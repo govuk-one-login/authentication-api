@@ -14,7 +14,7 @@ apacheCommonsPool = "org.apache.commons:commons-pool2:2.12.1"
 apacheCommonsValidator = "commons-validator:commons-validator:1.10.0"
 apacheHttpClient = "org.apache.httpcomponents:httpclient:4.5.14"
 apacheHttpComponents = "org.apache.httpcomponents.core5:httpcore5:5.3.6"
-approvalTests = "com.approvaltests:approvaltests:25.9.0"
+approvalTests = "com.approvaltests:approvaltests:26.0.0"
 awaitility = "org.awaitility:awaitility:4.3.0"
 awsCloudwatchEmf = "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
 awsCloudwatch = { module = "software.amazon.awssdk:cloudwatch", version.ref = "awsSdk" }
