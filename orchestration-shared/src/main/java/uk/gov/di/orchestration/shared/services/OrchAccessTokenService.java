@@ -10,9 +10,12 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenItem> {
     private static final Logger LOG = LogManager.getLogger(OrchAccessTokenService.class);
@@ -117,6 +120,57 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
         } catch (Exception e) {
             logAndThrowOrchAccessTokenException(
                     "Failed to save Orch access token item to Dynamo", e);
+        }
+    }
+
+    public void updateAccessTokensTtlToNow(List<OrchAccessTokenItem> items) {
+        try {
+            var currentTtl = nowClock.now().toInstant().getEpochSecond();
+            items.forEach(item -> item.setTimeToLive(currentTtl));
+            batchPut(items);
+        } catch (Exception e) {
+            logAndThrowOrchAccessTokenException("Failed to batch update token TTLs", e);
+        }
+    }
+
+    public void processAccessTokensWithoutTtlInBatches(
+            int batchSize, int totalSegments, Consumer<List<OrchAccessTokenItem>> batchProcessor) {
+        try {
+            IntStream.range(0, totalSegments)
+                    .parallel()
+                    .forEach(
+                            segment -> {
+                                try {
+                                    // stagger start times of parallel segments
+                                    Thread.sleep((long) segment * 100);
+                                } catch (InterruptedException e) {
+                                    // exit gracefully, allowing the other threads to complete the
+                                    // batch operations
+                                    Thread.currentThread().interrupt();
+                                    LOG.info(
+                                            "Processing interrupted for segment {}, stopping gracefully",
+                                            segment);
+                                    return;
+                                }
+                                var batch = new ArrayList<OrchAccessTokenItem>();
+                                scanTableSegment(segment, totalSegments)
+                                        .filter(item -> item.getTimeToLive() == 0)
+                                        .forEach(
+                                                item -> {
+                                                    batch.add(item);
+                                                    if (batch.size() == batchSize) {
+                                                        batchProcessor.accept(
+                                                                new ArrayList<>(batch));
+                                                        batch.clear();
+                                                    }
+                                                });
+                                if (!batch.isEmpty()) {
+                                    batchProcessor.accept(batch);
+                                }
+                            });
+        } catch (Exception e) {
+            logAndThrowOrchAccessTokenException(
+                    "Failed to process tokens without TTL in batches", e);
         }
     }
 
