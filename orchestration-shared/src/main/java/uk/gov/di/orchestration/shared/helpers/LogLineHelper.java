@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.helpers;
 
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import org.apache.logging.log4j.ThreadContext;
 
@@ -67,11 +68,14 @@ public class LogLineHelper {
     }
 
     public static void attachTraceId() {
+        var otel = GlobalOpenTelemetry.get(); // Ensure OpenTelemetry is initialised
         // Adapted from
         // https://docs.dynatrace.com/docs/analyze-explore-automate/logs/lma-log-enrichment#retrieve-span-and-trace-ids
         var spanContext = Span.current().getSpanContext();
         if (spanContext.isValid()) {
             attachLogFieldToLogs(TRACE_ID, spanContext.getTraceId());
         }
+        System.out.println("span context valid? " + spanContext.isValid());
+        System.out.println("otel? " + otel.toString());
     }
 }
