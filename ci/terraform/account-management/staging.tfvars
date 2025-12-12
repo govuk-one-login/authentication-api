@@ -37,3 +37,7 @@ ais_call_in_authenticate_enabled  = true
 #Vpc endpoint IDs
 # di-account-staging, di-account-components-staging
 home_vpc_endpoint_id = ["vpce-0c9ce65be09f99db7", "vpce-0fed7b2d44a0bde33"]
+
+# CIDR blocks
+new_auth_privatesub_cidr_blocks   = ["10.6.10.0/23", "10.6.12.0/23", "10.6.14.0/23"]
+new_auth_protectedsub_cidr_blocks = ["10.6.4.0/23", "10.6.6.0/23", "10.6.8.0/23"]
