@@ -32,7 +32,7 @@ awsSqs = { module = "software.amazon.awssdk:sqs", version.ref = "awsSdk" }
 awsSsm = { module = "software.amazon.awssdk:ssm", version.ref = "awsSdk" }
 awsS3 = { module = "software.amazon.awssdk:s3", version.ref = "awsSdk" }
 bouncyCastle = "org.bouncycastle:bcpkix-jdk18on:1.82"
-govUkNotify = "uk.gov.service.notify:notifications-java-client:5.2.1-RELEASE"
+govUkNotify = "uk.gov.service.notify:notifications-java-client:6.0.0-RELEASE"
 gson = "com.google.code.gson:gson:2.13.2"
 hamcrest = "org.hamcrest:hamcrest:3.0"
 jacksonDatabind = "com.fasterxml.jackson.core:jackson-databind:2.20.1"
