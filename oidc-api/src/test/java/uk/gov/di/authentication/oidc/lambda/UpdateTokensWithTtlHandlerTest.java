@@ -42,7 +42,7 @@ class UpdateTokensWithTtlHandlerTest {
 
         assertEquals("Finished", result);
         verify(orchAccessTokenService)
-                .processAccessTokensWithoutTtlInBatches(eq(1000), eq(1), eq(1000), any());
+                .processAccessTokensWithoutTtlInBatches(eq(1000), eq(1), eq(1000), any(), any());
     }
 
     @Test
@@ -51,7 +51,7 @@ class UpdateTokensWithTtlHandlerTest {
 
         assertEquals("Finished", result);
         verify(orchAccessTokenService)
-                .processAccessTokensWithoutTtlInBatches(eq(1000), eq(1), eq(1000), any());
+                .processAccessTokensWithoutTtlInBatches(eq(1000), eq(1), eq(1000), any(), any());
     }
 
     @Test
@@ -60,7 +60,7 @@ class UpdateTokensWithTtlHandlerTest {
         handler.handleRequest(input, context);
 
         verify(orchAccessTokenService)
-                .processAccessTokensWithoutTtlInBatches(eq(500), eq(4), eq(10), any());
+                .processAccessTokensWithoutTtlInBatches(eq(500), eq(4), eq(10), any(), any());
     }
 
     @Test
@@ -73,7 +73,7 @@ class UpdateTokensWithTtlHandlerTest {
         handler.handleRequest(input, context);
         verify(orchAccessTokenService)
                 .processAccessTokensWithoutTtlInBatches(
-                        eq(1000), eq(1), eq(1000), consumerCaptor.capture());
+                        eq(1000), eq(1), eq(1000), any(), consumerCaptor.capture());
 
         var testBatch =
                 List.of(

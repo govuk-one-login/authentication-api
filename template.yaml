@@ -2394,6 +2394,7 @@ Resources:
         LogGroup: !Ref UpdateTokensWithTtlFunctionLogGroup
       SnapStart:
         ApplyOn: PublishedVersions
+      Timeout: 600 #10 min
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup

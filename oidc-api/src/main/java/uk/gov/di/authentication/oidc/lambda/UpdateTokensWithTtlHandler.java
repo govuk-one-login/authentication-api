@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.lambda.LambdaTimer;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 
@@ -41,6 +42,8 @@ public class UpdateTokensWithTtlHandler implements RequestHandler<Object, String
         // because of parallel processing, tokens updated may exceed maxTokens slightly
         var maxTokens = config.getOrDefault("maxTokens", DEFAULT_MAX_TOKENS);
 
+        var timer = new LambdaTimer(context);
+
         LOG.info(
                 "Starting update of access tokens without TTL (readBatch={}, writeBatch={}, segments={}, maxTokens={})",
                 readBatchSize,
@@ -53,6 +56,7 @@ public class UpdateTokensWithTtlHandler implements RequestHandler<Object, String
                 readBatchSize,
                 totalSegments,
                 maxTokens,
+                timer,
                 batch -> {
                     // Process the batch in sub-batches for writing
                     for (int i = 0; i < batch.size(); i += writeBatchSize) {

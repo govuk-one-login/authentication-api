@@ -7,6 +7,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.lambda.LambdaTimer;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
@@ -24,6 +25,7 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
     private static final String FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR =
             "Failed to get Orch access token from Dynamo";
+    private static final int TIME_REMAINING_BUFFER_IN_MILLISECONDS = 10000;
 
     private final long timeToLive;
     private final NowHelper.NowClock nowClock;
@@ -139,6 +141,7 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
             int batchSize,
             int totalSegments,
             int maxTokens,
+            LambdaTimer timer,
             Consumer<List<OrchAccessTokenItem>> batchProcessor) {
 
         var maxTokensReached = new AtomicBoolean(false);
@@ -163,7 +166,11 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
                                 var batch = new ArrayList<OrchAccessTokenItem>();
                                 scanTableSegment(segment, totalSegments)
                                         .filter(item -> item.getTimeToLive() == 0)
-                                        .takeWhile(item -> !maxTokensReached.get())
+                                        .takeWhile(
+                                                item ->
+                                                        !maxTokensReached.get()
+                                                                && timer.hasTimeRemaining(
+                                                                        TIME_REMAINING_BUFFER_IN_MILLISECONDS))
                                         .forEach(
                                                 item -> {
                                                     batch.add(item);

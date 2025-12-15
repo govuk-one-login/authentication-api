@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
+import uk.gov.di.orchestration.shared.lambda.LambdaTimer;
 import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.time.Clock;
@@ -23,6 +24,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -43,6 +45,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
     private final DynamoDbTable<OrchAccessTokenItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
+    private final LambdaTimer lambdaTimer = mock(LambdaTimer.class);
     private OrchAccessTokenService orchAccessTokenService;
 
     @BeforeEach
@@ -269,6 +272,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
         @Test
         void shouldGetAccessTokensWithoutTtlInBatchesSuccessfully() {
             var spyService = spy(orchAccessTokenService);
+            when(lambdaTimer.hasTimeRemaining(anyLong())).thenReturn(true);
 
             var allTokensSegment1 = createOrchAccessTokensWithOrWithoutTtl(1, 19);
             var allTokensSegment2 = createOrchAccessTokensWithOrWithoutTtl(2, 2);
@@ -277,7 +281,8 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             doReturn(allTokensSegment2.stream()).when(spyService).scanTableSegment(1, 2);
 
             var capturedBatches = new ArrayList<List<OrchAccessTokenItem>>();
-            spyService.processAccessTokensWithoutTtlInBatches(10, 2, 100, capturedBatches::add);
+            spyService.processAccessTokensWithoutTtlInBatches(
+                    10, 2, 100, lambdaTimer, capturedBatches::add);
 
             assertEquals(
                     3,
@@ -290,6 +295,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
         @Test
         void shouldStopProcessingWhenMaxTokensReached() {
             var spyService = spy(orchAccessTokenService);
+            when(lambdaTimer.hasTimeRemaining(anyLong())).thenReturn(true);
 
             var allTokensSegment1 = createOrchAccessTokensWithOrWithoutTtl(0, 50);
             var allTokensSegment2 = createOrchAccessTokensWithOrWithoutTtl(0, 50);
@@ -298,13 +304,40 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             doReturn(allTokensSegment2.stream()).when(spyService).scanTableSegment(1, 2);
 
             var capturedBatches = new ArrayList<List<OrchAccessTokenItem>>();
-            spyService.processAccessTokensWithoutTtlInBatches(10, 2, 25, capturedBatches::add);
+            spyService.processAccessTokensWithoutTtlInBatches(
+                    10, 2, 25, lambdaTimer, capturedBatches::add);
 
             // Count items that actually completed processing
             var completedItems = capturedBatches.stream().flatMap(List::stream).toList();
 
             assertTrue(completedItems.size() <= 35, "should not exceed maxTokens + batch size");
             assertTrue(completedItems.size() >= 25, "should process at least maxTokens");
+        }
+
+        @Test
+        void shouldStopProcessingWhenLambdaAboutToTimeOut() {
+            var spyService = spy(orchAccessTokenService);
+
+            // on fourth check of hasTimeRemaining, will return false
+            when(lambdaTimer.hasTimeRemaining(anyLong()))
+                    .thenReturn(true)
+                    .thenReturn(true)
+                    .thenReturn(true)
+                    .thenReturn(false);
+
+            var allTokensSegment1 = createOrchAccessTokensWithOrWithoutTtl(0, 50);
+            var allTokensSegment2 = createOrchAccessTokensWithOrWithoutTtl(0, 50);
+
+            doReturn(allTokensSegment1.stream()).when(spyService).scanTableSegment(0, 2);
+            doReturn(allTokensSegment2.stream()).when(spyService).scanTableSegment(1, 2);
+
+            var capturedBatches = new ArrayList<List<OrchAccessTokenItem>>();
+            spyService.processAccessTokensWithoutTtlInBatches(
+                    10, 2, 25, lambdaTimer, capturedBatches::add);
+
+            var completedItems = capturedBatches.stream().flatMap(List::stream).toList();
+
+            assertEquals(3, completedItems.size());
         }
 
         @Test
