@@ -30,7 +30,7 @@ public class RateLimitService {
 
         var rateLimitExceeded = rateLimitAlgorithm.hasRateLimitExceeded(clientRateLimitConfig);
 
-        if (rateLimitExceeded) {
+        if (rateLimitExceeded || clientRateLimitConfig.rateLimit() == 0) {
             var decision = RateLimitDecision.OVER_LIMIT_RETURN_TO_RP;
             emitRateLimitExceededMetric(decision, clientRateLimitConfig.clientID());
 
