@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -34,6 +35,26 @@ class RateLimitServiceTest {
                         new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, null));
         assertFalse(rateLimitDecision.hasExceededRateLimit());
         assertEquals(RateLimitDecision.RateLimitAction.NONE, rateLimitDecision.getAction());
+    }
+
+    @Test
+    void itReturnsOverLimitReturnToRPWhenTheClientRateLimitIsZero() {
+        var rateLimitService =
+                new RateLimitService(neverExceededAlgorithm, cloudwatchMetricsService);
+        var rateLimitDecision =
+                rateLimitService.getClientRateLimitDecision(
+                        new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, 0));
+        assertTrue(rateLimitDecision.hasExceededRateLimit());
+        assertEquals(RateLimitDecision.RateLimitAction.RETURN_TO_RP, rateLimitDecision.getAction());
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "RpRateLimitExceeded",
+                        Map.of(
+                                "clientId",
+                                Constants.TEST_CLIENT_ID,
+                                "action",
+                                RateLimitDecision.RateLimitAction.RETURN_TO_RP.toString()));
     }
 
     @ParameterizedTest
