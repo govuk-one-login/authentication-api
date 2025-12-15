@@ -366,6 +366,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertOrchSessionIsUpdatedWithUserInfoClaims();
 
         assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
+        assertThat(response.getHeaders().get("Cache-Control"), equalTo("no-store"));
     }
 
     @Test

@@ -575,9 +575,7 @@ public class AuthenticationCallbackHandler
 
                 var headers = new HashMap<String, String>();
                 headers.put(ResponseHeaders.LOCATION, authenticationResponse.toURI().toString());
-                if (!configurationService.getEnvironment().equals("production")) {
-                    headers.put("Cache-Control", "no-store");
-                }
+                headers.put("Cache-Control", "no-store");
 
                 return generateApiGatewayProxyResponse(302, "", headers, null);
 
