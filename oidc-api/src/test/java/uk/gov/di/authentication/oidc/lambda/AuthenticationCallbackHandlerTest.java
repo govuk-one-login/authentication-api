@@ -324,6 +324,7 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 redirectLocation,
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
+        assertThat(response.getHeaders().get("Cache-Control"), equalTo("no-store"));
         verifyUserInfoRequest();
 
         verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
