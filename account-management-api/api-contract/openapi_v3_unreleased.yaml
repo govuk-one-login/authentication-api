@@ -81,13 +81,14 @@ paths:
                     code: 1008
                     message: "Invalid login credentials"
         "403":
-          description: Forbidden - Account is suspended or blocked
+          description: Forbidden - Account is suspended, blocked, or temporarily locked out
           content:
             application/json:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/UserAccountBlocked"
                   - $ref: "#/components/schemas/UserAccountSuspended"
+                  - $ref: "#/components/schemas/ExceededIncorrectPasswordSubmissionLimit"
               examples:
                 authenticate-when-user-has-blocked-intervention:
                   value:
@@ -97,6 +98,10 @@ paths:
                   value:
                     code: 1083
                     message: "User's account is suspended"
+                authenticate-when-exceeded-password-limit:
+                  value:
+                    code: 1094
+                    message: "User is temporarily locked out due to too many incorrect password attempts"
         "500":
           description: Internal Server Error - Account interventions service error
           content:
@@ -342,15 +347,21 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: "#/components/schemas/RequestIsMissingParameters"
-                  - $ref: "#/components/schemas/BlockedForEmailVerificationCodes"
-                  - $ref: "#/components/schemas/TooManyEmailCodesEntered"
+                $ref: "#/components/schemas/RequestIsMissingParameters"
               examples:
                 send-otp-challenge-when-request-is-missing-parameters:
                   value:
                     code: 1001
                     message: "Request is missing parameters"
+        "403":
+          description: Forbidden - User is temporarily locked out
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/BlockedForEmailVerificationCodes"
+                  - $ref: "#/components/schemas/TooManyEmailCodesEntered"
+              examples:
                 send-otp-challenge-when-blocked-for-requesting-codes:
                   value:
                     code: 1092
@@ -450,7 +461,6 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/RequestIsMissingParameters"
                   - $ref: "#/components/schemas/InvalidOTPCode"
-                  - $ref: "#/components/schemas/TooManyEmailCodesEntered"
               examples:
                 verify-otp-challenge-when-request-is-missing-parameters:
                   value:
@@ -460,6 +470,13 @@ paths:
                   value:
                     code: 1020
                     message: "Invalid OTP code"
+        "403":
+          description: Forbidden - User is temporarily locked out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyEmailCodesEntered"
+              examples:
                 verify-otp-challenge-when-blocked-for-entering-codes:
                   value:
                     code: 1093
@@ -1598,6 +1615,17 @@ components:
           example:
             code: 1093
             message: "User is blocked from entering OTP codes"
+    ExceededIncorrectPasswordSubmissionLimit:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1094]
+          example:
+            code: 1094
+            message: "User is temporarily locked out due to too many incorrect password attempts"
 
   securitySchemes:
     authorise-access-token:
