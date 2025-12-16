@@ -5071,6 +5071,154 @@ Resources:
       KmsDataKeyReusePeriodSeconds: 300
   #endregion
 
+  #region SPOT Request Queue
+  SpotRequestQueueKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "Key used to encrypt SPOT request queue"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowSpotQueueDecryption
+            Effect: Allow
+            Principal:
+              Service: sqs.amazonaws.com
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource: "*"
+          - Sid: AllowSpotRequestQueueKms
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${SpotAccountNumber}:root
+                - SpotAccountNumber: !Sub "{{resolve:ssm:${Environment}-spot-account-number}}"
+            Action:
+              - kms:Decrypt
+            Resource: "*"
+
+  SpotRequestQueueKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${Environment}-spot-request-sqs-queue-encryption-key
+      TargetKeyId: !Ref SpotRequestQueueKey
+
+  SpotRequestQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-spot-request-queue
+      MaximumMessageSize: 256000
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 10
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SpotRequestDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: !Ref SpotRequestQueueKey
+      KmsDataKeyReusePeriodSeconds: 300
+
+  SpotRequestDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-spot-request-dlq
+      KmsMasterKeyId: !GetAtt SpotRequestQueueKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+      MessageRetentionPeriod: 21600
+
+  SpotRequestQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref SpotRequestQueue
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchAccountToSend
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt SpotRequestQueue.Arn
+          - Sid: AllowSpotAccountToReceive
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${SpotAccountNumber}:root
+                - SpotAccountNumber: !Sub "{{resolve:ssm:${Environment}-spot-account-number}}"
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt SpotRequestQueue.Arn
+
+  SpotRequestDlqPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref SpotRequestDeadLetterQueue
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: SendAndReceive
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt SpotRequestDeadLetterQueue.Arn
+
+  SpotRequestQueueEncryptionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowSpotQueueEncryption
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt SpotRequestQueueKey.Arn
+
+  SpotRequestQueueWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWriteAccessToSpotQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt SpotRequestQueue.Arn
+          - Sid: AllowAccessToKeyForEncryptingPayloads
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource: !GetAtt SpotRequestQueueKey.Arn
+  #endregion
+
   #region SPOT Response Lambda
 
   SpotResponseFunction:
