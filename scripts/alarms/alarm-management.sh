@@ -168,8 +168,8 @@ init_alarms() {
   local international_quota_threshold=$((international_daily_quota * 60 / 100)) # 3,600
 
   # Limit Exceeded Thresholds (429 http status code responses from Notify)
-  local domestic_limit_threshold=2      # 2+ 429 http status code responses
-  local international_limit_threshold=2 # 2+ 429 http status code responses
+  local domestic_limit_threshold=1      # 1+ 429 http status code responses
+  local international_limit_threshold=1 # 1+ 429 http status code responses
 
   # Dynamically discover alarm names to handle P1 prefixes
   local domestic_quota_alarm international_quota_alarm domestic_limit_alarm international_limit_alarm
@@ -297,7 +297,7 @@ test_alarm() {
     test_value=$((THRESHOLD + 100))
   elif [[ ${METRIC_NAME} == "SmsLimitExceeded" ]]; then
     # For limit exceeded alarms, send metric directly (simulates 429 http status code responses from Notify)
-    test_value=$((THRESHOLD + 1)) # Send 3 for threshold of 2
+    test_value=${THRESHOLD}
     echo "Sending ${METRIC_NAME} metric with value ${test_value} (threshold: ${THRESHOLD}) to simulate HTTP status 429 (too many requests) responses from Notify"
     aws cloudwatch put-metric-data \
       --namespace "${NAMESPACE}" \
@@ -362,7 +362,7 @@ test_alarm() {
       --dimensions Name=Environment,Value="${ENVIRONMENT}" Name=Application,Value=Authentication Name=IsTest,Value=false Name=SmsDestinationType,Value="${SMS_TYPE}" \
       --start-time "$(date -u -v-5M +%Y-%m-%dT%H:%M:%S)" \
       --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
-      --period 300 \
+      --period 60 \
       --statistics Sum \
       --query "Datapoints[0].Sum" --output text)
 
@@ -406,10 +406,10 @@ test_alarm() {
       if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" || ${METRIC_NAME} == "SmsLimitExceeded" ]]; then
         echo "Monitoring alarm deactivation..."
         local deactivation_wait_count=0
-        while [[ ${deactivation_wait_count} -lt 10 ]]; do
+        while [[ ${deactivation_wait_count} -lt 25 ]]; do
           sleep 60
           deactivation_wait_count=$((deactivation_wait_count + 1))
-          echo "Checking alarm state (attempt ${deactivation_wait_count}/10)..."
+          echo "Checking alarm state (attempt ${deactivation_wait_count}/25)..."
           local current_alarm_state
           current_alarm_state=$(aws cloudwatch describe-alarms --alarm-names "${ALARM_NAME}" --query "MetricAlarms[0].StateValue" --output text)
           echo "Current alarm state: ${current_alarm_state}"
@@ -417,8 +417,8 @@ test_alarm() {
           if [[ ${current_alarm_state} == "OK" ]]; then
             echo "✅ SUCCESS: Alarm deactivated successfully!"
             break
-          elif [[ ${deactivation_wait_count} -eq 10 ]]; then
-            echo "⚠️  Alarm has not deactivated after 10 minutes. This may be normal for some alarm types."
+          elif [[ ${deactivation_wait_count} -eq 25 ]]; then
+            echo "⚠️  Alarm has not deactivated after 25 minutes. This may be normal for some alarm types."
           fi
         done
       fi
