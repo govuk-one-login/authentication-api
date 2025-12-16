@@ -4,9 +4,13 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchWriteItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
@@ -23,6 +27,7 @@ import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createD
 public class BaseDynamoService<T> {
     private final DynamoDbTable<T> dynamoTable;
     private final DynamoDbClient client;
+    private final DynamoDbEnhancedClient enhancedClient;
 
     public BaseDynamoService(
             Class<T> objectClass, String table, ConfigurationService configurationService) {
@@ -39,7 +44,7 @@ public class BaseDynamoService<T> {
                 TableNameHelper.getFullTableName(table, configurationService, isTableInOrchAccount);
 
         client = createDynamoClient(configurationService);
-        var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
+        enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         dynamoTable = enhancedClient.table(tableName, TableSchema.fromBean(objectClass));
         if (!isTableInOrchAccount) {
             warmUp();
@@ -49,6 +54,7 @@ public class BaseDynamoService<T> {
     public BaseDynamoService(DynamoDbTable<T> dynamoTable, DynamoDbClient client) {
         this.dynamoTable = dynamoTable;
         this.client = client;
+        this.enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
     }
 
     public void update(T item) {
@@ -134,5 +140,26 @@ public class BaseDynamoService<T> {
     public DescribeTableResponse describeTable() {
         return client.describeTable(
                 DescribeTableRequest.builder().tableName(dynamoTable.tableName()).build());
+    }
+
+    public Stream<T> scanTable() {
+        return dynamoTable.scan().items().stream();
+    }
+
+    public Stream<T> scanTableSegment(int segment, int totalSegments) {
+        var scanRequest =
+                ScanEnhancedRequest.builder().segment(segment).totalSegments(totalSegments).build();
+
+        return dynamoTable.scan(scanRequest).stream().map(Page::items).flatMap(List::stream);
+    }
+
+    public void batchPut(List<T> items) {
+        var writeBatch =
+                WriteBatch.builder(dynamoTable.tableSchema().itemType().rawClass())
+                        .mappedTableResource(dynamoTable);
+        items.forEach(writeBatch::addPutItem);
+
+        enhancedClient.batchWriteItem(
+                BatchWriteItemEnhancedRequest.builder().writeBatches(writeBatch.build()).build());
     }
 }

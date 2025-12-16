@@ -2373,6 +2373,56 @@ Resources:
 
   #endregion
 
+  #region Update Token With Ttl Lambda
+
+  UpdateTokensWithTtlFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: Lambda is manually invoked so DLQ not needed
+    Properties:
+      FunctionName: !Sub ${Environment}-UpdateTokensWithTtlFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
+      Handler: uk.gov.di.authentication.oidc.lambda.UpdateTokensWithTtlHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref UpdateTokensWithTtlFunctionLogGroup
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Timeout: 600 #10 min
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+      Policies:
+        - !Ref AccessTokenTableWriteAccessPolicy
+        - !Ref AccessTokenTableReadAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  UpdateTokensWithTtlFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-update-tokens-with-ttl-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  UpdateTokensWithTtlFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref UpdateTokensWithTtlFunctionLogGroup
+
+  #endregion
+
   #region Logout Lambda
 
   LogoutFunction:
@@ -7390,6 +7440,7 @@ Resources:
             Action:
               - dynamodb:DescribeTable
               - dynamodb:Get*
+              - dynamodb:Scan
             Resource:
               - !GetAtt AccessTokenTable.Arn
           - Sid: AllowAccessTokenTableIndexQueryAccess
@@ -7418,6 +7469,7 @@ Resources:
             Action:
               - dynamodb:UpdateItem
               - dynamodb:PutItem
+              - dynamodb:BatchWriteItem
             Resource:
               - !GetAtt AccessTokenTable.Arn
           - Sid: AllowAccessTokenTableDecryption
