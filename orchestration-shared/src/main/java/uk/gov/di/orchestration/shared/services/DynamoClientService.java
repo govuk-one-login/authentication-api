@@ -10,6 +10,7 @@ import uk.gov.di.orchestration.shared.entity.ManualUpdateClientRegistryRequest;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.validation.ClientRegistryDynamoExtensions;
 
 import java.util.List;
 import java.util.Objects;
@@ -21,6 +22,28 @@ public class DynamoClientService implements ClientService {
 
     private static final String CLIENT_REGISTRY_TABLE = "client-registry";
     private final DynamoDbTable<ClientRegistry> dynamoClientRegistryTable;
+
+    public DynamoClientService(
+            ConfigurationService configurationService,
+            ClientRegistryDynamoExtensions clientRegistryDynamoExtensions) {
+        var tableName = CLIENT_REGISTRY_TABLE;
+        if (configurationService.getDynamoArnPrefix().isPresent()
+                && !configurationService.isOrchClientRegistryEnabled()) {
+            tableName = configurationService.getDynamoArnPrefix().get() + tableName;
+        } else {
+            tableName = configurationService.getEnvironment() + "-" + tableName;
+        }
+
+        var dynamoDBEnhanced =
+                createDynamoEnhancedClient(configurationService, clientRegistryDynamoExtensions);
+        this.dynamoClientRegistryTable =
+                dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
+
+        if (configurationService.getDynamoArnPrefix().isPresent()
+                && !configurationService.isOrchClientRegistryEnabled()) {
+            warmUp();
+        }
+    }
 
     public DynamoClientService(ConfigurationService configurationService) {
         var tableName = CLIENT_REGISTRY_TABLE;
