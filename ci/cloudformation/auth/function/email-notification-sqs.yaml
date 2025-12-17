@@ -300,12 +300,13 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           Prefix: !If [IsProduction, "P1-", ""]
       ComparisonOperator: GreaterThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 15
       MetricName: SmsLimitExceeded
       Namespace: Authentication
-      Period: 300
+      Period: 60
       Statistic: Sum
-      Threshold: 2
+      Threshold: 1
       TreatMissingData: notBreaching
       Dimensions:
         - Name: Environment
@@ -323,7 +324,7 @@ Resources:
         - Name: ServiceType
           Value: "AWS::Lambda::Function"
       AlarmDescription: !Sub
-        - "${Prefix}Domestic SMS daily limit exceeded (${Env}). 2+ HTTP 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
+        - "${Prefix}Domestic SMS daily limit exceeded (${Env}). Received HTTP 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           Prefix: !If [IsProduction, "CRITICAL: ", ""]
       AlarmActions: !If
@@ -345,12 +346,13 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           Prefix: !If [IsProduction, "P1-", ""]
       ComparisonOperator: GreaterThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 20
       MetricName: SmsLimitExceeded
       Namespace: Authentication
-      Period: 300
+      Period: 60
       Statistic: Sum
-      Threshold: 2
+      Threshold: 1
       TreatMissingData: notBreaching
       Dimensions:
         - Name: Environment
@@ -368,7 +370,7 @@ Resources:
         - Name: ServiceType
           Value: "AWS::Lambda::Function"
       AlarmDescription: !Sub
-        - "${Prefix}International SMS daily limit exceeded (${Env}). 2+ HTTP 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
+        - "${Prefix}International SMS daily limit exceeded (${Env}). Received HTTP 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           Prefix: !If [IsProduction, "CRITICAL: ", ""]
       AlarmActions: !If
