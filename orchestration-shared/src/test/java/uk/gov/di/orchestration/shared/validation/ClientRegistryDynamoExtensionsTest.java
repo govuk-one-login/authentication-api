@@ -17,6 +17,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -35,6 +36,16 @@ public class ClientRegistryDynamoExtensionsTest {
     void setup() {
         clientRegistryDynamoExtensions = new ClientRegistryDynamoExtensions();
         assertThat(logging.events(), not(hasItem(withMessageContaining(clientId))));
+    }
+
+    @Test
+    void itReturnsImmediatelyIfNullItem() {
+        when(mockContext.items()).thenReturn(null);
+
+        ReadModification readModification = clientRegistryDynamoExtensions.afterRead(mockContext);
+
+        assertNull(readModification.transformedItem());
+        assertEquals(0, logging.events().size());
     }
 
     @Test

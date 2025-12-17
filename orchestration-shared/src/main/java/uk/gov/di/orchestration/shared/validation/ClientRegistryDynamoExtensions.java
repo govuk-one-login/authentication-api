@@ -16,6 +16,11 @@ public class ClientRegistryDynamoExtensions implements DynamoDbEnhancedClientExt
 
     @Override
     public ReadModification afterRead(DynamoDbExtensionContext.AfterRead context) {
+
+        if (context.items() == null) {
+            return ReadModification.builder().transformedItem(context.items()).build();
+        }
+
         var itemFields = context.items().keySet();
         var validClientFieldAttributeNames =
                 Arrays.stream(ClientRegistry.class.getDeclaredMethods())
