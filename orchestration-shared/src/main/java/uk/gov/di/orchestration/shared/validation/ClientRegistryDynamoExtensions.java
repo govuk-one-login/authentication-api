@@ -18,7 +18,7 @@ public class ClientRegistryDynamoExtensions implements DynamoDbEnhancedClientExt
     public ReadModification afterRead(DynamoDbExtensionContext.AfterRead context) {
 
         if (context.items() == null) {
-            return ReadModification.builder().transformedItem(context.items()).build();
+            return ReadModification.builder().build();
         }
 
         var itemFields = context.items().keySet();
@@ -47,7 +47,8 @@ public class ClientRegistryDynamoExtensions implements DynamoDbEnhancedClientExt
                                                 .s()));
                     }
                 });
-        // Return the value exactly as it is - we aren't modifying it just logging a side effect
-        return ReadModification.builder().transformedItem(context.items()).build();
+        // Return no transformedItem on the ReadModification. This will ensure that the item
+        // that is supplied further down is the same item as before.
+        return ReadModification.builder().build();
     }
 }

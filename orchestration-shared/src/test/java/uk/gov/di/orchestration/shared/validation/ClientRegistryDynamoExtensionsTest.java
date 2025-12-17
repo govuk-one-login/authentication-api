@@ -55,7 +55,7 @@ public class ClientRegistryDynamoExtensionsTest {
 
         ReadModification readModification = clientRegistryDynamoExtensions.afterRead(mockContext);
 
-        assertEquals(client, readModification.transformedItem());
+        assertNull(readModification.transformedItem());
         assertEquals(0, logging.events().size());
         assertThat(
                 logging.events(),
@@ -77,7 +77,7 @@ public class ClientRegistryDynamoExtensionsTest {
 
         ReadModification readModification = clientRegistryDynamoExtensions.afterRead(mockContext);
 
-        assertEquals(client, readModification.transformedItem());
+        assertNull(readModification.transformedItem());
         assertEquals(1, logging.events().size());
         assertThat(
                 logging.events(),
@@ -105,7 +105,7 @@ public class ClientRegistryDynamoExtensionsTest {
 
         ReadModification readModification = clientRegistryDynamoExtensions.afterRead(mockContext);
 
-        assertEquals(client, readModification.transformedItem());
+        assertNull(readModification.transformedItem());
         assertEquals(2, logging.events().size());
         assertThat(
                 logging.events(),
