@@ -2,28 +2,26 @@ package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 
-public class DecisionErrorHttpMapper {
+public class TrackingErrorHttpMapper {
 
-    private DecisionErrorHttpMapper() {}
+    private TrackingErrorHttpMapper() {}
 
-    public static ErrorResponseWithStatus toHttpResponse(DecisionError decisionError) {
-        ErrorResponse errorResponse = DecisionErrorAntiCorruption.toErrorResponse(decisionError);
+    public static ErrorResponseWithStatus toHttpResponse(TrackingError trackingError) {
+        ErrorResponse errorResponse = TrackingErrorAntiCorruption.toErrorResponse(trackingError);
         int statusCode =
-                switch (decisionError) {
-                    case CONFIGURATION_ERROR -> 500;
+                switch (trackingError) {
                     case STORAGE_SERVICE_ERROR -> 500;
-                    case INVALID_USER_CONTEXT -> 400;
                 };
         return new ErrorResponseWithStatus(statusCode, errorResponse);
     }
 
     public static APIGatewayProxyResponseEvent toApiGatewayProxyErrorResponse(
-            DecisionError decisionError) {
-        var httpResponse = DecisionErrorHttpMapper.toHttpResponse(decisionError);
+            TrackingError trackingError) {
+        var httpResponse = TrackingErrorHttpMapper.toHttpResponse(trackingError);
         return generateApiGatewayProxyErrorResponse(
                 httpResponse.statusCode(), httpResponse.errorResponse());
     }
