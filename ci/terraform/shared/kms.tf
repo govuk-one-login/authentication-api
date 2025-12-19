@@ -44,6 +44,22 @@ data "aws_iam_policy_document" "id_token_signing_key_access_policy" {
       identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
     }
   }
+
+  statement {
+    sid    = "AllowNewAuthAWSAcctAccessToKmsIdTokenSigningKey-${var.environment}"
+    effect = "Allow"
+
+    actions = [
+      "kms:GetPublicKey",
+      "kms:Sign"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
+    }
+  }
 }
 
 data "aws_iam_policy_document" "kms_policy_document" {
