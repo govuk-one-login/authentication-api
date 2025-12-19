@@ -363,10 +363,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
 
-    public boolean isOrchClientRegistryEnabled() {
-        return getFlagOrFalse("USE_ORCH_CLIENT_REGISTRY_TABLE");
-    }
-
     public boolean isSingleFactorAccountDeletionEnabled() {
         return getFlagOrFalse("SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED");
     }
