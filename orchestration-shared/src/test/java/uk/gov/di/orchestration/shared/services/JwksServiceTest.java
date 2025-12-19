@@ -19,6 +19,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 
+// QualityGateUnitTest
 class JwksServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -26,6 +27,7 @@ class JwksServiceTest {
     private final JwksService jwksService =
             new JwksService(configurationService, kmsConnectionService);
 
+    // QualityGateRegressionTest
     @Test
     void shouldRetrievePublicTokenSigningKeyFromKmsAndParseToJwk() {
         byte[] publicKey =
@@ -54,6 +56,7 @@ class JwksServiceTest {
         assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldRetrievePublicTokenSigningRsaKeyFromKmsAndParseToJwk() {
         byte[] publicKey =
