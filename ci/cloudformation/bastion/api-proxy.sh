@@ -5,7 +5,18 @@ set -euo pipefail
 ENVIRONMENT="${1?Usage: $0 <environment> [local-port:-8123]}"
 PORT=${2:-8123}
 
-export AWS_PROFILE="${AWS_PROFILE?AWS_PROFILE environment variable must be set}"
+export AWS_PROFILE=di-authentication-development-AdministratorAccessPermission
+
+echo "Ensuring AWS CLI is configured ..."
+# Test if the AWS CLI is configured with the correct profile
+if ! sso_session="$(aws configure get sso_session --profile "${AWS_PROFILE}")"; then
+  echo "AWS CLI profile ${AWS_PROFILE} is not configured."
+  echo "Please visit https://govukverify.atlassian.net/wiki/x/IgFm5 for instructions."
+  exit 1
+fi
+if ! aws sts get-caller-identity --profile "${AWS_PROFILE}" > /dev/null; then
+  aws sso login --sso-session "${sso_session}"
+fi
 
 echo "Fetching the instance ID from AWS..."
 INSTANCE_ID=$(aws ec2 describe-instances \
