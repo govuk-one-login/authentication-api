@@ -2,52 +2,44 @@ openapi: "3.0.1"
 
 info:
   title: "account-data-api"
-  version: 0.0.1
+  version: 0.0.3
   description: Account Data API
 
 paths:
-  /account/factors/passkeys:
-    get:
-      summary: Read all passkeys belonging to a user
-      responses:
-        200:
-          description: List of passkeys
-    post:
-      summary: Create a passkey belonging to a user
-      responses:
-        201:
-          description: Successfully created passkey
-        400:
-          description: Bad request
-
-  /account/factors/passkeys/{passkeyId}:
+  /accounts/{publicSubjectId}/authenticators/passkeys:
     parameters:
-      - name: passkeyId
+      - name: publicSubjectId
         in: path
+        description: Public subject ID
         required: true
         schema:
           type: string
-          format: uuid
     get:
-      summary: Read a passkey belonging to a user
+      summary: Read all passkeys belonging to a user
       responses:
-        200:
-          description: A passkey
-        404:
-          description: Passkey not found
-    put:
-      summary: Update a passkey belonging to a user
-      responses:
-        204:
-          description: Successfully updated passkey
-        400:
-          description: Bad request
-        404:
-          description: Passkey not found
-    delete:
-      summary: Delete a passkey belonging to a user
-      responses:
-        204:
-          description: Successfully deleted passkey
-        404:
-          description: Passkey not found
+        "200":
+          description: List of passkeys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  passkeys:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PasskeyAuthenticator"
+
+components:
+  schemas:
+    PasskeyAuthenticator:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "7f3a94c4-3079-451b-956d-d8351dca9420"
+        type:
+          type: string
+          example: "passkey"
+        name:
+          type: string
+          example: "My passkey"
