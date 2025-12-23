@@ -373,16 +373,6 @@ Resources:
         - "${Prefix}International SMS daily limit exceeded (${Env}). Received HTTP 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           Prefix: !If [IsProduction, "CRITICAL: ", ""]
-      AlarmActions: !If
-        - UseAlarmActions
-        - - !If
-            - IsProduction
-            - !Sub "arn:aws:sns:eu-west-2:${AWS::AccountId}:production-pagerduty-p1-alerts"
-            - !Sub
-              - "{{resolve:ssm:/deploy/${Env}/slack_alert_notification_topic_arn}}"
-              - Env:
-                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - !Ref AWS::NoValue
 
   EmailNotificationQueueFunctionScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
