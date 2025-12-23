@@ -170,16 +170,6 @@ Resources:
               RunbookLink,
               DefaultValue: "",
             ]
-      AlarmActions: !If
-        - UseAlarmActions
-        - - !If
-            - IsProduction
-            - !Sub "arn:aws:sns:eu-west-2:${AWS::AccountId}:production-pagerduty-p1-alerts"
-            - !Sub
-              - "{{resolve:ssm:/deploy/${Env}/slack_alert_notification_topic_arn}}"
-              - Env:
-                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - !Ref AWS::NoValue
       Dimensions:
         - Name: Environment
           Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
