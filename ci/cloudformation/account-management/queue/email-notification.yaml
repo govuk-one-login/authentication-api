@@ -44,6 +44,11 @@ Resources:
                 - !GetAtt MfaMethodCreateFunctionRole.Arn
                 - !GetAtt MfaMethodDeleteFunctionRole.Arn
                 - !GetAtt MfaMethodUpdateFunctionRole.Arn
+                - !GetAtt UpdateEmailFunctionRole.Arn
+                - !GetAtt UpdatePasswordFunctionRole.Arn
+                - !GetAtt SendOtpNotificationFunctionRole.Arn
+                - !GetAtt UpdatePhoneNumberFunctionRole.Arn
+                - !GetAtt DeleteAccountFunctionRole.Arn
 
   EmailNotificationDeadLetterQueue:
     Type: AWS::SQS::Queue

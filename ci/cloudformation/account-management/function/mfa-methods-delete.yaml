@@ -32,7 +32,7 @@ Resources:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MFA_METHOD_MANAGEMENT_API_ENABLED: "true"
           EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
-          INTERNAL_SECTOR_URI: !If
+          INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If
               - UseSubEnvironment
