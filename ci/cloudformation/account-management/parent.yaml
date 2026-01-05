@@ -1237,6 +1237,36 @@ Resources:
                     eventsTopicEncryptionKey,
                   ]
 
+  IdTokenSigningKeyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing KMS connection for a lambda which allows signing of id-token-signing-key payloads"
+      Path: !Sub
+        - /${Env}/auth-am-default/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToKmsAuditSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+              - kms:Verify
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    TokenSigningkeyArn,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    TokenSigningkeyArn,
+                  ]
+
   DynamoAccountModifiersReadWritePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:

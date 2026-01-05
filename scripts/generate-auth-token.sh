@@ -50,20 +50,16 @@ fi
 ENVIRONMENT="${POSITIONAL[0]}"
 EMAIL="${POSITIONAL[1]}"
 
-if [[ ${ENVIRONMENT} == "sandpit" ]]; then
-  export AWS_PROFILE="gds-di-development-admin"
-  KMS_KEY_ARN="arn:aws:kms:eu-west-2:761723964695:alias/sandpit-id-token-signing-key-alias"
-  CLIENT_ID="1Dlz5rYheTqzZASRMmSBtgFIYgZlysnQ"
-elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
-  export AWS_PROFILE="di-auth-development-admin"
+if [[ ${ENVIRONMENT} == "authdev1" ]]; then
+  export AWS_PROFILE="di-auth-development-AdministratorAccessPermission"
   KMS_KEY_ARN="arn:aws:kms:eu-west-2:653994557586:alias/authdev1-id-token-signing-key-alias"
   CLIENT_ID="skwdHH2y6ERjJWTPSoAFbSt8lX04OgtI"
 elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
-  export AWS_PROFILE="di-auth-development-admin"
+  export AWS_PROFILE="di-auth-development-AdministratorAccessPermission"
   KMS_KEY_ARN="arn:aws:kms:eu-west-2:653994557586:alias/authdev2-id-token-signing-key-alias"
   CLIENT_ID="rPEUe0hRrHqf0i0es1gYjKxE5ceGN7VK"
 elif [[ ${ENVIRONMENT} == "dev" ]]; then
-  export AWS_PROFILE="di-auth-development-admin"
+  export AWS_PROFILE="di-auth-development-AdministratorAccessPermission"
   KMS_KEY_ARN="arn:aws:kms:eu-west-2:653994557586:alias/dev-id-token-signing-key-alias"
   CLIENT_ID="J3tedNRsfssnsf4STuc2NNIV1C1gdxBB"
 elif [[ ${ENVIRONMENT} == "build" ]]; then

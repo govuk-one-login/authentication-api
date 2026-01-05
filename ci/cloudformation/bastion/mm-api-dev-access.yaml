@@ -1,0 +1,227 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Developer API proxy infrastructure for development environments"
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment name
+    Default: dev
+  AwsRegion:
+    Type: String
+    Default: eu-west-2
+    Description: AWS Region
+  ApiGatewayId:
+    Type: String
+    Description: API Gateway ID
+    Default: 84s539o9yd
+  VpcStackName:
+    Type: String
+    Description: Name of the VPC stack to import values from
+    Default: vpc
+
+Conditions:
+  IsDev: !Equals [!Ref Environment, "dev"]
+
+Resources:
+  # IAM Role for Developer Proxy
+  DeveloperProxyRole:
+    Type: AWS::IAM::Role
+    Condition: IsDev
+    Properties:
+      RoleName: !Sub "${Environment}-developer-proxy-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+
+  # KMS Access Policy
+  DeveloperProxyKMSAccessPolicy:
+    Type: AWS::IAM::RolePolicy
+    Condition: IsDev
+    Properties:
+      RoleName: !Ref DeveloperProxyRole
+      PolicyName: !Sub "${Environment}-developer-proxy-kms-access"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !Sub "arn:aws:kms:${AwsRegion}:${AWS::AccountId}:key/*"
+
+  # Instance Profile
+  DeveloperProxyInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: IsDev
+    Properties:
+      InstanceProfileName: !Sub "${Environment}-developer-proxy-profile"
+      Roles:
+        - !Ref DeveloperProxyRole
+
+  # SSM Document for Port Forwarding
+  DeveloperPortForwardDocument:
+    Type: AWS::SSM::Document
+    Condition: IsDev
+    Properties:
+      Name: !Sub "${Environment}-mm-api-developer-proxy-ssm-document"
+      DocumentType: Session
+      Content:
+        schemaVersion: "1.0"
+        description: "Document to start an Account Management API forwarding session over Session Manager"
+        sessionType: Port
+        parameters:
+          localPortNumber:
+            type: String
+            description: "(Optional) Port number on local machine to forward traffic to. An open port is chosen at run-time if not provided"
+            allowedPattern: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+            default: "0"
+        properties:
+          portNumber: "80"
+          type: LocalPortForwarding
+          localPortNumber: "{{ localPortNumber }}"
+
+  # Security Group for Developer Proxy
+  DeveloperProxySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: IsDev
+    Properties:
+      GroupName: !Sub "${Environment}-developer-proxy-sg"
+      GroupDescription: Security group for developer API proxy
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - Description: Allow outbound traffic to vpc endpoints
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          DestinationSecurityGroupId:
+            Fn::ImportValue: !Sub ${VpcStackName}-AWSServicesEndpointSecurityGroupId
+        - DestinationPrefixListId: pl-7ca54015 # See https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html
+          Description: Allow outgoing HTTPS requests to AWS S3 route from security group
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+
+  # EC2 Instance for Developer Proxy
+  DeveloperProxyInstance:
+    Type: AWS::EC2::Instance
+    Condition: IsDev
+    Properties:
+      ImageId: ami-09eaa54de6f278f78
+      InstanceType: t4g.nano
+      SubnetId:
+        Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
+      SecurityGroupIds:
+        - !Ref DeveloperProxySecurityGroup
+      IamInstanceProfile: !Ref DeveloperProxyInstanceProfile
+      Monitoring: true
+      MetadataOptions:
+        HttpTokens: required
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          package_update: true
+          package_upgrade: true
+
+          packages:
+            - nginx
+
+          write_files:
+            - path: /etc/nginx/conf.d/api-proxy.conf
+              content: |
+                server {
+                    listen 80;
+                    server_name _;
+
+                    # Debug request details
+                    add_header X-Debug-Host $host;
+                    add_header X-Debug-Uri $request_uri;
+
+                    location / {
+                        # This maps the request path correctly - using literal variable
+                        rewrite ^/(.*) /${Environment}/$1 break;
+
+                        # Set the proper Host header for API Gateway
+                        proxy_set_header Host ${ApiGatewayId}.execute-api.eu-west-2.amazonaws.com;
+
+                        # Pass the actual VPC endpoint - without https:// in proxy_pass
+                        proxy_pass https://vpce-0b907325ae3bfe3ce-0q79qfb6.execute-api.eu-west-2.vpce.amazonaws.com;
+
+                        # Forward the authorization header
+                        proxy_set_header Authorization $http_authorization;
+                        proxy_pass_request_headers on;
+
+                        # Add additional headers for debugging
+                        proxy_set_header X-Real-IP $remote_addr;
+                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                        proxy_set_header X-Original-URI $request_uri;
+
+                        # SSL verification settings for connecting to VPC endpoint
+                        proxy_ssl_verify off;
+                    }
+                }
+              owner: root:root
+              permissions: '0644'
+            - path: /etc/sudoers.d/ssm-agent-users
+              content: |
+                # User rules for ssm-user
+              owner: root:root
+              permissions: '0440'
+
+          runcmd:
+            - systemctl enable nginx
+            - systemctl start nginx
+      Tags:
+        - Key: Name
+          Value: !Sub "${Environment}-mm-api-developer-proxy-new"
+
+Outputs:
+  DeveloperProxyInstanceId:
+    Condition: IsDev
+    Description: Instance ID of the developer proxy
+    Value: !Ref DeveloperProxyInstance
+    Export:
+      Name: !Sub "${AWS::StackName}-DeveloperProxyInstanceId"
+
+  SSMDocumentName:
+    Condition: IsDev
+    Description: Name of the SSM document for port forwarding
+    Value: !Ref DeveloperPortForwardDocument
+    Export:
+      Name: !Sub "${AWS::StackName}-SSMDocumentName"
+
+  ApiProxyUsage:
+    Condition: IsDev
+    Description: Instructions for using the API proxy
+    Value: !Sub |
+      API Proxy available for ${Environment} environment
+
+      You will need to have the AWS session manager plugin installed (`brew install session-manager-plugin`).
+
+      To connect:
+      aws ssm start-session \
+        --target ${DeveloperProxyInstance} \
+        --document-name ${DeveloperPortForwardDocument} \
+        --parameters '{"localPortNumber":["8080"]}'
+
+      Make API requests to:
+      http://localhost:8080/endpoint
+
+      Don't forget to include your authorization header:
+      curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8080/update-email
+
+      To use a different local port:
+      aws ssm start-session \
+        --target ${DeveloperProxyInstance} \
+        --document-name ${DeveloperPortForwardDocument} \
+        --parameters '{"localPortNumber":["9000"]}'
+
+      Alternatively, you can use the provided script:
+      ci/terraform/account-management/api-proxy.sh ${Environment} [local-port]

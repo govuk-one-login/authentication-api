@@ -31,7 +31,7 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-          INTERNAL_SECTOR_URI: !If
+          INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If
               - UseSubEnvironment
