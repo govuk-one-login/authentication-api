@@ -27,19 +27,78 @@ paths:
                   passkeys:
                     type: array
                     items:
-                      $ref: "#/components/schemas/PasskeyAuthenticator"
+                      $ref: "#/components/schemas/PasskeyAuthenticatorRead"
+
+  /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
+    parameters:
+      - name: publicSubjectId
+        in: path
+        description: Public subject ID
+        required: true
+        schema:
+          type: string
+      - name: passkeyId
+        in: path
+        description: Passkey ID
+        required: true
+        schema:
+          type: string
+    patch:
+      summary: Update a passkey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyAuthenticatorUpdate"
+      responses:
+        "204":
+          description: Passkey updated
+        "400":
+          description: Trying to modify disallowed fields
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "User not found"
+                      - "Passkey not found"
 
 components:
   schemas:
-    PasskeyAuthenticator:
+    PasskeyAuthenticatorBase:
       type: object
       properties:
-        id:
-          type: string
-          example: "7f3a94c4-3079-451b-956d-d8351dca9420"
-        type:
-          type: string
-          example: "passkey"
         name:
           type: string
           example: "My passkey"
+
+    PasskeyAuthenticatorCreate:
+      $ref: "#/components/schemas/PasskeyAuthenticatorBase"
+
+    PasskeyAuthenticatorUpdate:
+      type: object
+      properties:
+        lastUsedAt:
+          type: string
+          format: date-time
+
+    PasskeyAuthenticatorRead:
+      allOf:
+        - $ref: "#/components/schemas/PasskeyAuthenticatorCreate"
+        - $ref: "#/components/schemas/PasskeyAuthenticatorUpdate"
+        - type: object
+          properties:
+            id:
+              type: string
+              example: "7f3a94c4-3079-451b-956d-d8351dca9420"
+            type:
+              type: string
+              example: "passkey"
+            createdAt:
+              type: string
+              format: date-time
