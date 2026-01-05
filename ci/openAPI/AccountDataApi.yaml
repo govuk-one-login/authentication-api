@@ -28,6 +28,16 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PasskeyAuthenticatorRead"
+    post:
+      summary: Create a passkey for a user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyAuthenticatorCreate"
+      responses:
+        "201":
+          description: Successfully created passkey
 
   /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
     parameters:
