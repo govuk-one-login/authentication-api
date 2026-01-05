@@ -10,15 +10,15 @@ paths:
     parameters:
       - name: publicSubjectId
         in: path
-        description: Public subject ID
+        description: Public Subject ID
         required: true
         schema:
           type: string
     get:
-      summary: Read all passkeys belonging to a user
+      summary: Retrieve all passkeys for a user
       responses:
         "200":
-          description: List of passkeys
+          description: Passkeys retrieved successfully
           content:
             application/json:
               schema:
@@ -37,13 +37,13 @@ paths:
               $ref: "#/components/schemas/PasskeyAuthenticatorCreate"
       responses:
         "201":
-          description: Successfully created passkey
+          description: Passkey created successfully
 
   /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
     parameters:
       - name: publicSubjectId
         in: path
-        description: Public subject ID
+        description: Public Subject ID
         required: true
         schema:
           type: string
@@ -62,11 +62,11 @@ paths:
               $ref: "#/components/schemas/PasskeyAuthenticatorUpdate"
       responses:
         "204":
-          description: Passkey updated
+          description: Passkey updated successfully
         "400":
-          description: Trying to modify disallowed fields
+          description: Invalid request - attempting to modify disallowed fields
         "404":
-          description: Not found
+          description: Resource not found
           content:
             application/json:
               schema:
@@ -81,11 +81,11 @@ paths:
       summary: Delete a passkey
       responses:
         "204":
-          description: Passkey deleted
+          description: Passkey deleted successfully
         "400":
-          description: Trying to modify disallowed fields
+          description: Invalid request - attempting to modify disallowed fields
         "404":
-          description: Not found
+          description: Resource not found
           content:
             application/json:
               schema:
