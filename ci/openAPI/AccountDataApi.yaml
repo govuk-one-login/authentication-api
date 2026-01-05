@@ -28,6 +28,17 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PasskeyAuthenticatorRead"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "User not found"
     post:
       summary: Create a passkey for a user
       requestBody:
@@ -38,6 +49,53 @@ paths:
       responses:
         "201":
           description: Passkey created successfully
+        "400":
+          description: Bad request - malformed request body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "Invalid request body"
+                      - "Missing required fields"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "User not found"
+        "409":
+          description: Passkey already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "Passkey already exists"
+        "422":
+          description: Unprocessable entity - invalid field values
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "Invalid credential format"
+                      - "Invalid AAGUID format"
+                      - "Invalid attestation signature"
 
   /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
     parameters:
@@ -65,8 +123,17 @@ paths:
           description: Passkey updated successfully
         "400":
           description: Invalid request - attempting to modify disallowed fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "Cannot modify disallowed fields"
         "404":
-          description: Resource not found
+          description: User not found
           content:
             application/json:
               schema:
@@ -82,10 +149,8 @@ paths:
       responses:
         "204":
           description: Passkey deleted successfully
-        "400":
-          description: Invalid request - attempting to modify disallowed fields
         "404":
-          description: Resource not found
+          description: User not found
           content:
             application/json:
               schema:
