@@ -99,15 +99,26 @@ paths:
 
 components:
   schemas:
-    PasskeyAuthenticatorBase:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "My passkey"
-
     PasskeyAuthenticatorCreate:
-      $ref: "#/components/schemas/PasskeyAuthenticatorBase"
+      type: object
+      required:
+        - credential
+        - id
+        - aaguid
+        - attestationSignature
+      properties:
+        credential:
+          type: string
+          description: Public key credential
+        id:
+          type: string
+          description: Passkey ID
+        aaguid:
+          type: string
+          description: Authenticator AAGUID
+        attestationSignature:
+          type: string
+          description: Authenticator attestation signature
 
     PasskeyAuthenticatorUpdate:
       type: object
@@ -122,9 +133,6 @@ components:
         - $ref: "#/components/schemas/PasskeyAuthenticatorUpdate"
         - type: object
           properties:
-            id:
-              type: string
-              example: "7f3a94c4-3079-451b-956d-d8351dca9420"
             type:
               type: string
               example: "passkey"
