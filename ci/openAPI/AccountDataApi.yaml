@@ -15,7 +15,10 @@ paths:
         schema:
           type: string
     get:
+      tags:
+        - Passkey
       summary: Retrieve all passkeys for a user
+      description: Get all passkeys registered to a user account.
       responses:
         "200":
           description: Passkeys retrieved successfully
@@ -40,7 +43,10 @@ paths:
                     enum:
                       - "User not found"
     post:
+      tags:
+        - Passkey
       summary: Create a passkey for a user
+      description: Register a new passkey authenticator for a user account.
       requestBody:
         content:
           application/json:
@@ -112,7 +118,10 @@ paths:
         schema:
           type: string
     patch:
+      tags:
+        - Passkey
       summary: Update a passkey
+      description: Update passkey metadata such as last used timestamp.
       requestBody:
         content:
           application/json:
@@ -145,7 +154,10 @@ paths:
                       - "User not found"
                       - "Passkey not found"
     delete:
+      tags:
+        - Passkey
       summary: Delete a passkey
+      description: Remove a passkey authenticator from a user account.
       responses:
         "204":
           description: Passkey deleted successfully
