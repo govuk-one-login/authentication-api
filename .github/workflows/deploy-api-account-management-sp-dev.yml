@@ -1,5 +1,5 @@
-name: "SP - Build and deploy API Account Management Dev"
-
+name: "SP - DEV: Build and deploy Account Management API to Dev"
+run-name: "DEV: Build and deploy Account Management API to ${{ inputs.environment }}"
 on:
   workflow_dispatch:
     inputs:
