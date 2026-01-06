@@ -73,16 +73,15 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref AuthorizerFunction.Arn
-      Principal:
-        AWS: !Sub
-          - "arn:aws:iam::${DataStoreAccountId}:root"
-          - DataStoreAccountId:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                dataStoreAccountId,
-              ]
+      FunctionName: !GetAtt AuthorizerFunction.Arn
+      Principal: !Sub
+        - "arn:aws:iam::${DataStoreAccountId}:root"
+        - DataStoreAccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              dataStoreAccountId,
+            ]
 
   AuthorizerFunctionLogGroup:
     Type: AWS::Logs::LogGroup
