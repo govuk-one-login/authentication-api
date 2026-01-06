@@ -256,7 +256,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: !Sub
-        - "/acceptance-tests${Env}/AUTH_AM_AUTHORIZER_LAMBDA_NAME"
+        - "/acceptance-tests/${Env}/AUTH_AM_AUTHORIZER_LAMBDA_NAME"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Type: String
       Value: !GetAtt AuthorizerFunction.Arn
