@@ -163,6 +163,20 @@ Resources:
       FilterPattern: ""
       LogGroupName: !Ref AccountManagementApiExecutionLogGroup
 
+AccountManagementApiIdParameter:
+  Type: AWS::SSM::Parameter
+  Properties:
+    Name: !Sub
+      - "/acceptance-tests/${Env}/AUTH_AM_API_ID"
+      - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+    Type: String
+    Value: !Ref AccountManagementApi
+    Description: "Account Management API ID used by Acceptance test "
+    Tags:
+      Name: !Sub "${AWS::StackName}-AccountManagementApiId"
+      Environment: !Ref Environment
+      Source: govuk-one-login/authentication-api/ci/cloudformation/account-management/api/account-management-method-management-api
+
 Outputs:
   AccountManagementApiId:
     Value: !Ref AccountManagementApi

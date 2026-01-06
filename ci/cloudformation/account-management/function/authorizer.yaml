@@ -69,6 +69,21 @@ Resources:
       FunctionName: !Ref AuthorizerFunction.Alias
       Principal: apigateway.amazonaws.com
 
+  AuthorizerFunctionAliasPermissionOldAwsAcct:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AuthorizerFunction.Arn
+      Principal:
+        AWS: !Sub
+          - "arn:aws:iam::${DataStoreAccountId}:root"
+          - DataStoreAccountId:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dataStoreAccountId,
+              ]
+
   AuthorizerFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -237,6 +252,19 @@ Resources:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Ref AuthorizerFunctionLogGroup
+
+  AuthorizerFunctionArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub
+        - "/acceptance-tests${Env}/AUTH_AM_AUTHORIZER_LAMBDA_NAME"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Type: String
+      Value: !GetAtt AuthorizerFunction.Arn
+      Description: "ARN for the API Gateway Authorizer Lambda function"
+      Tags:
+        Environment: !Ref Environment
+        Source: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/authorizer.yaml
 
 Outputs:
   AuthorizerFunctionArn:

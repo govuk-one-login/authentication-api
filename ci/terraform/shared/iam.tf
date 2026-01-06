@@ -105,6 +105,7 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
     effect = "Allow"
     actions = [
       "apigateway:GET",
+      "execute-api:*",
       "lambda:InvokeFunction",
       "s3:ListBucket",
       "s3:GetObject",
@@ -113,6 +114,13 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
     resources = [
       "arn:aws:apigateway:eu-west-2::/restapis",
       "arn:aws:apigateway:eu-west-2::/restapis/*",
+      "arn:aws:execute-api:eu-west-2:975050272416:*",
+      "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-api_gateway_authorizer",
+      "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-authenticate-lambda",
+      "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-mfa-methods-create-lambda",
+      "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-mfa-methods-retrieve-lambda",
+      "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-mfa-methods-update-lambda",
+      "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-send-otp-notification-lambda",
       "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-api_gateway_authorizer",
       "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-authenticate-lambda",
       "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-mfa-methods-create-lambda",
@@ -120,7 +128,9 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-mfa-methods-update-lambda",
       "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-send-otp-notification-lambda",
       "arn:aws:s3:::${var.environment}-am-api-acceptance-tests-otp",
-      "arn:aws:s3:::${var.environment}-am-api-acceptance-tests-otp/*"
+      "arn:aws:s3:::${var.environment}-am-api-acceptance-tests-otp/*",
+      "arn:aws:s3:::${var.environment}-am-api-acceptance-test-otp",
+      "arn:aws:s3:::${var.environment}-am-api-acceptance-test-otp/*"
     ]
   }
 }
