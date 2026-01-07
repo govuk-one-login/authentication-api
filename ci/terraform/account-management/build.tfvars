@@ -1,7 +1,8 @@
 common_state_bucket = "digital-identity-dev-tfstate"
 
 # URIs
-internal_sector_uri = "https://identity.build.account.gov.uk"
+internal_sector_uri   = "https://identity.build.account.gov.uk"
+access_token_jwks_url = "https://oidc.build.account.gov.uk/.well-known/jwks.json"
 
 # Sizing
 redis_node_size        = "cache.t2.small"
