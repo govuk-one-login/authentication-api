@@ -598,6 +598,21 @@ data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_doc
   }
 
   dynamic "statement" {
+    for_each = !contains(["integration", "production"], var.environment) ? [1] : []
+    content {
+      actions = [
+        "dynamodb:DeleteItem"
+      ]
+      effect = "Allow"
+      principals {
+        identifiers = [var.auth_new_account_id]
+        type        = "AWS"
+      }
+      resources = ["*"]
+    }
+  }
+
+  dynamic "statement" {
     for_each = contains(["integration", "production"], var.environment) ? [1] : []
     content {
       sid    = "DenyNonAdminTeamRolesAccess"
@@ -761,7 +776,6 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
       "dynamodb:BatchWriteItem",
       "dynamodb:UpdateItem",
       "dynamodb:PutItem",
-      "dynamodb:DeleteItem",
     ]
     effect = "Allow"
     principals {
@@ -769,6 +783,22 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
       type        = "AWS"
     }
     resources = ["*"]
+  }
+
+  dynamic "statement" {
+    # This Dynamic statement is only applied in Lower enviorment for AM Accptance test
+    for_each = !contains(["integration", "production"], var.environment) ? [1] : []
+    content {
+      actions = [
+        "dynamodb:DeleteItem"
+      ]
+      effect = "Allow"
+      principals {
+        identifiers = [var.auth_new_account_id]
+        type        = "AWS"
+      }
+      resources = ["*"]
+    }
   }
 
   dynamic "statement" {
