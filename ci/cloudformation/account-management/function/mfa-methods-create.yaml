@@ -7,14 +7,6 @@ Resources:
         - ${Env}-account-management-mfa-methods-create-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          mfaMethodsCreateMemorySize,
-          DefaultValue: 1536,
-        ]
-
       ProvisionedConcurrencyConfig: !If
         - MfaMethodsProvisionedConcurrency
         - ProvisionedConcurrentExecutions:

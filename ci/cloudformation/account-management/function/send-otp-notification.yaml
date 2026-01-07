@@ -7,12 +7,6 @@ Resources:
         - ${Env}-send-otp-notification-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          sendOtpNotificationMemorySize,
-        ]
       ProvisionedConcurrencyConfig: !If
         - SendOtpNotificationProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
