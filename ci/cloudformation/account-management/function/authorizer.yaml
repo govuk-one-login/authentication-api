@@ -47,6 +47,16 @@ Resources:
               !Ref Environment,
               testSigningKeyEnabled,
             ]
+          USE_ACCESS_TOKEN_JWKS_ENDPOINT: !If
+            - UseAccessTokenJwksEndpoint
+            - true
+            - false
+          ACCESS_TOKEN_JWKS_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              accessTokenJwksUrl,
+            ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:
