@@ -515,6 +515,19 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public boolean useAccessTokenJwksEndpoint() {
+        return getFlagOrFalse("USE_ACCESS_TOKEN_JWKS_ENDPOINT");
+    }
+
+    public URL getAccessTokenJwksUrl() throws MalformedURLException {
+        try {
+            return new URL(System.getenv().getOrDefault("ACCESS_TOKEN_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid JWKS URL: {}", e.getMessage());
+            throw new MalformedURLException(e.getMessage());
+        }
+    }
+
     public String getTokenSigningKeyRsaAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
@@ -646,6 +659,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getLegacyAccountDeletionTopicArn() {
         return System.getenv("LEGACY_ACCOUNT_DELETION_TOPIC_ARN");
+    }
+
+    private boolean getFlagOrFalse(String envVar) {
+        return System.getenv().containsKey(envVar) && Boolean.parseBoolean(System.getenv(envVar));
     }
 
     private URI getURIOrDefault(String envVar, String defaultUri) {

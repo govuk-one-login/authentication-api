@@ -37,6 +37,16 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+          USE_ACCESS_TOKEN_JWKS_ENDPOINT: !If
+            - UseAccessTokenJwksEndpoint
+            - true
+            - false
+          ACCESS_TOKEN_JWKS_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              accessTokenJwksUrl,
+            ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:
