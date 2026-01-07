@@ -2895,10 +2895,6 @@ Resources:
       BucketName: !Sub
         - "${Env}-am-api-acceptance-test-otp"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: aws:kms
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
