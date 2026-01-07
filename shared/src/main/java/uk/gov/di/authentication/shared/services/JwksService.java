@@ -84,15 +84,15 @@ public class JwksService {
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {
         JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
-        JWKSource<SecurityContext> jwkSource =
-                JWKSourceBuilder.create(url)
-                        .retrying(true)
-                        .refreshAheadCache(false)
-                        .cache(false)
-                        .rateLimited(false)
-                        .build();
         try {
-            LOG.info("Retrieving JWKSet with URL: {}", url);
+            LOG.info("Retrieving JWKSet with with URL: {}", url);
+            JWKSource<SecurityContext> jwkSource =
+                    JWKSourceBuilder.create(url)
+                            .retrying(true)
+                            .refreshAheadCache(false)
+                            .cache(false)
+                            .rateLimited(false)
+                            .build();
             return jwkSource.get(selector, null).stream()
                     .findFirst()
                     .orElseThrow(() -> new KeySourceException("No key found with given keyID"));
