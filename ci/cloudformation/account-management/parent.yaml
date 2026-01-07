@@ -2923,7 +2923,7 @@ Resources:
                       !Ref Environment,
                       dataStoreAccountId,
                     ]
-                - Env:
+                  Env:
                     !If [
                       UseSubEnvironment,
                       !Ref SubEnvironment,
