@@ -2916,12 +2916,18 @@ Resources:
             Effect: Allow
             Principal:
               AWS: !Sub
-                - "arn:aws:iam::${DataStoreAccountId}:role/CrossAccountRole-new-dev"
+                - "arn:aws:iam::${DataStoreAccountId}:role/CrossAccountRole-new-${Env}"
                 - DataStoreAccountId:
                     !FindInMap [
                       EnvironmentConfiguration,
                       !Ref Environment,
                       dataStoreAccountId,
+                    ]
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
                     ]
             Action:
               - s3:ListBucket
