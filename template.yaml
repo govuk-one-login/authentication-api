@@ -345,6 +345,7 @@ Resources:
     Properties:
       AliasName: "alias/mainKmsKey"
       TargetKeyId: !Ref MainKmsKey
+
   MainKmsKey:
     Type: AWS::KMS::Key
     Properties:
