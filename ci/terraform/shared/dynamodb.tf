@@ -761,6 +761,7 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
       "dynamodb:BatchWriteItem",
       "dynamodb:UpdateItem",
       "dynamodb:PutItem",
+      "dynamodb:DeleteItem",
     ]
     effect = "Allow"
     principals {
