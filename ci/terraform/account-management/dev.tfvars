@@ -1,7 +1,8 @@
 common_state_bucket = "di-auth-development-tfstate"
 
 # URIs
-internal_sector_uri = "https://identity.dev.account.gov.uk"
+internal_sector_uri   = "https://identity.dev.account.gov.uk"
+access_token_jwks_url = "https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json"
 
 # Sizing
 redis_node_size        = "cache.t2.small"
@@ -15,6 +16,7 @@ mfa_method_management_api_enabled            = true
 test_clients_enabled                         = true
 ais_call_in_authenticate_enabled             = true
 account_management_international_sms_enabled = false
+use_access_token_jwks_endpoint               = true
 
 # Durations
 lockout_duration                          = 30
