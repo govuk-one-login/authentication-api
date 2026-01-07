@@ -2904,6 +2904,69 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
+  AmApiAcceptanceTestsOtpBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: CreateTestBucket
+    Properties:
+      Bucket: !Ref AmApiAcceptanceTestsOtpBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowCrossAccountRoleAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - "arn:aws:iam::${DataStoreAccountId}:role/CrossAccountRole-new-dev"
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+            Action:
+              - s3:ListBucket
+              - s3:GetObject
+              - s3:DeleteObject
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${Env}-am-api-acceptance-test-otp"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:s3:::${Env}-am-api-acceptance-test-otp/*"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowSameAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: s3:*
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${Env}-am-api-acceptance-test-otp"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:s3:::${Env}-am-api-acceptance-test-otp/*"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
   S3AcceptanceTestsBucketPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
