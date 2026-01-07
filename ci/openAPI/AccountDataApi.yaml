@@ -1,0 +1,218 @@
+openapi: "3.0.1"
+
+info:
+  title: "account-data-api"
+  version: 0.0.3
+  description: Account Data API
+
+paths:
+  /accounts/{publicSubjectId}/authenticators/passkeys:
+    parameters:
+      - name: publicSubjectId
+        in: path
+        description: Public Subject ID
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Passkey
+      summary: Retrieve all passkeys for a user
+      description: Get all passkeys registered to a user account.
+      responses:
+        "200":
+          description: Passkeys retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  passkeys:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PasskeyAuthenticatorRead"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "User not found"
+    post:
+      tags:
+        - Passkey
+      summary: Create a passkey for a user
+      description: Register a new passkey authenticator for a user account.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyAuthenticatorCreate"
+      responses:
+        "201":
+          description: Passkey created successfully
+        "400":
+          description: Bad request - malformed request body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "Invalid request body"
+                      - "Missing required fields"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "User not found"
+        "409":
+          description: Passkey already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "Passkey already exists"
+        "422":
+          description: Unprocessable entity - invalid field values
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "Invalid credential format"
+                      - "Invalid AAGUID format"
+                      - "Invalid attestation signature"
+
+  /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
+    parameters:
+      - name: publicSubjectId
+        in: path
+        description: Public Subject ID
+        required: true
+        schema:
+          type: string
+      - name: passkeyId
+        in: path
+        description: Passkey ID
+        required: true
+        schema:
+          type: string
+    patch:
+      tags:
+        - Passkey
+      summary: Update a passkey
+      description: Update passkey metadata such as last used timestamp.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyAuthenticatorUpdate"
+      responses:
+        "204":
+          description: Passkey updated successfully
+        "400":
+          description: Invalid request - attempting to modify disallowed fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "Cannot modify disallowed fields"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "User not found"
+                      - "Passkey not found"
+    delete:
+      tags:
+        - Passkey
+      summary: Delete a passkey
+      description: Remove a passkey authenticator from a user account.
+      responses:
+        "204":
+          description: Passkey deleted successfully
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "User not found"
+                      - "Passkey not found"
+
+components:
+  schemas:
+    PasskeyAuthenticatorCreate:
+      type: object
+      required:
+        - credential
+        - id
+        - aaguid
+        - attestationSignature
+      properties:
+        credential:
+          type: string
+          description: Public key credential
+        id:
+          type: string
+          description: Passkey ID
+        aaguid:
+          type: string
+          description: Authenticator AAGUID
+        attestationSignature:
+          type: string
+          description: Authenticator attestation signature
+
+    PasskeyAuthenticatorUpdate:
+      type: object
+      properties:
+        lastUsedAt:
+          type: string
+          format: date-time
+
+    PasskeyAuthenticatorRead:
+      allOf:
+        - $ref: "#/components/schemas/PasskeyAuthenticatorCreate"
+        - $ref: "#/components/schemas/PasskeyAuthenticatorUpdate"
+        - type: object
+          properties:
+            type:
+              type: string
+              example: "passkey"
+            createdAt:
+              type: string
+              format: date-time
