@@ -396,7 +396,6 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f944cc04-ec31-4ff5-843f-c72e87f5f334
-      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6f8567bc-37aa-4a12-a3e7-87312701ebcb
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
       emailAcctCreationOtpCodeTtlDuration: 600
@@ -459,7 +458,6 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5f9f975-760d-4c34-ade5-7cc91ba09a7e
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
-      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/cc4448e9-1b9d-4309-ad65-deb619dc444c
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/55684f22-2ed2-4dab-bbde-c4381c66ff79
       AMApiFMSTagValue: accountmanagement
@@ -527,7 +525,6 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/bfeb0cf7-41fd-4ef5-bf3e-5cbda059a375
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
-      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/353a8367-d45a-47b5-b16b-b94cd163ab22
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/4812e1de-a6f5-459b-9328-1865e3a72176
       AMApiFMSTagValue: accountmanagementbuild
       cloudwatchLogRetentionInDays: 7
@@ -599,7 +596,6 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/f2cbc2f5-78d9-4e13-9f23-7b46907b91e6
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
-      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/cb787cef-819e-4824-b678-c6c172cc78cf
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       AMApiFMSTagValue: accountmanagementstaging
       cloudwatchLogRetentionInDays: 7
@@ -2815,55 +2811,6 @@ Resources:
                 - !Sub arn:aws:s3:::${Environment}-smoke-new-test-sms-codes
                 - !Sub arn:aws:s3:::${Environment}-smoke-new-test-sms-codes/*
 
-  TestClientEmailAllowListSecretEncryptionKey:
-    Condition: ProvisionTestClientSecret
-    Type: AWS::KMS::Key
-    Properties:
-      Description: KMS encryption key for test client email allow list
-      EnableKeyRotation: true
-      KeyPolicy:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowIamManagement
-            Effect: Allow
-            Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
-            Action: kms:*
-            Resource: "*"
-
-  TestClientEmailAllowListSecret:
-    Condition: ProvisionTestClientSecret
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub
-        - /${Env}/am-test-client-email-allow-list
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      KmsKeyId: !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
-
-  TestClientEmailAllowListSecretAccessPolicy:
-    Condition: ProvisionTestClientSecret
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "IAM policy for manging access to the test client email allow list secret"
-      Path: !Sub
-        - /${Env}/
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowGetSecretValue
-            Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource:
-              - !Ref TestClientEmailAllowListSecret
-          - Sid: AllowSecretDecrypt
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
-
   # Missing KMS policies from Terraform migration
   ClientRegistryTableKmsPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2948,10 +2895,6 @@ Resources:
       BucketName: !Sub
         - "${Env}-am-api-acceptance-test-otp"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: aws:kms
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -2960,6 +2903,69 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+
+  AmApiAcceptanceTestsOtpBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: CreateTestBucket
+    Properties:
+      Bucket: !Ref AmApiAcceptanceTestsOtpBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowCrossAccountRoleAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - "arn:aws:iam::${DataStoreAccountId}:role/CrossAccountRole-new-dev"
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+            Action:
+              - s3:ListBucket
+              - s3:GetObject
+              - s3:DeleteObject
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${Env}-am-api-acceptance-test-otp"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:s3:::${Env}-am-api-acceptance-test-otp/*"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowSameAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: s3:*
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${Env}-am-api-acceptance-test-otp"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:s3:::${Env}-am-api-acceptance-test-otp/*"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
 
   S3AcceptanceTestsBucketPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2998,15 +3004,6 @@ Resources:
                       !Ref SubEnvironment,
                       !Ref Environment,
                     ]
-              # Additional pattern for Terraform compatibility
-              - !Sub
-                - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Env}/test-client-email-allow-list-wekalx"
-                - Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
           - !If
             - HasTestClientSecretKey
             - Sid: AllowSecretDecrypt
@@ -3014,33 +3011,13 @@ Resources:
               Action:
                 - kms:Decrypt
               Resource:
-                - !If
-                  - UseSubEnvironment
-                  - !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref SubEnvironment,
-                      testClientSecretEncryptionKey,
-                      DefaultValue: "",
-                    ]
-                  - !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      testClientSecretEncryptionKey,
-                      DefaultValue: "",
-                    ]
                 - !Sub
-                  - "arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${Env}-test-client-secret-encryption-key"
+                  - "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-test-client-secret-encryption-key"
                   - Env:
                       !If [
                         UseSubEnvironment,
                         !Ref SubEnvironment,
                         !Ref Environment,
-                      ]
-                    DataStoreAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        dataStoreAccountId,
                       ]
             - !Ref AWS::NoValue
   AccountModifiersTableKmsPolicy:

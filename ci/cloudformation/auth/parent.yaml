@@ -2312,6 +2312,31 @@ Resources:
               AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: kms:*
             Resource: "*"
+          - Sid: AllowCrossAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${DataStoreAccountId}:root
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+              - kms:DescribeKey
+            Resource: "*"
+
+  TestClientEmailAllowListSecretEncryptionKeyAlias:
+    Condition: ProvisionTestClientSecret
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - alias/${Env}-test-client-secret-encryption-key
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref TestClientEmailAllowListSecretEncryptionKey
 
   TestClientEmailAllowListSecret:
     Condition: ProvisionTestClientSecret
