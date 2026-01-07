@@ -19,6 +19,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
@@ -44,6 +45,13 @@ public class JwksService {
             ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
         this.configurationService = configurationService;
         this.kmsConnectionService = kmsConnectionService;
+    }
+
+    public JWK getPublicTokenJwkWithOpaqueId(String keyId) throws MalformedURLException {
+        LOG.info("Retrieving EC public key");
+        return configurationService.useAccessTokenJwksEndpoint()
+                ? retrieveJwkFromURLWithKeyId(configurationService.getAccessTokenJwksUrl(), keyId)
+                : getPublicJWKWithKeyId(configurationService.getTokenSigningKeyAlias());
     }
 
     public JWK getPublicTokenJwkWithOpaqueId() {

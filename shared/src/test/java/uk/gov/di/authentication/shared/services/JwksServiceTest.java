@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
+import java.net.MalformedURLException;
 import java.util.Base64;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -27,7 +28,7 @@ class JwksServiceTest {
             new JwksService(configurationService, kmsConnectionService);
 
     @Test
-    void shouldRetrievePublicTokenSigningKeyFromKmsAndParseToJwk() {
+    void shouldRetrievePublicTokenSigningKeyFromKmsAndParseToJwk() throws MalformedURLException {
         byte[] publicKey =
                 Base64.getDecoder()
                         .decode(
@@ -47,7 +48,8 @@ class JwksServiceTest {
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
 
-        JWK publicKeyJwk = jwksService.getPublicTokenJwkWithOpaqueId();
+        JWK publicKeyJwk =
+                jwksService.getPublicTokenJwkWithOpaqueId(hashSha256String("14342354354353"));
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String("14342354354353")));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
