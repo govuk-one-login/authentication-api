@@ -103,7 +103,7 @@ public class JwksService {
                         .rateLimited(false)
                         .build();
         try {
-            LOG.info("Retrieving JWKSet with URL: {}", url);
+            LOG.info("Retrieving JWKSet with with URL: {}", url);
             return jwkSource.get(selector, null).stream()
                     .findFirst()
                     .orElseThrow(() -> new KeySourceException("No key found with given keyID"));
