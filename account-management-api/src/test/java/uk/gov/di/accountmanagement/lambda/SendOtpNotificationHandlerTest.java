@@ -76,6 +76,7 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSI
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_EMAIL_FORMAT;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.PERSISTENT_ID_HEADER_NAME;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -166,6 +167,7 @@ class SendOtpNotificationHandlerTest {
         when(configurationService.getTestClientVerifyPhoneNumberOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
+        when(configurationService.isAccountManagementInternationalSmsEnabled()).thenReturn(true);
     }
 
     @AfterEach
@@ -368,6 +370,30 @@ class SendOtpNotificationHandlerTest {
 
         verify(cloudwatchMetricsService, only())
                 .incrementCounter(eq("UserSubmittedCredential"), anyMap());
+    }
+
+    @Test
+    void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
+        when(configurationService.isAccountManagementInternationalSmsEnabled()).thenReturn(false);
+
+        var event = createEmptyEvent();
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                        TEST_TEST_USER_EMAIL_ADDRESS,
+                        VERIFY_PHONE_NUMBER,
+                        INTERNATIONAL_MOBILE_NUMBER));
+
+        var result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertTrue(
+                result.getBody()
+                        .contains(
+                                String.valueOf(
+                                        ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED
+                                                .getCode())));
+        verifyNoInteractions(emailSqsClient);
     }
 
     @Nested

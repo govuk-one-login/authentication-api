@@ -83,6 +83,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.containsMetadataPair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -183,8 +184,10 @@ class MFAMethodsCreateHandlerTest {
 
     @BeforeEach
     void setUp() {
-        reset(mfaMethodsService);
+        reset(mfaMethodsService, cloudwatchMetricsService);
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
+        when(configurationService.isAccountManagementInternationalSmsEnabled()).thenReturn(true);
+        when(configurationService.getEnvironment()).thenReturn("test");
         handler =
                 new MFAMethodsCreateHandler(
                         configurationService,
@@ -587,6 +590,25 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
+            verifyNoInteractions(sqsClient);
+            verifyNoInteractions(auditService);
+        }
+
+        @Test
+        void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
+            when(configurationService.isAccountManagementInternationalSmsEnabled())
+                    .thenReturn(false);
+
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(INTERNATIONAL_MOBILE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED));
             verifyNoInteractions(sqsClient);
             verifyNoInteractions(auditService);
         }

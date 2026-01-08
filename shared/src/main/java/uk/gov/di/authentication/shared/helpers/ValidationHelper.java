@@ -47,6 +47,14 @@ public class ValidationHelper {
 
     public static Optional<ErrorResponse> validatePhoneNumber(
             String phoneNumberInput, String environment, boolean isSmokeTest) {
+        return validatePhoneNumber(phoneNumberInput, environment, isSmokeTest, true);
+    }
+
+    public static Optional<ErrorResponse> validatePhoneNumber(
+            String phoneNumberInput,
+            String environment,
+            boolean isSmokeTest,
+            boolean allowInternational) {
         if (isValidTestNumberForEnvironment(phoneNumberInput, environment, isSmokeTest)) {
             return Optional.empty();
         }
@@ -72,8 +80,18 @@ public class ValidationHelper {
             LOG.warn("Invalid phone number: not a mobile number.  NumberType {}", phoneNumberType);
             return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         }
+
+        if (!allowInternational && isInternationalNumber(phoneNumber)) {
+            LOG.warn("International phone number not allowed");
+            return Optional.of(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED);
+        }
+
         LOG.info("Accepted phone NumberType {}", phoneNumberType);
         return Optional.empty();
+    }
+
+    private static boolean isInternationalNumber(Phonenumber.PhoneNumber phoneNumber) {
+        return phoneNumber.getCountryCode() != 44; // UK country code is 44
     }
 
     static boolean isAcceptedPhoneNumberType(PhoneNumberType phoneNumberType) {

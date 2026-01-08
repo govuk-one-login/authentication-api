@@ -263,7 +263,8 @@ public class SendOtpNotificationHandler
                         validatePhoneNumber(
                                 sendNotificationRequest.getPhoneNumber(),
                                 configurationService.getEnvironment(),
-                                false);
+                                false,
+                                configurationService.isAccountManagementInternationalSmsEnabled());
 
                 if (response.isPresent()) {
                     return generateApiGatewayProxyErrorResponse(400, response.get());
