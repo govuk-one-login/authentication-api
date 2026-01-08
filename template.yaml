@@ -1428,7 +1428,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -1584,7 +1584,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -1731,7 +1731,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -1887,7 +1887,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 25
@@ -2122,7 +2122,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -2328,7 +2328,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -2590,7 +2590,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -2751,7 +2751,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -3165,7 +3165,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -3387,7 +3387,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -3509,7 +3509,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -3804,7 +3804,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -4007,7 +4007,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -4197,7 +4197,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -4861,7 +4861,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -5170,7 +5170,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -5376,7 +5376,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
