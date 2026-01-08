@@ -2370,3 +2370,13 @@ Resources:
               - kms:Decrypt
             Resource:
               - !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
+
+Outputs:
+  TestClientEmailAllowListSecretEncryptionKeyArn:
+    Condition: ProvisionTestClientSecret
+    Description: ARN of the KMS key used to encrypt the test client email allow list secret
+    Value: !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
+    Export:
+      Name: !Sub
+        - ${Env}-test-client-secret-encryption-key-arn
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]

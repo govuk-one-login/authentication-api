@@ -3017,6 +3017,14 @@ Resources:
               Action:
                 - kms:Decrypt
               Resource:
+                - Fn::ImportValue: !Sub
+                    - "${Env}-test-client-secret-encryption-key-arn"
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
                 - !Sub
                   - "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-test-client-secret-encryption-key"
                   - Env:
