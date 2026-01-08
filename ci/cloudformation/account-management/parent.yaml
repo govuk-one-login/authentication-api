@@ -525,7 +525,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/bfeb0cf7-41fd-4ef5-bf3e-5cbda059a375
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
-      TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/4812e1de-a6f5-459b-9328-1865e3a72176
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
       AMApiFMSTagValue: accountmanagementbuild
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -3017,6 +3017,14 @@ Resources:
               Action:
                 - kms:Decrypt
               Resource:
+                - Fn::ImportValue: !Sub
+                    - "${Env}-test-client-secret-encryption-key-arn"
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
                 - !Sub
                   - "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-test-client-secret-encryption-key"
                   - Env:
