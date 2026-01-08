@@ -205,18 +205,20 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         auditContext = auditContext.withUserId(internalCommonSubjectId);
 
         UserPermissionContext userPermissionContext =
-                UserPermissionContext.builder()
-                        .withInternalSubjectId(userProfile.getSubjectID())
-                        .withRpPairwiseId(calculatedPairwiseId)
-                        .withEmailAddress(userProfile.getEmail())
-                        .build();
+                new UserPermissionContext(
+                        userProfile.getSubjectID(),
+                        calculatedPairwiseId,
+                        userProfile.getEmail(),
+                        null);
 
         var decisionResult =
                 permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
         if (decisionResult.isFailure()) {
             DecisionError failure = decisionResult.getFailure();
             LOG.error("Failure to get canReceivePassword decision due to {}", failure);
-            return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(failure);
+            var httpResponse = DecisionErrorHttpMapper.toHttpResponse(failure);
+            return generateApiGatewayProxyErrorResponse(
+                    httpResponse.statusCode(), httpResponse.errorResponse());
         }
 
         var decision = decisionResult.getSuccess();
@@ -416,7 +418,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (decisionResult.isFailure()) {
             DecisionError failure = decisionResult.getFailure();
             LOG.error("Failure to get canReceivePassword decision due to {}", failure);
-            return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(failure);
+            var httpResponse = DecisionErrorHttpMapper.toHttpResponse(failure);
+            return generateApiGatewayProxyErrorResponse(
+                    httpResponse.statusCode(), httpResponse.errorResponse());
         }
 
         var decision = decisionResult.getSuccess();

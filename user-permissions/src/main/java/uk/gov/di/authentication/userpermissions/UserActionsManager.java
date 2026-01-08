@@ -55,31 +55,6 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectEmailAddressReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        if (journeyType == JourneyType.REAUTHENTICATION) {
-            try {
-
-                String identifier =
-                        userPermissionContext.internalSubjectId() != null
-                                ? userPermissionContext.internalSubjectId()
-                                : userPermissionContext.rpPairwiseId();
-                getAuthenticationAttemptsService()
-                        .createOrIncrementCount(
-                                identifier,
-                                NowHelper.nowPlus(
-                                                configurationService.getReauthEnterEmailCountTTL(),
-                                                ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond(),
-                                JourneyType.REAUTHENTICATION,
-                                CountType.ENTER_EMAIL);
-            } catch (RuntimeException e) {
-                LOG.error(
-                        "Failed to store incorrect email count in AuthenticationAttemptsService",
-                        e);
-                return Result.failure(TrackingError.STORAGE_SERVICE_ERROR);
-            }
-        }
-
         return Result.success(null);
     }
 
