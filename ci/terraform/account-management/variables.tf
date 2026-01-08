@@ -208,6 +208,12 @@ variable "mfa_method_management_api_enabled" {
   default     = false
 }
 
+variable "account_management_international_sms_enabled" {
+  description = "Feature flag to control whether international phone numbers can be added as MFA methods"
+  type        = bool
+  default     = true
+}
+
 variable "account_intervention_service_uri" {
   default = ""
   type    = string
