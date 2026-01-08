@@ -1073,6 +1073,39 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TargetKeyId: !Ref MainKmsKey
 
+  TestIdTokenSigningKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Condition: IsNotProduction
+    Properties:
+      Description: KMS signing key for ID tokens used for acceptance tests
+      Enabled: true
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: ["kms:Sign", "kms:GetPublicKey", "kms:DescribeKey"]
+            Resource: "*"
+      KeyUsage: SIGN_VERIFY
+      PendingWindowInDays: 30
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+
+  TestIdTokenSigningKeyAlias:
+    Type: AWS::KMS::Alias
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Condition: IsNotProduction
+    Properties:
+      AliasName: !Sub "alias/${Environment}-test-id-token-signing-key-alias"
+      TargetKeyId: !Ref TestIdTokenSigningKey
+
   # ----------------
   # Managed policies
   # ----------------
