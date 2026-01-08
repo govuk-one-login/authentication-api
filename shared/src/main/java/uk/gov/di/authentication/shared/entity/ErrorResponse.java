@@ -113,7 +113,8 @@ public enum ErrorResponse {
     FAILED_TO_RAISE_AUDIT_EVENT(1087, "Failed to raise an audit event"),
     STORAGE_LAYER_ERROR(1088, "Error retrieving account details"),
     EMAIL_ADDRESS_DENIED(1089, "Email address is denied"),
-    UNHANDLED_NEGATIVE_DECISION(1090, "Permissions manager negative decision was not handled");
+    UNHANDLED_NEGATIVE_DECISION(1090, "Permissions manager negative decision was not handled"),
+    INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED(1091, "International phone numbers are not supported");
 
     private int code;
 
