@@ -159,12 +159,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             }
 
             var userPermissionContext =
-                    UserPermissionContext.builder()
-                            .withInternalSubjectId(
-                                    userContext.getAuthSession().getInternalCommonSubjectId())
-                            .withEmailAddress(request.getEmail())
-                            .withAuthSessionItem(userContext.getAuthSession())
-                            .build();
+                    new UserPermissionContext(
+                            userContext.getAuthSession().getInternalCommonSubjectId(),
+                            null,
+                            request.getEmail(),
+                            userContext.getAuthSession());
 
             var permissionCheckResult = checkUserPermissions(request.getEmail(), userContext);
             if (permissionCheckResult.isFailure()) {
@@ -316,12 +315,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private Result<APIGatewayProxyResponseEvent, Void> checkUserPermissions(
             String email, UserContext userContext) {
         var userPermissionContext =
-                UserPermissionContext.builder()
-                        .withInternalSubjectId(
-                                userContext.getAuthSession().getInternalCommonSubjectId())
-                        .withEmailAddress(email)
-                        .withAuthSessionItem(userContext.getAuthSession())
-                        .build();
+                new UserPermissionContext(
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        null,
+                        email,
+                        userContext.getAuthSession());
 
         var canSendResult =
                 permissionDecisionManager.canSendEmailOtpNotification(
@@ -367,12 +365,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             String email, UserContext userContext) {
         LOG.info("Validating Password Reset Count");
         var userPermissionContext =
-                UserPermissionContext.builder()
-                        .withInternalSubjectId(
-                                userContext.getAuthSession().getInternalCommonSubjectId())
-                        .withEmailAddress(email)
-                        .withAuthSessionItem(userContext.getAuthSession())
-                        .build();
+                new UserPermissionContext(
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        null,
+                        email,
+                        userContext.getAuthSession());
 
         var canSendResult =
                 permissionDecisionManager.canSendEmailOtpNotification(

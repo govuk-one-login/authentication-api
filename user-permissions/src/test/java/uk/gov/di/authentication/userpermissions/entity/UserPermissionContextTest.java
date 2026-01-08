@@ -3,8 +3,6 @@ package uk.gov.di.authentication.userpermissions.entity;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -30,7 +28,7 @@ class UserPermissionContextTest {
                         .build();
 
         // Then
-        assertEquals(List.of(INTERNAL_SUBJECT_ID), context.internalSubjectIds());
+        assertEquals(INTERNAL_SUBJECT_ID, context.internalSubjectId());
         assertEquals(RP_PAIRWISE_ID, context.rpPairwiseId());
         assertEquals(EMAIL_ADDRESS, context.emailAddress());
         assertNotNull(context.authSessionItem());
@@ -43,7 +41,7 @@ class UserPermissionContextTest {
         UserPermissionContext context = UserPermissionContext.builder().build();
 
         // Then
-        assertEquals(null, context.internalSubjectIds());
+        assertEquals(null, context.internalSubjectId());
         assertEquals(null, context.rpPairwiseId());
         assertEquals(null, context.emailAddress());
         assertEquals(null, context.authSessionItem());
