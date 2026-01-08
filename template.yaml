@@ -4928,14 +4928,17 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          AUTH_FRONTEND_BASE_URL: !Sub
-            - https://signin.${ServiceDomain}/
-            - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
-                ]
+          AUTH_FRONTEND_BASE_URL: !If
+            - UseAuthStub
+            - "https://authstub.oidc.authdev3.dev.account.gov.uk/"
+            - !Sub
+              - https://signin.${ServiceDomain}/
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
