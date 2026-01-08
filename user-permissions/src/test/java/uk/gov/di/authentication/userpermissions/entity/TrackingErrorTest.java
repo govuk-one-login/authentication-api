@@ -8,7 +8,6 @@ class TrackingErrorTest {
 
     @Test
     void shouldHaveCorrectEnumValues() {
-        // Then
-        assertEquals("UNKNOWN", TrackingError.UNKNOWN.name());
+        assertEquals("STORAGE_SERVICE_ERROR", TrackingError.STORAGE_SERVICE_ERROR.name());
     }
 }
