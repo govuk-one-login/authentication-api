@@ -57,7 +57,7 @@ class JwksServiceTest {
     }
 
     @Test
-    void shouldRetrievePublicTokenSigningRsaKeyFromKmsAndParseToJwk() {
+    void shouldRetrievePublicTokenSigningRsaKeyFromKmsAndParseToJwk() throws MalformedURLException {
         byte[] publicKey =
                 Base64.getDecoder()
                         .decode(
@@ -77,7 +77,8 @@ class JwksServiceTest {
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
 
-        JWK publicKeyJwk = jwksService.getPublicTokenRsaJwkWithOpaqueId();
+        JWK publicKeyJwk =
+                jwksService.getPublicTokenRsaJwkWithOpaqueId(hashSha256String("25252525252525"));
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String("25252525252525")));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.RS256));

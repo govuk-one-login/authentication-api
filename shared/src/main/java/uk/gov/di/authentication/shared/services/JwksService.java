@@ -59,6 +59,13 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyAlias());
     }
 
+    public JWK getPublicTokenRsaJwkWithOpaqueId(String keyId) throws MalformedURLException {
+        LOG.info("Retrieving RSA public key");
+        return configurationService.useAccessTokenJwksEndpoint()
+                ? retrieveJwkFromURLWithKeyId(configurationService.getAccessTokenJwksUrl(), keyId)
+                : getPublicJWKWithKeyId(configurationService.getTokenSigningKeyRsaAlias());
+    }
+
     public JWK getPublicTokenRsaJwkWithOpaqueId() {
         LOG.info("Retrieving RSA public key");
         return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyRsaAlias());
