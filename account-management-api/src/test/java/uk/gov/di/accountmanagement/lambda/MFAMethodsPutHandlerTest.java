@@ -77,6 +77,8 @@ import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEM
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.containsMetadataPair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -128,6 +130,8 @@ class MFAMethodsPutHandlerTest {
                 mfaMethodsMigrationService);
 
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
+        when(configurationService.isAccountManagementInternationalSmsEnabled()).thenReturn(true);
+        when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(any())).thenReturn(TEST_SALT);
         handler =
@@ -144,7 +148,7 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldReturn200WithUpdatedMethodWhenFeatureFlagEnabled() throws Json.JsonException {
-        var phoneNumber = "123456789";
+        var phoneNumber = UK_MOBILE_NUMBER;
         var updateRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
@@ -221,7 +225,7 @@ class MFAMethodsPutHandlerTest {
                         .withEmail(nonMigratedEmail)
                         .withSubjectID(TEST_PUBLIC_SUBJECT);
         when(authenticationService.getOrGenerateSalt(nonMigratedUser)).thenReturn(TEST_SALT);
-        var phoneNumber = "123456789";
+        var phoneNumber = UK_MOBILE_NUMBER;
         var updateRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
@@ -312,7 +316,7 @@ class MFAMethodsPutHandlerTest {
             MFAMethodUpdateIdentifier emailNotificationIdentifier,
             NotificationType notificationType)
             throws Json.JsonException {
-        var phoneNumber = "123456789";
+        var phoneNumber = UK_MOBILE_NUMBER;
         var updateRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
@@ -382,7 +386,7 @@ class MFAMethodsPutHandlerTest {
     @CsvSource({"500", "404", "200"})
     @Test
     void shouldRaiseSwitchCompletedAuditEvent() {
-        var phoneNumber = "123456789";
+        var phoneNumber = UK_MOBILE_NUMBER;
         var updateRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
@@ -450,7 +454,7 @@ class MFAMethodsPutHandlerTest {
     @ParameterizedTest
     @MethodSource("phoneNumberUpdateTypeIdentifiers")
     void shouldRaiseUpdatePhoneNumberAuditEvent(MFAMethodUpdateIdentifier updateTypeIdentifier) {
-        var phoneNumber = "123456789";
+        var phoneNumber = UK_MOBILE_NUMBER;
         var updateRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
@@ -509,8 +513,8 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldRaiseOnlySwitchCompletedAuditEventWhenSwitchingBetweenSmsMethodsSuccessful() {
-        var firstPhoneNumber = "111111111";
-        var secondPhoneNumber = "222222222";
+        var firstPhoneNumber = UK_MOBILE_NUMBER;
+        var secondPhoneNumber = "+447316763843";
 
         var updateRequest =
                 MfaMethodUpdateRequest.from(
@@ -599,7 +603,11 @@ class MFAMethodsPutHandlerTest {
                         MFA_IDENTIFIER);
         var backupMfaMethod =
                 MFAMethod.smsMfaMethod(
-                        true, true, "123456789", PriorityIdentifier.BACKUP, "sms-identifier-1");
+                        true,
+                        true,
+                        UK_MOBILE_NUMBER,
+                        PriorityIdentifier.BACKUP,
+                        "sms-identifier-1");
         var postUpdateMfaMethods = List.of(defaultMfaMethod, backupMfaMethod);
 
         when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
@@ -724,7 +732,7 @@ class MFAMethodsPutHandlerTest {
                         .withEmail(nonMigratedEmail)
                         .withSubjectID(TEST_PUBLIC_SUBJECT);
         when(authenticationService.getOrGenerateSalt(nonMigratedUser)).thenReturn(TEST_SALT);
-        var phoneNumber = "123456789";
+        var phoneNumber = UK_MOBILE_NUMBER;
         var updateRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
@@ -862,7 +870,7 @@ class MFAMethodsPutHandlerTest {
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
 
-        var phoneNumber = "123456789";
+        var phoneNumber = UK_MOBILE_NUMBER;
         var updateRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
@@ -1060,6 +1068,24 @@ class MFAMethodsPutHandlerTest {
         verifyNoInteractions(auditService);
     }
 
+    @Test
+    void shouldReturn400WhenPhoneNumberIsInvalidFormat() {
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+
+        var invalidPhoneNumber = "+44123"; // Invalid UK number format
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        event = event.withBody(updateSmsRequest(invalidPhoneNumber, TEST_OTP));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+
+        verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
+    }
+
     private static Stream<Arguments> invalidRequestBodies() {
         return Stream.of(
                 // Invalid priority identifier
@@ -1247,12 +1273,37 @@ class MFAMethodsPutHandlerTest {
     }
 
     @Test
+    void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() throws Json.JsonException {
+        when(configurationService.isAccountManagementInternationalSmsEnabled()).thenReturn(false);
+
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest =
+                event.withBody(updateSmsRequest(INTERNATIONAL_MOBILE_NUMBER, TEST_OTP));
+
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+        when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.GetMfaResult(
+                                        DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED));
+    }
+
+    @Test
     void shouldReturn401WhenPrincipalIsInvalid() {
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
         var event = generateApiGatewayEvent("invalid-principal");
-        event = event.withBody(updateSmsRequest("012345678", TEST_OTP));
+        event = event.withBody(updateSmsRequest(UK_MOBILE_NUMBER, TEST_OTP));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
@@ -1268,7 +1319,7 @@ class MFAMethodsPutHandlerTest {
                 .thenReturn(Optional.empty());
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-        event = event.withBody(updateSmsRequest("012345678", TEST_OTP));
+        event = event.withBody(updateSmsRequest(UK_MOBILE_NUMBER, TEST_OTP));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(404));
@@ -1293,7 +1344,7 @@ class MFAMethodsPutHandlerTest {
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
 
-        var phoneNumber = "123456789";
+        var phoneNumber = UK_MOBILE_NUMBER;
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));

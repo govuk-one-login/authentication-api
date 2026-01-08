@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -398,6 +399,20 @@ public class MFAMethodsPutHandler
                         return Result.failure(
                                 generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.REQUEST_MISSING_PARAMS));
+                    }
+
+                    var phoneValidationResult =
+                            ValidationHelper.validatePhoneNumber(
+                                    smsMfaDetail.phoneNumber(),
+                                    configurationService.getEnvironment(),
+                                    false,
+                                    configurationService
+                                            .isAccountManagementInternationalSmsEnabled());
+                    if (phoneValidationResult.isPresent()) {
+                        LOG.warn("Phone number validation failed: {}", phoneValidationResult.get());
+                        return Result.failure(
+                                generateApiGatewayProxyErrorResponse(
+                                        400, phoneValidationResult.get()));
                     }
                 } else if (mfaDetail instanceof RequestAuthAppMfaDetail authAppDetail) {
                     if (authAppDetail.credential() == null
