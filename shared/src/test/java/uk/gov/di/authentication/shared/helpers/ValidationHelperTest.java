@@ -126,6 +126,45 @@ class ValidationHelperTest {
             assertTrue(ValidationHelper.isAcceptedPhoneNumberType(FIXED_LINE_OR_MOBILE));
             assertFalse(ValidationHelper.isAcceptedPhoneNumberType(FIXED_LINE));
         }
+
+        private static Stream<Arguments> phoneNumberValidationTestParameters() {
+            return Stream.of(
+                    arguments("+33645453322", true, Optional.empty()),
+                    arguments(
+                            "+33645453322",
+                            false,
+                            Optional.of(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED)),
+                    arguments("+77777777777", true, Optional.empty()),
+                    arguments(
+                            "+77777777777",
+                            false,
+                            Optional.of(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED)),
+                    arguments("+447316763843", true, Optional.empty()),
+                    arguments("+447316763843", false, Optional.empty()),
+                    arguments("+4407316763843", true, Optional.empty()),
+                    arguments("+4407316763843", false, Optional.empty()),
+                    arguments("07316763843", true, Optional.empty()),
+                    arguments("07316763843", false, Optional.empty()));
+        }
+
+        @ParameterizedTest
+        @MethodSource("phoneNumberValidationTestParameters")
+        void shouldValidatePhoneNumbersBasedOnInternationalFlag(
+                String phoneNumber,
+                boolean allowInternational,
+                Optional<ErrorResponse> expectedResult) {
+            assertThat(
+                    ValidationHelper.validatePhoneNumber(
+                            phoneNumber, PRODUCTION, false, allowInternational),
+                    equalTo(expectedResult));
+        }
+
+        @Test
+        void shouldDefaultToAllowingInternationalNumbers() {
+            assertThat(
+                    ValidationHelper.validatePhoneNumber("+33645453322", PRODUCTION, false),
+                    equalTo(Optional.empty()));
+        }
     }
 
     @Nested
