@@ -117,4 +117,68 @@ class JwksHandlerTest {
         var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
         assertThat(response, hasHeader("Cache-Control", "max-age=86400"));
     }
+
+    @Test
+    void shouldPublishNewKeysAlongsideOldWhenNewKeyPublishingIsEnabled() throws JOSEException {
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
+
+        var tokenSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var docAppSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var rsaTokenSigningKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        var newTokenSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var newRsaTokenSigningKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+
+        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaTokenSigningKey);
+        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newTokenSigningKey);
+        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueId()).thenReturn(newRsaTokenSigningKey);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet =
+                new JWKSet(
+                        List.of(
+                                tokenSigningKey,
+                                docAppSigningKey,
+                                rsaTokenSigningKey,
+                                newTokenSigningKey,
+                                newRsaTokenSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+    }
+
+    @Test
+    void shouldPublishNewEcKeyWhenNewPublishIsEnabledButRsaNotEnabled() throws JOSEException {
+        when(configurationService.isRsaSigningAvailable()).thenReturn(false);
+        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
+
+        var tokenSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var docAppSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var newTokenSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+
+        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
+        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newTokenSigningKey);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet =
+                new JWKSet(List.of(tokenSigningKey, docAppSigningKey, newTokenSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+    }
 }

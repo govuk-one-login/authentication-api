@@ -51,6 +51,16 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getExternalTokenSigningKeyRsaAlias());
     }
 
+    public JWK getNextPublicTokenJwkWithOpaqueId() {
+        LOG.info("Retrieving next EC public key");
+        return getPublicJWKWithKeyId(configurationService.getNextExternalTokenSigningKeyAlias());
+    }
+
+    public JWK getNextPublicTokenRsaJwkWithOpaqueId() {
+        LOG.info("Retrieving next RSA public key");
+        return getPublicJWKWithKeyId(configurationService.getNextExternalTokenSigningKeyRsaAlias());
+    }
+
     public JWK getPublicDocAppSigningJwkWithOpaqueId() {
         LOG.info("Retrieving Doc App public key");
         return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
