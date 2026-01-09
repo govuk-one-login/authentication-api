@@ -61,9 +61,7 @@ Resources:
               !Ref Environment,
               emailAcctCreationOtpCodeTtlDuration,
             ]
-          LOCKOUT_COUNT_TTL: "600"
           USE_STRONGLY_CONSISTENT_READS: "true"
-          SUPPORT_REAUTH_SIGNOUT_ENABLED: "true"
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
