@@ -3,6 +3,7 @@ package uk.gov.di.authentication.services;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAccessTokenExtension;
 
@@ -35,12 +36,20 @@ class OrchAccessTokenServiceIntegrationTest {
                     orchAccessTokenExtension.getAccessToken(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
 
             assertTrue(accessToken.isPresent());
-            assertEquals(CLIENT_AND_RP_PAIRWISE_ID, accessToken.get().getClientAndRpPairwiseId());
-            assertEquals(AUTH_CODE, accessToken.get().getAuthCode());
-            assertEquals(CLIENT_SESSION_ID, accessToken.get().getClientSessionId());
-            assertEquals(TOKEN, accessToken.get().getToken());
-            assertEquals(
-                    INTERNAL_PAIRWISE_SUBJECT_ID, accessToken.get().getInternalPairwiseSubjectId());
+            assertOrchAccessTokenItemMatchesExpected(accessToken.get());
+
+            // For ATO-2243: Verify token has been saved correctly in both tables
+            var oldTableToken =
+                    orchAccessTokenExtension.getAccessTokenFromOldTable(
+                            CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
+            var newTableToken =
+                    orchAccessTokenExtension.getAccessTokenFromNewTable(
+                            CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
+
+            assertTrue(oldTableToken.isPresent(), "Token should exist in old table");
+            assertTrue(newTableToken.isPresent(), "Token should exist in new table");
+            assertOrchAccessTokenItemMatchesExpected(oldTableToken.get());
+            assertOrchAccessTokenItemMatchesExpected(newTableToken.get());
         }
 
         @Test
@@ -48,6 +57,17 @@ class OrchAccessTokenServiceIntegrationTest {
             assertThrows(
                     OrchAccessTokenException.class,
                     () -> orchAccessTokenExtension.saveAccessToken(null, null, null, null, null));
+        }
+
+        private static void assertOrchAccessTokenItemMatchesExpected(
+                OrchAccessTokenItem orchAccessTokenItem) {
+            assertEquals(CLIENT_AND_RP_PAIRWISE_ID, orchAccessTokenItem.getClientAndRpPairwiseId());
+            assertEquals(TOKEN, orchAccessTokenItem.getToken());
+            assertEquals(
+                    INTERNAL_PAIRWISE_SUBJECT_ID,
+                    orchAccessTokenItem.getInternalPairwiseSubjectId());
+            assertEquals(CLIENT_SESSION_ID, orchAccessTokenItem.getClientSessionId());
+            assertEquals(AUTH_CODE, orchAccessTokenItem.getAuthCode());
         }
     }
 
