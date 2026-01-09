@@ -15,6 +15,7 @@ import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHead
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
+// QualityGateUnitTest
 class RequestHeaderHelperTest {
 
     private static final Map<String, String> MAP_ONE_ENTRY_UPPER_CASE =
@@ -67,6 +68,7 @@ class RequestHeaderHelperTest {
                         "client-session-id-123"));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("headersTestParameters")
     void testHeadersContainValidHeader(
@@ -78,6 +80,7 @@ class RequestHeaderHelperTest {
                 expectedValidity, headersContainValidHeader(headers, headerName, matchLowerCase));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("headersTestParameters")
     void testGetHeaderValueFromHeaders(
@@ -89,6 +92,7 @@ class RequestHeaderHelperTest {
         assertEquals(expectedValue, getHeaderValueFromHeaders(headers, headerName, matchLowerCase));
     }
 
+    // QualityGateRegressionTest
     @Test
     void testGetHeaderValueOrElse() {
         assertEquals("headers null", getHeaderValueOrElse(null, "Session-Id", "headers null"));
