@@ -6158,6 +6158,16 @@ Resources:
                   !Ref Environment,
                   idTokenKeyArn,
                 ]
+          - Fn::If:
+              - ProvisionNewExternalTokenSigningKeys
+              - Sid: AllowNewIdTokenSigningKms
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchExternalTokenEcSigningKmsKey.Arn
+              - !Ref AWS::NoValue
 
   IdTokenKmsRsaAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6176,6 +6186,16 @@ Resources:
                   !Ref Environment,
                   idTokenKeyRsaArn,
                 ]
+          - Fn::If:
+              - ProvisionNewExternalTokenSigningKeys
+              - Sid: AllowNewIdTokenSigningKms
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchExternalTokenRsaSigningKmsKey.Arn
+              - !Ref AWS::NoValue
 
   DocAppSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
