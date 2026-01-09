@@ -3086,6 +3086,12 @@ Resources:
             - UseAuthStub
             - !Sub /orch-stubs/${Environment}-auth-stub-auth-public-encryption-key
             - !Sub ${Environment}-auth-public-encryption-key
+          DOMAIN_NAME:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              serviceDomain,
+            ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy
