@@ -7567,6 +7567,33 @@ Resources:
       AliasName: !Sub "alias/${Environment}-orch-external-token-ec-signing-kms-key-alias"
       TargetKeyId: !Ref OrchExternalTokenEcSigningKmsKey
 
+  OrchExternalTokenRsaSigningKmsKey:
+    Condition: ProvisionNewExternalTokenSigningKeys
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS signing key for signing external tokens issued to RPs. This key is specifically for use in signing with RSA based algorithms.
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: RSA_4096
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  OrchExternalTokenRsaSigningKmsKeyAlias:
+    Condition: ProvisionNewExternalTokenSigningKeys
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-external-token-rsa-signing-kms-key-alias"
+      TargetKeyId: !Ref OrchExternalTokenRsaSigningKmsKey
+
   #endregion
 
   #region Canary Alarms
