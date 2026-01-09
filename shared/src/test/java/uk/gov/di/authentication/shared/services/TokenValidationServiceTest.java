@@ -14,17 +14,22 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class TokenValidationServiceTest {
 
@@ -41,11 +46,16 @@ class TokenValidationServiceTest {
     private JWSSigner signer;
     private ECKey ecJWK;
 
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(TokenValidationService.class);
+
     @BeforeEach
     void setUp() throws JOSEException {
         ecJWK = generateECKeyPair();
         signer = new ECDSASigner(ecJWK);
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(ecJWK.toPublicJWK());
+        when(configurationService.getEnvironment()).thenReturn("dev");
     }
 
     @Test
@@ -63,8 +73,59 @@ class TokenValidationServiceTest {
     }
 
     @Test
+    void shouldSuccessfullyValidateTestAccessToken() throws JOSEException {
+        ECKey testEcJWK = generateECKeyPair();
+        JWSSigner signer = new ECDSASigner(testEcJWK);
+        SignedJWT signedTestAccessToken = createSignedAccessToken(signer);
+
+        when(configurationService.isTestSigningKeyEnabled()).thenReturn(true);
+        when(jwksService.getPublicTestTokenJwkWithOpaqueId()).thenReturn(testEcJWK.toPublicJWK());
+
+        assertTrue(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedTestAccessToken.serialize())));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Token signature validated using test key")));
+    }
+
+    @Test
+    void shouldSuccessfullyValidateRealAccessTokenWhenTestAccessTokenExists() {
+        ECKey testEcJWK = generateECKeyPair();
+        SignedJWT signedAccessToken = createSignedAccessToken(signer);
+
+        when(configurationService.isTestSigningKeyEnabled()).thenReturn(true);
+        when(jwksService.getPublicTestTokenJwkWithOpaqueId()).thenReturn(testEcJWK.toPublicJWK());
+
+        assertTrue(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedAccessToken.serialize())));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Token signature validated using real key")));
+    }
+
+    @Test
+    void shouldFailToValidateTokenSignedWithDifferentKeyWhenTestAccessTokenExists()
+            throws JOSEException {
+        ECKey testEcJWK = generateECKeyPair();
+
+        ECKey someOtherJwk = generateECKeyPair();
+        JWSSigner signer = new ECDSASigner(someOtherJwk);
+        SignedJWT signedAccessTokenWithDifferentKey = createSignedAccessToken(signer);
+
+        when(configurationService.isTestSigningKeyEnabled()).thenReturn(true);
+        when(jwksService.getPublicTestTokenJwkWithOpaqueId()).thenReturn(testEcJWK.toPublicJWK());
+
+        assertFalse(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedAccessTokenWithDifferentKey.serialize())));
+    }
+
+    @Test
     void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
+
         assertTrue(
                 tokenValidationService.validateAccessTokenSignature(
                         new BearerAccessToken(signedAccessToken.serialize())));

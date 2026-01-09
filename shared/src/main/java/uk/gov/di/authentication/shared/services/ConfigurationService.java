@@ -758,6 +758,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean isTestSigningKeyEnabled() {
+        return System.getenv()
+                .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
     public boolean isBulkAccountDeletionEnabled() {
         return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
     }
