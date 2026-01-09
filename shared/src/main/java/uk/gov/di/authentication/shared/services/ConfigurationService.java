@@ -519,6 +519,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
 
+    public String getTestTokenSigningKeyAlias() {
+        return System.getenv("TEST_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
     public boolean isRsaSigningAvailable() {
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
