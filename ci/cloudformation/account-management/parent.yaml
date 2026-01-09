@@ -284,7 +284,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
-      lockoutDuration: 600
+      lockoutDuration: 7200
       otpCodeTtlDuration: 600
       lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
@@ -343,7 +343,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
-      lockoutDuration: 600
+      lockoutDuration: 7200
       otpCodeTtlDuration: 600
       lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
@@ -401,7 +401,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
-      lockoutDuration: 600
+      lockoutDuration: 7200
       otpCodeTtlDuration: 600
       lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
@@ -497,10 +497,10 @@ Mappings:
       UseAlarmActions: "No"
       emailAcctCreationOtpCodeTtlDuration: 3600
       lockoutCountTtl: 60
-      lockoutDuration: 60
+      lockoutDuration: 7200
       otpCodeTtlDuration: 60
       reauthEnterEmailCountTtl: 3600
-      reducedLockoutDuration: 30
+      reducedLockoutDuration: 300
       supportReauthSignoutEnabled: false
       termsConditionsVersion: 1.13
       testClientsEnabled: true
@@ -564,10 +564,10 @@ Mappings:
       UseAlarmActions: "Yes"
       emailAcctCreationOtpCodeTtlDuration: 60
       lockoutCountTtl: 60
-      lockoutDuration: 60
+      lockoutDuration: 7200
       otpCodeTtlDuration: 60
       reauthEnterEmailCountTtl: 3600
-      reducedLockoutDuration: 30
+      reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
