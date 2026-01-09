@@ -372,7 +372,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isRsaSigningAvailable() {
-        return List.of("build", "staging", "integration", "production").contains(getEnvironment());
+        return List.of("dev", "build", "staging", "integration", "production")
+                .contains(getEnvironment());
     }
 
     public boolean isSingleFactorAccountDeletionEnabled() {
