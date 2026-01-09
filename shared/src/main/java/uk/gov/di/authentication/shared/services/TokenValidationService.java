@@ -4,6 +4,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
@@ -16,6 +17,8 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 public class TokenValidationService {
 
@@ -68,10 +71,14 @@ public class TokenValidationService {
                         new RSASSAVerifier(
                                 jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
             } else {
-                return jwt.verify(
-                        new ECDSAVerifier(jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
+                List<JWK> signingKeys =
+                        Stream.of(
+                                        jwksService.getPublicTokenJwkWithOpaqueId(),
+                                        jwksService.getPublicTestTokenJwkWithOpaqueId())
+                                .filter(Objects::nonNull)
+                                .toList();
+                return isJwtSignatureValidWithKeys(jwt, signingKeys);
             }
-
         } catch (JOSEException | java.text.ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
@@ -89,5 +96,17 @@ public class TokenValidationService {
             return false;
         }
         return true;
+    }
+
+    public boolean isJwtSignatureValidWithKeys(SignedJWT jwt, List<JWK> signingKeys) {
+        return signingKeys.stream()
+                .anyMatch(
+                        key -> {
+                            try {
+                                return jwt.verify(new ECDSAVerifier(key.toECKey()));
+                            } catch (JOSEException e) {
+                                return false;
+                            }
+                        });
     }
 }

@@ -63,8 +63,34 @@ class TokenValidationServiceTest {
     }
 
     @Test
+    void shouldSuccessfullyValidateTestAccessToken() throws JOSEException {
+        ECKey testEcJWK = generateECKeyPair();
+        JWSSigner signer = new ECDSASigner(testEcJWK);
+        SignedJWT signedTestAccessToken = createSignedAccessToken(signer);
+
+        when(jwksService.getPublicTestTokenJwkWithOpaqueId()).thenReturn(testEcJWK.toPublicJWK());
+
+        assertTrue(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedTestAccessToken.serialize())));
+    }
+
+    @Test
+    void shouldSuccessfullyValidateAccessTokenWhenTestAccessTokenExists() {
+        ECKey testEcJWK = generateECKeyPair();
+        SignedJWT signedAccessToken = createSignedAccessToken(signer);
+
+        when(jwksService.getPublicTestTokenJwkWithOpaqueId()).thenReturn(testEcJWK.toPublicJWK());
+
+        assertTrue(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedAccessToken.serialize())));
+    }
+
+    @Test
     void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
+
         assertTrue(
                 tokenValidationService.validateAccessTokenSignature(
                         new BearerAccessToken(signedAccessToken.serialize())));
