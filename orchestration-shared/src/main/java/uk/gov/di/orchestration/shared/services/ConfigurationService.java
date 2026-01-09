@@ -359,6 +359,18 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
 
+    public String getNextExternalTokenSigningKeyAlias() {
+        return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
+    public String getNextExternalTokenSigningKeyRsaAlias() {
+        return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS");
+    }
+
+    public boolean isPublishNextExternalTokenSigningKeysEnabled() {
+        return getFlagOrFalse("PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS");
+    }
+
     public boolean isRsaSigningAvailable() {
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
