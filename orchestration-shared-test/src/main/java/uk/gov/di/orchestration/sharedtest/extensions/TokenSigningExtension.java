@@ -33,13 +33,20 @@ public class TokenSigningExtension extends KmsKeyExtension {
     public void beforeAll(ExtensionContext context) {
         super.beforeAll(context);
         kmsConnectionService =
-                new KmsConnectionService(Optional.of(LOCALSTACK_ENDPOINT), REGION, getKeyAlias());
+                new KmsConnectionService(
+                        Optional.of(LOCALSTACK_ENDPOINT), REGION, getKeyAlias(), getNewKeyAlias());
     }
 
     public SignedJWT signJwt(JWTClaimsSet claimsSet) {
+        return signJwt(claimsSet, null);
+    }
+
+    public SignedJWT signJwt(JWTClaimsSet claimsSet, String keyId) {
         try {
             JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(getKeyAlias()).build();
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(keyId == null ? getKeyAlias() : keyId)
+                            .build();
             Base64URL encodedHeader = jwsHeader.toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;
@@ -48,6 +55,33 @@ public class TokenSigningExtension extends KmsKeyExtension {
                     SignRequest.builder()
                             .message(SdkBytes.fromByteBuffer(messageToSign))
                             .keyId(getKeyAlias())
+                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                            .build();
+            var signResult = kmsConnectionService.sign(signRequest);
+            String signature =
+                    Base64URL.encode(
+                                    ECDSA.transcodeSignatureToConcat(
+                                            signResult.signature().asByteArray(),
+                                            ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)))
+                            .toString();
+            return SignedJWT.parse(message + "." + signature);
+        } catch (java.text.ParseException | JOSEException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public SignedJWT signJwtWithNewPublicKey(JWTClaimsSet claimsSet) {
+        try {
+            JWSHeader jwsHeader =
+                    new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(getNewKeyAlias()).build();
+            Base64URL encodedHeader = jwsHeader.toBase64URL();
+            Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
+            String message = encodedHeader + "." + encodedClaims;
+            ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
+            SignRequest signRequest =
+                    SignRequest.builder()
+                            .message(SdkBytes.fromByteBuffer(messageToSign))
+                            .keyId(getNewKeyAlias())
                             .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();
             var signResult = kmsConnectionService.sign(signRequest);

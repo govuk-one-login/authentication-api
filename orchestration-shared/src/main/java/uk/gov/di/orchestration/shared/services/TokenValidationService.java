@@ -15,6 +15,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 public class TokenValidationService {
 
@@ -63,8 +64,14 @@ public class TokenValidationService {
                         new RSASSAVerifier(
                                 jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
             } else {
-                return jwt.verify(
-                        new ECDSAVerifier(jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
+                var oldPublicKey = jwksService.getPublicTokenJwkWithOpaqueId();
+                if (Objects.equals(jwt.getHeader().getKeyID(), oldPublicKey.getKeyID())) {
+                    return jwt.verify(new ECDSAVerifier(oldPublicKey.toECKey()));
+                } else {
+                    return jwt.verify(
+                            new ECDSAVerifier(
+                                    jwksService.getNextPublicTokenJwkWithOpaqueId().toECKey()));
+                }
             }
 
         } catch (JOSEException | java.text.ParseException e) {
