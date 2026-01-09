@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
@@ -60,10 +61,12 @@ import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
@@ -1093,6 +1096,34 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(response, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
             assertNoNotificationsReceived(notificationsQueue);
+        }
+
+        @Test
+        void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultSms);
+            userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+
+            handler =
+                    new MFAMethodsPutHandler(
+                            ACCOUNT_MANAGEMENT_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    format(
+                                            UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE,
+                                            INTERNATIONAL_MOBILE_NUMBER,
+                                            CommonTestVariables.TEST_OTP_CODE)),
+                            Collections.emptyMap(),
+                            Collections.emptyMap(),
+                            Map.ofEntries(
+                                    Map.entry("publicSubjectId", testPublicSubject),
+                                    Map.entry("mfaIdentifier", defaultSms.getMfaIdentifier())),
+                            Map.of("principalId", testInternalSubject));
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    response, hasJsonBody(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED));
         }
     }
 

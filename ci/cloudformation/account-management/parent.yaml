@@ -319,6 +319,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      accountManagementInternationalSmsEnabled: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev1.dev.account.gov.uk
     authdev2:
@@ -378,6 +379,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      accountManagementInternationalSmsEnabled: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev2.dev.account.gov.uk
     authdev3:
@@ -436,6 +438,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      accountManagementInternationalSmsEnabled: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979
@@ -505,6 +508,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      accountManagementInternationalSmsEnabled: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.dev.account.gov.uk
     build:
@@ -572,6 +576,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      accountManagementInternationalSmsEnabled: true
       OrchAccountID: 767397776536
       OrchApiBaseUrl: https://oidc.build.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979
@@ -644,6 +649,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      accountManagementInternationalSmsEnabled: true
       OrchAccountID: 590183975515
       OrchApiBaseUrl: https://oidc.staging.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/156f87e0-001a-4ae8-a6c1-23f8f68b6e84
@@ -716,6 +722,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       useStronglyConsistentReads: false
+      accountManagementInternationalSmsEnabled: true
       OrchAccountID: 058264132019
       OrchApiBaseUrl: https://oidc.integration.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/1b5c001b-ed53-4a7b-bfbe-5d0f596110b5
@@ -788,6 +795,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       useStronglyConsistentReads: false
+      accountManagementInternationalSmsEnabled: true
       OrchAccountID: 533266965190
       OrchApiBaseUrl: https://oidc.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/7ad27a55-9d21-47f2-be03-b61f2c9a8ce6

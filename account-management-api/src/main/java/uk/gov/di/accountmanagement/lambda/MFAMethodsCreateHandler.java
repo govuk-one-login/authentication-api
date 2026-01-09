@@ -189,7 +189,10 @@ public class MFAMethodsCreateHandler
 
             var invalidPhoneNumber =
                     ValidationHelper.validatePhoneNumber(
-                            requestSmsMfaDetail.phoneNumber(), PRODUCTION.name(), false);
+                            requestSmsMfaDetail.phoneNumber(),
+                            PRODUCTION.name(),
+                            false,
+                            configurationService.isAccountManagementInternationalSmsEnabled());
 
             if (invalidPhoneNumber.isPresent()) {
                 var auditEventStatus =

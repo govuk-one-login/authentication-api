@@ -35,6 +35,12 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MFA_METHOD_MANAGEMENT_API_ENABLED: "true"
+          ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              accountManagementInternationalSmsEnabled,
+            ]
           EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
