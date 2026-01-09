@@ -17,12 +17,14 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
+import java.net.MalformedURLException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,10 +44,10 @@ class TokenValidationServiceTest {
     private ECKey ecJWK;
 
     @BeforeEach
-    void setUp() throws JOSEException {
+    void setUp() throws JOSEException, MalformedURLException {
         ecJWK = generateECKeyPair();
         signer = new ECDSASigner(ecJWK);
-        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(ecJWK.toPublicJWK());
+        when(jwksService.getPublicTokenJwkWithOpaqueId(any())).thenReturn(ecJWK.toPublicJWK());
     }
 
     @Test
@@ -71,12 +73,13 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateRsaSignedAccessToken() throws JOSEException {
+    void shouldSuccessfullyValidateRsaSignedAccessToken()
+            throws JOSEException, MalformedURLException {
         var rsaKey = new RSAKeyGenerator(2048).generate();
         var rsaSigner = new RSASSASigner(rsaKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId(any())).thenReturn(rsaKey);
 
         SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(
