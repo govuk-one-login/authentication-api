@@ -3092,6 +3092,14 @@ Resources:
               !Ref Environment,
               serviceDomain,
             ]
+          ORCH_REDIRECT_URI: !Sub
+            - https://oidc.${ServiceDomain}/orchestration-redirect
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy
