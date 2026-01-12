@@ -101,6 +101,11 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  PublishNextExternalTokenSigningKeys:
+    !And [
+      !Condition ProvisionNewExternalTokenSigningKeys,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3334,6 +3339,18 @@ Resources:
               !Ref Environment,
               docAppSigningKeyArn,
             ]
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
+            - PublishNextExternalTokenSigningKeys
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
+            - !Ref AWS::NoValue
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
@@ -6178,6 +6195,16 @@ Resources:
                   !Ref Environment,
                   idTokenKeyArn,
                 ]
+          - Fn::If:
+              - ProvisionNewExternalTokenSigningKeys
+              - Sid: AllowNewIdTokenSigningKms
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchExternalTokenEcSigningKmsKey.Arn
+              - !Ref AWS::NoValue
 
   IdTokenKmsRsaAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6196,6 +6223,16 @@ Resources:
                   !Ref Environment,
                   idTokenKeyRsaArn,
                 ]
+          - Fn::If:
+              - ProvisionNewExternalTokenSigningKeys
+              - Sid: AllowNewIdTokenSigningKms
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchExternalTokenRsaSigningKmsKey.Arn
+              - !Ref AWS::NoValue
 
   DocAppSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
