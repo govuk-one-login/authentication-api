@@ -2,6 +2,9 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
@@ -12,6 +15,7 @@ import java.util.Optional;
 public class OrchAccessTokenExtension extends DynamoExtension implements AfterEachCallback {
 
     public static final String TABLE_NAME = "local-Access-Token";
+    public static final String NEW_TABLE_NAME = "local-Orch-Access-Token";
     public static final String CLIENT_AND_RP_PAIRWISE_ID_FIELD = "ClientAndRpPairwiseId";
     private static final String AUTH_CODE_FIELD = "AuthCode";
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
@@ -36,12 +40,22 @@ public class OrchAccessTokenExtension extends DynamoExtension implements AfterEa
                 TABLE_NAME,
                 CLIENT_AND_RP_PAIRWISE_ID_FIELD,
                 Optional.of(AUTH_CODE_FIELD));
+        clearDynamoTable(
+                dynamoDB,
+                NEW_TABLE_NAME,
+                CLIENT_AND_RP_PAIRWISE_ID_FIELD,
+                Optional.of(AUTH_CODE_FIELD));
     }
 
     @Override
     protected void createTables() {
         createTableWithPartitionAndSortKey(
                 TABLE_NAME,
+                CLIENT_AND_RP_PAIRWISE_ID_FIELD,
+                AUTH_CODE_FIELD,
+                createGlobalSecondaryIndex(AUTH_CODE_INDEX, AUTH_CODE_FIELD));
+        createTableWithPartitionAndSortKey(
+                NEW_TABLE_NAME,
                 CLIENT_AND_RP_PAIRWISE_ID_FIELD,
                 AUTH_CODE_FIELD,
                 createGlobalSecondaryIndex(AUTH_CODE_INDEX, AUTH_CODE_FIELD));
@@ -64,5 +78,24 @@ public class OrchAccessTokenExtension extends DynamoExtension implements AfterEa
 
     public Optional<OrchAccessTokenItem> getAccessTokenForAuthCode(String authCode) {
         return orchAccessTokenService.getAccessTokenForAuthCode(authCode);
+    }
+
+    public Optional<OrchAccessTokenItem> getAccessTokenFromOldTable(
+            String clientAndRpPairwiseId, String authCode) {
+        return getAccessTokenFromTable(TABLE_NAME, clientAndRpPairwiseId, authCode);
+    }
+
+    public Optional<OrchAccessTokenItem> getAccessTokenFromNewTable(
+            String clientAndRpPairwiseId, String authCode) {
+        return getAccessTokenFromTable(NEW_TABLE_NAME, clientAndRpPairwiseId, authCode);
+    }
+
+    private Optional<OrchAccessTokenItem> getAccessTokenFromTable(
+            String tableName, String clientAndRpPairwiseId, String authCode) {
+        var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDB).build();
+        var table =
+                enhancedClient.table(tableName, TableSchema.fromBean(OrchAccessTokenItem.class));
+        var key = Key.builder().partitionValue(clientAndRpPairwiseId).sortValue(authCode).build();
+        return Optional.ofNullable(table.getItem(key));
     }
 }

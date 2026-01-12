@@ -4,10 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
@@ -19,6 +16,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -26,10 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,8 +39,10 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
     private static final Instant CREATION_INSTANT = Instant.parse("2025-02-01T03:04:05.678Z");
 
-    private final DynamoDbTable<OrchAccessTokenItem> table = mock(DynamoDbTable.class);
-    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
+    private final BaseDynamoService<OrchAccessTokenItem> mockOldService =
+            mock(BaseDynamoService.class);
+    private final BaseDynamoService<OrchAccessTokenItem> mockNewService =
+            mock(BaseDynamoService.class);
     private final LambdaTimer lambdaTimer = mock(LambdaTimer.class);
     private OrchAccessTokenService orchAccessTokenService;
 
@@ -53,8 +51,8 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
         when(configurationService.getAccessTokenExpiry()).thenReturn(3600L);
         orchAccessTokenService =
                 new OrchAccessTokenService(
-                        dynamoDbClient,
-                        table,
+                        mockOldService,
+                        mockNewService,
                         configurationService,
                         Clock.fixed(CREATION_INSTANT, ZoneId.systemDefault()));
     }
@@ -63,6 +61,9 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
     class StoreOrchAccessToken {
         @Test
         void shouldStoreAccessTokenSuccessfully() {
+            doNothing().when(mockOldService).put(any(OrchAccessTokenItem.class));
+            doNothing().when(mockNewService).put(any(OrchAccessTokenItem.class));
+
             orchAccessTokenService.saveAccessToken(
                     CLIENT_AND_RP_PAIRWISE_ID,
                     AUTH_CODE,
@@ -70,19 +71,23 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                     INTERNAL_PAIRWISE_SUBJECT_ID,
                     CLIENT_SESSION_ID);
 
-            var orchAccessTokenItemCaptor = ArgumentCaptor.forClass(OrchAccessTokenItem.class);
-            verify(table).putItem(orchAccessTokenItemCaptor.capture());
-            var capturedRequest = orchAccessTokenItemCaptor.getValue();
+            var oldServiceCaptor = ArgumentCaptor.forClass(OrchAccessTokenItem.class);
+            var newServiceCaptor = ArgumentCaptor.forClass(OrchAccessTokenItem.class);
 
+            verify(mockOldService).put(oldServiceCaptor.capture());
+            verify(mockNewService).put(newServiceCaptor.capture());
+
+            var capturedRequest = oldServiceCaptor.getValue();
             assertOrchAccessTokenItemMatchesExpected(capturedRequest);
             assertTrue(capturedRequest.getTimeToLive() > CREATION_INSTANT.getEpochSecond());
+            assertEquals(oldServiceCaptor.getValue(), newServiceCaptor.getValue());
         }
 
         @Test
         void shouldThrowWhenDynamoThrowsException() {
             doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
-                    .when(table)
-                    .putItem(any(OrchAccessTokenItem.class));
+                    .when(mockOldService)
+                    .put(any(OrchAccessTokenItem.class));
 
             var exception =
                     assertThrows(
@@ -110,16 +115,8 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                             .withClientSessionId(CLIENT_SESSION_ID)
                             .withAuthCode(AUTH_CODE);
 
-            GetItemEnhancedRequest orchAccessTokenGetRequest =
-                    GetItemEnhancedRequest.builder()
-                            .key(
-                                    Key.builder()
-                                            .partitionValue(CLIENT_AND_RP_PAIRWISE_ID)
-                                            .sortValue(AUTH_CODE)
-                                            .build())
-                            .consistentRead(true)
-                            .build();
-            when(table.getItem(orchAccessTokenGetRequest)).thenReturn(orchAccessTokenItem);
+            when(mockOldService.get(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE))
+                    .thenReturn(Optional.of(orchAccessTokenItem));
 
             var actualOrchAccessToken =
                     orchAccessTokenService.getAccessToken(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
@@ -140,9 +137,8 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldThrowWhenDynamoThrowsException() {
-            doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
-                    .when(table)
-                    .getItem(any(GetItemEnhancedRequest.class));
+            when(mockOldService.get(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE))
+                    .thenThrow(DynamoDbException.class);
 
             var exception =
                     assertThrows(
@@ -166,12 +162,10 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
                             .withClientSessionId(CLIENT_SESSION_ID);
 
-            var spyService = spy(orchAccessTokenService);
-            doReturn(List.of(orchAccessTokenItem))
-                    .when(spyService)
-                    .queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
+            when(mockOldService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE))
+                    .thenReturn(List.of(orchAccessTokenItem));
 
-            var actualOrchAccessToken = spyService.getAccessTokenForAuthCode(AUTH_CODE);
+            var actualOrchAccessToken = orchAccessTokenService.getAccessTokenForAuthCode(AUTH_CODE);
 
             assertTrue(actualOrchAccessToken.isPresent());
             assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
@@ -179,20 +173,17 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldReturnEmptyWhenNoAccessTokenForAuthCode() {
-            var spyService = spy(orchAccessTokenService);
-            doReturn(List.of()).when(spyService).queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
+            when(mockOldService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE)).thenReturn(List.of());
 
-            var actualOrchAccessToken = spyService.getAccessTokenForAuthCode(AUTH_CODE);
+            var actualOrchAccessToken = orchAccessTokenService.getAccessTokenForAuthCode(AUTH_CODE);
 
             assertTrue(actualOrchAccessToken.isEmpty());
         }
 
         @Test
         void shouldThrowWhenDynamoThrowsException() {
-            var spyService = spy(orchAccessTokenService);
-            doThrow(DynamoDbException.class)
-                    .when(spyService)
-                    .queryIndex("authCode-index", AUTH_CODE);
+            when(mockOldService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE))
+                    .thenThrow(DynamoDbException.class);
 
             var exception =
                     assertThrows(
@@ -214,13 +205,11 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
                             .withClientSessionId(CLIENT_SESSION_ID);
 
-            var spyService = spy(orchAccessTokenService);
-            doReturn(Stream.of(orchAccessTokenItem))
-                    .when(spyService)
-                    .queryTableStream(CLIENT_AND_RP_PAIRWISE_ID);
+            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
+                    .thenReturn(Stream.of(orchAccessTokenItem));
 
             var actualOrchAccessToken =
-                    spyService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
+                    orchAccessTokenService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
                             CLIENT_AND_RP_PAIRWISE_ID, TOKEN);
 
             assertTrue(actualOrchAccessToken.isPresent());
@@ -237,13 +226,11 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
                             .withClientSessionId(CLIENT_SESSION_ID);
 
-            var spyService = spy(orchAccessTokenService);
-            doReturn(Stream.of(orchAccessTokenItem))
-                    .when(spyService)
-                    .queryTableStream(CLIENT_AND_RP_PAIRWISE_ID);
+            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
+                    .thenReturn(Stream.of(orchAccessTokenItem));
 
             var actualOrchAccessToken =
-                    spyService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
+                    orchAccessTokenService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
                             CLIENT_AND_RP_PAIRWISE_ID, TOKEN);
 
             assertTrue(actualOrchAccessToken.isEmpty());
@@ -251,10 +238,8 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldThrowWhenDynamoThrowsException() {
-            var spyService = spy(orchAccessTokenService);
-            doThrow(DynamoDbException.class)
-                    .when(spyService)
-                    .queryTableStream(CLIENT_AND_RP_PAIRWISE_ID);
+            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
+                    .thenThrow(DynamoDbException.class);
 
             var exception =
                     assertThrows(
@@ -271,17 +256,16 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
     class UpdatingTtl {
         @Test
         void shouldGetAccessTokensWithoutTtlInBatchesSuccessfully() {
-            var spyService = spy(orchAccessTokenService);
             when(lambdaTimer.hasTimeRemaining(anyLong())).thenReturn(true);
 
             var allTokensSegment1 = createOrchAccessTokensWithOrWithoutTtl(1, 19);
             var allTokensSegment2 = createOrchAccessTokensWithOrWithoutTtl(2, 2);
 
-            doReturn(allTokensSegment1.stream()).when(spyService).scanTableSegment(0, 2);
-            doReturn(allTokensSegment2.stream()).when(spyService).scanTableSegment(1, 2);
+            when(mockOldService.scanTableSegment(0, 2)).thenReturn(allTokensSegment1.stream());
+            when(mockOldService.scanTableSegment(1, 2)).thenReturn(allTokensSegment2.stream());
 
             var capturedBatches = new ArrayList<List<OrchAccessTokenItem>>();
-            spyService.processAccessTokensWithoutTtlInBatches(
+            orchAccessTokenService.processAccessTokensWithoutTtlInBatches(
                     10, 2, 100, lambdaTimer, capturedBatches::add);
 
             assertEquals(
@@ -294,17 +278,16 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldStopProcessingWhenMaxTokensReached() {
-            var spyService = spy(orchAccessTokenService);
             when(lambdaTimer.hasTimeRemaining(anyLong())).thenReturn(true);
 
             var allTokensSegment1 = createOrchAccessTokensWithOrWithoutTtl(0, 50);
             var allTokensSegment2 = createOrchAccessTokensWithOrWithoutTtl(0, 50);
 
-            doReturn(allTokensSegment1.stream()).when(spyService).scanTableSegment(0, 2);
-            doReturn(allTokensSegment2.stream()).when(spyService).scanTableSegment(1, 2);
+            when(mockOldService.scanTableSegment(0, 2)).thenReturn(allTokensSegment1.stream());
+            when(mockOldService.scanTableSegment(1, 2)).thenReturn(allTokensSegment2.stream());
 
             var capturedBatches = new ArrayList<List<OrchAccessTokenItem>>();
-            spyService.processAccessTokensWithoutTtlInBatches(
+            orchAccessTokenService.processAccessTokensWithoutTtlInBatches(
                     10, 2, 25, lambdaTimer, capturedBatches::add);
 
             // Count items that actually completed processing
@@ -316,8 +299,6 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldStopProcessingWhenLambdaAboutToTimeOut() {
-            var spyService = spy(orchAccessTokenService);
-
             // on fourth check of hasTimeRemaining, will return false
             when(lambdaTimer.hasTimeRemaining(anyLong()))
                     .thenReturn(true)
@@ -328,11 +309,11 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             var allTokensSegment1 = createOrchAccessTokensWithOrWithoutTtl(0, 50);
             var allTokensSegment2 = createOrchAccessTokensWithOrWithoutTtl(0, 50);
 
-            doReturn(allTokensSegment1.stream()).when(spyService).scanTableSegment(0, 2);
-            doReturn(allTokensSegment2.stream()).when(spyService).scanTableSegment(1, 2);
+            when(mockOldService.scanTableSegment(0, 2)).thenReturn(allTokensSegment1.stream());
+            when(mockOldService.scanTableSegment(1, 2)).thenReturn(allTokensSegment2.stream());
 
             var capturedBatches = new ArrayList<List<OrchAccessTokenItem>>();
-            spyService.processAccessTokensWithoutTtlInBatches(
+            orchAccessTokenService.processAccessTokensWithoutTtlInBatches(
                     10, 2, 25, lambdaTimer, capturedBatches::add);
 
             var completedItems = capturedBatches.stream().flatMap(List::stream).toList();
@@ -342,17 +323,15 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldBatchWriteSuccessfully() {
-            var spyService = spy(orchAccessTokenService);
-
             var tokensToUpdate = createOrchAccessTokensWithOrWithoutTtl(0, 5);
 
             var expectedTtl = CREATION_INSTANT.getEpochSecond();
 
-            doNothing().when(spyService).batchPut(any());
-            spyService.updateAccessTokensTtlToNow(tokensToUpdate);
+            doNothing().when(mockOldService).batchPut(any());
+            orchAccessTokenService.updateAccessTokensTtlToNow(tokensToUpdate);
 
             tokensToUpdate.forEach(item -> assertEquals(expectedTtl, item.getTimeToLive()));
-            verify(spyService).batchPut(tokensToUpdate);
+            verify(mockOldService).batchPut(tokensToUpdate);
         }
 
         List<OrchAccessTokenItem> createOrchAccessTokensWithOrWithoutTtl(
