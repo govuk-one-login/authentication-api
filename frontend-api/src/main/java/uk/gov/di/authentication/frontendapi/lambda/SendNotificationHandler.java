@@ -286,7 +286,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 ValidationHelper.validatePhoneNumber(
                         request.getPhoneNumber(),
                         configurationService.getEnvironment(),
-                        isSmokeTest);
+                        isSmokeTest,
+                        configurationService.isInternalApiInternationalSmsEnabled());
 
         if (errorResponse.isPresent()) {
             return generateApiGatewayProxyResponse(400, errorResponse.get());

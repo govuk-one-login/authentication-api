@@ -193,6 +193,7 @@ class SendNotificationHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
         when(configurationService.getEnvironment()).thenReturn("unit-test");
+        when(configurationService.isInternalApiInternationalSmsEnabled()).thenReturn(true);
 
         var userCreds =
                 new UserCredentials()
@@ -1055,6 +1056,33 @@ class SendNotificationHandlerTest {
                 assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(auditService);
+            }
+
+            @Test
+            void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
+                when(configurationService.isInternalApiInternationalSmsEnabled()).thenReturn(false);
+                usingValidSession();
+
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL,
+                                VERIFY_PHONE_NUMBER,
+                                CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                                REGISTRATION);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertTrue(
+                        result.getBody()
+                                .contains(
+                                        String.valueOf(
+                                                ErrorResponse
+                                                        .INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED
+                                                        .getCode())));
+                verifyNoInteractions(emailSqsClient);
             }
 
             @Test
