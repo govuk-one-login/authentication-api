@@ -103,10 +103,34 @@ public class OrchAccessTokenService {
         } catch (Exception e) {
             logAndThrowOrchAccessTokenException(FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR, e);
         }
+
+        List<OrchAccessTokenItem> newOrchAccessTokens = List.of();
+        try {
+            newOrchAccessTokens =
+                    newOrchAccessTokenService.queryTableStream(clientAndRpPairwiseId).toList();
+        } catch (Exception e) {
+            LOG.warn(
+                    "Failed to get access token from new dynamo table. Error message: {}",
+                    e.getMessage());
+        }
+
         if (orchAccessTokens.isEmpty()) {
             LOG.info(
                     "No Orch access token found for clientAndRpPairwiseId {}",
                     clientAndRpPairwiseId);
+            if (!newOrchAccessTokens.isEmpty()) {
+                LOG.warn("Access token(s) were found in the new table but not in the old table");
+            }
+        } else {
+            if (newOrchAccessTokens.isEmpty()) {
+                LOG.warn("Access token(s) were found in the old table but not in the new table");
+            } else {
+                var oldTokens = new java.util.HashSet<>(orchAccessTokens);
+                var newTokens = new java.util.HashSet<>(newOrchAccessTokens);
+                if (!oldTokens.equals(newTokens)) {
+                    LOG.warn("Access tokens found in the tables do not match");
+                }
+            }
         }
         return orchAccessTokens;
     }
