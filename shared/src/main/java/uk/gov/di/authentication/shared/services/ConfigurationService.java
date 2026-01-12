@@ -748,6 +748,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean isInternalApiInternationalSmsEnabled() {
+        return System.getenv()
+                .getOrDefault("INTERNAL_API_INTERNATIONAL_SMS_ENABLED", "true")
+                .equals("true");
+    }
+
     public boolean isBulkAccountDeletionEnabled() {
         return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
     }
