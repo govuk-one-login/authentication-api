@@ -16,7 +16,7 @@ public record UserPermissionContext(
             String emailAddress,
             AuthSessionItem authSessionItem) {
         this(
-                internalSubjectId != null ? List.of(internalSubjectId) : null,
+                internalSubjectId != null ? List.of(internalSubjectId) : List.of(),
                 rpPairwiseId,
                 emailAddress,
                 authSessionItem);
@@ -41,7 +41,7 @@ public record UserPermissionContext(
 
         public Builder withInternalSubjectId(String internalSubjectId) {
             return withInternalSubjectIds(
-                    internalSubjectId != null ? List.of(internalSubjectId) : null);
+                    internalSubjectId != null ? List.of(internalSubjectId) : List.of());
         }
 
         public Builder withInternalSubjectIds(List<String> internalSubjectIds) {
