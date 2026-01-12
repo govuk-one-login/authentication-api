@@ -793,4 +793,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
         return Integer.parseInt(key);
     }
+
+    public String getAuthToAuthAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_AUTH_AUDIENCE", "");
+    }
 }
