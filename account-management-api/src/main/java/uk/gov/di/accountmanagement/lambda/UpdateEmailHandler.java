@@ -235,6 +235,9 @@ public class UpdateEmailHandler
                 NotifyRequest notifyEmailAddressUpdateRequest =
                         new NotifyRequest(
                                 emailAddress, NotificationType.EMAIL_UPDATED, userLanguage);
+                LOG.info(
+                        "Sending notification, reference: {}",
+                        notifyEmailAddressUpdateRequest.getUniqueNotificationReference());
                 sqsClient.send(objectMapper.writeValueAsString((notifyEmailAddressUpdateRequest)));
             }
 
