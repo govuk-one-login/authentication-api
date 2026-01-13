@@ -197,7 +197,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
-      internalApiInternationalSmsEnabled: true
+      internalApiInternationalSmsEnabled: false
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -231,7 +231,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
-      internalApiInternationalSmsEnabled: true
+      internalApiInternationalSmsEnabled: false
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -265,7 +265,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
-      internalApiInternationalSmsEnabled: true
+      internalApiInternationalSmsEnabled: false
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -300,7 +300,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       frontendApiFMSTagValue: "authfrontenddev"
       frontendBaseUrl: https://signin.dev.account.gov.uk
-      internalApiInternationalSmsEnabled: true
+      internalApiInternationalSmsEnabled: false
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
