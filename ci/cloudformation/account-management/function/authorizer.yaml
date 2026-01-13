@@ -32,6 +32,18 @@ Resources:
                 !Ref Environment,
                 TokenSigningkeyArn,
               ]
+          TEST_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                TestIdTokenSigningKeyArn,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                TestIdTokenSigningKeyArn,
+              ]
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
@@ -45,6 +57,7 @@ Resources:
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref AuditEventsSnsPolicy
         - !Ref IdTokenSigningKeyPolicy
+        - !Ref TestIdTokenSigningKeyPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
