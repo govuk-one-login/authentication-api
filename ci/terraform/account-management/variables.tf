@@ -254,3 +254,9 @@ variable "new_auth_privatesub_cidr_blocks" {
   default     = []
   description = "New Auth equivalent environment private subnets"
 }
+
+variable "test_signing_key_enabled" {
+  description = "Feature flag to control whether we check the access token signature against the auth owned acceptance test key"
+  type        = bool
+  default     = false
+}

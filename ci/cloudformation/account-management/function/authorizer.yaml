@@ -32,11 +32,21 @@ Resources:
                 !Ref Environment,
                 TokenSigningkeyArn,
               ]
+          TEST_TOKEN_SIGNING_KEY_ALIAS: !If
+            - IsAcceptanceTestEnv
+            - !GetAtt TestIdTokenSigningKey.Arn
+            - !Ref AWS::NoValue
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+          TEST_SIGNING_KEY_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              testSigningKeyEnabled,
+            ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:
@@ -45,6 +55,11 @@ Resources:
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref AuditEventsSnsPolicy
         - !Ref IdTokenSigningKeyPolicy
+        - !If [
+            IsAcceptanceTestEnv,
+            !Ref TestIdTokenSigningKeyPolicy,
+            !Ref "AWS::NoValue",
+          ]
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
