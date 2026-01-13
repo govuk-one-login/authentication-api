@@ -110,4 +110,29 @@ public class OrchAccessTokenItem {
         this.timeToLive = timeToLive;
         return this;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OrchAccessTokenItem that = (OrchAccessTokenItem) o;
+        return timeToLive == that.timeToLive
+                && java.util.Objects.equals(clientAndRpPairwiseId, that.clientAndRpPairwiseId)
+                && java.util.Objects.equals(authCode, that.authCode)
+                && java.util.Objects.equals(token, that.token)
+                && java.util.Objects.equals(
+                        internalPairwiseSubjectId, that.internalPairwiseSubjectId)
+                && java.util.Objects.equals(clientSessionId, that.clientSessionId);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(
+                clientAndRpPairwiseId,
+                authCode,
+                token,
+                internalPairwiseSubjectId,
+                clientSessionId,
+                timeToLive);
+    }
 }
