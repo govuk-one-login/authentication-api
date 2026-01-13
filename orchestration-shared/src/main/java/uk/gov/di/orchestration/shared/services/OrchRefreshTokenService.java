@@ -7,16 +7,19 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.lambda.LambdaTimer;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenItem> {
     private static final Logger LOG = LogManager.getLogger(OrchRefreshTokenService.class);
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
+    private static final int TIME_REMAINING_BUFFER_IN_MILLISECONDS = 10000;
     private final long timeToLive;
     private final NowHelper.NowClock nowClock;
 
@@ -106,6 +109,28 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
                     e);
         }
         return item;
+    }
+
+    public void processRefreshTokensWithoutTtlSequentially(
+            LambdaTimer timer,
+            int readBatchSize,
+            Consumer<List<OrchRefreshTokenItem>> batchConsumer) {
+        List<OrchRefreshTokenItem> batch = new ArrayList<>();
+        scanTable()
+                .filter(item -> item.getTimeToLive() == 0)
+                .takeWhile(item -> timer.hasTimeRemaining(TIME_REMAINING_BUFFER_IN_MILLISECONDS))
+                .forEach(
+                        item -> {
+                            if (batch.size() >= readBatchSize) {
+                                batchConsumer.accept(new ArrayList<>(batch));
+                                batch.clear();
+                            }
+                            batch.add(item);
+                        });
+        if (!batch.isEmpty()) {
+            batchConsumer.accept(new ArrayList<>(batch));
+            batch.clear();
+        }
     }
 
     private void logAndThrowOrchRefreshTokenException(String message, Exception e) {

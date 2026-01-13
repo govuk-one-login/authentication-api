@@ -1,6 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -9,15 +10,28 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
+import uk.gov.di.orchestration.shared.lambda.LambdaTimer;
 import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -207,5 +221,113 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertEquals(
                 "Failed to get Orch refresh tokens from Dynamo for auth code",
                 exception.getMessage());
+    }
+
+    @Nested
+    class UpdateTokenTtl {
+        private final LambdaTimer mockLambdaTimer = mock(LambdaTimer.class);
+        private final List<List<OrchRefreshTokenItem>> batchesProcessed = new ArrayList<>();
+        private OrchRefreshTokenService spyService;
+
+        @BeforeEach
+        void setup() {
+            when(mockLambdaTimer.hasTimeRemaining(anyLong())).thenReturn(true);
+            batchesProcessed.clear();
+            spyService = spy(orchRefreshTokenService);
+        }
+
+        @Test
+        void shouldNotUpdateTokensIfNoTokensFoundWithTtlOfZero() {
+            var token1 = tokenWithTtl(123L);
+            var token2 = tokenWithTtl(456L);
+            var token3 = tokenWithTtl(789L);
+            doReturn(Stream.of(token1, token2, token3)).when(spyService).scanTable();
+
+            spyService.processRefreshTokensWithoutTtlSequentially(
+                    mockLambdaTimer, 100, batchesProcessed::add);
+
+            assertTrue(batchesProcessed.isEmpty());
+        }
+
+        @Test
+        void shouldUpdateTtlOfTokensIfTokenFoundWithTtlOfZero() {
+            var token1 = tokenWithoutTtl();
+            var token2 = tokenWithTtl(456L);
+            var token3 = tokenWithoutTtl();
+            doReturn(Stream.of(token1, token2, token3)).when(spyService).scanTable();
+
+            spyService.processRefreshTokensWithoutTtlSequentially(
+                    mockLambdaTimer, 100, batchesProcessed::add);
+
+            assertThat(batchesProcessed, contains(List.of(token1, token3)));
+        }
+
+        @Test
+        void shouldStopUpdatingTokensIfLambdaIsNearTimeout() {
+            when(mockLambdaTimer.hasTimeRemaining(anyLong())).thenReturn(true).thenReturn(false);
+            var token1 = tokenWithoutTtl();
+            var token2 = tokenWithTtl(456L);
+            var token3 = tokenWithoutTtl();
+            doReturn(Stream.of(token1, token2, token3)).when(spyService).scanTable();
+
+            spyService.processRefreshTokensWithoutTtlSequentially(
+                    mockLambdaTimer, 100, batchesProcessed::add);
+
+            assertThat(batchesProcessed, contains(List.of(token1)));
+        }
+
+        @Test
+        void shouldUpdateTokensInBatchesWhenReadBatchSizeIsMet() {
+            var token1 = tokenWithoutTtl();
+            var token2 = tokenWithTtl(456L);
+            var token3 = tokenWithoutTtl();
+            var token4 = tokenWithoutTtl();
+            doReturn(Stream.of(token1, token2, token3, token4)).when(spyService).scanTable();
+
+            spyService.processRefreshTokensWithoutTtlSequentially(
+                    mockLambdaTimer, 2, batchesProcessed::add);
+
+            assertThat(batchesProcessed, contains(List.of(token1, token3), List.of(token4)));
+        }
+
+        @Test
+        void shouldSetTokenTtlToNowUsingMethod() {
+            var mockNow = Instant.parse("2026-01-14T13:30:00Z");
+            fixCurrentTime(mockNow);
+            spyService = spy(orchRefreshTokenService);
+            doNothing().when(spyService).batchPut(anyList());
+            var token = tokenWithoutTtl();
+
+            spyService.updateRefreshTokenBatchTtlToNow(List.of(token));
+            verify(spyService)
+                    .batchPut(
+                            argThat(
+                                    list ->
+                                            list.size() == 1
+                                                    && list.get(0).getTimeToLive()
+                                                            == mockNow.getEpochSecond()));
+        }
+
+        private void fixCurrentTime(Instant time) {
+            orchRefreshTokenService =
+                    new OrchRefreshTokenService(
+                            dynamoDbClient,
+                            table,
+                            configurationService,
+                            Clock.fixed(time, ZoneOffset.UTC));
+        }
+
+        private OrchRefreshTokenItem tokenWithoutTtl() {
+            return tokenWithTtl(0L);
+        }
+
+        private OrchRefreshTokenItem tokenWithTtl(long ttl) {
+            return new OrchRefreshTokenItem()
+                    .withToken("test-token")
+                    .withAuthCode("test-auth-code")
+                    .withJwtId("test-jwt-id")
+                    .withIsUsed(false)
+                    .withTimeToLive(ttl);
+        }
     }
 }
