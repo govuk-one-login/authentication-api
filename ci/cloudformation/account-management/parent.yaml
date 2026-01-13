@@ -1085,7 +1085,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: ["kms:Sign", "kms:GetPublicKey", "kms:DescribeKey"]
+            Action: "kms:*"
             Resource: "*"
       KeyUsage: SIGN_VERIFY
       PendingWindowInDays: 30
