@@ -33,7 +33,8 @@ class RateLimitServiceTest {
                 new RateLimitService(alwaysExceededAlgorithm, cloudwatchMetricsService);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
-                        new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, null));
+                        new ClientRateLimitConfig(
+                                Constants.TEST_CLIENT_ID, Constants.CLIENT_NAME, null));
         assertFalse(rateLimitDecision.hasExceededRateLimit());
         assertEquals(RateLimitDecision.RateLimitAction.NONE, rateLimitDecision.getAction());
     }
@@ -44,7 +45,8 @@ class RateLimitServiceTest {
                 new RateLimitService(neverExceededAlgorithm, cloudwatchMetricsService);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
-                        new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, 0));
+                        new ClientRateLimitConfig(
+                                Constants.TEST_CLIENT_ID, Constants.CLIENT_NAME, 0));
         assertTrue(rateLimitDecision.hasExceededRateLimit());
         assertEquals(RateLimitDecision.RateLimitAction.RETURN_TO_RP, rateLimitDecision.getAction());
 
@@ -65,7 +67,8 @@ class RateLimitServiceTest {
         var rateLimitService = new RateLimitService(algorithm, cloudwatchMetricsService);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
-                        new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, 400));
+                        new ClientRateLimitConfig(
+                                Constants.TEST_CLIENT_ID, Constants.CLIENT_NAME, 400));
         assertEquals(outcome, rateLimitDecision);
 
         if (outcome.hasExceededRateLimit()) {

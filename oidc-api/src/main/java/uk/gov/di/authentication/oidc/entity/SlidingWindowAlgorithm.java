@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ObjectMessage;
 import uk.gov.di.authentication.oidc.services.ClientRateLimitDataService;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.time.Clock;
@@ -17,19 +18,27 @@ public class SlidingWindowAlgorithm implements RateLimitAlgorithm {
     private static final int PERIOD_LENGTH_IN_SECONDS = 60;
     private final ClientRateLimitDataService rateLimitDataService;
     private final NowHelper.NowClock nowClock;
+    private final CloudwatchMetricsService metrics;
 
     public SlidingWindowAlgorithm(ConfigurationService configurationService) {
-        this(new ClientRateLimitDataService(configurationService));
-    }
-
-    public SlidingWindowAlgorithm(ClientRateLimitDataService clientRateLimitDataService) {
-        this(clientRateLimitDataService, Clock.systemUTC());
+        this(
+                new ClientRateLimitDataService(configurationService),
+                new CloudwatchMetricsService(configurationService));
     }
 
     public SlidingWindowAlgorithm(
-            ClientRateLimitDataService clientRateLimitDataService, Clock clock) {
+            ClientRateLimitDataService clientRateLimitDataService,
+            CloudwatchMetricsService metrics) {
+        this(clientRateLimitDataService, Clock.systemUTC(), metrics);
+    }
+
+    public SlidingWindowAlgorithm(
+            ClientRateLimitDataService clientRateLimitDataService,
+            Clock clock,
+            CloudwatchMetricsService metrics) {
         this.rateLimitDataService = clientRateLimitDataService;
         this.nowClock = new NowHelper.NowClock(clock);
+        this.metrics = metrics;
     }
 
     @Override
@@ -76,6 +85,10 @@ public class SlidingWindowAlgorithm implements RateLimitAlgorithm {
         if (rateLimit > 0) {
             var consumption = (previousCountInWindow + currentCount) / rateLimit;
             LOG.info(new ObjectMessage(Map.of("client", clientId, "consumption", consumption)));
+            metrics.putEmbeddedValue(
+                    "RateLimitConsumption",
+                    consumption,
+                    Map.of("ClientID", clientId, "Client", rateLimitConfig.clientName()));
         }
 
         if (previousCountInWindow + currentCount > rateLimit) {

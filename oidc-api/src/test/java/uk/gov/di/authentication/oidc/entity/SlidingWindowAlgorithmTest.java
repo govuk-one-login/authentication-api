@@ -2,6 +2,7 @@ package uk.gov.di.authentication.oidc.entity;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.services.ClientRateLimitDataService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -12,11 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.helper.Constants.CLIENT_NAME;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.TEST_CLIENT_ID;
 
 class SlidingWindowAlgorithmTest {
     private final ClientRateLimitDataService rateLimitDataService =
             mock(ClientRateLimitDataService.class);
+    private final CloudwatchMetricsService metrics = mock(CloudwatchMetricsService.class);
     private static final LocalDateTime CURRENT_PERIOD = LocalDateTime.parse("2025-07-15T16:27");
     private static final LocalDateTime PREVIOUS_PERIOD = CURRENT_PERIOD.minusMinutes(1);
     private SlidingWindowAlgorithm slidingWindowAlgorithm;
@@ -78,7 +81,7 @@ class SlidingWindowAlgorithmTest {
     }
 
     private static ClientRateLimitConfig clientWithRateLimit(Integer rateLimit) {
-        return new ClientRateLimitConfig(TEST_CLIENT_ID, rateLimit);
+        return new ClientRateLimitConfig(TEST_CLIENT_ID, CLIENT_NAME, rateLimit);
     }
 
     private void setupRateLimitDataAt(LocalDateTime period, long requestCount) {
@@ -93,6 +96,7 @@ class SlidingWindowAlgorithmTest {
         slidingWindowAlgorithm =
                 new SlidingWindowAlgorithm(
                         rateLimitDataService,
-                        Clock.fixed(time.toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
+                        Clock.fixed(time.toInstant(ZoneOffset.UTC), ZoneOffset.UTC),
+                        metrics);
     }
 }
