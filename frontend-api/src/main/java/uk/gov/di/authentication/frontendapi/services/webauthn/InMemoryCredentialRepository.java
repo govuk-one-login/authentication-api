@@ -45,6 +45,10 @@ public class InMemoryCredentialRepository implements CredentialRepository {
         this.store = store;
     }
 
+    public InMemoryCredentialRepository() {
+        this(new Store());
+    }
+
     @Override
     public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
         return store.getAll().stream()

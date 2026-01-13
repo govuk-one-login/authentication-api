@@ -753,4 +753,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getAccountManagementSqsLambdaFunctionName() {
         return String.format("%s-account-management-sqs-lambda", getEnvironment());
     }
+
+    public String getWebAuthnRelyingPartyId() {
+        return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_ID", "");
+    }
+
+    public String getWebAuthnRelyingPartyName() {
+        return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "");
+    }
 }
