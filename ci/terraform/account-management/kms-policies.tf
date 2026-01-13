@@ -101,15 +101,13 @@ data "aws_iam_policy_document" "test_id_token_signing_key_access_policy" {
   count = var.environment != "production" ? 1 : 0
 
   statement {
-    sid    = "AllowAccessToTestIdTokenKmsPublicKey"
+    sid    = "DefaultAccessPolicy"
     effect = "Allow"
 
     actions = [
-      "kms:GetPublicKey",
-      "kms:Sign",
-      "kms:DescribeKey"
+      "kms:*"
     ]
-    resources = [aws_kms_key.test_id_token_signing_key[0].arn]
+    resources = ["*"]
 
     principals {
       type        = "AWS"
