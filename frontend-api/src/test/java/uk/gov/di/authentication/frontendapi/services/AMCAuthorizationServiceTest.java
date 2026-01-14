@@ -38,7 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -48,8 +47,14 @@ class AMCAuthorizationServiceTest {
             "urn:fdc:gov.uk:2022:xH7hrtJCgdi2NEF7TXcOC6SMz8DohdoLo9hWqQMWPRk";
     private static final String AUTH_ISSUER_CLAIM = "https://signin.account.gov.uk/";
     private static final String AUTH_TO_AUTH_AUDIENCE = "https://api.manage.account.gov.uk";
+    private static final String AUTH_TO_AMC_AUDIENCE = "https://amc.account.gov.uk";
     private static final String CLIENT_ID = "test-client-id";
     private static final String SESSION_ID = "test-session-id";
+    private static final String RESPONSE_TYPE = "code";
+    private static final String REDIRECT_URI = "https://example.com/callback";
+    private static final String EMAIL = "test@example.com";
+    private static final String JOURNEY_ID = "test-journey-id";
+    private static final String PUBLIC_SUBJECT = "test-public-subject";
     private static final AuthSessionItem authSessionItem = mock(AuthSessionItem.class);
 
     // Ensure 0 milliseconds for JWT compatibility
@@ -69,22 +74,34 @@ class AMCAuthorizationServiceTest {
     }
 
     @Test
-    void shouldCreateAccessTokenWithValidJWTClaims() throws Exception {
+    void shouldCreateCompositeJWTClaimsWithValidAccessToken() throws Exception {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
         mockConfigurationService(expiryDate);
         mockAuthSessionItem();
         mockKmsSigningToUseKey(ecSigningKey);
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-        Result<AMCAuthorizeFailureReason, BearerAccessToken> result =
-                amcAuthorizationService.createAccessToken(
+        Result<AMCAuthorizeFailureReason, JWTClaimsSet> result =
+                amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                        authSessionItem);
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
 
         assertTrue(result.isSuccess());
-        BearerAccessToken bearerToken = result.getSuccess();
+        JWTClaimsSet compositeClaims = result.getSuccess();
+
+        assertCompositeJWTClaims(compositeClaims, expiryDate);
+
+        @SuppressWarnings("unchecked")
+        Result<AMCAuthorizeFailureReason, BearerAccessToken> accessTokenResult =
+                (Result<AMCAuthorizeFailureReason, BearerAccessToken>)
+                        compositeClaims.getClaim("access_token");
+
+        BearerAccessToken bearerToken = accessTokenResult.getSuccess();
 
         assertEquals(SESSION_EXPIRY, bearerToken.getLifetime());
         assertTrue(bearerToken.getScope().contains(AMCScope.ACCOUNT_DELETE.getValue()));
@@ -92,40 +109,27 @@ class AMCAuthorizationServiceTest {
         SignedJWT signedJWT = SignedJWT.parse(bearerToken.getValue());
         assertTrue(signedJWT.verify(new ECDSAVerifier(ecSigningKey.toECPublicKey())));
 
-        JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-        assertAll(
-                "JWT Claims",
-                () -> assertEquals(AUTH_ISSUER_CLAIM, claims.getIssuer()),
-                () -> assertEquals(INTERNAL_PAIRWISE_ID, claims.getSubject()),
-                () -> assertEquals(List.of(AUTH_TO_AUTH_AUDIENCE), claims.getAudience()),
-                () ->
-                        assertEquals(
-                                List.of(AMCScope.ACCOUNT_DELETE.getValue()),
-                                claims.getClaim("scope")),
-                () -> assertEquals(CLIENT_ID, claims.getClaim("client_id")),
-                () -> assertEquals(SESSION_ID, claims.getClaim("sid")),
-                () -> assertEquals(NOW, claims.getIssueTime()),
-                () -> assertEquals(NOW, claims.getNotBeforeTime()),
-                () -> assertEquals(expiryDate, claims.getExpirationTime()),
-                () -> assertDoesNotThrow(() -> UUID.fromString(claims.getJWTID())));
+        JWTClaimsSet accessTokenClaims = signedJWT.getJWTClaimsSet();
+        assertAccessTokenClaims(accessTokenClaims, expiryDate);
     }
 
     @Test
     void shouldReturnFailureWhenKmsSigningFails() {
-        when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
-        when(nowClock.now()).thenReturn(NOW);
-        when(nowClock.nowPlus(anyLong(), any())).thenReturn(new Date());
-        when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
-                .thenReturn("key-alias");
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
         when(kmsConnectionService.sign(any(SignRequest.class)))
                 .thenThrow(SdkException.builder().message("KMS Unreachable").build());
 
-        Result<AMCAuthorizeFailureReason, BearerAccessToken> result =
-                amcAuthorizationService.createAccessToken(
+        Result<AMCAuthorizeFailureReason, JWTClaimsSet> result =
+                amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                        authSessionItem);
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
 
         assertTrue(result.isFailure());
         assertEquals(AMCAuthorizeFailureReason.KMS_ERROR, result.getFailure());
@@ -133,11 +137,10 @@ class AMCAuthorizationServiceTest {
 
     @Test
     void shouldReturnFailureWhenSignatureTranscodingFails() {
-        when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
-        when(nowClock.now()).thenReturn(NOW);
-        when(nowClock.nowPlus(anyLong(), any())).thenReturn(new Date());
-        when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
-                .thenReturn("key-alias");
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
         when(kmsConnectionService.sign(any(SignRequest.class)))
                 .thenReturn(
@@ -147,11 +150,13 @@ class AMCAuthorizationServiceTest {
                                                 new byte[] {0x00, 0x01})) // Invalid bytes
                                 .build());
 
-        Result<AMCAuthorizeFailureReason, BearerAccessToken> result =
-                amcAuthorizationService.createAccessToken(
+        Result<AMCAuthorizeFailureReason, JWTClaimsSet> result =
+                amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                        authSessionItem);
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
 
         assertTrue(result.isFailure());
         assertEquals(AMCAuthorizeFailureReason.TRANSCODING_ERROR, result.getFailure());
@@ -184,9 +189,11 @@ class AMCAuthorizationServiceTest {
     private void mockConfigurationService(Date expiryDate) {
         when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
         when(configurationService.getAuthToAuthAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
+        when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
                 .thenReturn("test-key-alias");
+        when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
         when(nowClock.now()).thenReturn(NOW);
         when(nowClock.nowPlus(SESSION_EXPIRY, ChronoUnit.SECONDS)).thenReturn(expiryDate);
     }
@@ -194,5 +201,46 @@ class AMCAuthorizationServiceTest {
     private void mockAuthSessionItem() {
         when(authSessionItem.getClientId()).thenReturn(CLIENT_ID);
         when(authSessionItem.getSessionId()).thenReturn(SESSION_ID);
+    }
+
+    private void assertCompositeJWTClaims(JWTClaimsSet compositeClaims, Date expiryDate) {
+        assertAll(
+                "Composite JWT Claims",
+                () -> assertEquals(AUTH_ISSUER_CLAIM, compositeClaims.getIssuer()),
+                () -> assertEquals(List.of(AUTH_TO_AMC_AUDIENCE), compositeClaims.getAudience()),
+                () -> assertEquals(CLIENT_ID, compositeClaims.getClaim("client_id")),
+                () -> assertEquals(RESPONSE_TYPE, compositeClaims.getClaim("response_type")),
+                () -> assertEquals(REDIRECT_URI, compositeClaims.getClaim("redirect_uri")),
+                () ->
+                        assertEquals(
+                                List.of(AMCScope.ACCOUNT_DELETE.getValue()),
+                                compositeClaims.getClaim("scope")),
+                () -> assertDoesNotThrow(() -> compositeClaims.getClaim("state")),
+                () -> assertEquals(INTERNAL_PAIRWISE_ID, compositeClaims.getSubject()),
+                () -> assertEquals(EMAIL, compositeClaims.getClaim("email")),
+                () -> assertEquals(JOURNEY_ID, compositeClaims.getClaim("govuk_signin_journey_id")),
+                () -> assertEquals(PUBLIC_SUBJECT, compositeClaims.getClaim("public_sub")),
+                () -> assertEquals(NOW, compositeClaims.getIssueTime()),
+                () -> assertEquals(NOW, compositeClaims.getNotBeforeTime()),
+                () -> assertEquals(expiryDate, compositeClaims.getExpirationTime()),
+                () -> assertDoesNotThrow(() -> UUID.fromString(compositeClaims.getJWTID())));
+    }
+
+    private void assertAccessTokenClaims(JWTClaimsSet accessTokenClaims, Date expiryDate) {
+        assertAll(
+                "Access Token Claims",
+                () -> assertEquals(AUTH_ISSUER_CLAIM, accessTokenClaims.getIssuer()),
+                () -> assertEquals(INTERNAL_PAIRWISE_ID, accessTokenClaims.getSubject()),
+                () -> assertEquals(List.of(AUTH_TO_AUTH_AUDIENCE), accessTokenClaims.getAudience()),
+                () ->
+                        assertEquals(
+                                List.of(AMCScope.ACCOUNT_DELETE.getValue()),
+                                accessTokenClaims.getClaim("scope")),
+                () -> assertEquals(CLIENT_ID, accessTokenClaims.getClaim("client_id")),
+                () -> assertEquals(SESSION_ID, accessTokenClaims.getClaim("sid")),
+                () -> assertEquals(NOW, accessTokenClaims.getIssueTime()),
+                () -> assertEquals(NOW, accessTokenClaims.getNotBeforeTime()),
+                () -> assertEquals(expiryDate, accessTokenClaims.getExpirationTime()),
+                () -> assertDoesNotThrow(() -> UUID.fromString(accessTokenClaims.getJWTID())));
     }
 }

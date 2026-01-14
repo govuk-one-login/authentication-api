@@ -818,4 +818,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getAuthToAccountManagementPrivateSigningKeyAlias() {
         return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_PRIVATE_SIGNING_KEY", "");
     }
+
+    public String getAuthToAMCAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_AUDIENCE", "");
+    }
+
+    public String getAMCRedirectURI() {
+        return System.getenv().getOrDefault("AMC_REDIRECT_URI", "");
+    }
 }
