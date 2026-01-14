@@ -34,6 +34,7 @@ class IdentityProgressServiceTest {
     @BeforeEach
     void setup() {
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configurationService.getSyncWaitForSpotTimeout()).thenReturn(5000L);
         identityProgressService =
                 new IdentityProgressService(
                         configurationService,
