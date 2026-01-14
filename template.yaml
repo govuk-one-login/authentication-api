@@ -110,6 +110,12 @@ Conditions:
         !Equals [staging, !Ref Environment],
       ],
     ]
+  UseSyncWaitForSpot:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -4820,7 +4826,10 @@ Resources:
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
-          USE_SYNC_WAIT_FOR_SPOT: false
+          USE_SYNC_WAIT_FOR_SPOT: !If
+            - UseSyncWaitForSpot
+            - true
+            - false
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
