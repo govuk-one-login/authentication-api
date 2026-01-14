@@ -18,6 +18,8 @@ import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -52,6 +54,22 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canReceiveEmailAddress(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
+        if (journeyType == null || userPermissionContext == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            if (userPermissionContext.internalSubjectIds() == null
+                    || userPermissionContext.rpPairwiseId() == null) {
+                return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+            }
+
+            return this.checkForAnyReauthLockout(
+                    userPermissionContext.internalSubjectIds(),
+                    userPermissionContext.rpPairwiseId(),
+                    CountType.ENTER_EMAIL);
+        }
+
         return Result.success(new Decision.Permitted(0));
     }
 
@@ -123,13 +141,13 @@ public class PermissionDecisionManager implements PermissionDecisions {
         }
 
         if (journeyType == JourneyType.REAUTHENTICATION) {
-            if (userPermissionContext.internalSubjectId() == null
+            if (userPermissionContext.internalSubjectIds() == null
                     || userPermissionContext.rpPairwiseId() == null) {
                 return Result.failure(DecisionError.INVALID_USER_CONTEXT);
             }
 
             return this.checkForAnyReauthLockout(
-                    userPermissionContext.internalSubjectId(),
+                    userPermissionContext.internalSubjectIds(),
                     userPermissionContext.rpPairwiseId(),
                     CountType.ENTER_PASSWORD);
         }
@@ -245,7 +263,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
             }
 
             return this.checkForAnyReauthLockout(
-                    userPermissionContext.internalSubjectId(),
+                    userPermissionContext.internalSubjectIds(),
                     userPermissionContext.rpPairwiseId(),
                     null);
         }
@@ -269,12 +287,17 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     private Result<DecisionError, Decision> checkForAnyReauthLockout(
-            String internalSubjectId, String rpPairwiseId, CountType primaryCountCheck) {
+            List<String> internalSubjectIds, String rpPairwiseId, CountType primaryCountCheck) {
+        List<String> identifiers = new ArrayList<>();
+        if (internalSubjectIds != null) {
+            identifiers.addAll(internalSubjectIds);
+        }
+        identifiers.add(rpPairwiseId);
 
         var reauthCounts =
                 getAuthenticationAttemptsService()
-                        .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                internalSubjectId, rpPairwiseId, JourneyType.REAUTHENTICATION);
+                        .getCountsByJourneyForIdentifiers(
+                                identifiers, JourneyType.REAUTHENTICATION);
 
         var exceedingCounts =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(

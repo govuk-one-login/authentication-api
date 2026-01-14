@@ -206,7 +206,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
 
         UserPermissionContext userPermissionContext =
-                new UserPermissionContext(null, null, userCredentials.getEmail(), null);
+                UserPermissionContext.builder()
+                        .withEmailAddress(userCredentials.getEmail())
+                        .build();
 
         userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
 

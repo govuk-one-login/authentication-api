@@ -11,13 +11,16 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -40,7 +43,10 @@ class UserActionsManagerTest {
     private final AuthSessionItem authSession =
             new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);
     private final UserPermissionContext userPermissionContext =
-            new UserPermissionContext(null, null, EMAIL, authSession);
+            UserPermissionContext.builder()
+                    .withEmailAddress(EMAIL)
+                    .withAuthSessionItem(authSession)
+                    .build();
 
     @BeforeEach
     void setUp() {
@@ -106,7 +112,10 @@ class UserActionsManagerTest {
                 sessionWithMaxCount = sessionWithMaxCount.incrementPasswordResetCount();
             }
             var contextWithMaxCount =
-                    new UserPermissionContext(null, null, EMAIL, sessionWithMaxCount);
+                    UserPermissionContext.builder()
+                            .withEmailAddress(EMAIL)
+                            .withAuthSessionItem(sessionWithMaxCount)
+                            .build();
 
             var result =
                     userActionsManager.sentEmailOtpNotification(
@@ -129,7 +138,10 @@ class UserActionsManagerTest {
                 sessionWithExactMaxCount = sessionWithExactMaxCount.incrementPasswordResetCount();
             }
             var contextWithExactMaxCount =
-                    new UserPermissionContext(null, null, EMAIL, sessionWithExactMaxCount);
+                    UserPermissionContext.builder()
+                            .withEmailAddress(EMAIL)
+                            .withAuthSessionItem(sessionWithExactMaxCount)
+                            .build();
 
             var result =
                     userActionsManager.sentEmailOtpNotification(
@@ -214,6 +226,74 @@ class UserActionsManagerTest {
                             900L);
             verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
             assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class IncorrectEmailAddressReceived {
+
+        @Test
+        void shouldIncrementCountForReauthenticationJourney() {
+            var context =
+                    UserPermissionContext.builder()
+                            .withInternalSubjectId("internal-subject-id")
+                            .withRpPairwiseId("rp-pairwise-id")
+                            .build();
+            when(configurationService.getReauthEnterEmailCountTTL()).thenReturn(900L);
+
+            var result =
+                    userActionsManager.incorrectEmailAddressReceived(
+                            JourneyType.REAUTHENTICATION, context);
+
+            assertTrue(result.isSuccess());
+            verify(authenticationAttemptsService)
+                    .createOrIncrementCount(
+                            eq("internal-subject-id"),
+                            anyLong(),
+                            eq(JourneyType.REAUTHENTICATION),
+                            eq(CountType.ENTER_EMAIL));
+        }
+
+        @Test
+        void shouldUseRpPairwiseIdWhenInternalSubjectIdIsNull() {
+            var context =
+                    UserPermissionContext.builder()
+                            .withInternalSubjectId(null)
+                            .withRpPairwiseId("rp-pairwise-id")
+                            .build();
+            when(configurationService.getReauthEnterEmailCountTTL()).thenReturn(900L);
+
+            var result =
+                    userActionsManager.incorrectEmailAddressReceived(
+                            JourneyType.REAUTHENTICATION, context);
+
+            assertTrue(result.isSuccess());
+            verify(authenticationAttemptsService)
+                    .createOrIncrementCount(
+                            eq("rp-pairwise-id"),
+                            anyLong(),
+                            eq(JourneyType.REAUTHENTICATION),
+                            eq(CountType.ENTER_EMAIL));
+        }
+
+        @Test
+        void shouldReturnStorageErrorWhenExceptionThrown() {
+            var context =
+                    UserPermissionContext.builder()
+                            .withInternalSubjectId("internal-subject-id")
+                            .withRpPairwiseId("rp-pairwise-id")
+                            .build();
+            when(configurationService.getReauthEnterEmailCountTTL()).thenReturn(900L);
+            doThrow(new RuntimeException("Storage error"))
+                    .when(authenticationAttemptsService)
+                    .createOrIncrementCount(anyString(), anyLong(), any(), any());
+
+            var result =
+                    userActionsManager.incorrectEmailAddressReceived(
+                            JourneyType.REAUTHENTICATION, context);
+
+            assertTrue(result.isFailure());
+            assertEquals(TrackingError.STORAGE_SERVICE_ERROR, result.getFailure());
         }
     }
 
