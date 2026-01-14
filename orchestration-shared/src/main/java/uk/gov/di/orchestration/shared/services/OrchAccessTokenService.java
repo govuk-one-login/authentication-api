@@ -66,18 +66,40 @@ public class OrchAccessTokenService {
         }
 
         if (orchAccessToken.isEmpty()) {
-            LOG.info(
-                    "No Orch access token found for clientAndRpPairwiseId {}",
-                    clientAndRpPairwiseId);
+            LOG.info("No Orch access token found");
         }
         return orchAccessToken;
     }
 
     public Optional<OrchAccessTokenItem> getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
             String clientAndRpPairwiseId, String tokenValue) {
-        return getAccessTokensForClientAndRpPairwiseId(clientAndRpPairwiseId).stream()
-                .filter(item -> Objects.equals(item.getToken(), tokenValue))
-                .findFirst();
+        Optional<OrchAccessTokenItem> orchAccessTokenItem =
+                getAccessTokensForClientAndRpPairwiseId(clientAndRpPairwiseId).stream()
+                        .filter(item -> Objects.equals(item.getToken(), tokenValue))
+                        .findFirst();
+
+        Optional<OrchAccessTokenItem> orchAccessTokenItemFromNewTable =
+                getAccessTokensForClientAndRpPairwiseIdFromNewTable(clientAndRpPairwiseId).stream()
+                        .filter(item -> Objects.equals(item.getToken(), tokenValue))
+                        .findFirst();
+
+        if (orchAccessTokenItem.isEmpty()) {
+            LOG.info("No Orch access token found");
+            if (!orchAccessTokenItemFromNewTable.isEmpty()) {
+                LOG.warn("Access token was found in the new table but not in the old table");
+            }
+        } else {
+            if (orchAccessTokenItemFromNewTable.isEmpty()) {
+                LOG.warn("Access token was found in the old table but not in the new table");
+            } else {
+                if (!orchAccessTokenItem.get().equals(orchAccessTokenItemFromNewTable.get())) {
+                    LOG.warn("Access token from new table does not match the old table");
+                } else {
+                    LOG.info("Access tokens match");
+                }
+            }
+        }
+        return orchAccessTokenItem;
     }
 
     public Optional<OrchAccessTokenItem> getAccessTokenForAuthCode(String authCode) {
@@ -104,9 +126,22 @@ public class OrchAccessTokenService {
             logAndThrowOrchAccessTokenException(FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR, e);
         }
         if (orchAccessTokens.isEmpty()) {
-            LOG.info(
-                    "No Orch access token found for clientAndRpPairwiseId {}",
-                    clientAndRpPairwiseId);
+            LOG.info("No Orch access token found");
+        }
+        return orchAccessTokens;
+    }
+
+    private List<OrchAccessTokenItem> getAccessTokensForClientAndRpPairwiseIdFromNewTable(
+            String clientAndRpPairwiseId) {
+        List<OrchAccessTokenItem> orchAccessTokens = List.of();
+        try {
+            orchAccessTokens =
+                    newOrchAccessTokenService.queryTableStream(clientAndRpPairwiseId).toList();
+        } catch (Exception e) {
+            LOG.warn("Failed to get access token from new table. Error: {}", e.getMessage());
+        }
+        if (orchAccessTokens.isEmpty()) {
+            LOG.warn("No Orch access token found in new table");
         }
         return orchAccessTokens;
     }
