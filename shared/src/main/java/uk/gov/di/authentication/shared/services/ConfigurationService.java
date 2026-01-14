@@ -755,10 +755,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getWebAuthnRelyingPartyId() {
-        return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_ID", "");
+        return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_ID", "account.gov.uk");
     }
 
     public String getWebAuthnRelyingPartyName() {
-        return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "");
+        return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "GOV.UK One Login");
     }
 }
