@@ -9,6 +9,7 @@ import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
@@ -51,7 +52,7 @@ public class AMCAuthorizationService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    Result<AMCAuthorizeFailureReason, BearerAccessToken> createAccessToken(
+    private Result<AMCAuthorizeFailureReason, BearerAccessToken> createAccessToken(
             Subject internalPairwiseSubject, AMCScope[] scope, AuthSessionItem authSessionItem) {
         LOG.info("Generating access token");
         Date issueTime = nowClock.now();
@@ -140,5 +141,45 @@ public class AMCAuthorizationService {
             LOG.error("Failed to construct final SignedJWT object", e);
             return Result.failure(AMCAuthorizeFailureReason.JWT_CONSTRUCTION_ERROR);
         }
+    }
+
+    Result<AMCAuthorizeFailureReason, JWTClaimsSet> createCompositeJWT(
+            Subject internalPairwiseSubject,
+            AMCScope[] scope,
+            AuthSessionItem authSessionItem,
+            String clientSessionId,
+            String publicSubject) {
+        List<String> scopeValues = Arrays.stream(scope).map(AMCScope::getValue).toList();
+        Date issueTime = nowClock.now();
+        Date expiryDate =
+                nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
+
+        Result<AMCAuthorizeFailureReason, BearerAccessToken> accessTokenResult =
+                createAccessToken(internalPairwiseSubject, scope, authSessionItem);
+        if (accessTokenResult.isFailure()) {
+            return Result.failure(accessTokenResult.getFailure());
+        }
+
+        return Result.success(
+                new JWTClaimsSet.Builder()
+                        .issuer(configurationService.getAuthIssuerClaim())
+                        .claim("client_id", authSessionItem.getClientId())
+                        .audience(configurationService.getAuthToAMCAudience())
+                        .claim("response_type", "code")
+                        .claim("redirect_uri", configurationService.getAMCRedirectURI())
+                        .claim("scope", scopeValues)
+                        .claim("state", new State())
+                        .jwtID(UUID.randomUUID().toString())
+                        .issueTime(issueTime)
+                        .notBeforeTime(issueTime)
+                        .expirationTime(expiryDate)
+                        .subject(internalPairwiseSubject.toString())
+                        .claim("email", authSessionItem.getEmailAddress())
+                        .claim("govuk_signin_journey_id", clientSessionId)
+                        .claim("public_sub", publicSubject)
+                        .claim(
+                                "access_token",
+                                createAccessToken(internalPairwiseSubject, scope, authSessionItem))
+                        .build());
     }
 }
