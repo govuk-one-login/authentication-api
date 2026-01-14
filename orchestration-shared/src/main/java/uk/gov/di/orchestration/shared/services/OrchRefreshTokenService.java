@@ -111,6 +111,16 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
         return item;
     }
 
+    public void updateRefreshTokenBatchTtlToNow(List<OrchRefreshTokenItem> items) {
+        try {
+            var currentTtl = nowClock.now().toInstant().getEpochSecond();
+            items.forEach(item -> item.setTimeToLive(currentTtl));
+            batchPut(items);
+        } catch (Exception e) {
+            logAndThrowOrchRefreshTokenException("Failed to batch update token TTLs", e);
+        }
+    }
+
     public void processRefreshTokensWithoutTtlSequentially(
             LambdaTimer timer,
             int readBatchSize,

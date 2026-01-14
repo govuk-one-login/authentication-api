@@ -2381,6 +2381,55 @@ Resources:
 
   #endregion
 
+  #region Update Refresh Token With Ttl Lambda
+
+  UpdateRefreshTokensWithTtlFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: Lambda is manually invoked so DLQ not needed
+    Properties:
+      FunctionName: !Sub ${Environment}-UpdateRefreshTokensWithTtlFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
+      Handler: uk.gov.di.authentication.oidc.lambda.UpdateRefreshTokensWithTtlHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref UpdateRefreshTokensWithTtlFunctionLogGroup
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Timeout: 600 #10 min
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+      Policies:
+        - !Ref RefreshTokenTableReadWriteAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  UpdateRefreshTokensWithTtlFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-update-refresh-tokens-with-ttl-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  UpdateRefreshTokensWithTtlFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref UpdateRefreshTokensWithTtlFunctionLogGroup
+
+  #endregion
+
   #region Logout Lambda
 
   LogoutFunction:
@@ -7765,6 +7814,7 @@ Resources:
             Action:
               - dynamodb:DescribeTable
               - dynamodb:Get*
+              - dynamodb:Scan
             Resource:
               - !GetAtt RefreshTokenTable.Arn
           - Sid: AllowRefreshTokenTableIndexQueryAccess
@@ -7778,6 +7828,7 @@ Resources:
             Action:
               - dynamodb:UpdateItem
               - dynamodb:PutItem
+              - dynamodb:BatchWriteItem
             Resource:
               - !GetAtt RefreshTokenTable.Arn
           - Sid: AllowRefreshTokenTableDecryption
