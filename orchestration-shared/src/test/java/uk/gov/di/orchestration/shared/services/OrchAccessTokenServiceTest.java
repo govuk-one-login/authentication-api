@@ -19,8 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -28,7 +26,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenItem> {
 
@@ -119,7 +116,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                             .withClientSessionId(CLIENT_SESSION_ID)
                             .withAuthCode(AUTH_CODE);
 
-            when(mockOldService.get(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE))
+            when(mockNewService.get(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE))
                     .thenReturn(Optional.of(orchAccessTokenItem));
 
             var actualOrchAccessToken =
@@ -141,7 +138,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldThrowWhenDynamoThrowsException() {
-            when(mockOldService.get(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE))
+            when(mockNewService.get(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE))
                     .thenThrow(DynamoDbException.class);
 
             var exception =
@@ -166,7 +163,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
                             .withClientSessionId(CLIENT_SESSION_ID);
 
-            when(mockOldService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE))
+            when(mockNewService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE))
                     .thenReturn(List.of(orchAccessTokenItem));
 
             var actualOrchAccessToken = orchAccessTokenService.getAccessTokenForAuthCode(AUTH_CODE);
@@ -177,7 +174,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldReturnEmptyWhenNoAccessTokenForAuthCode() {
-            when(mockOldService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE)).thenReturn(List.of());
+            when(mockNewService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE)).thenReturn(List.of());
 
             var actualOrchAccessToken = orchAccessTokenService.getAccessTokenForAuthCode(AUTH_CODE);
 
@@ -186,7 +183,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldThrowWhenDynamoThrowsException() {
-            when(mockOldService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE))
+            when(mockNewService.queryIndex(AUTH_CODE_INDEX, AUTH_CODE))
                     .thenThrow(DynamoDbException.class);
 
             var exception =
@@ -209,7 +206,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
                             .withClientSessionId(CLIENT_SESSION_ID);
 
-            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
+            when(mockNewService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
                     .thenReturn(Stream.of(orchAccessTokenItem));
 
             var actualOrchAccessToken =
@@ -230,7 +227,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
                             .withClientSessionId(CLIENT_SESSION_ID);
 
-            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
+            when(mockNewService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
                     .thenReturn(Stream.of(orchAccessTokenItem));
 
             var actualOrchAccessToken =
@@ -242,7 +239,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
         @Test
         void shouldThrowWhenDynamoThrowsException() {
-            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
+            when(mockNewService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
                     .thenThrow(DynamoDbException.class);
 
             var exception =
@@ -253,96 +250,6 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
                                             .getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
                                                     CLIENT_AND_RP_PAIRWISE_ID, TOKEN));
             assertEquals("Failed to get Orch access token from Dynamo", exception.getMessage());
-        }
-    }
-
-    @Nested
-    class DualReadVerification {
-        @Test
-        void shouldProceedWithoutWarningWhenTokensMatch() {
-            var orchAccessTokenItem =
-                    new OrchAccessTokenItem()
-                            .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
-                            .withAuthCode(AUTH_CODE)
-                            .withToken(TOKEN)
-                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
-                            .withClientSessionId(CLIENT_SESSION_ID);
-
-            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
-                    .thenReturn(Stream.of(orchAccessTokenItem));
-            when(mockNewService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
-                    .thenReturn(Stream.of(orchAccessTokenItem));
-
-            var actualOrchAccessToken =
-                    orchAccessTokenService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
-                            CLIENT_AND_RP_PAIRWISE_ID, TOKEN);
-
-            assertThat(logging.events(), hasItem(withMessageContaining("Access tokens match")));
-            assertTrue(actualOrchAccessToken.isPresent());
-            assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
-        }
-
-        @Test
-        void shouldLogWarningAndProceedWhenTokensDoNotMatch() {
-            var orchAccessTokenItem =
-                    new OrchAccessTokenItem()
-                            .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
-                            .withAuthCode(AUTH_CODE)
-                            .withToken(TOKEN)
-                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
-                            .withClientSessionId(CLIENT_SESSION_ID);
-            var tokenInNewTable =
-                    new OrchAccessTokenItem()
-                            .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
-                            .withAuthCode(AUTH_CODE)
-                            .withToken(TOKEN)
-                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
-                            .withClientSessionId("different-client-session-id");
-
-            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
-                    .thenReturn(Stream.of(orchAccessTokenItem));
-            when(mockNewService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
-                    .thenReturn(Stream.of(tokenInNewTable));
-
-            var actualOrchAccessToken =
-                    orchAccessTokenService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
-                            CLIENT_AND_RP_PAIRWISE_ID, TOKEN);
-
-            assertThat(
-                    logging.events(),
-                    hasItem(
-                            withMessageContaining(
-                                    "Access token from new table does not match the old table")));
-            assertTrue(actualOrchAccessToken.isPresent());
-            assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
-        }
-
-        @Test
-        void shouldLogWarningAndProceedWhenTokenOnlyExistsInOldTable() {
-            var orchAccessTokenItem =
-                    new OrchAccessTokenItem()
-                            .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
-                            .withAuthCode(AUTH_CODE)
-                            .withToken(TOKEN)
-                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
-                            .withClientSessionId(CLIENT_SESSION_ID);
-
-            when(mockOldService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
-                    .thenReturn(Stream.of(orchAccessTokenItem));
-            when(mockNewService.queryTableStream(CLIENT_AND_RP_PAIRWISE_ID))
-                    .thenReturn(Stream.of());
-
-            var actualOrchAccessToken =
-                    orchAccessTokenService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
-                            CLIENT_AND_RP_PAIRWISE_ID, TOKEN);
-
-            assertThat(
-                    logging.events(),
-                    hasItem(
-                            withMessageContaining(
-                                    "Access token was found in the old table but not in the new table")));
-            assertTrue(actualOrchAccessToken.isPresent());
-            assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
         }
     }
 
