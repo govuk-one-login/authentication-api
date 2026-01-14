@@ -797,4 +797,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getAuthToAuthAudience() {
         return System.getenv().getOrDefault("AUTH_TO_AUTH_AUDIENCE", "");
     }
+
+    public String getAuthToAccountManagementPrivateSigningKeyAlias() {
+        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_PRIVATE_SIGNING_KEY", "");
+    }
 }
