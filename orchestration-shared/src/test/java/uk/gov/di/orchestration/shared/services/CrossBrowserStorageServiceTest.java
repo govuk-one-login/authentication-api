@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.STATE;
 
+// QualityGateUnitTest
 class CrossBrowserStorageServiceTest extends BaseDynamoServiceTest<CrossBrowserItem> {
     private static final GetItemEnhancedRequest GET_CROSS_BROWSER_REQUEST =
             getRequestFor(STATE.getValue());
@@ -44,6 +45,7 @@ class CrossBrowserStorageServiceTest extends BaseDynamoServiceTest<CrossBrowserI
                         Clock.fixed(CURRENT_TIME, ZoneId.of("UTC")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldStoreCrossBrowserItem() {
         crossBrowserStorageService.storeItem(CROSS_BROWSER_ITEM);
@@ -51,6 +53,7 @@ class CrossBrowserStorageServiceTest extends BaseDynamoServiceTest<CrossBrowserI
         verify(table).putItem(CROSS_BROWSER_ITEM.withTimeToLive(VALID_TTL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowExceptionWhenFailingToStoreItem() {
         withFailedPut();
@@ -60,6 +63,7 @@ class CrossBrowserStorageServiceTest extends BaseDynamoServiceTest<CrossBrowserI
                 () -> crossBrowserStorageService.storeItem(CROSS_BROWSER_ITEM));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetClientSessionIdFromState() {
         withValidGet(CROSS_BROWSER_ITEM.withTimeToLive(VALID_TTL));
@@ -70,6 +74,7 @@ class CrossBrowserStorageServiceTest extends BaseDynamoServiceTest<CrossBrowserI
         assertEquals(CLIENT_SESSION_ID, actualClientSessionId);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowExceptionWhenFailingToGetCrossBrowserItem() {
         withFailedGet();
@@ -79,12 +84,14 @@ class CrossBrowserStorageServiceTest extends BaseDynamoServiceTest<CrossBrowserI
                 () -> crossBrowserStorageService.getClientSessionId(STATE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetNoClientSessionIdWhenNoCrossBrowserItemExists() {
         var actualClientSessionIdOpt = crossBrowserStorageService.getClientSessionId(STATE);
         assertFalse(actualClientSessionIdOpt.isPresent());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetNoClientSessionIdWhenCrossBrowserItemHasExpired() {
         withValidGet(CROSS_BROWSER_ITEM.withTimeToLive(EXPIRED_TTL));
