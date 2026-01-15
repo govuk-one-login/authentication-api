@@ -742,6 +742,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("INTERNATIONAL_SMS_QUOTA_THRESHOLD", "15000"));
     }
 
+    public boolean isAccountManagementInternationalSmsEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", "true")
+                .equals("true");
+    }
+
     public boolean isBulkAccountDeletionEnabled() {
         return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
     }

@@ -60,9 +60,11 @@ import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String TEST_EMAIL = "test@email.com";
@@ -781,6 +783,33 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     response.getStatusCode(),
                     "Expected unauthorized when principal is invalid");
             assertThat(response, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
+        }
+
+        @Test
+        void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
+            userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            handler =
+                    new MFAMethodsCreateHandler(
+                            ACCOUNT_MANAGEMENT_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    constructRequestBody(
+                                            PriorityIdentifier.BACKUP,
+                                            new RequestSmsMfaDetail(
+                                                    INTERNATIONAL_MOBILE_NUMBER, otp))),
+                            Map.of(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS"),
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", testPublicSubject),
+                            Map.of("principalId", testInternalSubject));
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    response, hasJsonBody(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED));
         }
     }
 
