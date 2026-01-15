@@ -2,9 +2,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
@@ -78,24 +75,5 @@ public class OrchAccessTokenExtension extends DynamoExtension implements AfterEa
 
     public Optional<OrchAccessTokenItem> getAccessTokenForAuthCode(String authCode) {
         return orchAccessTokenService.getAccessTokenForAuthCode(authCode);
-    }
-
-    public Optional<OrchAccessTokenItem> getAccessTokenFromOldTable(
-            String clientAndRpPairwiseId, String authCode) {
-        return getAccessTokenFromTable(TABLE_NAME, clientAndRpPairwiseId, authCode);
-    }
-
-    public Optional<OrchAccessTokenItem> getAccessTokenFromNewTable(
-            String clientAndRpPairwiseId, String authCode) {
-        return getAccessTokenFromTable(NEW_TABLE_NAME, clientAndRpPairwiseId, authCode);
-    }
-
-    private Optional<OrchAccessTokenItem> getAccessTokenFromTable(
-            String tableName, String clientAndRpPairwiseId, String authCode) {
-        var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDB).build();
-        var table =
-                enhancedClient.table(tableName, TableSchema.fromBean(OrchAccessTokenItem.class));
-        var key = Key.builder().partitionValue(clientAndRpPairwiseId).sortValue(authCode).build();
-        return Optional.ofNullable(table.getItem(key));
     }
 }
