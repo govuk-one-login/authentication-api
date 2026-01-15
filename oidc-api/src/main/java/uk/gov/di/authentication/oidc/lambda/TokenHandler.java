@@ -374,11 +374,6 @@ public class TokenHandler
                     new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
 
-        // TO DO: this will be removed after a few days of monitoring
-        if (orchRefreshTokenItem.getAuthCode().equals("placeholder-for-auth-code")) {
-            LOG.info("The refresh token in dynamo has a placeholder for auth code.");
-        }
-
         OIDCTokenResponse tokenResponse;
         try {
             tokenResponse =

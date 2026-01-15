@@ -131,10 +131,6 @@ public class AccessTokenService {
         }
         OrchAccessTokenItem orchAccessTokenItem = orchAccessTokenItemMaybe.get();
 
-        if (orchAccessTokenItem.getAuthCode().equals("placeholder-for-auth-code")) {
-            LOG.info("The access token in dynamo has a placeholder for auth code.");
-        }
-
         return new AccessTokenInfo(
                 Objects.requireNonNullElse(
                         orchAccessTokenItem.getInternalPairwiseSubjectId(), "missing"),

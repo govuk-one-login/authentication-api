@@ -5,25 +5,18 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.lambda.LambdaTimer;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.stream.IntStream;
 
 public class OrchAccessTokenService {
     private static final Logger LOG = LogManager.getLogger(OrchAccessTokenService.class);
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
     private static final String FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR =
             "Failed to get Orch access token from Dynamo";
-    private static final int TIME_REMAINING_BUFFER_IN_MILLISECONDS = 10000;
 
     private final BaseDynamoService<OrchAccessTokenItem> oldOrchAccessTokenService;
     private final BaseDynamoService<OrchAccessTokenItem> newOrchAccessTokenService;
@@ -60,7 +53,7 @@ public class OrchAccessTokenService {
             String clientAndRpPairwiseId, String authCode) {
         Optional<OrchAccessTokenItem> orchAccessToken = Optional.empty();
         try {
-            orchAccessToken = oldOrchAccessTokenService.get(clientAndRpPairwiseId, authCode);
+            orchAccessToken = newOrchAccessTokenService.get(clientAndRpPairwiseId, authCode);
         } catch (Exception e) {
             logAndThrowOrchAccessTokenException(FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR, e);
         }
@@ -73,38 +66,14 @@ public class OrchAccessTokenService {
 
     public Optional<OrchAccessTokenItem> getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
             String clientAndRpPairwiseId, String tokenValue) {
-        Optional<OrchAccessTokenItem> orchAccessTokenItem =
-                getAccessTokensForClientAndRpPairwiseId(clientAndRpPairwiseId).stream()
-                        .filter(item -> Objects.equals(item.getToken(), tokenValue))
-                        .findFirst();
-
-        Optional<OrchAccessTokenItem> orchAccessTokenItemFromNewTable =
-                getAccessTokensForClientAndRpPairwiseIdFromNewTable(clientAndRpPairwiseId).stream()
-                        .filter(item -> Objects.equals(item.getToken(), tokenValue))
-                        .findFirst();
-
-        if (orchAccessTokenItem.isEmpty()) {
-            LOG.info("No Orch access token found");
-            if (!orchAccessTokenItemFromNewTable.isEmpty()) {
-                LOG.warn("Access token was found in the new table but not in the old table");
-            }
-        } else {
-            if (orchAccessTokenItemFromNewTable.isEmpty()) {
-                LOG.warn("Access token was found in the old table but not in the new table");
-            } else {
-                if (!orchAccessTokenItem.get().equals(orchAccessTokenItemFromNewTable.get())) {
-                    LOG.warn("Access token from new table does not match the old table");
-                } else {
-                    LOG.info("Access tokens match");
-                }
-            }
-        }
-        return orchAccessTokenItem;
+        return getAccessTokensForClientAndRpPairwiseId(clientAndRpPairwiseId).stream()
+                .filter(item -> Objects.equals(item.getToken(), tokenValue))
+                .findFirst();
     }
 
     public Optional<OrchAccessTokenItem> getAccessTokenForAuthCode(String authCode) {
         try {
-            var items = oldOrchAccessTokenService.queryIndex(AUTH_CODE_INDEX, authCode);
+            var items = newOrchAccessTokenService.queryIndex(AUTH_CODE_INDEX, authCode);
             if (items.isEmpty()) {
                 LOG.info("No Orch access token found");
                 return Optional.empty();
@@ -121,27 +90,12 @@ public class OrchAccessTokenService {
         List<OrchAccessTokenItem> orchAccessTokens = List.of();
         try {
             orchAccessTokens =
-                    oldOrchAccessTokenService.queryTableStream(clientAndRpPairwiseId).toList();
+                    newOrchAccessTokenService.queryTableStream(clientAndRpPairwiseId).toList();
         } catch (Exception e) {
             logAndThrowOrchAccessTokenException(FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR, e);
         }
         if (orchAccessTokens.isEmpty()) {
             LOG.info("No Orch access token found");
-        }
-        return orchAccessTokens;
-    }
-
-    private List<OrchAccessTokenItem> getAccessTokensForClientAndRpPairwiseIdFromNewTable(
-            String clientAndRpPairwiseId) {
-        List<OrchAccessTokenItem> orchAccessTokens = List.of();
-        try {
-            orchAccessTokens =
-                    newOrchAccessTokenService.queryTableStream(clientAndRpPairwiseId).toList();
-        } catch (Exception e) {
-            LOG.warn("Failed to get access token from new table. Error: {}", e.getMessage());
-        }
-        if (orchAccessTokens.isEmpty()) {
-            LOG.warn("No Orch access token found in new table");
         }
         return orchAccessTokens;
     }
@@ -171,74 +125,6 @@ public class OrchAccessTokenService {
             newOrchAccessTokenService.put(orchAccessTokenItem);
         } catch (Exception e) {
             LOG.warn("Failed to save to new OrchAccessToken table");
-        }
-    }
-
-    public void updateAccessTokensTtlToNow(List<OrchAccessTokenItem> items) {
-        try {
-            var currentTtl = nowClock.now().toInstant().getEpochSecond();
-            items.forEach(item -> item.setTimeToLive(currentTtl));
-            oldOrchAccessTokenService.batchPut(items);
-        } catch (Exception e) {
-            logAndThrowOrchAccessTokenException("Failed to batch update token TTLs", e);
-        }
-    }
-
-    public void processAccessTokensWithoutTtlInBatches(
-            int batchSize,
-            int totalSegments,
-            int maxTokens,
-            LambdaTimer timer,
-            Consumer<List<OrchAccessTokenItem>> batchProcessor) {
-
-        var maxTokensReached = new AtomicBoolean(false);
-        var processedCount = new AtomicInteger(0);
-        try {
-            IntStream.range(0, totalSegments)
-                    .parallel()
-                    .forEach(
-                            segment -> {
-                                try {
-                                    // stagger start times of parallel segments
-                                    Thread.sleep((long) segment * 100);
-                                } catch (InterruptedException e) {
-                                    // exit gracefully, allowing the other threads to complete the
-                                    // batch operations
-                                    Thread.currentThread().interrupt();
-                                    LOG.info(
-                                            "Processing interrupted for segment {}, stopping gracefully",
-                                            segment);
-                                    return;
-                                }
-                                var batch = new ArrayList<OrchAccessTokenItem>();
-                                oldOrchAccessTokenService
-                                        .scanTableSegment(segment, totalSegments)
-                                        .filter(item -> item.getTimeToLive() == 0)
-                                        .takeWhile(
-                                                item ->
-                                                        !maxTokensReached.get()
-                                                                && timer.hasTimeRemaining(
-                                                                        TIME_REMAINING_BUFFER_IN_MILLISECONDS))
-                                        .forEach(
-                                                item -> {
-                                                    batch.add(item);
-                                                    if (batch.size() == batchSize) {
-                                                        batchProcessor.accept(
-                                                                new ArrayList<>(batch));
-                                                        if (processedCount.addAndGet(batchSize)
-                                                                >= maxTokens) {
-                                                            maxTokensReached.set(true);
-                                                        }
-                                                        batch.clear();
-                                                    }
-                                                });
-                                if (!batch.isEmpty()) {
-                                    batchProcessor.accept(batch);
-                                }
-                            });
-        } catch (Exception e) {
-            logAndThrowOrchAccessTokenException(
-                    "Failed to process tokens without TTL in batches", e);
         }
     }
 
