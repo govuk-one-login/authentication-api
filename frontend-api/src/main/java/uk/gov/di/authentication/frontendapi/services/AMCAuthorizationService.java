@@ -143,7 +143,7 @@ public class AMCAuthorizationService {
         }
     }
 
-    Result<AMCAuthorizeFailureReason, JWTClaimsSet> createCompositeJWT(
+    Result<AMCAuthorizeFailureReason, SignedJWT> createCompositeJWT(
             Subject internalPairwiseSubject,
             AMCScope[] scope,
             AuthSessionItem authSessionItem,
@@ -160,7 +160,7 @@ public class AMCAuthorizationService {
             return Result.failure(accessTokenResult.getFailure());
         }
 
-        return Result.success(
+        var claims =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getAuthIssuerClaim())
                         .claim("client_id", authSessionItem.getClientId())
@@ -180,6 +180,15 @@ public class AMCAuthorizationService {
                         .claim(
                                 "access_token",
                                 createAccessToken(internalPairwiseSubject, scope, authSessionItem))
-                        .build());
+                        .build();
+
+        Result<AMCAuthorizeFailureReason, SignedJWT> jwsResult =
+                signJWT(claims, configurationService.getAuthToAMCPrivateSigningKeyAlias());
+
+        if (jwsResult.isFailure()) {
+            return Result.failure(jwsResult.getFailure());
+        }
+
+        return Result.success(jwsResult.getSuccess());
     }
 }
