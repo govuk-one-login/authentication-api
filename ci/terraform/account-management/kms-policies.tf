@@ -122,3 +122,31 @@ resource "aws_kms_key_policy" "test_id_token_signing_key_policy" {
   key_id = aws_kms_key.test_id_token_signing_key[0].id
   policy = data.aws_iam_policy_document.test_id_token_signing_key_access_policy[0].json
 }
+
+data "aws_iam_policy_document" "test_id_token_kms_policy_document" {
+  count = var.environment != "production" ? 1 : 0
+
+  statement {
+    sid    = "AllowAccessToTestIdTokenSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:GetPublicKey",
+      "kms:Sign",
+      "kms:Verify"
+    ]
+    resources = [
+      aws_kms_key.test_id_token_signing_key[0].arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "test_id_token_lambda_kms_policy" {
+  count = var.environment != "production" ? 1 : 0
+
+  name        = "${var.environment}-account-mgmt-test-id-token-kms-policy"
+  path        = "/"
+  description = "IAM policy for Lambda access to test ID token signing key"
+
+  policy = data.aws_iam_policy_document.test_id_token_kms_policy_document[0].json
+}

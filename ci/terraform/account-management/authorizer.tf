@@ -4,12 +4,12 @@ module "account_management_api_authorizer_role" {
   role_name   = "account-management-api-authorizer-role"
   vpc_arn     = local.vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.lambda_kms_policy.arn,
     aws_iam_policy.dynamo_am_client_registry_read_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     local.client_registry_encryption_policy_arn
-  ]
+  ], var.environment != "production" ? [aws_iam_policy.test_id_token_lambda_kms_policy[0].arn] : [])
   extra_tags = {
     Service = "authorizer"
   }
@@ -47,9 +47,10 @@ resource "aws_lambda_function" "authorizer" {
   }
   environment {
     variables = {
-      TOKEN_SIGNING_KEY_ALIAS = data.aws_kms_key.id_token_public_key.key_id
-      ENVIRONMENT             = var.environment
-      JAVA_TOOL_OPTIONS       = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      TOKEN_SIGNING_KEY_ALIAS      = data.aws_kms_key.id_token_public_key.key_id
+      TEST_TOKEN_SIGNING_KEY_ALIAS = var.environment != "production" ? aws_kms_key.test_id_token_signing_key[0].key_id : ""
+      ENVIRONMENT                  = var.environment
+      JAVA_TOOL_OPTIONS            = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
