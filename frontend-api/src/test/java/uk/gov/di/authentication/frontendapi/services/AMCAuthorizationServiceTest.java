@@ -11,7 +11,6 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
@@ -55,6 +54,8 @@ class AMCAuthorizationServiceTest {
     private static final String EMAIL = "test@example.com";
     private static final String JOURNEY_ID = "test-journey-id";
     private static final String PUBLIC_SUBJECT = "test-public-subject";
+    private static final String ACCESS_TOKEN_KEY_ALIAS = "test-key-alias";
+    private static final String COMPOSITE_JWT_KEY_ALIAS = "auth-to-amc-test-key-alias";
     private static final AuthSessionItem authSessionItem = mock(AuthSessionItem.class);
 
     // Ensure 0 milliseconds for JWT compatibility
@@ -75,15 +76,17 @@ class AMCAuthorizationServiceTest {
 
     @Test
     void shouldCreateCompositeJWTClaimsWithValidAccessToken() throws Exception {
-        ECKey ecSigningKey =
+        ECKey accessTokenKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        ECKey compositeJWTKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
         mockConfigurationService(expiryDate);
         mockAuthSessionItem();
-        mockKmsSigningToUseKey(ecSigningKey);
+        mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
         when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-        Result<AMCAuthorizeFailureReason, JWTClaimsSet> result =
+        Result<AMCAuthorizeFailureReason, SignedJWT> result =
                 amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -92,24 +95,24 @@ class AMCAuthorizationServiceTest {
                         PUBLIC_SUBJECT);
 
         assertTrue(result.isSuccess());
-        JWTClaimsSet compositeClaims = result.getSuccess();
+        SignedJWT compositeJWT = result.getSuccess();
+        assertTrue(compositeJWT.verify(new ECDSAVerifier(compositeJWTKey.toECPublicKey())));
+
+        JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
 
         assertCompositeJWTClaims(compositeClaims, expiryDate);
 
         @SuppressWarnings("unchecked")
-        Result<AMCAuthorizeFailureReason, BearerAccessToken> accessTokenResult =
-                (Result<AMCAuthorizeFailureReason, BearerAccessToken>)
-                        compositeClaims.getClaim("access_token");
+        var accessTokenClaim =
+                (java.util.Map<String, Object>) compositeClaims.getClaim("access_token");
+        @SuppressWarnings("unchecked")
+        var bearerTokenMap = (java.util.Map<String, Object>) accessTokenClaim.get("value");
+        var accessTokenValue = (String) bearerTokenMap.get("value");
 
-        BearerAccessToken bearerToken = accessTokenResult.getSuccess();
+        SignedJWT accessTokenJWT = SignedJWT.parse(accessTokenValue);
+        assertTrue(accessTokenJWT.verify(new ECDSAVerifier(accessTokenKey.toECPublicKey())));
 
-        assertEquals(SESSION_EXPIRY, bearerToken.getLifetime());
-        assertTrue(bearerToken.getScope().contains(AMCScope.ACCOUNT_DELETE.getValue()));
-
-        SignedJWT signedJWT = SignedJWT.parse(bearerToken.getValue());
-        assertTrue(signedJWT.verify(new ECDSAVerifier(ecSigningKey.toECPublicKey())));
-
-        JWTClaimsSet accessTokenClaims = signedJWT.getJWTClaimsSet();
+        JWTClaimsSet accessTokenClaims = accessTokenJWT.getJWTClaimsSet();
         assertAccessTokenClaims(accessTokenClaims, expiryDate);
     }
 
@@ -123,7 +126,7 @@ class AMCAuthorizationServiceTest {
         when(kmsConnectionService.sign(any(SignRequest.class)))
                 .thenThrow(SdkException.builder().message("KMS Unreachable").build());
 
-        Result<AMCAuthorizeFailureReason, JWTClaimsSet> result =
+        Result<AMCAuthorizeFailureReason, SignedJWT> result =
                 amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -150,7 +153,7 @@ class AMCAuthorizationServiceTest {
                                                 new byte[] {0x00, 0x01})) // Invalid bytes
                                 .build());
 
-        Result<AMCAuthorizeFailureReason, JWTClaimsSet> result =
+        Result<AMCAuthorizeFailureReason, SignedJWT> result =
                 amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -162,17 +165,21 @@ class AMCAuthorizationServiceTest {
         assertEquals(AMCAuthorizeFailureReason.TRANSCODING_ERROR, result.getFailure());
     }
 
-    private void mockKmsSigningToUseKey(ECKey ecKey) {
+    private void mockKmsSigningWithDifferentKeys(ECKey accessTokenKey, ECKey compositeJWTKey) {
         when(kmsConnectionService.sign(any(SignRequest.class)))
                 .thenAnswer(
                         invocation -> {
-                            String input =
-                                    ((SignRequest) invocation.getArgument(0))
-                                            .message()
-                                            .asUtf8String();
+                            SignRequest request = invocation.getArgument(0);
+                            String keyId = request.keyId();
+                            String input = request.message().asUtf8String();
+
+                            ECKey keyToUse =
+                                    keyId.equals(ACCESS_TOKEN_KEY_ALIAS)
+                                            ? accessTokenKey
+                                            : compositeJWTKey;
 
                             byte[] signature =
-                                    new ECDSASigner(ecKey)
+                                    new ECDSASigner(keyToUse)
                                             .sign(
                                                     new JWSHeader(JWSAlgorithm.ES256),
                                                     input.getBytes(StandardCharsets.UTF_8))
@@ -192,7 +199,9 @@ class AMCAuthorizationServiceTest {
         when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
-                .thenReturn("test-key-alias");
+                .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
+        when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
+                .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
         when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
         when(nowClock.now()).thenReturn(NOW);
         when(nowClock.nowPlus(SESSION_EXPIRY, ChronoUnit.SECONDS)).thenReturn(expiryDate);
