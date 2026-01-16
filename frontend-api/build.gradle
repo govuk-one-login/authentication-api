@@ -32,7 +32,8 @@ dependencies {
             libs.awsCloudwatch,
             libs.bouncyCastle,
             libs.awsKms,
-            libs.jetbrainsAnnotations
+            libs.jetbrainsAnnotations,
+            libs.webauthnServer
 
     runtimeOnly libs.bundles.loggingRuntime,
             platform(libs.openTelemetryBom),
