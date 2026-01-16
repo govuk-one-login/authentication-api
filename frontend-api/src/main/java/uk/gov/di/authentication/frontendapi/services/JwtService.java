@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
@@ -17,8 +18,8 @@ import com.nimbusds.jwt.SignedJWT;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
-import software.amazon.awssdk.services.kms.model.KmsException;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
@@ -29,56 +30,57 @@ import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 
-import static com.nimbusds.jose.crypto.impl.ECDSA.getSignatureByteArrayLength;
-import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
-
 public class JwtService {
     private static final Logger LOG = LogManager.getLogger(JwtService.class);
+    private static final int ECDSA_P256_SIGNATURE_LENGTH = 64;
     private final KmsConnectionService kmsConnectionService;
 
     public JwtService(KmsConnectionService kmsConnectionService) {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public SignedJWT signJWT(JWSAlgorithm signingAlgorithm, JWTClaimsSet jwtClaims, String keyId)
-            throws JwtServiceException {
-        LOG.info("Creating signed JWT");
-        try {
-            var signingKeyId =
-                    kmsConnectionService
-                            .getPublicKey(GetPublicKeyRequest.builder().keyId(keyId).build())
-                            .keyId();
+    public SignedJWT signJWT(JWTClaimsSet jwtClaims, String keyId) throws JwtServiceException {
+        JWSHeader header =
+                new JWSHeader.Builder(JWSAlgorithm.ES256).type(JOSEObjectType.JWT).build();
 
-            var encodedHeader =
-                    new JWSHeader.Builder(signingAlgorithm)
-                            .keyID(hashSha256String(signingKeyId))
-                            .build()
-                            .toBase64URL();
-            var encodedClaims = Base64URL.encode(jwtClaims.toString());
-            var message = encodedHeader + "." + encodedClaims;
+        Base64URL encodedHeader = header.toBase64URL();
+        Base64URL encodedClaims = jwtClaims.toPayload().toBase64URL();
+        String signingInput = encodedHeader + "." + encodedClaims;
+
+        SignResponse signResponse;
+        try {
             SignRequest signRequest =
                     SignRequest.builder()
+                            .keyId(keyId)
                             .message(
                                     SdkBytes.fromByteArray(
-                                            message.getBytes(StandardCharsets.UTF_8)))
-                            .keyId(keyId)
+                                            signingInput.getBytes(StandardCharsets.UTF_8)))
+                            .messageType(MessageType.RAW)
                             .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();
 
-            LOG.info("Signing JWT");
-            SignResponse signResult = kmsConnectionService.sign(signRequest);
-            var signature = parseSignature(signResult.signature().asByteArray(), signingAlgorithm);
-            SignedJWT signedJWT = SignedJWT.parse(message + "." + signature);
-            LOG.info("JWT has been signed and parsed successfully");
-            return signedJWT;
-        } catch (KmsException e) {
-            LOG.error("KMS error when signing JWT", e);
-            throw new JwtServiceException(
-                    String.format("KMS error when signing JWT: \"%s\" ", e.getMessage()));
-        } catch (ParseException | JOSEException e) {
-            LOG.error("Failed to sign JWT", e);
-            throw new JwtServiceException(
-                    String.format("Failed to sign JWT: \"%s\" ", e.getMessage()));
+            signResponse = kmsConnectionService.sign(signRequest);
+        } catch (SdkException e) {
+            LOG.error("AWS SDK error when signing JWT", e);
+            throw new JwtServiceException("AWS SDK error when signing JWT", e);
+        }
+
+        Base64URL signature;
+        try {
+            byte[] derSignature = signResponse.signature().asByteArray();
+            byte[] joseSignature =
+                    ECDSA.transcodeSignatureToConcat(derSignature, ECDSA_P256_SIGNATURE_LENGTH);
+            signature = Base64URL.encode(joseSignature);
+        } catch (JOSEException e) {
+            LOG.error("Failed to transcode KMS signature from DER to JOSE format", e);
+            throw new JwtServiceException("Failed to transcode signature", e);
+        }
+
+        try {
+            return new SignedJWT(encodedHeader, encodedClaims, signature);
+        } catch (ParseException e) {
+            LOG.error("Failed to construct final SignedJWT object", e);
+            throw new JwtServiceException("Failed to construct JWT", e);
         }
     }
 
@@ -105,13 +107,5 @@ public class JwtService {
             throw new JwtServiceException(
                     String.format("ParseException when encrypting JWT: \"%s\" ", e.getMessage()));
         }
-    }
-
-    private String parseSignature(byte[] signature, JWSAlgorithm signingAlgorithm)
-            throws JOSEException {
-        return Base64URL.encode(
-                        ECDSA.transcodeSignatureToConcat(
-                                signature, getSignatureByteArrayLength(signingAlgorithm)))
-                .toString();
     }
 }
