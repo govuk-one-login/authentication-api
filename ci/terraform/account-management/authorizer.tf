@@ -43,13 +43,14 @@ resource "aws_lambda_function" "authorizer" {
 
   vpc_config {
     security_group_ids = [local.allow_egress_security_group_id]
-    subnet_ids         = local.private_subnet_ids
+    subnet_ids         = local.protected_subnet_ids
   }
   environment {
     variables = {
       TOKEN_SIGNING_KEY_ALIAS = data.aws_kms_key.id_token_public_key.key_id
       ENVIRONMENT             = var.environment
       JAVA_TOOL_OPTIONS       = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      ACCESS_TOKEN_JWKS_URL   = var.access_token_jwks_url
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn

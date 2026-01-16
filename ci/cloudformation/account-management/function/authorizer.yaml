@@ -37,6 +37,10 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+          ACCESS_TOKEN_JWKS_URL: !If
+            - IsNotProduction
+            - !Sub https://oidc.${Environment}.account.gov.uk/.well-known/jwks.json
+            - https://oidc.account.gov.uk/.well-known/jwks.json
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:
@@ -51,9 +55,9 @@ Resources:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
         SubnetIds:
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
 
   AuthorizerFunctionPermission:
     Type: AWS::Lambda::Permission

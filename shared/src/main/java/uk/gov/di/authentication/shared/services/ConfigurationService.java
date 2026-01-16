@@ -515,6 +515,19 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public boolean useAccessTokenJwksEndpoint() {
+        return List.of("dev", "build").contains(getEnvironment());
+    }
+
+    public URL getAccessTokenJwksUrl() throws MalformedURLException {
+        try {
+            return new URL(System.getenv().getOrDefault("ACCESS_TOKEN_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid JWKS URL: {}", e.getMessage());
+            throw new MalformedURLException(e.getMessage());
+        }
+    }
+
     public String getTokenSigningKeyRsaAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
