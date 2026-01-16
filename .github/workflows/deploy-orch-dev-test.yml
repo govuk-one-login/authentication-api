@@ -25,21 +25,21 @@ jobs:
       contents: read
     steps:
       - name: Checkout repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Set up SAM cli
-        uses: aws-actions/setup-sam@819220f63fb333a9a394dd0a5cab2d8303fd17e2 # v2
+        uses: aws-actions/setup-sam@c2a20b1822cc4a6bc594ff7f1dbb658758e383c3 # v2
         with:
           use-installer: true
 
       - name: Set up AWS creds
-        uses: aws-actions/configure-aws-credentials@f24d7193d98baebaeacc7e2227925dd47cc267f5 # v4.2.0
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
           role-to-assume: ${{ secrets.ORCH_GH_ACTIONS_ROLE_ARN }}
           aws-region: eu-west-2
 
       - name: Set up JDK 17
-        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 #v4.7.1
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e #v5.1.0
         with:
           java-version: "17"
           distribution: "corretto"
