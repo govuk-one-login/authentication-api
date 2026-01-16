@@ -14,6 +14,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
+import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.List;
 
@@ -69,12 +70,17 @@ public class TokenValidationService {
                                 jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
             } else {
                 return jwt.verify(
-                        new ECDSAVerifier(jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
+                        new ECDSAVerifier(
+                                jwksService
+                                        .getPublicTokenJwkWithOpaqueId(jwt.getHeader().getKeyID())
+                                        .toECKey()));
             }
 
         } catch (JOSEException | java.text.ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
         }
     }
 
