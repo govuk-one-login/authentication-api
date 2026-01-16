@@ -39,6 +39,12 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
+          INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              internalApiNewInternationalSmsEnabled,
+            ]
           LOCKOUT_COUNT_TTL:
             !FindInMap [
               EnvironmentConfiguration,

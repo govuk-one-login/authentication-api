@@ -3,11 +3,15 @@ package uk.gov.di.authentication.api;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -21,6 +25,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -66,5 +71,39 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT));
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled(JourneyType journeyType)
+            throws Json.JsonException {
+        handler =
+                new SendNotificationHandler(
+                        INTERNAL_API_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE,
+                        redisConnectionService);
+
+        var requestBody =
+                Map.of(
+                        "email",
+                        USER_EMAIL,
+                        "notificationType",
+                        NotificationType.VERIFY_PHONE_NUMBER,
+                        "phoneNumber",
+                        CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                        "journeyType",
+                        journeyType);
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody), constructFrontendHeaders(SESSION_ID), Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(
+                response,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED)));
     }
 }
