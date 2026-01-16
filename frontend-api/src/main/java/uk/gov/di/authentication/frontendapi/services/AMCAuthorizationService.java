@@ -79,23 +79,17 @@ public class AMCAuthorizationService {
                         .jwtID(UUID.randomUUID().toString())
                         .build();
 
-        Result<AMCAuthorizeFailureReason, SignedJWT> signJWTResult =
-                signJWT(
+        return signJWT(
                         claims,
-                        configurationService.getAuthToAccountManagementPrivateSigningKeyAlias());
-
-        if (signJWTResult.isFailure()) {
-            return Result.failure(signJWTResult.getFailure());
-        }
-
-        Scope oauthScope = new Scope(scopeValues.toArray(new String[0]));
-        BearerAccessToken bearerToken =
-                new BearerAccessToken(
-                        signJWTResult.getSuccess().serialize(),
-                        configurationService.getSessionExpiry(),
-                        oauthScope);
-
-        return Result.success(bearerToken);
+                        configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
+                .map(
+                        signedJWT -> {
+                            Scope oauthScope = new Scope(scopeValues.toArray(new String[0]));
+                            return new BearerAccessToken(
+                                    signedJWT.serialize(),
+                                    configurationService.getSessionExpiry(),
+                                    oauthScope);
+                        });
     }
 
     Result<AMCAuthorizeFailureReason, SignedJWT> createCompositeJWT(
@@ -109,41 +103,34 @@ public class AMCAuthorizationService {
         Date expiryDate =
                 nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
 
-        Result<AMCAuthorizeFailureReason, BearerAccessToken> accessTokenResult =
-                createAccessToken(internalPairwiseSubject, scope, authSessionItem);
-        if (accessTokenResult.isFailure()) {
-            return Result.failure(accessTokenResult.getFailure());
-        }
+        return createAccessToken(internalPairwiseSubject, scope, authSessionItem)
+                .flatMap(
+                        accessToken -> {
+                            var claims =
+                                    new JWTClaimsSet.Builder()
+                                            .issuer(configurationService.getAuthIssuerClaim())
+                                            .claim("client_id", authSessionItem.getClientId())
+                                            .audience(configurationService.getAuthToAMCAudience())
+                                            .claim("response_type", "code")
+                                            .claim(
+                                                    "redirect_uri",
+                                                    configurationService.getAMCRedirectURI())
+                                            .claim("scope", scopeValues)
+                                            .claim("state", new State())
+                                            .jwtID(UUID.randomUUID().toString())
+                                            .issueTime(issueTime)
+                                            .notBeforeTime(issueTime)
+                                            .expirationTime(expiryDate)
+                                            .subject(internalPairwiseSubject.toString())
+                                            .claim("email", authSessionItem.getEmailAddress())
+                                            .claim("govuk_signin_journey_id", clientSessionId)
+                                            .claim("public_sub", publicSubject)
+                                            .claim("access_token", accessToken.getValue())
+                                            .build();
 
-        var claims =
-                new JWTClaimsSet.Builder()
-                        .issuer(configurationService.getAuthIssuerClaim())
-                        .claim("client_id", authSessionItem.getClientId())
-                        .audience(configurationService.getAuthToAMCAudience())
-                        .claim("response_type", "code")
-                        .claim("redirect_uri", configurationService.getAMCRedirectURI())
-                        .claim("scope", scopeValues)
-                        .claim("state", new State())
-                        .jwtID(UUID.randomUUID().toString())
-                        .issueTime(issueTime)
-                        .notBeforeTime(issueTime)
-                        .expirationTime(expiryDate)
-                        .subject(internalPairwiseSubject.toString())
-                        .claim("email", authSessionItem.getEmailAddress())
-                        .claim("govuk_signin_journey_id", clientSessionId)
-                        .claim("public_sub", publicSubject)
-                        .claim(
-                                "access_token",
-                                createAccessToken(internalPairwiseSubject, scope, authSessionItem))
-                        .build();
-
-        Result<AMCAuthorizeFailureReason, SignedJWT> jwsResult =
-                signJWT(claims, configurationService.getAuthToAMCPrivateSigningKeyAlias());
-
-        if (jwsResult.isFailure()) {
-            return Result.failure(jwsResult.getFailure());
-        }
-
-        return Result.success(jwsResult.getSuccess());
+                            return signJWT(
+                                    claims,
+                                    configurationService.getAuthToAMCPrivateSigningKeyAlias());
+                        });
     }
 }
