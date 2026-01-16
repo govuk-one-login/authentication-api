@@ -1,9 +1,10 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 public enum AMCAuthorizeFailureReason {
-    JWT_CONSTRUCTION_ERROR("jwt_construction_error"),
+    JWT_ENCODING_ERROR("jwt_encoding_error"),
+    UNKNOWN_JWT_SIGNING_ERROR("unknown_jwt_signing_error"),
     TRANSCODING_ERROR("transcoding_error"),
-    KMS_ERROR("kms_error");
+    SIGNING_ERROR("signing_error");
 
     private final String value;
 
