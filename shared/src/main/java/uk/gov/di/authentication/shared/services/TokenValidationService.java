@@ -4,7 +4,6 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
@@ -15,10 +14,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
+import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 public class TokenValidationService {
 
@@ -71,24 +69,25 @@ public class TokenValidationService {
                         new RSASSAVerifier(
                                 jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
             } else {
-                var realKey = jwksService.getPublicTokenJwkWithOpaqueId();
-                var acceptanceTestKey =
-                        configuration.isTestSigningKeyEnabled()
-                                ? jwksService.getPublicTestTokenJwkWithOpaqueId()
-                                : null;
-
-                Stream<JWK> signingKeys =
-                        Stream.of(realKey, acceptanceTestKey).filter(Objects::nonNull);
-
-                return signingKeys.anyMatch(
-                        key -> {
-                            boolean isTestKey = key.equals(acceptanceTestKey);
-                            return isSignatureValidWithKey(jwt, key, isTestKey);
-                        });
+                if (configuration.isTestSigningKeyEnabled()) {
+                    var acceptanceTestKey = jwksService.getPublicTestTokenJwkWithOpaqueId();
+                    boolean isValid = jwt.verify(new ECDSAVerifier(acceptanceTestKey.toECKey()));
+                    if (isValid) {
+                        LOG.info("Token signature validated using test key");
+                        return isValid;
+                    }
+                }
+                return jwt.verify(
+                        new ECDSAVerifier(
+                                jwksService
+                                        .getPublicTokenJwkWithOpaqueId(jwt.getHeader().getKeyID())
+                                        .toECKey()));
             }
         } catch (JOSEException | java.text.ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -103,17 +102,5 @@ public class TokenValidationService {
             return false;
         }
         return true;
-    }
-
-    private boolean isSignatureValidWithKey(SignedJWT jwt, JWK trustedKey, boolean isTestKey) {
-        try {
-            boolean isValid = jwt.verify(new ECDSAVerifier(trustedKey.toECKey()));
-            if (isValid && !configuration.getEnvironment().equals("production")) {
-                LOG.info("Token signature validated using {} key", isTestKey ? "test" : "real");
-            }
-            return isValid;
-        } catch (JOSEException e) {
-            return false;
-        }
     }
 }

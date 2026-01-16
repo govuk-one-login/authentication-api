@@ -10,6 +10,7 @@ import com.nimbusds.jose.jwk.KeyUse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -21,14 +22,15 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetStorageTokenJwkHandler;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.JwksExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
@@ -47,6 +49,8 @@ class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerInt
 
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
 
+    @RegisterExtension public static final JwksExtension jwksExtension = new JwksExtension();
+
     @RegisterExtension
     private static final KmsKeyExtension mfaResetStorageTokenSigningKey =
             new KmsKeyExtension("mfa-reset-storage-token-signing-key", KeyUsageType.SIGN_VERIFY);
@@ -58,10 +62,8 @@ class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerInt
     private static String expectedKid;
 
     @BeforeAll
-    static void setupEnvironment() {
-        environment.set(
-                "MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS",
-                mfaResetStorageTokenSigningKey.getKeyId());
+    static void setupEnvironment() throws MalformedURLException {
+        environment.set("ACCESS_TOKEN_JWKS_URL", jwksExtension.getJwksUrl());
 
         try (KmsClient kmsClient = getKmsClient()) {
             GetPublicKeyRequest getPublicKeyRequest =
@@ -79,6 +81,13 @@ class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerInt
         }
     }
 
+    @BeforeEach
+    void setup() {
+        environment.set(
+                "MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS",
+                mfaResetStorageTokenSigningKey.getKeyId());
+    }
+
     private static KmsClient getKmsClient() {
         return KmsClient.builder()
                 .endpointOverride(URI.create("http://localhost:45678"))
@@ -91,7 +100,22 @@ class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerInt
 
     @Test
     void shouldReturnJWKSetContainingTheStorageTokenSigningKey() {
-        handler = new MfaResetStorageTokenJwkHandler(new ConfigurationService());
+        handler = new MfaResetStorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
+
+        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(200));
+
+        JsonObject jwk = JsonParser.parseString(response.getBody()).getAsJsonObject();
+        JsonArray keys = jwk.get("keys").getAsJsonArray();
+        assertEquals(1, keys.size(), "JWKS endpoint must return a single key.");
+
+        checkPublicSigningKeyResponseMeetsADR0030(keys.get(0).getAsJsonObject());
+    }
+
+    @Test
+    void shouldReturnJWKSetContainingTheStorageTokenSigningKeyWithJwksEnabled() {
+        handler = new MfaResetStorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_ENABLED);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
@@ -108,7 +132,7 @@ class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerInt
     void shouldNotAllowExceptionsToEscape() {
         environment.set("MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS", "wrong-key-alias");
 
-        handler = new MfaResetStorageTokenJwkHandler(new ConfigurationService());
+        handler = new MfaResetStorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
