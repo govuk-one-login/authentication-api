@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AMCAuthorizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-amc-authorize-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler::handleRequest
+      Environment:
+        Variables:
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+      LoggingConfig:
+        LogGroup: !Ref AMCAuthorizeFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
+            ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref HttpsEgressSecurityGroup
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder: ""
+
+  AMCAuthorizeFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: "AMCAuthorizeFunction"
+      Principal: apigateway.amazonaws.com
+
+  AMCAuthorizeFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: "AMCAuthorizeFunction"
+      Principal: apigateway.amazonaws.com
+
+  AMCAuthorizeFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-amc-authorize-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AMCAuthorizeFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/amc-authorize.yaml
+
+  AMCAuthorizeFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AMCAuthorizeFunctionLogGroup

@@ -759,4 +759,24 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getAccountManagementSqsLambdaFunctionName() {
         return String.format("%s-account-management-sqs-lambda", getEnvironment());
     }
+
+    public String getAuthToAuthAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_AUTH_AUDIENCE", "");
+    }
+
+    public String getAuthToAccountManagementPrivateSigningKeyAlias() {
+        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_PRIVATE_SIGNING_KEY", "");
+    }
+
+    public String getAuthToAMCPrivateSigningKeyAlias() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_PRIVATE_SIGNING_KEY", "");
+    }
+
+    public String getAuthToAMCAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_AUDIENCE", "");
+    }
+
+    public String getAMCRedirectURI() {
+        return System.getenv().getOrDefault("AMC_REDIRECT_URI", "");
+    }
 }
