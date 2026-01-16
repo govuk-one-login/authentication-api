@@ -2,6 +2,7 @@ package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -46,7 +47,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -55,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.USER_INFO_RETURNED;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
@@ -79,6 +80,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static String DOC_APP_CREDENTIAL;
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    public static final String KEY_ID = "token-signing-key";
 
     private static final List<String> SCOPES =
             List.of(
@@ -142,7 +144,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        var signedJWT = externalTokenSigner.signJwt(claimsSet);
+        var signedJWT = externalTokenSigner.signJwt(claimsSet, hashSha256String(KEY_ID));
         var accessToken = new BearerAccessToken(signedJWT.serialize());
         orchAccessTokenExtension.saveAccessToken(
                 CLIENT_ID + "." + PUBLIC_SUBJECT,
@@ -339,7 +341,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet)
             throws JOSEException, NoSuchAlgorithmException {
-        var jwsHeader = new JWSHeader(ES256);
+        var jwsHeader =
+                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(hashSha256String(KEY_ID)).build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
 
         var keyPairGenerator = KeyPairGenerator.getInstance("EC");
@@ -381,7 +384,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         .map(ClaimsSetRequest.Entry::getClaimName)
                                         .collect(Collectors.toList()))
                         .build();
-        var signedJWT = externalTokenSigner.signJwt(claimsSet);
+        var signedJWT = externalTokenSigner.signJwt(claimsSet, KEY_ID);
         var accessToken = new BearerAccessToken(signedJWT.serialize());
         orchAccessTokenExtension.saveAccessToken(
                 CLIENT_ID + "." + PUBLIC_SUBJECT.getValue(),
@@ -409,7 +412,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(DOC_APP_PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        var signedJWT = externalTokenSigner.signJwt(claimsSet);
+        var signedJWT = externalTokenSigner.signJwt(claimsSet, KEY_ID);
         var accessToken = new BearerAccessToken(signedJWT.serialize());
         orchAccessTokenExtension.saveAccessToken(
                 APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,

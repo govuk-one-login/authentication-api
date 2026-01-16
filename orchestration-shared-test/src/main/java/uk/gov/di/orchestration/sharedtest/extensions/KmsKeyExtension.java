@@ -22,8 +22,10 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     protected KmsClient kms;
     protected final String keyAliasSuffix;
+    protected final String newKeyAliasSuffix;
 
     private String keyAlias;
+    private String newKeyAlias;
     private final KeyUsageType keyUsageType;
 
     public KmsKeyExtension(String keyAliasSuffix) {
@@ -32,6 +34,7 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     public KmsKeyExtension(String keyAliasSuffix, KeyUsageType keyUsageType) {
         this.keyAliasSuffix = keyAliasSuffix;
+        this.newKeyAliasSuffix = "new-" + keyAliasSuffix;
         this.keyUsageType = keyUsageType;
     }
 
@@ -50,11 +53,19 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         keyAliasSuffix);
 
+        newKeyAlias =
+                format(
+                        "alias/{0}-{1}",
+                        context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
+                        newKeyAliasSuffix);
+
         if (!keyExists(keyAlias)) {
             if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
                 createEncryptionKey(keyAlias);
+                createEncryptionKey(newKeyAlias);
             } else {
                 createTokenSigningKey(keyAlias);
+                createTokenSigningKey(newKeyAlias);
             }
         }
     }
@@ -108,5 +119,9 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     public String getKeyAlias() {
         return keyAlias;
+    }
+
+    public String getNewKeyAlias() {
+        return newKeyAlias;
     }
 }
