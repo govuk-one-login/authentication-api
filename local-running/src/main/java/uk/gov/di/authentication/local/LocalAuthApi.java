@@ -21,6 +21,7 @@ import uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler;
 import uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler;
 import uk.gov.di.authentication.frontendapi.lambda.SignUpHandler;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
+import uk.gov.di.authentication.frontendapi.lambda.StartPasskeyAssertionHandler;
 import uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
@@ -57,6 +58,7 @@ public class LocalAuthApi {
         app.post("/user-exists", handlerFor(new CheckUserExistsHandler()));
         app.post("/verify-code", handlerFor(new VerifyCodeHandler()));
         app.post("/verify-mfa-code", handlerFor(new VerifyMfaCodeHandler()));
+        app.post("/start-passkey-assertion", handlerFor(new StartPasskeyAssertionHandler()));
 
         // External API
         app.post("/token", handlerFor(new TokenHandler()));
