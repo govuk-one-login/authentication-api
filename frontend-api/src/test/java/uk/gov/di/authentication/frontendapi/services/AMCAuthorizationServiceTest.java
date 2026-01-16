@@ -19,6 +19,7 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -67,11 +68,13 @@ class AMCAuthorizationServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final NowHelper.NowClock nowClock = mock(NowHelper.NowClock.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private JwtService jwtService;
 
     @BeforeEach
     void setup() {
+        jwtService = new JwtService(kmsConnectionService);
         amcAuthorizationService =
-                new AMCAuthorizationService(configurationService, nowClock, kmsConnectionService);
+                new AMCAuthorizationService(configurationService, nowClock, jwtService);
     }
 
     @Test
@@ -135,7 +138,7 @@ class AMCAuthorizationServiceTest {
                         PUBLIC_SUBJECT);
 
         assertTrue(result.isFailure());
-        assertEquals(AMCAuthorizeFailureReason.KMS_ERROR, result.getFailure());
+        assertEquals(AMCAuthorizeFailureReason.SIGNING_ERROR, result.getFailure());
     }
 
     @Test
@@ -148,9 +151,7 @@ class AMCAuthorizationServiceTest {
         when(kmsConnectionService.sign(any(SignRequest.class)))
                 .thenReturn(
                         SignResponse.builder()
-                                .signature(
-                                        SdkBytes.fromByteArray(
-                                                new byte[] {0x00, 0x01})) // Invalid bytes
+                                .signature(SdkBytes.fromByteArray(new byte[] {0x00, 0x01}))
                                 .build());
 
         Result<AMCAuthorizeFailureReason, SignedJWT> result =
@@ -163,6 +164,32 @@ class AMCAuthorizationServiceTest {
 
         assertTrue(result.isFailure());
         assertEquals(AMCAuthorizeFailureReason.TRANSCODING_ERROR, result.getFailure());
+    }
+
+    @Test
+    void shouldReturnJwtConstructionErrorForUnknownExceptionCause() {
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
+
+        JwtService mockJwtService = mock(JwtService.class);
+        when(mockJwtService.signJWT(any(), any()))
+                .thenThrow(new JwtServiceException("Unknown error"));
+
+        AMCAuthorizationService serviceWithMockJwt =
+                new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+
+        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+                serviceWithMockJwt.createCompositeJWT(
+                        new Subject(INTERNAL_PAIRWISE_ID),
+                        new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
+
+        assertTrue(result.isFailure());
+        assertEquals(AMCAuthorizeFailureReason.UNKNOWN_JWT_SIGNING_ERROR, result.getFailure());
     }
 
     private void mockKmsSigningWithDifferentKeys(ECKey accessTokenKey, ECKey compositeJWTKey) {

@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
@@ -42,7 +41,6 @@ import java.util.List;
 
 public class IPVReverificationService {
     private static final Logger LOG = LogManager.getLogger(IPVReverificationService.class);
-    private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private static final String MFA_RESET_SCOPE = "reverification";
     private final ConfigurationService configurationService;
     private final JwtService jwtService;
@@ -151,7 +149,6 @@ public class IPVReverificationService {
 
         SignedJWT signedJWT =
                 jwtService.signJWT(
-                        SIGNING_ALGORITHM,
                         mfaResetAuthorizationClaims,
                         configurationService.getMfaResetJarSigningKeyId());
         LOG.info("Created Signed MFA Reset JWT");
