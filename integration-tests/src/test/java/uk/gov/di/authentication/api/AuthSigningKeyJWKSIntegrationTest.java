@@ -10,6 +10,7 @@ import com.nimbusds.jose.jwk.KeyUse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -21,15 +22,19 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.JwksExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -46,6 +51,8 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @SystemStub private static final EnvironmentVariables environment = new EnvironmentVariables();
 
+    @RegisterExtension public static final JwksExtension jwksExtension = new JwksExtension();
+
     @RegisterExtension
     private static final KmsKeyExtension mfaResetJarSigningKey =
             new KmsKeyExtension("mfa-reset-jar-signing-key", KeyUsageType.SIGN_VERIFY);
@@ -57,9 +64,8 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static String expectedHashKeyArn;
 
     @BeforeAll
-    static void setupEnvironment() {
-        environment.set(
-                "IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS", mfaResetJarSigningKey.getKeyId());
+    static void setupEnvironment() throws MalformedURLException {
+        environment.set("ACCESS_TOKEN_JWKS_URL", jwksExtension.getJwksUrl());
 
         try (KmsClient kmsClient = getKmsClient()) {
             GetPublicKeyRequest getPublicKeyRequest =
@@ -73,6 +79,12 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
         }
     }
 
+    @BeforeEach
+    void setup() {
+        environment.set(
+                "IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS", mfaResetJarSigningKey.getKeyId());
+    }
+
     private static KmsClient getKmsClient() {
         return KmsClient.builder()
                 .endpointOverride(URI.create("http://localhost:45678"))
@@ -83,9 +95,34 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 .build();
     }
 
+    private static KeyPair createTestEncryptionKeyPair() {
+        try {
+            var keyPairGenerator = KeyPairGenerator.getInstance("EC");
+            keyPairGenerator.initialize(256);
+            return keyPairGenerator.generateKeyPair();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Unable to create EC key pair: " + e.getMessage());
+        }
+    }
+
     @Test
     void shouldReturnJWKSetContainingTheReverificationSigningKey() {
-        handler = new MfaResetJarJwkHandler(new ConfigurationService());
+        handler = new MfaResetJarJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
+
+        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(200));
+
+        JsonObject jwk = JsonParser.parseString(response.getBody()).getAsJsonObject();
+        JsonArray keys = jwk.get("keys").getAsJsonArray();
+        assertEquals(1, keys.size(), "JWKS endpoint must return a single key.");
+
+        checkPublicSigningKeyResponseMeetsADR0030(keys.get(0).getAsJsonObject());
+    }
+
+    @Test
+    void shouldReturnJWKSetContainingTheReverificationSigningKeyWithJwksEnabled() {
+        handler = new MfaResetJarJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_ENABLED);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
@@ -102,7 +139,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void shouldNotAllowExceptionsToEscape() {
         environment.set("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS", "wrong-key-alias");
 
-        handler = new MfaResetJarJwkHandler(new ConfigurationService());
+        handler = new MfaResetJarJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
