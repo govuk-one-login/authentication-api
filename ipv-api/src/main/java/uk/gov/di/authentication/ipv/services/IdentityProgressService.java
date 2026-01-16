@@ -17,13 +17,13 @@ import static uk.gov.di.authentication.ipv.utils.IdentityProgressUtils.getIdenti
 public class IdentityProgressService {
 
     private static final Logger LOG = LogManager.getLogger(IdentityProgressService.class);
-    private static final int DELAY_IN_MS = 800;
-    private static final int MAX_RETRIES = 10;
+    private static final int DELAY_IN_MS = 500;
     private final ConfigurationService configurationService;
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Sleeper sleeper;
+    private final int maxRetries;
 
     public IdentityProgressService(ConfigurationService configurationService) {
         this(
@@ -45,6 +45,7 @@ public class IdentityProgressService {
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.sleeper = sleeper;
+        this.maxRetries = (int) (configurationService.getSyncWaitForSpotTimeout() / DELAY_IN_MS);
     }
 
     public IdentityProgressStatus pollForStatus(String clientSessionId, AuditContext auditContext)
@@ -52,12 +53,15 @@ public class IdentityProgressService {
         var status = IdentityProgressStatus.PROCESSING;
         var attempts = 1;
         while (status == IdentityProgressStatus.PROCESSING) {
-            LOG.info("Attempting to find identity credentials in dynamo. Attempt: {}", attempts);
+            LOG.info(
+                    "Attempting to find identity credentials in dynamo. Attempt {} out of {}",
+                    attempts,
+                    maxRetries);
             var identityCredentials = dynamoIdentityService.getIdentityCredentials(clientSessionId);
             status = getIdentityProgressStatus(identityCredentials, attempts);
             if (status == IdentityProgressStatus.PROCESSING) {
-                if (attempts >= MAX_RETRIES) {
-                    LOG.info("Max retries of {} reached. Returning ERROR", MAX_RETRIES);
+                if (attempts >= maxRetries) {
+                    LOG.info("Max retries of {} reached. Returning ERROR", maxRetries);
                     status = IdentityProgressStatus.ERROR;
                 } else {
                     sleeper.sleep(DELAY_IN_MS);

@@ -436,6 +436,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("USE_SYNC_WAIT_FOR_SPOT");
     }
 
+    public long getSyncWaitForSpotTimeout() {
+        return Long.parseLong(System.getenv().getOrDefault("SYNC_WAIT_FOR_SPOT_TIMEOUT", "5000"));
+    }
+
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }
