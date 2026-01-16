@@ -2,6 +2,8 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -12,14 +14,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class OrchAccessTokenService {
+public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenItem> {
     private static final Logger LOG = LogManager.getLogger(OrchAccessTokenService.class);
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
     private static final String FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR =
             "Failed to get Orch access token from Dynamo";
 
-    private final BaseDynamoService<OrchAccessTokenItem> oldOrchAccessTokenService;
-    private final BaseDynamoService<OrchAccessTokenItem> newOrchAccessTokenService;
     private final long timeToLive;
     private final NowHelper.NowClock nowClock;
 
@@ -28,23 +28,17 @@ public class OrchAccessTokenService {
     }
 
     public OrchAccessTokenService(ConfigurationService configurationService, Clock clock) {
-        oldOrchAccessTokenService =
-                new BaseDynamoService<>(
-                        OrchAccessTokenItem.class, "Access-Token", configurationService, true);
-        newOrchAccessTokenService =
-                new BaseDynamoService<>(
-                        OrchAccessTokenItem.class, "Orch-Access-Token", configurationService, true);
+        super(OrchAccessTokenItem.class, "Orch-Access-Token", configurationService, true);
         this.timeToLive = configurationService.getAccessTokenExpiry();
         this.nowClock = new NowHelper.NowClock(clock);
     }
 
     public OrchAccessTokenService(
-            BaseDynamoService<OrchAccessTokenItem> oldService,
-            BaseDynamoService<OrchAccessTokenItem> newService,
+            DynamoDbClient dynamoDbClient,
+            DynamoDbTable<OrchAccessTokenItem> dynamoDbTable,
             ConfigurationService configurationService,
             Clock clock) {
-        this.oldOrchAccessTokenService = oldService;
-        this.newOrchAccessTokenService = newService;
+        super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getAccessTokenExpiry();
         this.nowClock = new NowHelper.NowClock(clock);
     }
@@ -53,7 +47,7 @@ public class OrchAccessTokenService {
             String clientAndRpPairwiseId, String authCode) {
         Optional<OrchAccessTokenItem> orchAccessToken = Optional.empty();
         try {
-            orchAccessToken = newOrchAccessTokenService.get(clientAndRpPairwiseId, authCode);
+            orchAccessToken = get(clientAndRpPairwiseId, authCode);
         } catch (Exception e) {
             logAndThrowOrchAccessTokenException(FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR, e);
         }
@@ -73,7 +67,7 @@ public class OrchAccessTokenService {
 
     public Optional<OrchAccessTokenItem> getAccessTokenForAuthCode(String authCode) {
         try {
-            var items = newOrchAccessTokenService.queryIndex(AUTH_CODE_INDEX, authCode);
+            var items = queryIndex(AUTH_CODE_INDEX, authCode);
             if (items.isEmpty()) {
                 LOG.info("No Orch access token found");
                 return Optional.empty();
@@ -89,8 +83,7 @@ public class OrchAccessTokenService {
             String clientAndRpPairwiseId) {
         List<OrchAccessTokenItem> orchAccessTokens = List.of();
         try {
-            orchAccessTokens =
-                    newOrchAccessTokenService.queryTableStream(clientAndRpPairwiseId).toList();
+            orchAccessTokens = queryTableStream(clientAndRpPairwiseId).toList();
         } catch (Exception e) {
             logAndThrowOrchAccessTokenException(FAILED_TO_GET_ACCESS_TOKEN_FROM_DYNAMO_ERROR, e);
         }
@@ -106,25 +99,20 @@ public class OrchAccessTokenService {
             String token,
             String internalPairwiseSubjectId,
             String clientSessionId) {
-        var itemTtl = nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS).toInstant().getEpochSecond();
-        OrchAccessTokenItem orchAccessTokenItem =
-                new OrchAccessTokenItem()
-                        .withClientAndRpPairwiseId(clientAndRpPairwiseId)
-                        .withToken(token)
-                        .withInternalPairwiseSubjectId(internalPairwiseSubjectId)
-                        .withClientSessionId(clientSessionId)
-                        .withAuthCode(authCode)
-                        .withTimeToLive(itemTtl);
         try {
-            oldOrchAccessTokenService.put(orchAccessTokenItem);
+            var itemTtl =
+                    nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS).toInstant().getEpochSecond();
+            put(
+                    new OrchAccessTokenItem()
+                            .withClientAndRpPairwiseId(clientAndRpPairwiseId)
+                            .withToken(token)
+                            .withInternalPairwiseSubjectId(internalPairwiseSubjectId)
+                            .withClientSessionId(clientSessionId)
+                            .withAuthCode(authCode)
+                            .withTimeToLive(itemTtl));
         } catch (Exception e) {
             logAndThrowOrchAccessTokenException(
                     "Failed to save Orch access token item to Dynamo", e);
-        }
-        try {
-            newOrchAccessTokenService.put(orchAccessTokenItem);
-        } catch (Exception e) {
-            LOG.warn("Failed to save to new OrchAccessToken table");
         }
     }
 

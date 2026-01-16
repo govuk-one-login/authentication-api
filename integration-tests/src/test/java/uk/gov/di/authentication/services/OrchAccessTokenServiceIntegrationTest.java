@@ -37,19 +37,6 @@ class OrchAccessTokenServiceIntegrationTest {
 
             assertTrue(accessToken.isPresent());
             assertOrchAccessTokenItemMatchesExpected(accessToken.get());
-
-            // For ATO-2243: Verify token has been saved correctly in both tables
-            var oldTableToken =
-                    orchAccessTokenExtension.getAccessTokenFromOldTable(
-                            CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
-            var newTableToken =
-                    orchAccessTokenExtension.getAccessTokenFromNewTable(
-                            CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
-
-            assertTrue(oldTableToken.isPresent(), "Token should exist in old table");
-            assertTrue(newTableToken.isPresent(), "Token should exist in new table");
-            assertOrchAccessTokenItemMatchesExpected(oldTableToken.get());
-            assertOrchAccessTokenItemMatchesExpected(newTableToken.get());
         }
 
         @Test
