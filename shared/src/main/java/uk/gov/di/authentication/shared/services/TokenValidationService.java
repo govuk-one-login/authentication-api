@@ -67,7 +67,10 @@ public class TokenValidationService {
                     && configuration.isRsaSigningAvailable()) {
                 return jwt.verify(
                         new RSASSAVerifier(
-                                jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
+                                jwksService
+                                        .getPublicTokenRsaJwkWithOpaqueId(
+                                                jwt.getHeader().getKeyID())
+                                        .toRSAKey()));
             } else {
                 if (configuration.isTestSigningKeyEnabled()) {
                     var acceptanceTestKey = jwksService.getPublicTestTokenJwkWithOpaqueId();

@@ -135,12 +135,13 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateRsaSignedAccessToken() throws JOSEException {
+    void shouldSuccessfullyValidateRsaSignedAccessToken()
+            throws JOSEException, MalformedURLException {
         var rsaKey = new RSAKeyGenerator(2048).generate();
         var rsaSigner = new RSASSASigner(rsaKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId(any())).thenReturn(rsaKey);
 
         SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(
