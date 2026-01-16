@@ -105,12 +105,7 @@ class AMCAuthorizationServiceTest {
 
         assertCompositeJWTClaims(compositeClaims, expiryDate);
 
-        @SuppressWarnings("unchecked")
-        var accessTokenClaim =
-                (java.util.Map<String, Object>) compositeClaims.getClaim("access_token");
-        @SuppressWarnings("unchecked")
-        var bearerTokenMap = (java.util.Map<String, Object>) accessTokenClaim.get("value");
-        var accessTokenValue = (String) bearerTokenMap.get("value");
+        var accessTokenValue = (String) compositeClaims.getClaim("access_token");
 
         SignedJWT accessTokenJWT = SignedJWT.parse(accessTokenValue);
         assertTrue(accessTokenJWT.verify(new ECDSAVerifier(accessTokenKey.toECPublicKey())));
@@ -190,6 +185,59 @@ class AMCAuthorizationServiceTest {
 
         assertTrue(result.isFailure());
         assertEquals(AMCAuthorizeFailureReason.UNKNOWN_JWT_SIGNING_ERROR, result.getFailure());
+    }
+
+    @Test
+    void shouldHandleMultipleScopes() throws Exception {
+        ECKey accessTokenKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        ECKey compositeJWTKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
+
+        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+                amcAuthorizationService.createCompositeJWT(
+                        new Subject(INTERNAL_PAIRWISE_ID),
+                        new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
+
+        assertTrue(result.isSuccess());
+        JWTClaimsSet compositeClaims = result.getSuccess().getJWTClaimsSet();
+        assertEquals(
+                List.of(AMCScope.ACCOUNT_DELETE.getValue(), AMCScope.ACCOUNT_DELETE.getValue()),
+                compositeClaims.getClaim("scope"));
+    }
+
+    @Test
+    void shouldReturnJwtEncodingErrorWhenParseExceptionOccurs() {
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
+
+        JwtService mockJwtService = mock(JwtService.class);
+        when(mockJwtService.signJWT(any(), any()))
+                .thenThrow(new JwtServiceException("Parse error", new java.text.ParseException("Invalid", 0)));
+
+        AMCAuthorizationService serviceWithMockJwt =
+                new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+
+        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+                serviceWithMockJwt.createCompositeJWT(
+                        new Subject(INTERNAL_PAIRWISE_ID),
+                        new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
+
+        assertTrue(result.isFailure());
+        assertEquals(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR, result.getFailure());
     }
 
     private void mockKmsSigningWithDifferentKeys(ECKey accessTokenKey, ECKey compositeJWTKey) {
