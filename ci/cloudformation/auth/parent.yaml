@@ -197,6 +197,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
+      internalApiNewInternationalSmsEnabled: true
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -230,6 +231,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
+      internalApiNewInternationalSmsEnabled: true
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -263,6 +265,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
+      internalApiNewInternationalSmsEnabled: true
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -297,6 +300,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       frontendApiFMSTagValue: "authfrontenddev"
       frontendBaseUrl: https://signin.dev.account.gov.uk
+      internalApiNewInternationalSmsEnabled: true
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
@@ -341,6 +345,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       frontendApiFMSTagValue: "authfrontendbuild"
       frontendBaseUrl: https://signin.build.account.gov.uk
+      internalApiNewInternationalSmsEnabled: true
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -388,6 +393,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       frontendApiFMSTagValue: "authfrontendstaging"
       frontendBaseUrl: https://signin.staging.account.gov.uk
+      internalApiNewInternationalSmsEnabled: true
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -437,6 +443,7 @@ Mappings:
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       frontendApiFMSTagValue: "authfrontendint"
       frontendBaseUrl: https://signin.integration.account.gov.uk
+      internalApiNewInternationalSmsEnabled: true
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
@@ -485,6 +492,7 @@ Mappings:
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
       frontendApiFMSTagValue: "authfrontendprod"
       frontendBaseUrl: https://signin.account.gov.uk
+      internalApiNewInternationalSmsEnabled: true
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
