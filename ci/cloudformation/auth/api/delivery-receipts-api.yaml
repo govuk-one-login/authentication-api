@@ -1,5 +1,4 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Transform: AWS::Serverless-2016-10-31
 Resources:
   DeliveryReceiptsApi:
     Type: AWS::Serverless::Api
@@ -8,6 +7,7 @@ Resources:
         - ${Env}-di-authentication-delivery-receipts-api
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      OpenApiVersion: 3.0.1
       TracingEnabled: true
       EndpointConfiguration:
         Type: REGIONAL
