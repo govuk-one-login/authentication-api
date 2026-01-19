@@ -9,12 +9,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.StartPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPasskeyAssertionRequest>
@@ -58,6 +60,15 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
             StartPasskeyAssertionRequest request,
             UserContext userContext) {
         LOG.info("StartPasskeyAssertionHandler called");
+        var emailAddress = userContext.getAuthSession().getEmailAddress();
+        if (emailAddress == null || emailAddress.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.EMAIL_ADDRESS_EMPTY);
+        }
+        var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
+        if (userProfile.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.USER_NOT_FOUND);
+        }
+        var subjectId = userProfile.get().getSubjectID();
         return generateApiGatewayProxyResponse(200, "");
     }
 }

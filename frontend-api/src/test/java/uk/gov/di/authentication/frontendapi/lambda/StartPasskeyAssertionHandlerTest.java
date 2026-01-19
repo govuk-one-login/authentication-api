@@ -5,9 +5,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.yubico.webauthn.RelyingParty;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -22,14 +25,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartPasskeyAssertionHandlerTest {
+
+    private static final UserProfile USER_PROFILE =
+            new UserProfile().withEmail(EMAIL).withSubjectID("subject-id");
 
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -61,15 +69,55 @@ class StartPasskeyAssertionHandlerTest {
                         relyingParty);
     }
 
-    @Test
-    void shouldReturn200ForValidRequest() {
-        var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+    @Nested
+    class Success {
+        @Test
+        void shouldReturn200ForValidRequest() {
+            authSession.setEmailAddress(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(USER_PROFILE));
 
-        assertThat(result, hasStatus(200));
-        assertEquals("", result.getBody());
+            var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            assertThat(result, hasStatus(200));
+            assertEquals("", result.getBody());
+        }
     }
 
-    private APIGatewayProxyRequestEvent startPasskeyAssertionRequest() {
+    @Nested
+    class Validation {
+        @Test
+        void shouldReturn400WhenEmailIsNull() {
+            var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+        }
+
+        @Test
+        void shouldReturn400WhenEmailIsEmpty() {
+            authSession.setEmailAddress("");
+
+            var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+        }
+
+        @Test
+        void shouldReturn400WhenUserDoesNotExist() {
+            authSession.setEmailAddress(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.empty());
+
+            var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+        }
+    }
+
+    private APIGatewayProxyRequestEvent startPasskeyAssertionRequest(String email) {
         return new APIGatewayProxyRequestEvent()
                 .withHeaders(VALID_HEADERS)
                 .withBody("{}")
