@@ -4,9 +4,11 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.yubico.webauthn.RelyingParty;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.StartPasskeyAssertionRequest;
+import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -19,6 +21,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(StartPasskeyAssertionHandler.class);
+    private final RelyingParty relyingParty;
 
     public StartPasskeyAssertionHandler() {
         this(ConfigurationService.getInstance());
@@ -27,16 +30,19 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
     public StartPasskeyAssertionHandler(
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            RelyingParty relyingParty) {
         super(
                 StartPasskeyAssertionRequest.class,
                 configurationService,
                 authenticationService,
                 authSessionService);
+        this.relyingParty = relyingParty;
     }
 
     public StartPasskeyAssertionHandler(ConfigurationService configurationService) {
         super(StartPasskeyAssertionRequest.class, configurationService);
+        this.relyingParty = RelyingPartyProvider.provide(configurationService);
     }
 
     @Override
