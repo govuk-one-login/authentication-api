@@ -4,7 +4,9 @@ public enum AMCAuthorizeFailureReason {
     JWT_ENCODING_ERROR("jwt_encoding_error"),
     UNKNOWN_JWT_SIGNING_ERROR("unknown_jwt_signing_error"),
     TRANSCODING_ERROR("transcoding_error"),
-    SIGNING_ERROR("signing_error");
+    SIGNING_ERROR("signing_error"),
+    ENCRYPTION_ERROR("encryption_error"),
+    UNKNOWN_JWT_ENCRYPTING_ERROR("unknown_jwt_encrypting_error");
 
     private final String value;
 
