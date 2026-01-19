@@ -23,7 +23,7 @@ awsDynamoDbEnhanced = { module = "software.amazon.awssdk:dynamodb-enhanced", ver
 awsLambdaBase = { module = "software.amazon.awssdk:lambda", version.ref = "awsSdk" }
 awsLambdaCore = "com.amazonaws:aws-lambda-java-core:1.4.0"
 awsLambdaEvents = "com.amazonaws:aws-lambda-java-events:3.16.1"
-awsLambdaLog4j = "com.amazonaws:aws-lambda-java-log4j2:1.6.0"
+awsLambdaLog4j = "com.amazonaws:aws-lambda-java-log4j2:1.6.1"
 awsLambdaTests = "com.amazonaws:aws-lambda-java-tests:1.1.2"
 awsKms = { module = "software.amazon.awssdk:kms", version.ref = "awsSdk" }
 awsSecretsManager = { module = "software.amazon.awssdk:secretsmanager", version.ref = "awsSdk" }
