@@ -31,8 +31,8 @@ lambda_min_concurrency = 1
 lambda_max_concurrency = 3
 
 # Feature flags
-mfa_method_management_api_enabled = true
-ais_call_in_authenticate_enabled  = true
+mfa_method_management_api_enabled            = true
+ais_call_in_authenticate_enabled             = true
 account_management_international_sms_enabled = false
 
 #Vpc endpoint IDs

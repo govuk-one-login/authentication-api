@@ -345,7 +345,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       frontendApiFMSTagValue: "authfrontendbuild"
       frontendBaseUrl: https://signin.build.account.gov.uk
-      internalApiNewInternationalSmsEnabled: false
+      internalApiNewInternationalSmsEnabled: true
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -393,7 +393,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       frontendApiFMSTagValue: "authfrontendstaging"
       frontendBaseUrl: https://signin.staging.account.gov.uk
-      internalApiNewInternationalSmsEnabled: true
+      internalApiNewInternationalSmsEnabled: false
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
