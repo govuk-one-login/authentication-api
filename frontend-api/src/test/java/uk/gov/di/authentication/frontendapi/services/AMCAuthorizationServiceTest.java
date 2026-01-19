@@ -12,6 +12,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;
@@ -59,6 +61,8 @@ class AMCAuthorizationServiceTest {
     private static final String SESSION_ID = "test-session-id";
     private static final String RESPONSE_TYPE = "code";
     private static final String REDIRECT_URI = "https://example.com/callback";
+    private static final String AMC_CLIENT_ID = "amc-client-id";
+    private static final String AMC_AUTHORIZE_URI = "https://amc.account.gov.uk/authorize";
     private static final String EMAIL = "test@example.com";
     private static final String JOURNEY_ID = "test-journey-id";
     private static final String PUBLIC_SUBJECT = "test-public-subject";
@@ -88,7 +92,7 @@ class AMCAuthorizationServiceTest {
     }
 
     @Test
-    void shouldCreateCompositeJWTClaimsWithValidAccessToken() throws Exception {
+    void shouldBuildAuthorizationUrlWithValidJWT() throws Exception {
         ECKey accessTokenKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         ECKey compositeJWTKey =
@@ -101,26 +105,29 @@ class AMCAuthorizationServiceTest {
         mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
         when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
-                amcAuthorizationService.createCompositeJWT(
+        Result<AMCAuthorizeFailureReason, String> result =
+                amcAuthorizationService.buildAuthorizationUrl(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
                         PUBLIC_SUBJECT);
 
-        EncryptedJWT encryptedJWT = result.getSuccess();
+        assertTrue(result.isSuccess());
+        String authorizationUrl = result.getSuccess();
+        assertTrue(authorizationUrl.startsWith(AMC_AUTHORIZE_URI));
+
+        AuthorizationRequest authRequest = AuthorizationRequest.parse(authorizationUrl);
+        EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
         encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
         SignedJWT compositeJWT = encryptedJWT.getPayload().toSignedJWT();
 
         assertTrue(compositeJWT.verify(new ECDSAVerifier(compositeJWTKey.toECPublicKey())));
 
         JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
-
         assertCompositeJWTClaims(compositeClaims, expiryDate);
 
         var accessTokenValue = (String) compositeClaims.getClaim("access_token");
-
         SignedJWT accessTokenJWT = SignedJWT.parse(accessTokenValue);
         assertTrue(accessTokenJWT.verify(new ECDSAVerifier(accessTokenKey.toECPublicKey())));
 
@@ -138,8 +145,8 @@ class AMCAuthorizationServiceTest {
         when(kmsConnectionService.sign(any(SignRequest.class)))
                 .thenThrow(SdkException.builder().message("KMS Unreachable").build());
 
-        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
-                amcAuthorizationService.createCompositeJWT(
+        Result<AMCAuthorizeFailureReason, String> result =
+                amcAuthorizationService.buildAuthorizationUrl(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
@@ -163,8 +170,8 @@ class AMCAuthorizationServiceTest {
                                 .signature(SdkBytes.fromByteArray(new byte[] {0x00, 0x01}))
                                 .build());
 
-        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
-                amcAuthorizationService.createCompositeJWT(
+        Result<AMCAuthorizeFailureReason, String> result =
+                amcAuthorizationService.buildAuthorizationUrl(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
@@ -189,8 +196,8 @@ class AMCAuthorizationServiceTest {
         AMCAuthorizationService serviceWithMockJwt =
                 new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
 
-        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
-                serviceWithMockJwt.createCompositeJWT(
+        Result<AMCAuthorizeFailureReason, String> result =
+                serviceWithMockJwt.buildAuthorizationUrl(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
@@ -215,15 +222,17 @@ class AMCAuthorizationServiceTest {
         mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
         when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
-                amcAuthorizationService.createCompositeJWT(
+        Result<AMCAuthorizeFailureReason, String> result =
+                amcAuthorizationService.buildAuthorizationUrl(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
                         PUBLIC_SUBJECT);
 
-        EncryptedJWT encryptedJWT = result.getSuccess();
+        assertTrue(result.isSuccess());
+        AuthorizationRequest authRequest = AuthorizationRequest.parse(result.getSuccess());
+        EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
         encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
         SignedJWT compositeJWT = encryptedJWT.getPayload().toSignedJWT();
         JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
@@ -249,8 +258,8 @@ class AMCAuthorizationServiceTest {
         AMCAuthorizationService serviceWithMockJwt =
                 new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
 
-        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
-                serviceWithMockJwt.createCompositeJWT(
+        Result<AMCAuthorizeFailureReason, String> result =
+                serviceWithMockJwt.buildAuthorizationUrl(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
@@ -274,8 +283,8 @@ class AMCAuthorizationServiceTest {
         mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
         when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
-                amcAuthorizationService.createCompositeJWT(
+        Result<AMCAuthorizeFailureReason, String> result =
+                amcAuthorizationService.buildAuthorizationUrl(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
@@ -324,6 +333,8 @@ class AMCAuthorizationServiceTest {
         when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                 .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
         when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
+        when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
+        when(configurationService.getAMCAuthorizeURI()).thenReturn(URI.create(AMC_AUTHORIZE_URI));
         when(nowClock.now()).thenReturn(NOW);
         when(nowClock.nowPlus(SESSION_EXPIRY, ChronoUnit.SECONDS)).thenReturn(expiryDate);
     }
