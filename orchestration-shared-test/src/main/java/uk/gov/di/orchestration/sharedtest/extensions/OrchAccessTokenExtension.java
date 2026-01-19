@@ -11,8 +11,7 @@ import java.util.Optional;
 
 public class OrchAccessTokenExtension extends DynamoExtension implements AfterEachCallback {
 
-    public static final String TABLE_NAME = "local-Access-Token";
-    public static final String NEW_TABLE_NAME = "local-Orch-Access-Token";
+    public static final String TABLE_NAME = "local-Orch-Access-Token";
     public static final String CLIENT_AND_RP_PAIRWISE_ID_FIELD = "ClientAndRpPairwiseId";
     private static final String AUTH_CODE_FIELD = "AuthCode";
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
@@ -37,22 +36,12 @@ public class OrchAccessTokenExtension extends DynamoExtension implements AfterEa
                 TABLE_NAME,
                 CLIENT_AND_RP_PAIRWISE_ID_FIELD,
                 Optional.of(AUTH_CODE_FIELD));
-        clearDynamoTable(
-                dynamoDB,
-                NEW_TABLE_NAME,
-                CLIENT_AND_RP_PAIRWISE_ID_FIELD,
-                Optional.of(AUTH_CODE_FIELD));
     }
 
     @Override
     protected void createTables() {
         createTableWithPartitionAndSortKey(
                 TABLE_NAME,
-                CLIENT_AND_RP_PAIRWISE_ID_FIELD,
-                AUTH_CODE_FIELD,
-                createGlobalSecondaryIndex(AUTH_CODE_INDEX, AUTH_CODE_FIELD));
-        createTableWithPartitionAndSortKey(
-                NEW_TABLE_NAME,
                 CLIENT_AND_RP_PAIRWISE_ID_FIELD,
                 AUTH_CODE_FIELD,
                 createGlobalSecondaryIndex(AUTH_CODE_INDEX, AUTH_CODE_FIELD));
