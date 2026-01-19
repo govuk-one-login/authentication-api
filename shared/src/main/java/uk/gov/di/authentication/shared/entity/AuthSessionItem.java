@@ -43,6 +43,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_IS_ONE_LOGIN_SERVICE = "IsOneLoginService";
     public static final String ATTRIBUTE_SUBJECT_TYPE = "SubjectType";
     public static final String ATTRIBUTE_RP_SECTOR_IDENTIFIER_HOST = "RpSectorIdentifierHost";
+    public static final String ATTRIBUTE_PASSKEY_ASSERTION_REQUEST = "PasskeyAssertionRequest";
 
     public enum AccountState {
         NEW,
@@ -85,6 +86,7 @@ public class AuthSessionItem {
     private boolean isOneLoginService;
     private String subjectType;
     private String rpSectorIdentifierHost;
+    private String passkeyAssertionRequest;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -465,6 +467,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withRpSectorIdentifierHost(String rpSectorIdentifierHost) {
         this.rpSectorIdentifierHost = rpSectorIdentifierHost;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PASSKEY_ASSERTION_REQUEST)
+    public String getPasskeyAssertionRequest() {
+        return passkeyAssertionRequest;
+    }
+
+    public void setPasskeyAssertionRequest(String passkeyAssertionRequest) {
+        this.passkeyAssertionRequest = passkeyAssertionRequest;
+    }
+
+    public AuthSessionItem withPasskeyAssertionRequest(String passkeyAssertionRequest) {
+        this.passkeyAssertionRequest = passkeyAssertionRequest;
         return this;
     }
 

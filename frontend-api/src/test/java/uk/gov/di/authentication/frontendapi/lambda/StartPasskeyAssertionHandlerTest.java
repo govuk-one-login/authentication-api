@@ -2,7 +2,11 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.RelyingParty;
+import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.PublicKeyCredentialRequestOptions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -16,14 +20,20 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
@@ -72,15 +82,24 @@ class StartPasskeyAssertionHandlerTest {
     @Nested
     class Success {
         @Test
-        void shouldReturn200ForValidRequest() {
+        void shouldReturn200ForValidRequest() throws Exception {
             authSession.setEmailAddress(EMAIL);
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(USER_PROFILE));
+            var assertionRequest = createAssertionRequest();
+            var expectedJson = assertionRequest.toJson();
+            when(relyingParty.startAssertion(any())).thenReturn(assertionRequest);
 
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
             assertThat(result, hasStatus(200));
-            assertEquals("", result.getBody());
+            assertThat(result.getBody(), equalTo(assertionRequest.toCredentialsGetJson()));
+            verify(authSessionService)
+                    .updateSession(
+                            argThat(
+                                    session ->
+                                            session.getPasskeyAssertionRequest()
+                                                    .equals(expectedJson)));
         }
     }
 
@@ -117,10 +136,57 @@ class StartPasskeyAssertionHandlerTest {
         }
     }
 
-    private APIGatewayProxyRequestEvent startPasskeyAssertionRequest(String email) {
+    @Nested
+    class Error {
+        @Test
+        void shouldReturn500WhenToCredentialsGetJsonSerializationFails() throws Exception {
+            authSession.setEmailAddress(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(USER_PROFILE));
+
+            var spyAssertionRequest = spy(createAssertionRequest());
+            doThrow(new JsonProcessingException("test") {})
+                    .when(spyAssertionRequest)
+                    .toCredentialsGetJson();
+            when(relyingParty.startAssertion(any())).thenReturn(spyAssertionRequest);
+
+            var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+        }
+
+        @Test
+        void shouldReturn500WhenToJsonSerializationFails() throws Exception {
+            authSession.setEmailAddress(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(USER_PROFILE));
+
+            var spyAssertionRequest = spy(createAssertionRequest());
+            doThrow(new JsonProcessingException("test") {}).when(spyAssertionRequest).toJson();
+            when(relyingParty.startAssertion(any())).thenReturn(spyAssertionRequest);
+
+            var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+            verify(authSessionService, never()).updateSession(any());
+        }
+    }
+
+    private APIGatewayProxyRequestEvent startPasskeyAssertionRequest() {
         return new APIGatewayProxyRequestEvent()
                 .withHeaders(VALID_HEADERS)
                 .withBody("{}")
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+    }
+
+    private AssertionRequest createAssertionRequest() {
+        var challenge = new ByteArray("test-challenge".getBytes(StandardCharsets.UTF_8));
+        var publicKeyCredentialRequestOptions =
+                PublicKeyCredentialRequestOptions.builder().challenge(challenge).build();
+        return AssertionRequest.builder()
+                .publicKeyCredentialRequestOptions(publicKeyCredentialRequestOptions)
+                .build();
     }
 }
