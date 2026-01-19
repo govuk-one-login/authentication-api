@@ -7450,8 +7450,6 @@ Resources:
   #region access token data table
   AccessTokenTableEncryptionKey:
     Type: AWS::KMS::Key
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Access Token DynamoDB table
       EnableKeyRotation: true
@@ -7480,8 +7478,6 @@ Resources:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
   AccessTokenTable:
     Type: AWS::DynamoDB::Table
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Access-Token
       AttributeDefinitions:
@@ -7502,7 +7498,7 @@ Resources:
         - AttributeName: AuthCode
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
-      DeletionProtectionEnabled: true
+      DeletionProtectionEnabled: false
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt AccessTokenTableEncryptionKey.Arn
