@@ -1107,7 +1107,9 @@ Resources:
     UpdateReplacePolicy: Retain
     Condition: IsNotProduction
     Properties:
-      AliasName: !Sub "alias/${Environment}-test-id-token-signing-key-alias"
+      AliasName: !Sub
+        - "alias/${Env}-test-id-token-signing-key-alias"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TargetKeyId: !Ref TestIdTokenSigningKey
 
   # ----------------
