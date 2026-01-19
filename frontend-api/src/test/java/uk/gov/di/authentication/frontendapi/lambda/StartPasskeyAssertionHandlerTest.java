@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.yubico.webauthn.RelyingParty;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ class StartPasskeyAssertionHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final RelyingParty relyingParty = mock(RelyingParty.class);
     private StartPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
@@ -53,7 +55,10 @@ class StartPasskeyAssertionHandlerTest {
                 .thenReturn(Optional.of(authSession));
         handler =
                 new StartPasskeyAssertionHandler(
-                        configurationService, authenticationService, authSessionService);
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        relyingParty);
     }
 
     @Test
