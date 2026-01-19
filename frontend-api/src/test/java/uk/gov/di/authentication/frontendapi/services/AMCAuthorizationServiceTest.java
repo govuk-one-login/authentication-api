@@ -13,7 +13,6 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
@@ -107,7 +106,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 amcAuthorizationService.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -147,7 +146,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 amcAuthorizationService.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -172,7 +171,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 amcAuthorizationService.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -210,7 +209,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 serviceWithMockJwt.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -245,7 +244,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 serviceWithMockJwt.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -282,7 +281,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 serviceWithMockJwt.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -308,7 +307,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 serviceWithMockJwt.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -334,7 +333,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 amcAuthorizationService.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -370,7 +369,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 serviceWithMockJwt.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,
@@ -395,7 +394,7 @@ class AMCAuthorizationServiceTest {
 
         Result<AMCAuthorizeFailureReason, String> result =
                 amcAuthorizationService.buildAuthorizationUrl(
-                        new Subject(INTERNAL_PAIRWISE_ID),
+                        INTERNAL_PAIRWISE_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
                         JOURNEY_ID,

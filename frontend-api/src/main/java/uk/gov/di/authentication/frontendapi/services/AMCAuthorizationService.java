@@ -10,7 +10,6 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -79,7 +78,7 @@ public class AMCAuthorizationService {
     }
 
     private Result<AMCAuthorizeFailureReason, BearerAccessToken> createAccessToken(
-            Subject internalPairwiseSubject, AMCScope[] scope, AuthSessionItem authSessionItem) {
+            String internalPairwiseSubject, AMCScope[] scope, AuthSessionItem authSessionItem) {
         Date issueTime = nowClock.now();
         Date expiryDate =
                 nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
@@ -93,7 +92,7 @@ public class AMCAuthorizationService {
                         .expirationTime(expiryDate)
                         .issueTime(issueTime)
                         .notBeforeTime(issueTime)
-                        .subject(internalPairwiseSubject.getValue())
+                        .subject(internalPairwiseSubject)
                         .claim("client_id", authSessionItem.getClientId())
                         .claim("sid", authSessionItem.getSessionId())
                         .jwtID(UUID.randomUUID().toString())
@@ -113,7 +112,7 @@ public class AMCAuthorizationService {
     }
 
     private Result<AMCAuthorizeFailureReason, EncryptedJWT> createCompositeJWT(
-            Subject internalPairwiseSubject,
+            String internalPairwiseSubject,
             AMCScope[] scope,
             AuthSessionItem authSessionItem,
             String clientSessionId,
@@ -141,7 +140,7 @@ public class AMCAuthorizationService {
                                             .issueTime(issueTime)
                                             .notBeforeTime(issueTime)
                                             .expirationTime(expiryDate)
-                                            .subject(internalPairwiseSubject.toString())
+                                            .subject(internalPairwiseSubject)
                                             .claim("email", authSessionItem.getEmailAddress())
                                             .claim("govuk_signin_journey_id", clientSessionId)
                                             .claim("public_sub", publicSubject)
@@ -172,7 +171,7 @@ public class AMCAuthorizationService {
     }
 
     public Result<AMCAuthorizeFailureReason, String> buildAuthorizationUrl(
-            Subject internalPairwiseSubject,
+            String internalPairwiseSubject,
             AMCScope[] scope,
             AuthSessionItem authSessionItem,
             String clientSessionId,
