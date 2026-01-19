@@ -10,9 +10,8 @@ otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
 # Feature Flags
-mfa_method_management_api_enabled            = true
-test_clients_enabled                         = true
-account_management_international_sms_enabled = false
+mfa_method_management_api_enabled = true
+test_clients_enabled              = true
 
 openapi_spec_filename = "openapi_v2.yaml"
 
