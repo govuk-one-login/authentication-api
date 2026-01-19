@@ -2,7 +2,11 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.RelyingParty;
+import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.PublicKeyCredentialRequestOptions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -19,11 +23,13 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
@@ -69,15 +75,17 @@ class StartPasskeyAssertionHandlerTest {
     @Nested
     class Success {
         @Test
-        void shouldReturn200ForValidRequest() {
+        void shouldReturn200ForValidRequest() throws Exception {
             var userProfile = new UserProfile().withEmail(EMAIL).withSubjectID("subject-id");
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL.toLowerCase()))
                     .thenReturn(Optional.of(userProfile));
+            var assertionRequest = createAssertionRequest();
+            when(relyingParty.startAssertion(any())).thenReturn(assertionRequest);
 
             var result = handler.handleRequest(startPasskeyAssertionRequest(EMAIL), context);
 
             assertThat(result, hasStatus(200));
-            assertEquals("", result.getBody());
+            assertThat(result.getBody(), equalTo(assertionRequest.toCredentialsGetJson()));
         }
     }
 
@@ -103,10 +111,40 @@ class StartPasskeyAssertionHandlerTest {
         }
     }
 
+    @Nested
+    class Error {
+        @Test
+        void shouldReturn500WhenSerializationFails() throws Exception {
+            var userProfile = new UserProfile().withEmail(EMAIL).withSubjectID("subject-id");
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL.toLowerCase()))
+                    .thenReturn(Optional.of(userProfile));
+
+            var spyAssertionRequest = spy(createAssertionRequest());
+            doThrow(new JsonProcessingException("test") {})
+                    .when(spyAssertionRequest)
+                    .toCredentialsGetJson();
+            when(relyingParty.startAssertion(any())).thenReturn(spyAssertionRequest);
+
+            var result = handler.handleRequest(startPasskeyAssertionRequest(EMAIL), context);
+
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+        }
+    }
+
     private APIGatewayProxyRequestEvent startPasskeyAssertionRequest(String email) {
         return new APIGatewayProxyRequestEvent()
                 .withHeaders(VALID_HEADERS)
                 .withBody("{\"email\": \"" + email + "\"}")
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+    }
+
+    private AssertionRequest createAssertionRequest() {
+        var challenge = new ByteArray("test-challenge".getBytes());
+        var publicKeyCredentialRequestOptions =
+                PublicKeyCredentialRequestOptions.builder().challenge(challenge).build();
+        return AssertionRequest.builder()
+                .publicKeyCredentialRequestOptions(publicKeyCredentialRequestOptions)
+                .build();
     }
 }

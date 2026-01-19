@@ -33,7 +33,8 @@ dependencies {
             libs.bouncyCastle,
             libs.awsKms,
             libs.jetbrainsAnnotations,
-            libs.webauthnServer
+            libs.webauthnServer,
+            libs.jacksonDatabind
 
     runtimeOnly libs.bundles.loggingRuntime,
             platform(libs.openTelemetryBom),

@@ -4,7 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.RelyingParty;
+import com.yubico.webauthn.StartAssertionOptions;
+import com.yubico.webauthn.data.ByteArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.StartPasskeyAssertionRequest;
@@ -16,6 +19,9 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -65,6 +71,23 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.USER_NOT_FOUND);
         }
         var subjectId = userProfile.get().getSubjectID();
-        return generateApiGatewayProxyResponse(200, "");
+
+        var userHandle = new ByteArray(subjectId.getBytes(StandardCharsets.UTF_8));
+        var assertionRequest =
+                relyingParty.startAssertion(
+                        StartAssertionOptions.builder()
+                                .userHandle(Optional.of(userHandle))
+                                .build());
+
+        String credentialsJson;
+        try {
+            credentialsJson = assertionRequest.toCredentialsGetJson();
+        } catch (JsonProcessingException e) {
+            LOG.error("Error serializing assertion request", e);
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+        }
+
+        return generateApiGatewayProxyResponse(200, credentialsJson);
     }
 }
