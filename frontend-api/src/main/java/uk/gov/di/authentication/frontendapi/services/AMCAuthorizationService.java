@@ -5,7 +5,10 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
@@ -77,7 +80,6 @@ public class AMCAuthorizationService {
 
     private Result<AMCAuthorizeFailureReason, BearerAccessToken> createAccessToken(
             Subject internalPairwiseSubject, AMCScope[] scope, AuthSessionItem authSessionItem) {
-        LOG.info("Generating access token");
         Date issueTime = nowClock.now();
         Date expiryDate =
                 nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
@@ -110,7 +112,7 @@ public class AMCAuthorizationService {
                         });
     }
 
-    Result<AMCAuthorizeFailureReason, EncryptedJWT> createCompositeJWT(
+    private Result<AMCAuthorizeFailureReason, EncryptedJWT> createCompositeJWT(
             Subject internalPairwiseSubject,
             AMCScope[] scope,
             AuthSessionItem authSessionItem,
@@ -166,6 +168,35 @@ public class AMCAuthorizationService {
                                                                     .JWT_ENCODING_ERROR);
                                                 }
                                             });
+                        });
+    }
+
+    public Result<AMCAuthorizeFailureReason, String> buildAuthorizationUrl(
+            Subject internalPairwiseSubject,
+            AMCScope[] scope,
+            AuthSessionItem authSessionItem,
+            String clientSessionId,
+            String publicSubject) {
+        LOG.info("Building AMC authorization URL");
+        return createCompositeJWT(
+                        internalPairwiseSubject,
+                        scope,
+                        authSessionItem,
+                        clientSessionId,
+                        publicSubject)
+                .map(
+                        requestJWT -> {
+                            AuthorizationRequest authRequest =
+                                    new AuthorizationRequest.Builder(
+                                                    new ResponseType(ResponseType.Value.CODE),
+                                                    new ClientID(
+                                                            configurationService.getAMCClientId()))
+                                            .endpointURI(configurationService.getAMCAuthorizeURI())
+                                            .requestObject(requestJWT)
+                                            .build();
+                            String authorizationUrl = authRequest.toURI().toString();
+                            LOG.info("AMC authorization URL created");
+                            return authorizationUrl;
                         });
     }
 }
