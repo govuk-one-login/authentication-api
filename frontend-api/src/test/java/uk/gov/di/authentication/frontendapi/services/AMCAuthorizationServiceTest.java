@@ -183,6 +183,116 @@ class AMCAuthorizationServiceTest {
     }
 
     @Test
+    void shouldReturnEncryptionErrorWhenJoseExceptionOccursDuringEncryption() throws Exception {
+        ECKey accessTokenKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        when(configurationService.getAuthToAMCPublicEncryptionKey())
+                .thenReturn(constructTestPublicKey());
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
+
+        JwtService mockJwtService = mock(JwtService.class);
+        SignedJWT signedJWT =
+                new SignedJWT(
+                        new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
+        signedJWT.sign(new ECDSASigner(accessTokenKey));
+        when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
+        when(mockJwtService.encryptJWT(any(), any()))
+                .thenThrow(
+                        new JwtServiceException(
+                                "Encryption failed",
+                                new com.nimbusds.jose.JOSEException("Encryption error")));
+
+        AMCAuthorizationService serviceWithMockJwt =
+                new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+
+        Result<AMCAuthorizeFailureReason, String> result =
+                serviceWithMockJwt.buildAuthorizationUrl(
+                        new Subject(INTERNAL_PAIRWISE_ID),
+                        new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
+
+        assertTrue(result.isFailure());
+        assertEquals(AMCAuthorizeFailureReason.ENCRYPTION_ERROR, result.getFailure());
+    }
+
+    @Test
+    void shouldReturnUnknownEncryptionErrorForUnknownExceptionDuringEncryption() throws Exception {
+        ECKey accessTokenKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        when(configurationService.getAuthToAMCPublicEncryptionKey())
+                .thenReturn(constructTestPublicKey());
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
+
+        JwtService mockJwtService = mock(JwtService.class);
+        SignedJWT signedJWT =
+                new SignedJWT(
+                        new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
+        signedJWT.sign(new ECDSASigner(accessTokenKey));
+        when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
+        when(mockJwtService.encryptJWT(any(), any()))
+                .thenThrow(new JwtServiceException("Unknown encryption error"));
+
+        AMCAuthorizationService serviceWithMockJwt =
+                new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+
+        Result<AMCAuthorizeFailureReason, String> result =
+                serviceWithMockJwt.buildAuthorizationUrl(
+                        new Subject(INTERNAL_PAIRWISE_ID),
+                        new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
+
+        assertTrue(result.isFailure());
+        assertEquals(AMCAuthorizeFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR, result.getFailure());
+    }
+
+    @Test
+    void shouldReturnJwtEncodingErrorWhenParseExceptionOccursDuringEncryption() throws Exception {
+        ECKey accessTokenKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        when(configurationService.getAuthToAMCPublicEncryptionKey())
+                .thenReturn(constructTestPublicKey());
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
+
+        JwtService mockJwtService = mock(JwtService.class);
+        SignedJWT signedJWT =
+                new SignedJWT(
+                        new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
+        signedJWT.sign(new ECDSASigner(accessTokenKey));
+        when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
+        when(mockJwtService.encryptJWT(any(), any()))
+                .thenThrow(
+                        new JwtServiceException(
+                                "Parse error", new java.text.ParseException("Invalid", 0)));
+
+        AMCAuthorizationService serviceWithMockJwt =
+                new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+
+        Result<AMCAuthorizeFailureReason, String> result =
+                serviceWithMockJwt.buildAuthorizationUrl(
+                        new Subject(INTERNAL_PAIRWISE_ID),
+                        new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
+
+        assertTrue(result.isFailure());
+        assertEquals(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+    }
+
+    @Test
     void shouldReturnJwtConstructionErrorForUnknownExceptionCause() {
         Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
         mockConfigurationService(expiryDate);
