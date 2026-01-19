@@ -4,10 +4,12 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
+import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -27,8 +29,12 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 
 class AMCAuthorizationServiceTest {
     private AMCAuthorizationService amcAuthorizationService;
@@ -57,6 +64,10 @@ class AMCAuthorizationServiceTest {
     private static final String PUBLIC_SUBJECT = "test-public-subject";
     private static final String ACCESS_TOKEN_KEY_ALIAS = "test-key-alias";
     private static final String COMPOSITE_JWT_KEY_ALIAS = "auth-to-amc-test-key-alias";
+    private static final KeyPair TEST_KEY_PAIR = GENERATE_RSA_KEY_PAIR();
+    private static final RSAPublicKey TEST_PUBLIC_KEY = (RSAPublicKey) TEST_KEY_PAIR.getPublic();
+    private static final RSAPrivateKey TEST_PRIVATE_KEY =
+            (RSAPrivateKey) TEST_KEY_PAIR.getPrivate();
     private static final AuthSessionItem authSessionItem = mock(AuthSessionItem.class);
 
     // Ensure 0 milliseconds for JWT compatibility
@@ -68,11 +79,10 @@ class AMCAuthorizationServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final NowHelper.NowClock nowClock = mock(NowHelper.NowClock.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private JwtService jwtService;
 
     @BeforeEach
     void setup() {
-        jwtService = new JwtService(kmsConnectionService);
+        JwtService jwtService = new JwtService(kmsConnectionService);
         amcAuthorizationService =
                 new AMCAuthorizationService(configurationService, nowClock, jwtService);
     }
@@ -83,13 +93,15 @@ class AMCAuthorizationServiceTest {
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         ECKey compositeJWTKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        when(configurationService.getAuthToAMCPublicEncryptionKey())
+                .thenReturn(constructTestPublicKey());
         Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
         mockConfigurationService(expiryDate);
         mockAuthSessionItem();
         mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
         when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
                 amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -97,8 +109,10 @@ class AMCAuthorizationServiceTest {
                         JOURNEY_ID,
                         PUBLIC_SUBJECT);
 
-        assertTrue(result.isSuccess());
-        SignedJWT compositeJWT = result.getSuccess();
+        EncryptedJWT encryptedJWT = result.getSuccess();
+        encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
+        SignedJWT compositeJWT = encryptedJWT.getPayload().toSignedJWT();
+
         assertTrue(compositeJWT.verify(new ECDSAVerifier(compositeJWTKey.toECPublicKey())));
 
         JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
@@ -124,7 +138,7 @@ class AMCAuthorizationServiceTest {
         when(kmsConnectionService.sign(any(SignRequest.class)))
                 .thenThrow(SdkException.builder().message("KMS Unreachable").build());
 
-        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
                 amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -149,7 +163,7 @@ class AMCAuthorizationServiceTest {
                                 .signature(SdkBytes.fromByteArray(new byte[] {0x00, 0x01}))
                                 .build());
 
-        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
                 amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -175,7 +189,7 @@ class AMCAuthorizationServiceTest {
         AMCAuthorizationService serviceWithMockJwt =
                 new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
 
-        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
                 serviceWithMockJwt.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -193,13 +207,15 @@ class AMCAuthorizationServiceTest {
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         ECKey compositeJWTKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        when(configurationService.getAuthToAMCPublicEncryptionKey())
+                .thenReturn(constructTestPublicKey());
         Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
         mockConfigurationService(expiryDate);
         mockAuthSessionItem();
         mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
         when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
                 amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
@@ -207,8 +223,11 @@ class AMCAuthorizationServiceTest {
                         JOURNEY_ID,
                         PUBLIC_SUBJECT);
 
-        assertTrue(result.isSuccess());
-        JWTClaimsSet compositeClaims = result.getSuccess().getJWTClaimsSet();
+        EncryptedJWT encryptedJWT = result.getSuccess();
+        encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
+        SignedJWT compositeJWT = encryptedJWT.getPayload().toSignedJWT();
+        JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
+
         assertEquals(
                 List.of(AMCScope.ACCOUNT_DELETE.getValue(), AMCScope.ACCOUNT_DELETE.getValue()),
                 compositeClaims.getClaim("scope"));
@@ -223,13 +242,40 @@ class AMCAuthorizationServiceTest {
 
         JwtService mockJwtService = mock(JwtService.class);
         when(mockJwtService.signJWT(any(), any()))
-                .thenThrow(new JwtServiceException("Parse error", new java.text.ParseException("Invalid", 0)));
+                .thenThrow(
+                        new JwtServiceException(
+                                "Parse error", new java.text.ParseException("Invalid", 0)));
 
         AMCAuthorizationService serviceWithMockJwt =
                 new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
 
-        Result<AMCAuthorizeFailureReason, SignedJWT> result =
+        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
                 serviceWithMockJwt.createCompositeJWT(
+                        new Subject(INTERNAL_PAIRWISE_ID),
+                        new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                        authSessionItem,
+                        JOURNEY_ID,
+                        PUBLIC_SUBJECT);
+
+        assertTrue(result.isFailure());
+        assertEquals(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+    }
+
+    @Test
+    void shouldReturnJwtEncodingErrorWhenPublicKeyParsingFails() throws Exception {
+        ECKey accessTokenKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        ECKey compositeJWTKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        when(configurationService.getAuthToAMCPublicEncryptionKey()).thenReturn("invalid-pem-key");
+        Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+        mockConfigurationService(expiryDate);
+        mockAuthSessionItem();
+        mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
+        when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
+
+        Result<AMCAuthorizeFailureReason, EncryptedJWT> result =
+                amcAuthorizationService.createCompositeJWT(
                         new Subject(INTERNAL_PAIRWISE_ID),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,
@@ -326,5 +372,10 @@ class AMCAuthorizationServiceTest {
                 () -> assertEquals(NOW, accessTokenClaims.getNotBeforeTime()),
                 () -> assertEquals(expiryDate, accessTokenClaims.getExpirationTime()),
                 () -> assertDoesNotThrow(() -> UUID.fromString(accessTokenClaims.getJWTID())));
+    }
+
+    private static String constructTestPublicKey() {
+        var encodedKey = Base64.getMimeEncoder().encodeToString(TEST_PUBLIC_KEY.getEncoded());
+        return "-----BEGIN PUBLIC KEY-----\n" + encodedKey + "\n-----END PUBLIC KEY-----\n";
     }
 }

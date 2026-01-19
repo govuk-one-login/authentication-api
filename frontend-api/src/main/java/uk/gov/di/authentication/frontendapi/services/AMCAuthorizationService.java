@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -18,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -57,6 +60,21 @@ public class AMCAuthorizationService {
         }
     }
 
+    private Result<AMCAuthorizeFailureReason, EncryptedJWT> encryptJWT(
+            SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) {
+        try {
+            return Result.success(jwtService.encryptJWT(signedJWT, publicEncryptionKey));
+        } catch (JwtServiceException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof JOSEException) {
+                return Result.failure(AMCAuthorizeFailureReason.ENCRYPTION_ERROR);
+            } else if (cause instanceof ParseException) {
+                return Result.failure(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR);
+            }
+            return Result.failure(AMCAuthorizeFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR);
+        }
+    }
+
     private Result<AMCAuthorizeFailureReason, BearerAccessToken> createAccessToken(
             Subject internalPairwiseSubject, AMCScope[] scope, AuthSessionItem authSessionItem) {
         LOG.info("Generating access token");
@@ -92,7 +110,7 @@ public class AMCAuthorizationService {
                         });
     }
 
-    Result<AMCAuthorizeFailureReason, SignedJWT> createCompositeJWT(
+    Result<AMCAuthorizeFailureReason, EncryptedJWT> createCompositeJWT(
             Subject internalPairwiseSubject,
             AMCScope[] scope,
             AuthSessionItem authSessionItem,
@@ -129,8 +147,25 @@ public class AMCAuthorizationService {
                                             .build();
 
                             return signJWT(
-                                    claims,
-                                    configurationService.getAuthToAMCPrivateSigningKeyAlias());
+                                            claims,
+                                            configurationService
+                                                    .getAuthToAMCPrivateSigningKeyAlias())
+                                    .flatMap(
+                                            signedJWT -> {
+                                                try {
+                                                    RSAPublicKey publicKey =
+                                                            JWK.parseFromPEMEncodedObjects(
+                                                                            configurationService
+                                                                                    .getAuthToAMCPublicEncryptionKey())
+                                                                    .toRSAKey()
+                                                                    .toRSAPublicKey();
+                                                    return encryptJWT(signedJWT, publicKey);
+                                                } catch (JOSEException e) {
+                                                    return Result.failure(
+                                                            AMCAuthorizeFailureReason
+                                                                    .JWT_ENCODING_ERROR);
+                                                }
+                                            });
                         });
     }
 }
