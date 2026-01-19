@@ -72,6 +72,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -486,6 +488,37 @@ class TokenServiceTest {
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
         assertTrue(errorObject.isPresent());
+    }
+
+    @Test
+    void shouldGenerateNewTokensFromRefreshToken() throws Exception {
+        var scopes = List.of("openid", "offline_access");
+        var clientSessionId = "test-client-session-id";
+        createSignedAccessToken();
+
+        tokenService.generateRefreshTokenResponse(
+                CLIENT_ID,
+                scopes,
+                PUBLIC_SUBJECT,
+                INTERNAL_PAIRWISE_SUBJECT,
+                JWSAlgorithm.ES256,
+                AUTH_CODE,
+                clientSessionId);
+
+        verify(orchAccessTokenService)
+                .saveAccessToken(
+                        eq(CLIENT_ID + "." + PUBLIC_SUBJECT.getValue()),
+                        eq(AUTH_CODE),
+                        anyString(),
+                        eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
+                        eq(clientSessionId));
+        verify(orchRefreshTokenService)
+                .saveRefreshToken(
+                        anyString(),
+                        eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
+                        anyString(),
+                        eq(AUTH_CODE),
+                        eq(clientSessionId));
     }
 
     private void createSignedIdToken() throws JOSEException {

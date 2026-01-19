@@ -78,11 +78,6 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
     }
 
     public void saveRefreshToken(
-            String jwtId, String internalPairwiseSubjectId, String token, String authCode) {
-        saveRefreshToken(jwtId, internalPairwiseSubjectId, token, authCode, null);
-    }
-
-    public void saveRefreshToken(
             String jwtId,
             String internalPairwiseSubjectId,
             String token,

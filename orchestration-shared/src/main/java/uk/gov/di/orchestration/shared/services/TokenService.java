@@ -147,7 +147,8 @@ public class TokenService {
             Subject rpPaiwiseSubject,
             Subject internalPairwiseSubject,
             JWSAlgorithm signingAlgorithm,
-            String authCode) {
+            String authCode,
+            String clientSessionId) {
         AccessToken accessToken =
                 generateAndStoreAccessToken(
                         clientID,
@@ -156,7 +157,7 @@ public class TokenService {
                         internalPairwiseSubject,
                         null,
                         signingAlgorithm,
-                        "refreshToken",
+                        clientSessionId,
                         authCode);
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(
@@ -165,7 +166,8 @@ public class TokenService {
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
                         signingAlgorithm,
-                        authCode);
+                        authCode,
+                        clientSessionId);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -343,23 +345,6 @@ public class TokenService {
                 journeyId);
 
         return accessToken;
-    }
-
-    private RefreshToken generateAndStoreRefreshToken(
-            String clientId,
-            List<String> scopes,
-            Subject rpPairwiseSubject,
-            Subject internalPairwiseSubject,
-            JWSAlgorithm signingAlgorithm,
-            String authCode) {
-        return generateAndStoreRefreshToken(
-                clientId,
-                scopes,
-                rpPairwiseSubject,
-                internalPairwiseSubject,
-                signingAlgorithm,
-                authCode,
-                null);
     }
 
     private RefreshToken generateAndStoreRefreshToken(

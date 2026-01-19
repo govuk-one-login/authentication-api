@@ -376,6 +376,7 @@ public class TokenHandler
 
         OIDCTokenResponse tokenResponse;
         try {
+            var clientSessionId = orchRefreshTokenItem.getClientSessionId();
             tokenResponse =
                     tokenService.generateRefreshTokenResponse(
                             clientId,
@@ -383,7 +384,8 @@ public class TokenHandler
                             rpPairwiseSubject,
                             new Subject(orchRefreshTokenItem.getInternalPairwiseSubjectId()),
                             signingAlgorithm,
-                            orchRefreshTokenItem.getAuthCode());
+                            orchRefreshTokenItem.getAuthCode(),
+                            clientSessionId);
         } catch (OrchAccessTokenException | OrchRefreshTokenException e) {
             LOG.error("Failed to process refresh token", e);
             return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
