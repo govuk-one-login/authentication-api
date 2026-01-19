@@ -110,6 +110,12 @@ Conditions:
         !Equals [staging, !Ref Environment],
       ],
     ]
+  UseSyncWaitForSpot:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -142,6 +148,7 @@ Mappings:
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 3c2cb819-4dd1-4fbc-90f0-cbdc3ec24e50
       authStubEnabled: false
+      syncWaitForSpotTimeout: 20000
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -171,6 +178,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
       authStubEnabled: false
+      syncWaitForSpotTimeout: 20000
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -202,6 +210,7 @@ Mappings:
       globalLogoutQueueArn: arn:aws:sqs:eu-west-2:178023842775:self-staging-EC-SQS-Output-Queue-orchGlobalLogout
       globalLogoutQueueKmsKeyArn: arn:aws:kms:eu-west-2:178023842775:key/7cf407f9-958e-4039-a095-c46ba0a08d82
       authStubEnabled: false
+      syncWaitForSpotTimeout: 20000
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -231,6 +240,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
       authStubEnabled: false
+      syncWaitForSpotTimeout: 5000
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -260,6 +270,7 @@ Mappings:
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
       authStubEnabled: false
+      syncWaitForSpotTimeout: 5000
 
 Globals:
   Function:
@@ -4767,7 +4778,16 @@ Resources:
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
-          USE_SYNC_WAIT_FOR_SPOT: false
+          USE_SYNC_WAIT_FOR_SPOT: !If
+            - UseSyncWaitForSpot
+            - true
+            - false
+          SYNC_WAIT_FOR_SPOT_TIMEOUT:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              syncWaitForSpotTimeout,
+            ]
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
