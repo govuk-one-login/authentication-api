@@ -649,7 +649,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
-      accountManagementInternationalSmsEnabled: true
+      accountManagementInternationalSmsEnabled: false
       OrchAccountID: 590183975515
       OrchApiBaseUrl: https://oidc.staging.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/156f87e0-001a-4ae8-a6c1-23f8f68b6e84
