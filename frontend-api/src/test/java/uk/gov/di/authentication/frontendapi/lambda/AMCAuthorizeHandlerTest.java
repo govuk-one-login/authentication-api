@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
@@ -95,11 +96,7 @@ class AMCAuthorizeHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
-                        event,
-                        context,
-                        new uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest(
-                                EMAIL, AMCJourneyType.SFAD),
-                        userContext);
+                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
         assertEquals(200, result.getStatusCode());
         assertEquals(expectedUrl, result.getBody());
@@ -125,11 +122,7 @@ class AMCAuthorizeHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
-                        event,
-                        context,
-                        new uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest(
-                                EMAIL, AMCJourneyType.SFAD),
-                        userContext);
+                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
         assertEquals(400, result.getStatusCode());
         assertTrue(result.getBody().contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
@@ -153,11 +146,7 @@ class AMCAuthorizeHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
-                        event,
-                        context,
-                        new uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest(
-                                EMAIL, AMCJourneyType.SFAD),
-                        userContext);
+                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
         int expectedStatusCode =
                 switch (failureReason) {
