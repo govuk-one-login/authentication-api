@@ -4,7 +4,13 @@ permissions:
   id-token: write
   contents: read
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      use_auth_stub:
+        description: "Use Auth-Stub"
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -13,3 +19,5 @@ jobs:
       ORCH_GH_ACTIONS_ROLE_ARN: ${{ secrets.ORCH_DEV_GH_ACTIONS_ROLE_ARN }}
       ORCH_ARTIFACT_BUCKET_NAME: ${{ secrets.ORCH_DEV_ARTIFACT_BUCKET_NAME }}
       ORCH_SIGNING_PROFILE_NAME: ${{ secrets.ORCH_DEV_SIGNING_PROFILE_NAME }}
+    with:
+      use_auth_stub: ${{ inputs.use_auth_stub }}

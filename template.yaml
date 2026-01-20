@@ -38,6 +38,10 @@ Parameters:
     Type: Number
     Description: Minimum number of errors before error rate alarms can be triggered
     Default: 4
+  EnableAuthStub:
+    Type: String
+    Description: Whether to use the auth stub. Should only be set in dev
+    Default: "false"
 
 Conditions:
   UsePermissionsBoundary:
@@ -89,11 +93,7 @@ Conditions:
   IsProduction: !Equals [!Ref Environment, production]
   IsNotProduction: !Not [!Condition IsProduction]
   UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
-  UseAuthStub:
-    !Equals [
-      !FindInMap [EnvironmentConfiguration, !Ref Environment, authStubEnabled],
-      true,
-    ]
+  UseAuthStub: !Equals [!Ref EnableAuthStub, "true"]
   UseSingleFactorAccountDeletion: !Equals [dev, !Ref Environment]
   ProvisionNewExternalTokenSigningKeys:
     !Or [
@@ -147,7 +147,6 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 3c2cb819-4dd1-4fbc-90f0-cbdc3ec24e50
-      authStubEnabled: false
       syncWaitForSpotTimeout: 20000
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -177,7 +176,6 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
-      authStubEnabled: false
       syncWaitForSpotTimeout: 20000
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -209,7 +207,6 @@ Mappings:
       aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
       globalLogoutQueueArn: arn:aws:sqs:eu-west-2:178023842775:self-staging-EC-SQS-Output-Queue-orchGlobalLogout
       globalLogoutQueueKmsKeyArn: arn:aws:kms:eu-west-2:178023842775:key/7cf407f9-958e-4039-a095-c46ba0a08d82
-      authStubEnabled: false
       syncWaitForSpotTimeout: 20000
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -239,7 +236,6 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
-      authStubEnabled: false
       syncWaitForSpotTimeout: 5000
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
@@ -269,7 +265,6 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
-      authStubEnabled: false
       syncWaitForSpotTimeout: 5000
 
 Globals:

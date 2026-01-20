@@ -12,6 +12,11 @@ on:
         required: true
       ORCH_SIGNING_PROFILE_NAME:
         required: true
+    inputs:
+      use_auth_stub:
+        description: "Use Auth-Stub"
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -45,7 +50,7 @@ jobs:
       - name: SAM build
         run: |
           ./gradlew --no-daemon --parallel :oidc:buildZip :ipv-api:buildZip :doc-checking-app-api:buildZip :client-registry-api:buildZip
-          sam build --parallel
+          sam build --parallel --parameter-overrides ParameterKey=EnableAuthStub,ParameterValue=${{ inputs.use_auth_stub }}
 
       - name: Deploy SAM app
         uses: govuk-one-login/devplatform-upload-action@fda75612a1b0e5a8c84ae7c44a23340e50e5bbde # v3.8
