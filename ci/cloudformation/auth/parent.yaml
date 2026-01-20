@@ -2277,6 +2277,40 @@ Resources:
                       OrchAccountID,
                     ]
                   OrchEnv: !Ref Environment
+          # Orch Client Registry Encryption Key - Decrypt
+          - Sid: AllowOrchClientRegistryEncryptionKeyCrossAccountDecryptAccess
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    OrchClientRegistryTableEncryptionkey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    OrchClientRegistryTableEncryptionkey,
+                  ]
+          # Orch Identity Credentials Table - Read
+          - Sid: AllowOrchClientRegistryCrossAccountReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${OrchEnv}-client-registry"
+                - OrchAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      OrchAccountID,
+                    ]
+                  OrchEnv: !Ref Environment
 
   S3SmokeTestPolicy:
     Type: AWS::IAM::ManagedPolicy

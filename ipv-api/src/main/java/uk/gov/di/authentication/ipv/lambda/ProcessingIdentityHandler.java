@@ -184,6 +184,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                         userContext.getClientId(),
                         intervention);
         var redirectUrl = logoutResult.getHeaders().get(ResponseHeaders.LOCATION);
+        LOG.info("Completed intervention in processing identity handler");
         return generateApiGatewayProxyResponse(
                 200,
                 new ProcessingIdentityInterventionResponse(

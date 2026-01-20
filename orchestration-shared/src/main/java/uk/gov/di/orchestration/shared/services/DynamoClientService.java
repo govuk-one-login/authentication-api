@@ -24,6 +24,11 @@ public class DynamoClientService implements ClientService {
 
     public DynamoClientService(ConfigurationService configurationService) {
         var tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+
+        // This is for processing identity handler
+        if (configurationService.getOrchDynamoArnPrefix().isPresent()) {
+            tableName = configurationService.getOrchDynamoArnPrefix().get() + CLIENT_REGISTRY_TABLE;
+        }
         var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService);
         this.dynamoClientRegistryTable =
                 dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
