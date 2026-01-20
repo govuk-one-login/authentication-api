@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.sharedtest.logging;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
-import org.apache.logging.log4j.core.impl.MutableLogEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,11 +18,7 @@ public class StubAppender extends AbstractAppender {
 
     @Override
     public void append(final LogEvent event) {
-        if (event instanceof MutableLogEvent mutableLogEvent) {
-            events.add(mutableLogEvent.createMemento());
-        } else {
-            events.add(event);
-        }
+        events.add(event.toImmutable());
     }
 
     public List<LogEvent> getEvents() {

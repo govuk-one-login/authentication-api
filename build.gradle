@@ -166,6 +166,10 @@ subprojects {
                     add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
                         because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                     }
+
+                    add(conf.name, 'org.apache.logging.log4j:log4j-core:[2.25.3,3.0.0)') {
+                        because 'CVE-2025-68161 is fixed in 2.25.3 and higher'
+                    }
                 }
             }
         }
