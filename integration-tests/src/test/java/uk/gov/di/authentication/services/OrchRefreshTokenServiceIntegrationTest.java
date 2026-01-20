@@ -15,6 +15,7 @@ class OrchRefreshTokenServiceIntegrationTest {
     private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "test-internal-pairwise-subject-id";
     private static final String TOKEN = "test-token";
     private static final String AUTH_CODE = "test-auth-code";
+    private static final String CLIENT_SESSION_ID = "test-client-session-id";
 
     @RegisterExtension
     protected static final OrchRefreshTokenExtension orchRefreshTokenExtension =
@@ -23,7 +24,7 @@ class OrchRefreshTokenServiceIntegrationTest {
     @Test
     void shouldStoreOrchRefreshTokenWithAllFieldsSet() {
         orchRefreshTokenExtension.saveRefreshToken(
-                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE);
+                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE, CLIENT_SESSION_ID);
 
         var refreshToken = orchRefreshTokenExtension.getRefreshToken(JWT_ID);
 
@@ -33,6 +34,7 @@ class OrchRefreshTokenServiceIntegrationTest {
                 INTERNAL_PAIRWISE_SUBJECT_ID, refreshToken.get().getInternalPairwiseSubjectId());
         assertEquals(TOKEN, refreshToken.get().getToken());
         assertEquals(AUTH_CODE, refreshToken.get().getAuthCode());
+        assertEquals(CLIENT_SESSION_ID, refreshToken.get().getClientSessionId());
         // getting the token causes it to be marked as used
         assertTrue(refreshToken.get().getIsUsed());
     }
@@ -40,7 +42,7 @@ class OrchRefreshTokenServiceIntegrationTest {
     @Test
     void shouldReturnEmptyOptionalWhenNoRefreshTokenExistsForJwtId() {
         orchRefreshTokenExtension.saveRefreshToken(
-                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE);
+                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE, CLIENT_SESSION_ID);
         var refreshToken = orchRefreshTokenExtension.getRefreshToken("different-jwt-id");
         assertTrue(refreshToken.isEmpty());
     }
@@ -48,7 +50,7 @@ class OrchRefreshTokenServiceIntegrationTest {
     @Test
     void shouldReturnEmptyOptionalWhenRefreshTokenForJwtIdIsAlreadyUsed() {
         orchRefreshTokenExtension.saveRefreshToken(
-                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE);
+                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE, CLIENT_SESSION_ID);
         var refreshToken = orchRefreshTokenExtension.getRefreshToken(JWT_ID);
         assertTrue(refreshToken.isPresent());
 
@@ -59,9 +61,13 @@ class OrchRefreshTokenServiceIntegrationTest {
     @Test
     void shouldReturnRefreshTokensForAuthCode() {
         orchRefreshTokenExtension.saveRefreshToken(
-                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE);
+                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE, CLIENT_SESSION_ID);
         orchRefreshTokenExtension.saveRefreshToken(
-                "another-jwt-id", "another-internal-pairwise-id", "another-token", AUTH_CODE);
+                "another-jwt-id",
+                "another-internal-pairwise-id",
+                "another-token",
+                AUTH_CODE,
+                "another-csid");
         var refreshTokens = orchRefreshTokenExtension.getRefreshTokensForAuthCode(AUTH_CODE);
         assertEquals(2, refreshTokens.size());
 
@@ -84,6 +90,7 @@ class OrchRefreshTokenServiceIntegrationTest {
         assertEquals(
                 "another-internal-pairwise-id",
                 secondRefreshToken.get().getInternalPairwiseSubjectId());
+        assertEquals("another-csid", secondRefreshToken.get().getClientSessionId());
         assertEquals(AUTH_CODE, secondRefreshToken.get().getAuthCode());
         assertFalse(secondRefreshToken.get().getIsUsed());
     }
@@ -91,7 +98,7 @@ class OrchRefreshTokenServiceIntegrationTest {
     @Test
     void shouldReturnEmptyListWhenNoRefreshTokenExistsForAuthCode() {
         orchRefreshTokenExtension.saveRefreshToken(
-                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE);
+                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE, CLIENT_SESSION_ID);
         var refreshTokens =
                 orchRefreshTokenExtension.getRefreshTokensForAuthCode("different-auth-code");
         assertTrue(refreshTokens.isEmpty());
@@ -101,6 +108,6 @@ class OrchRefreshTokenServiceIntegrationTest {
     void shouldThrowWhenFailingToSaveRefreshToken() {
         assertThrows(
                 OrchRefreshTokenException.class,
-                () -> orchRefreshTokenExtension.saveRefreshToken(null, null, null, null));
+                () -> orchRefreshTokenExtension.saveRefreshToken(null, null, null, null, null));
     }
 }

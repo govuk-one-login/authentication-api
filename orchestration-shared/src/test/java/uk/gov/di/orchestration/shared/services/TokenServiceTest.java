@@ -72,7 +72,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -177,10 +176,11 @@ class TokenServiceTest {
 
         verify(orchRefreshTokenService)
                 .saveRefreshToken(
-                        eq(jti),
-                        eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
-                        eq(refreshTokenValue),
-                        eq(AUTH_CODE));
+                        jti,
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        refreshTokenValue,
+                        AUTH_CODE,
+                        JOURNEY_ID);
     }
 
     @Test
@@ -258,10 +258,11 @@ class TokenServiceTest {
 
         verify(orchRefreshTokenService)
                 .saveRefreshToken(
-                        eq(jti),
-                        eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
-                        eq(refreshTokenValue),
-                        eq(AUTH_CODE));
+                        jti,
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        refreshTokenValue,
+                        AUTH_CODE,
+                        JOURNEY_ID);
     }
 
     @Test

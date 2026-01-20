@@ -133,7 +133,8 @@ public class TokenService {
                                             rpPairwiseSubject,
                                             internalPairwiseSubject,
                                             signingAlgorithm,
-                                            authCode));
+                                            authCode,
+                                            journeyId));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -351,6 +352,24 @@ public class TokenService {
             Subject internalPairwiseSubject,
             JWSAlgorithm signingAlgorithm,
             String authCode) {
+        return generateAndStoreRefreshToken(
+                clientId,
+                scopes,
+                rpPairwiseSubject,
+                internalPairwiseSubject,
+                signingAlgorithm,
+                authCode,
+                null);
+    }
+
+    private RefreshToken generateAndStoreRefreshToken(
+            String clientId,
+            List<String> scopes,
+            Subject rpPairwiseSubject,
+            Subject internalPairwiseSubject,
+            JWSAlgorithm signingAlgorithm,
+            String authCode,
+            String journeyId) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         var jwtId = IdGenerator.generate();
@@ -370,7 +389,11 @@ public class TokenService {
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
         orchRefreshTokenService.saveRefreshToken(
-                jwtId, internalPairwiseSubject.toString(), refreshToken.getValue(), authCode);
+                jwtId,
+                internalPairwiseSubject.toString(),
+                refreshToken.getValue(),
+                authCode,
+                journeyId);
 
         return refreshToken;
     }
