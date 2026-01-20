@@ -109,7 +109,7 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         var response =
                 makeRequest(
-                        Optional.of(new AMCAuthorizeRequest(USER_EMAIL, AMCJourneyType.SFAD)),
+                        Optional.of(new AMCAuthorizeRequest(AMCJourneyType.SFAD)),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
@@ -137,8 +137,7 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         var response =
                 makeRequest(
-                        Optional.of(
-                                new AMCAuthorizeRequest(emailWithoutProfile, AMCJourneyType.SFAD)),
+                        Optional.of(new AMCAuthorizeRequest(AMCJourneyType.SFAD)),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
