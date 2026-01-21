@@ -93,7 +93,7 @@ public class AMCAuthorizationService {
                         .issueTime(issueTime)
                         .notBeforeTime(issueTime)
                         .subject(internalPairwiseSubject)
-                        .claim("client_id", authSessionItem.getClientId())
+                        .claim("client_id", configurationService.getAMCClientId())
                         .claim("sid", authSessionItem.getSessionId())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
@@ -128,7 +128,9 @@ public class AMCAuthorizationService {
                             var claims =
                                     new JWTClaimsSet.Builder()
                                             .issuer(configurationService.getAuthIssuerClaim())
-                                            .claim("client_id", authSessionItem.getClientId())
+                                            .claim(
+                                                    "client_id",
+                                                    configurationService.getAMCClientId())
                                             .audience(configurationService.getAuthToAMCAudience())
                                             .claim("response_type", "code")
                                             .claim(
