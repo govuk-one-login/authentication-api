@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest;
+import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -115,12 +116,15 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(200));
         String responseBody = response.getBody();
-        assertTrue(responseBody.startsWith("https://test-amc.account.gov.uk/authorize?"));
-        assertTrue(responseBody.contains("response_type=code"));
-        assertTrue(responseBody.contains("client_id=test-amc-client"));
-        assertTrue(responseBody.contains("request="));
+        var amcResponse = objectMapper.readValue(responseBody, AMCAuthorizeResponse.class);
+        String redirectUrl = amcResponse.redirectUrl();
 
-        String requestParam = responseBody.split("request=")[1];
+        assertTrue(redirectUrl.startsWith("https://test-amc.account.gov.uk/authorize?"));
+        assertTrue(redirectUrl.contains("response_type=code"));
+        assertTrue(redirectUrl.contains("client_id=test-amc-client"));
+        assertTrue(redirectUrl.contains("request="));
+
+        String requestParam = redirectUrl.split("request=")[1];
         String decodedJwe = URLDecoder.decode(requestParam, StandardCharsets.UTF_8);
         EncryptedJWT encryptedJWT = EncryptedJWT.parse(decodedJwe);
 
