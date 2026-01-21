@@ -37,8 +37,9 @@ lambda_min_concurrency = 3
 openapi_spec_filename = "openapi_v2.yaml"
 
 # Feature flags
-mfa_method_management_api_enabled = true
-ais_call_in_authenticate_enabled  = true
+mfa_method_management_api_enabled            = true
+ais_call_in_authenticate_enabled             = true
+account_management_international_sms_enabled = false
 
 # Logging
 cloudwatch_log_retention = 30
