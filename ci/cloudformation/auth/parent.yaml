@@ -492,7 +492,7 @@ Mappings:
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
       frontendApiFMSTagValue: "authfrontendprod"
       frontendBaseUrl: https://signin.account.gov.uk
-      internalApiNewInternationalSmsEnabled: true
+      internalApiNewInternationalSmsEnabled: false
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
