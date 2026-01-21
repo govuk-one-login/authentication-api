@@ -458,7 +458,7 @@ class AMCAuthorizationServiceTest {
                 "Composite JWT Claims",
                 () -> assertEquals(AUTH_ISSUER_CLAIM, compositeClaims.getIssuer()),
                 () -> assertEquals(List.of(AUTH_TO_AMC_AUDIENCE), compositeClaims.getAudience()),
-                () -> assertEquals(CLIENT_ID, compositeClaims.getClaim("client_id")),
+                () -> assertEquals(AMC_CLIENT_ID, compositeClaims.getClaim("client_id")),
                 () -> assertEquals(RESPONSE_TYPE, compositeClaims.getClaim("response_type")),
                 () -> assertEquals(REDIRECT_URI, compositeClaims.getClaim("redirect_uri")),
                 () ->
@@ -486,7 +486,7 @@ class AMCAuthorizationServiceTest {
                         assertEquals(
                                 List.of(AMCScope.ACCOUNT_DELETE.getValue()),
                                 accessTokenClaims.getClaim("scope")),
-                () -> assertEquals(CLIENT_ID, accessTokenClaims.getClaim("client_id")),
+                () -> assertEquals(AMC_CLIENT_ID, accessTokenClaims.getClaim("client_id")),
                 () -> assertEquals(SESSION_ID, accessTokenClaims.getClaim("sid")),
                 () -> assertEquals(NOW, accessTokenClaims.getIssueTime()),
                 () -> assertEquals(NOW, accessTokenClaims.getNotBeforeTime()),
