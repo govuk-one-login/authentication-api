@@ -795,7 +795,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       useStronglyConsistentReads: false
-      accountManagementInternationalSmsEnabled: true
+      accountManagementInternationalSmsEnabled: false
       OrchAccountID: 533266965190
       OrchApiBaseUrl: https://oidc.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/7ad27a55-9d21-47f2-be03-b61f2c9a8ce6
