@@ -1,3 +1,7 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
-public class FinishPasskeyAssertionRequest {}
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import uk.gov.di.authentication.shared.validation.Required;
+
+public record FinishPasskeyAssertionRequest(@Expose @Required @SerializedName("pkc") String pkc) {}
