@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest;
+import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
 import uk.gov.di.authentication.frontendapi.services.AMCAuthorizationService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
@@ -13,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -102,6 +104,14 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                             case UNKNOWN_JWT_ENCRYPTING_ERROR -> generateApiGatewayProxyErrorResponse(
                                     500, ErrorResponse.AMC_UNKNOWN_JWT_ENCRYPTING_ERROR);
                         },
-                success -> generateApiGatewayProxyResponse(200, success));
+                success -> {
+                    try {
+                        return generateApiGatewayProxyResponse(
+                                200, new AMCAuthorizeResponse(success));
+                    } catch (Json.JsonException e) {
+                        return generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.SERIALIZATION_ERROR);
+                    }
+                });
     }
 }
