@@ -576,7 +576,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
-      accountManagementInternationalSmsEnabled: true
+      accountManagementInternationalSmsEnabled: false
       OrchAccountID: 767397776536
       OrchApiBaseUrl: https://oidc.build.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979
