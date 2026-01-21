@@ -121,7 +121,8 @@ public enum ErrorResponse {
     AMC_SIGNING_ERROR(1093, "Failed to sign JWT for AMC authorization"),
     AMC_ENCRYPTION_ERROR(1094, "Failed to encrypt JWT for AMC authorization"),
     AMC_UNKNOWN_JWT_SIGNING_ERROR(1095, "Unknown error signing JWT for AMC authorization"),
-    AMC_UNKNOWN_JWT_ENCRYPTING_ERROR(1096, "Unknown error encrypting JWT for AMC authorization");
+    AMC_UNKNOWN_JWT_ENCRYPTING_ERROR(1096, "Unknown error encrypting JWT for AMC authorization"),
+    SERIALIZATION_ERROR(1097, "Failed to serialize API Gateway proxy response");
 
     private int code;
 
