@@ -12,6 +12,7 @@ public class OrchRefreshTokenItem {
             "InternalPairwiseSubjectId";
     private static final String ATTRIBUTE_TOKEN = "Token";
     private static final String ATTRIBUTE_AUTH_CODE = "AuthCode";
+    private static final String ATTRIBUTE_CLIENT_SESSION_ID = "ClientSessionId";
     private static final String ATTRIBUTE_IS_USED = "IsUsed";
     private static final String ATTRIBUTE_TTL = "ttl";
 
@@ -19,6 +20,7 @@ public class OrchRefreshTokenItem {
     private String internalPairwiseSubjectId;
     private String token;
     private String authCode;
+    private String clientSessionId;
     private boolean isUsed = false;
     private long timeToLive;
 
@@ -77,6 +79,20 @@ public class OrchRefreshTokenItem {
 
     public OrchRefreshTokenItem withAuthCode(String authCode) {
         this.authCode = authCode;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CLIENT_SESSION_ID)
+    public String getClientSessionId() {
+        return clientSessionId;
+    }
+
+    public void setClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
+    }
+
+    public OrchRefreshTokenItem withClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
         return this;
     }
 

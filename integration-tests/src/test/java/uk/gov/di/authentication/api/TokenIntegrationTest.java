@@ -467,7 +467,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 signedJWT.getJWTClaimsSet().getJWTID(),
                 INTERNAL_PAIRWISE_SUBJECT_ID,
                 refreshToken.getValue(),
-                AUTH_CODE);
+                AUTH_CODE,
+                CLIENT_SESSION_ID);
 
         PrivateKey privateKey = keyPair.getPrivate();
         JWTAuthenticationClaimsSet claimsSet =
@@ -523,7 +524,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 signedJWT.getJWTClaimsSet().getJWTID(),
                 INTERNAL_PAIRWISE_SUBJECT_ID,
                 refreshToken.getValue(),
-                AUTH_CODE);
+                AUTH_CODE,
+                CLIENT_SESSION_ID);
         PrivateKey privateKey = keyPair.getPrivate();
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(
@@ -565,7 +567,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 signedJWT.getJWTClaimsSet().getJWTID(),
                 INTERNAL_PAIRWISE_SUBJECT_ID,
                 refreshToken.getValue(),
-                AUTH_CODE);
+                AUTH_CODE,
+                CLIENT_SESSION_ID);
 
         PrivateKey privateKey = keyPair.getPrivate();
         JWTAuthenticationClaimsSet claimsSet =
@@ -618,7 +621,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 signedJWT.getJWTClaimsSet().getJWTID(),
                 INTERNAL_PAIRWISE_SUBJECT_ID,
                 "a-different-token-value",
-                AUTH_CODE);
+                AUTH_CODE,
+                CLIENT_SESSION_ID);
 
         PrivateKey privateKey = keyPair.getPrivate();
         JWTAuthenticationClaimsSet claimsSet =

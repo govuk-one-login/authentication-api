@@ -133,7 +133,8 @@ public class TokenService {
                                             rpPairwiseSubject,
                                             internalPairwiseSubject,
                                             signingAlgorithm,
-                                            authCode));
+                                            authCode,
+                                            journeyId));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -146,7 +147,8 @@ public class TokenService {
             Subject rpPaiwiseSubject,
             Subject internalPairwiseSubject,
             JWSAlgorithm signingAlgorithm,
-            String authCode) {
+            String authCode,
+            String clientSessionId) {
         AccessToken accessToken =
                 generateAndStoreAccessToken(
                         clientID,
@@ -155,7 +157,7 @@ public class TokenService {
                         internalPairwiseSubject,
                         null,
                         signingAlgorithm,
-                        "refreshToken",
+                        clientSessionId,
                         authCode);
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(
@@ -164,7 +166,8 @@ public class TokenService {
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
                         signingAlgorithm,
-                        authCode);
+                        authCode,
+                        clientSessionId);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -350,7 +353,8 @@ public class TokenService {
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
             JWSAlgorithm signingAlgorithm,
-            String authCode) {
+            String authCode,
+            String journeyId) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         var jwtId = IdGenerator.generate();
@@ -370,7 +374,11 @@ public class TokenService {
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
         orchRefreshTokenService.saveRefreshToken(
-                jwtId, internalPairwiseSubject.toString(), refreshToken.getValue(), authCode);
+                jwtId,
+                internalPairwiseSubject.toString(),
+                refreshToken.getValue(),
+                authCode,
+                journeyId);
 
         return refreshToken;
     }

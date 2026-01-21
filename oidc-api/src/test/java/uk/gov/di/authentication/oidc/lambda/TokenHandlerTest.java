@@ -1119,7 +1119,8 @@ public class TokenHandlerTest {
                             .withJwtId(jwtId)
                             .withAuthCode(AUTH_CODE)
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
-                            .withToken(refreshTokenInRequest.getValue());
+                            .withToken(refreshTokenInRequest.getValue())
+                            .withClientSessionId(CLIENT_SESSION_ID);
             when(orchRefreshTokenService.getRefreshToken(jwtId))
                     .thenReturn(Optional.of(orchRefreshTokenItem));
             when(tokenValidationService.validateRefreshTokenScopes(
@@ -1131,12 +1132,13 @@ public class TokenHandlerTest {
                             new OIDCTokens(
                                     "test-id-token-string", accessToken, refreshTokenInRequest));
             when(tokenService.generateRefreshTokenResponse(
-                            eq(CLIENT_ID),
-                            eq(SCOPES.toStringList()),
-                            eq(RP_PAIRWISE_SUBJECT),
-                            eq(INTERNAL_PAIRWISE_SUBJECT),
-                            eq(JWSAlgorithm.ES256),
-                            eq(AUTH_CODE)))
+                            CLIENT_ID,
+                            SCOPES.toStringList(),
+                            RP_PAIRWISE_SUBJECT,
+                            INTERNAL_PAIRWISE_SUBJECT,
+                            JWSAlgorithm.ES256,
+                            AUTH_CODE,
+                            CLIENT_SESSION_ID))
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
@@ -1174,7 +1176,8 @@ public class TokenHandlerTest {
                             .withJwtId(jwtId)
                             .withAuthCode(AUTH_CODE)
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
-                            .withToken(refreshTokenInRequest.getValue());
+                            .withToken(refreshTokenInRequest.getValue())
+                            .withClientSessionId(CLIENT_SESSION_ID);
             when(orchRefreshTokenService.getRefreshToken(jwtId))
                     .thenReturn(Optional.of(orchRefreshTokenItem));
             when(tokenValidationService.validateRefreshTokenScopes(
@@ -1184,12 +1187,13 @@ public class TokenHandlerTest {
             OIDCTokenResponse tokenResponse =
                     new OIDCTokenResponse(new OIDCTokens(accessToken, refreshTokenInRequest));
             when(tokenService.generateRefreshTokenResponse(
-                            eq(CLIENT_ID),
-                            eq(SCOPES.toStringList()),
-                            eq(RP_PAIRWISE_SUBJECT),
-                            eq(INTERNAL_PAIRWISE_SUBJECT),
-                            eq(JWSAlgorithm.RS256),
-                            eq(AUTH_CODE)))
+                            CLIENT_ID,
+                            SCOPES.toStringList(),
+                            RP_PAIRWISE_SUBJECT,
+                            INTERNAL_PAIRWISE_SUBJECT,
+                            JWSAlgorithm.RS256,
+                            AUTH_CODE,
+                            CLIENT_SESSION_ID))
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
@@ -1223,7 +1227,8 @@ public class TokenHandlerTest {
                             .withJwtId(jwtId)
                             .withAuthCode(AUTH_CODE)
                             .withToken(refreshTokenInRequest.getValue())
-                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue());
+                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
+                            .withClientSessionId(CLIENT_SESSION_ID);
             when(orchRefreshTokenService.getRefreshToken(jwtId))
                     .thenReturn(Optional.of(orchRefreshTokenItem));
             when(tokenValidationService.validateRefreshTokenScopes(
@@ -1236,7 +1241,8 @@ public class TokenHandlerTest {
                             RP_PAIRWISE_SUBJECT,
                             INTERNAL_PAIRWISE_SUBJECT,
                             JWSAlgorithm.ES256,
-                            AUTH_CODE))
+                            AUTH_CODE,
+                            CLIENT_SESSION_ID))
                     .thenThrow(OrchAccessTokenException.class);
 
             APIGatewayProxyResponseEvent result =

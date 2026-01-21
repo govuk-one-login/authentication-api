@@ -42,8 +42,13 @@ public class OrchRefreshTokenExtension extends DynamoExtension implements AfterE
     }
 
     public void saveRefreshToken(
-            String jwtId, String internalPairwiseSubjectId, String token, String authCode) {
-        orchRefreshTokenService.saveRefreshToken(jwtId, internalPairwiseSubjectId, token, authCode);
+            String jwtId,
+            String internalPairwiseSubjectId,
+            String token,
+            String authCode,
+            String clientSessionId) {
+        orchRefreshTokenService.saveRefreshToken(
+                jwtId, internalPairwiseSubjectId, token, authCode, clientSessionId);
     }
 
     public Optional<OrchRefreshTokenItem> getRefreshToken(String jwtId) {

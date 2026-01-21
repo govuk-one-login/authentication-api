@@ -34,6 +34,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
     private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "test-internal-pairwise-subject-id";
     private static final String TOKEN = "test-token";
     private static final String AUTH_CODE = "test-auth-code";
+    private static final String CLIENT_SESSION_ID = "test-client-session-id";
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
     private static final Instant CREATION_INSTANT = Instant.parse("2025-02-01T03:04:05.678Z");
 
@@ -55,7 +56,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
     @Test
     void shouldStoreOrchRefreshTokenItem() {
         orchRefreshTokenService.saveRefreshToken(
-                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE);
+                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE, CLIENT_SESSION_ID);
 
         var orchRefreshTokenItemCaptor = ArgumentCaptor.forClass(OrchRefreshTokenItem.class);
         verify(table).putItem(orchRefreshTokenItemCaptor.capture());
@@ -67,6 +68,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
                 refreshTokenFromCapturedRequest.getInternalPairwiseSubjectId());
         assertEquals(TOKEN, refreshTokenFromCapturedRequest.getToken());
         assertEquals(AUTH_CODE, refreshTokenFromCapturedRequest.getAuthCode());
+        assertEquals(CLIENT_SESSION_ID, refreshTokenFromCapturedRequest.getClientSessionId());
         assertFalse(refreshTokenFromCapturedRequest.getIsUsed());
         assertEquals(
                 CREATION_INSTANT.getEpochSecond() + 3600L,
@@ -84,7 +86,11 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
                         OrchRefreshTokenException.class,
                         () ->
                                 orchRefreshTokenService.saveRefreshToken(
-                                        JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE));
+                                        JWT_ID,
+                                        INTERNAL_PAIRWISE_SUBJECT_ID,
+                                        TOKEN,
+                                        AUTH_CODE,
+                                        CLIENT_SESSION_ID));
         assertEquals("Failed to save Orch refresh token item to Dynamo", exception.getMessage());
     }
 

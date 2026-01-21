@@ -78,7 +78,11 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
     }
 
     public void saveRefreshToken(
-            String jwtId, String internalPairwiseSubjectId, String token, String authCode) {
+            String jwtId,
+            String internalPairwiseSubjectId,
+            String token,
+            String authCode,
+            String clientSessionId) {
         try {
             var itemTtl =
                     nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS).toInstant().getEpochSecond();
@@ -88,6 +92,7 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
                             .withInternalPairwiseSubjectId(internalPairwiseSubjectId)
                             .withToken(token)
                             .withAuthCode(authCode)
+                            .withClientSessionId(clientSessionId)
                             .withTimeToLive(itemTtl));
         } catch (Exception e) {
             logAndThrowOrchRefreshTokenException(
