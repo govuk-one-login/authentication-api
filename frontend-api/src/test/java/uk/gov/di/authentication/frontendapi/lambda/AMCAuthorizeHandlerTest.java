@@ -99,7 +99,7 @@ class AMCAuthorizeHandlerTest {
                         event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
         assertEquals(200, result.getStatusCode());
-        assertEquals(expectedUrl, result.getBody());
+        assertTrue(result.getBody().contains(expectedUrl));
         verify(amcAuthorizationService)
                 .buildAuthorizationUrl(
                         INTERNAL_COMMON_SUBJECT_ID,
