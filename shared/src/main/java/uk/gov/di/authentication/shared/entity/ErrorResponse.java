@@ -114,7 +114,8 @@ public enum ErrorResponse {
     STORAGE_LAYER_ERROR(1088, "Error retrieving account details"),
     EMAIL_ADDRESS_DENIED(1089, "Email address is denied"),
     UNHANDLED_NEGATIVE_DECISION(1090, "Permissions manager negative decision was not handled"),
-    INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED(1091, "International phone numbers are not supported");
+    INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED(1091, "International phone numbers are not supported"),
+    UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error");
 
     private int code;
 
