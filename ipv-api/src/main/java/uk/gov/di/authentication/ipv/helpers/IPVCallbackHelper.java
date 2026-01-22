@@ -57,12 +57,15 @@ public class IPVCallbackHelper {
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final ConfigurationService configurationService;
     private final DynamoIdentityService dynamoIdentityService;
     private final AwsSqsClient sqsClient;
+    private final AwsSqsClient spotSqsClient;
     private final OidcAPI oidcAPI;
     private final OrchSessionService orchSessionService;
 
     public IPVCallbackHelper(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
@@ -72,6 +75,11 @@ public class IPVCallbackHelper {
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueURI(),
+                        configurationService.getSqsEndpointURI());
+        this.spotSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getSpotRequestQueueURI(),
                         configurationService.getSqsEndpointURI());
         this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         this.oidcAPI = new OidcAPI(configurationService);
@@ -83,18 +91,22 @@ public class IPVCallbackHelper {
             AuthCodeResponseGenerationService authCodeResponseService,
             OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
+            ConfigurationService configurationService,
             DynamoIdentityService dynamoIdentityService,
             SerializationService objectMapper,
             AwsSqsClient sqsClient,
+            AwsSqsClient spotSqsClient,
             OidcAPI oidcApi,
             OrchSessionService orchSessionService) {
         this.auditService = auditService;
         this.authCodeResponseService = authCodeResponseService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.configurationService = configurationService;
         this.dynamoIdentityService = dynamoIdentityService;
         this.objectMapper = objectMapper;
         this.sqsClient = sqsClient;
+        this.spotSqsClient = spotSqsClient;
         this.oidcAPI = oidcApi;
         this.orchSessionService = orchSessionService;
     }
@@ -316,6 +328,9 @@ public class IPVCallbackHelper {
                         clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);
         sqsClient.send(spotRequestString);
+        if (configurationService.isNewSpotRequestQueueWritingEnabled()) {
+            spotSqsClient.send(spotRequestString);
+        }
         LOG.info("SPOT request placed on queue");
     }
 
