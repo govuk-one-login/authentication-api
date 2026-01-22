@@ -4805,6 +4805,7 @@ Resources:
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy
         - !Ref SpotRequestQueueWritePolicy
+        - !Ref SpotRequestQueueWriteAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
