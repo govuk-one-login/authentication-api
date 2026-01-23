@@ -60,9 +60,22 @@ public class TokenValidationService {
 
             if (JWSAlgorithm.RS256 == jwt.getHeader().getAlgorithm()
                     && configuration.isRsaSigningAvailable()) {
-                return jwt.verify(
-                        new RSASSAVerifier(
-                                jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
+                if (configuration.isPublishNextExternalTokenSigningKeysEnabled()) {
+                    var oldPublicKey = jwksService.getPublicTokenRsaJwkWithOpaqueId();
+                    if (Objects.equals(jwt.getHeader().getKeyID(), oldPublicKey.getKeyID())) {
+                        return jwt.verify(new RSASSAVerifier(oldPublicKey.toRSAKey()));
+                    } else {
+                        return jwt.verify(
+                                new RSASSAVerifier(
+                                        jwksService
+                                                .getNextPublicTokenRsaJwkWithOpaqueId()
+                                                .toRSAKey()));
+                    }
+                } else {
+                    return jwt.verify(
+                            new RSASSAVerifier(
+                                    jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
+                }
             } else {
                 if (configuration.isPublishNextExternalTokenSigningKeysEnabled()) {
                     var oldPublicKey = jwksService.getPublicTokenJwkWithOpaqueId();

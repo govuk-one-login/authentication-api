@@ -6,6 +6,7 @@ import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
@@ -104,7 +105,7 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateRsaSignedAccessToken() throws JOSEException {
-        var rsaKey = new RSAKeyGenerator(2048).generate();
+        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
         var rsaSigner = new RSASSASigner(rsaKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
@@ -112,6 +113,41 @@ class TokenValidationServiceTest {
 
         SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(
+                tokenValidationService.isTokenSignatureValid(
+                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
+    }
+
+    @Test
+    void shouldSuccessfullyValidateNewRsaSignedAccessToken() throws JOSEException {
+        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
+        var newRSAKey = generateCustomRsaKeyPair(NEW_KEY_ID);
+        var newRSASigner = new RSASSASigner(newRSAKey);
+
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueId()).thenReturn(newRSAKey);
+
+        SignedJWT signedAccessToken = createCustomSignedAccessToken(newRSASigner, NEW_KEY_ID);
+        assertTrue(
+                tokenValidationService.isTokenSignatureValid(
+                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
+    }
+
+    @Test
+    void shouldFailToValidateRsaKeyAccessTokenIfNeitherKeyId() throws JOSEException {
+        var wrongRSAKey = new RSAKeyGenerator(2048).generate();
+        var rsaSigner = new RSASSASigner(wrongRSAKey);
+        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
+        var newRSAKey = generateCustomRsaKeyPair(NEW_KEY_ID);
+
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueId()).thenReturn(newRSAKey);
+
+        SignedJWT signedAccessToken = createCustomSignedAccessToken(rsaSigner, FAILED_KEY_ID);
+        assertFalse(
                 tokenValidationService.isTokenSignatureValid(
                         new BearerAccessToken(signedAccessToken.serialize()).getValue()));
     }
@@ -154,6 +190,14 @@ class TokenValidationServiceTest {
         List<String> clientScopes = List.of("openid", "phone", "offline_access");
         assertFalse(
                 tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
+    }
+
+    private RSAKey generateCustomRsaKeyPair(String keyId) {
+        try {
+            return new RSAKeyGenerator(2048).keyID(keyId).generate();
+        } catch (JOSEException e) {
+            throw new RuntimeException();
+        }
     }
 
     private ECKey generateCustomECKeyPair(String keyId) {
