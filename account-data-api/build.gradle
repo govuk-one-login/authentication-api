@@ -1,0 +1,54 @@
+plugins {
+    id 'java'
+}
+
+group = 'uk.gov.di.authentication.accountdata'
+version = 'unspecified'
+
+dependencies {
+
+    compileOnly libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.awsSns,
+            libs.awsS3,
+            libs.bundles.awsDynamoDb,
+            libs.awsKms,
+            libs.awsSecretsManager
+
+    implementation project(path: ':shared')
+    implementation project(':audit-events')
+
+    implementation libs.gson,
+            libs.bundles.nimbus,
+            libs.awsCloudwatchEmf,
+            libs.awsCloudwatch,
+            libs.bouncyCastle,
+            libs.jetbrainsAnnotations
+
+    runtimeOnly libs.bundles.loggingRuntime,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
+
+    testImplementation libs.bundles.test,
+            libs.awsLambdaTests,
+            project(":shared-test"),
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsS3,
+            libs.awsKms,
+            libs.bundles.awsDynamoDb,
+            libs.wiremock
+
+    testRuntimeOnly libs.bundles.testRuntime
+}
+
+test {
+    useJUnitPlatform()
+    environment "TRACING_ENABLED", "false"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
