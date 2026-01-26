@@ -4,7 +4,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-account-management-bulk-remove-account-lambda
+        - ${Env}-bulk-remove-account-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       MemorySize:
@@ -113,13 +113,13 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-account-management-bulk-remove-account-errors
+        - ${Env}-bulk-remove-account-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref BulkRemoveAccountFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-account-management-bulk-remove-account-error-count
+            - ${Env}-bulk-remove-account-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
@@ -133,7 +133,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-management-bulk-remove-account-lambda function. https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-bulk-remove-account-lambda function. https://govukverify.atlassian.net/wiki/x/HIHpRQE"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -143,12 +143,12 @@ Resources:
             ]
           Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AlarmName: !Sub
-        - ${Env}-account-management-bulk-remove-account-alarm
+        - ${Env}-bulk-remove-account-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-account-management-bulk-remove-account-error-count
+        - ${Env}-bulk-remove-account-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -169,10 +169,10 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of 25% has been reached in the ${Env}-account-management-bulk-remove-account-lambda. https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+        - "Lambda error rate of 25% has been reached in the ${Env}-bulk-remove-account-lambda. https://govukverify.atlassian.net/wiki/x/HIHpRQE"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AlarmName: !Sub
-        - ${Env}-account-management-bulk-remove-account-error-rate-alarm
+        - ${Env}-bulk-remove-account-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -191,7 +191,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-management-bulk-remove-account-lambda
+                    - ${Env}-bulk-remove-account-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -210,7 +210,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-management-bulk-remove-account-lambda
+                    - ${Env}-bulk-remove-account-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,

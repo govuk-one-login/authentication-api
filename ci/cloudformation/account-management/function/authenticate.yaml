@@ -4,7 +4,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-account-management-authenticate-lambda
+        - ${Env}-authenticate-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       MemorySize:
@@ -129,13 +129,13 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-account-management-authenticate-errors
+        - ${Env}-authenticate-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthenticateFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-account-management-authenticate-error-count
+            - ${Env}-authenticate-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
@@ -149,7 +149,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-management-authenticate-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-authenticate-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -166,12 +166,12 @@ Resources:
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-account-management-authenticate-alarm
+        - ${Env}-authenticate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-account-management-authenticate-error-count
+        - ${Env}-authenticate-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -192,7 +192,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-account-management-authenticate-lambda. ${RunbookLink}"
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-authenticate-lambda. ${RunbookLink}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ErrorRateThreshold:
             !FindInMap [
@@ -209,7 +209,7 @@ Resources:
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-account-management-authenticate-error-rate-alarm
+        - ${Env}-authenticate-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -228,7 +228,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-management-authenticate-lambda
+                    - ${Env}-authenticate-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -247,7 +247,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-management-authenticate-lambda
+                    - ${Env}-authenticate-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
