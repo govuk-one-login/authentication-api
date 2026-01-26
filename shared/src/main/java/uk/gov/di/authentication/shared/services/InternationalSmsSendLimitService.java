@@ -13,7 +13,6 @@ import java.util.Optional;
 public class InternationalSmsSendLimitService extends BaseDynamoService<InternationalSmsSendCount> {
 
     private static final Logger LOG = LogManager.getLogger(InternationalSmsSendLimitService.class);
-    private static final String UK_COUNTRY_CODE = "44";
     private final ConfigurationService configurationService;
 
     public InternationalSmsSendLimitService(ConfigurationService configurationService) {
@@ -98,10 +97,7 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
     }
 
     private boolean isDomesticPhoneNumber(String formattedPhoneNumber) {
-        String countryCode = PhoneNumberHelper.getCountry(formattedPhoneNumber);
-
-        boolean isDomesticNumber = UK_COUNTRY_CODE.equals(countryCode);
-        if (isDomesticNumber) {
+        if (PhoneNumberHelper.isDomesticPhoneNumber(formattedPhoneNumber)) {
             LOG.warn(
                     "Invalid argument - service should not be called with a domestic number. Failing gracefully.");
             return true;
