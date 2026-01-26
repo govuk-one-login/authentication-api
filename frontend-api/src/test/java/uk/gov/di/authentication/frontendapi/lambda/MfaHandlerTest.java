@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
@@ -102,6 +103,7 @@ class MfaHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService = mock(InternationalSmsSendLimitService.class);
     private static final int MAX_CODE_RETRIES = 6;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final MFAMethod backupAuthAppMethod =
@@ -202,7 +204,8 @@ class MfaHandlerTest {
                         sqsClient,
                         authSessionService,
                         mfaMethodsService,
-                        testUserHelper);
+                        testUserHelper,
+                        internationalSmsSendLimitService);
     }
 
     @Test

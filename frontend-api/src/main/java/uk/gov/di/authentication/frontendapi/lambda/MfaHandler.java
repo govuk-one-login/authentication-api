@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -44,6 +45,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.EMAIL_HAS_NO_USER_PROFILE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
@@ -72,6 +74,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private final AwsSqsClient sqsClient;
     private final MFAMethodsService mfaMethodsService;
     private final TestUserHelper testUserHelper;
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService;
 
     public MfaHandler(
             ConfigurationService configurationService,
@@ -82,7 +85,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             AwsSqsClient sqsClient,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
-            TestUserHelper testUserHelper) {
+            TestUserHelper testUserHelper,
+            InternationalSmsSendLimitService internationalSmsSendLimitService) {
         super(MfaRequest.class, configurationService, authenticationService, authSessionService);
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
@@ -90,6 +94,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.sqsClient = sqsClient;
         this.mfaMethodsService = mfaMethodsService;
         this.testUserHelper = testUserHelper;
+        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
     }
 
     public MfaHandler(
@@ -107,6 +112,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getSqsEndpointUri());
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
+        this.internationalSmsSendLimitService = new InternationalSmsSendLimitService(configurationService);
     }
 
     public MfaHandler() {
@@ -121,6 +127,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getSqsEndpointUri());
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
+        this.internationalSmsSendLimitService = new InternationalSmsSendLimitService(configurationService);
     }
 
     @Override
@@ -246,6 +253,17 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         400, thisRequestExceedsMaximumAllowedRequests.get());
             }
 
+            /*
+                TODO: Add this to commit message:
+                Reviewed usage of this handler on the frontend, noted that the common supported error across the controllers was 1026 (BLOCKED_FOR_SENDING_MFA_OTPS).
+                Controllers reviewed: send-mfa-controller, enter-password-controller, how-do-you-want-security-codes-controller, reset-password-check-email-controller/
+             */
+
+            if (internationalSmsSendLimitService.hasReachedInternationalSmsLimit(phoneNumber)) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, BLOCKED_FOR_SENDING_MFA_OTPS);
+            }
+
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
 
             String codeIdentifier = email.concat(PhoneNumberHelper.formatPhoneNumber(phoneNumber));
@@ -337,14 +355,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
                     newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+            return Optional.of(BLOCKED_FOR_SENDING_MFA_OTPS);
         }
         if (codeStorageService.isBlockedForEmail(
                 email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
                     newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+            return Optional.of(BLOCKED_FOR_SENDING_MFA_OTPS);
         }
 
         if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
