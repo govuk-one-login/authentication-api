@@ -143,7 +143,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.internationalSmsSendLimitService = new InternationalSmsSendLimitService(configurationService);
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -166,7 +167,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.internationalSmsSendLimitService = new InternationalSmsSendLimitService(configurationService);
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -403,8 +405,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         if (!testClientWithAllowedEmail) {
             if (notificationType == VERIFY_PHONE_NUMBER) {
-                if (hasReachedInternationalSmsLimit(destination)) {
-                    return generateApiGatewayProxyErrorResponse(400, BLOCKED_FOR_PHONE_VERIFICATION_CODES);
+                if (internationalSmsSendLimitService.hasReachedInternationalSmsLimit(destination)) {
+                    return generateApiGatewayProxyErrorResponse(
+                            400, BLOCKED_FOR_PHONE_VERIFICATION_CODES);
                 }
 
                 cloudwatchMetricsService.putEmbeddedValue(
@@ -589,10 +592,5 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         "No Invalid Code Audit event configured for NotificationType");
             }
         };
-    }
-
-    private boolean hasReachedInternationalSmsLimit(String destination) {
-        return !PhoneNumberHelper.isDomesticPhoneNumber(destination)
-                && !internationalSmsSendLimitService.canSendSms(destination);
     }
 }
