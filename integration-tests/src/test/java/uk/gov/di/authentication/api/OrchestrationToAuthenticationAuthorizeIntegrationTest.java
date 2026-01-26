@@ -413,11 +413,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         }
 
         @Override
-        public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
-            return orchestrationPrivateKeyJwtSigner.getKeyAlias();
-        }
-
-        @Override
         public String getOrchestrationToAuthenticationEncryptionPublicKey() {
             return publicKey;
         }
