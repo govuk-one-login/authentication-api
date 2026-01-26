@@ -246,6 +246,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         400, thisRequestExceedsMaximumAllowedRequests.get());
             }
 
+            // TODO: Add env var config to lambda for the service to use.
+            // TODO: Check if international destination, and if so check their state here.
+
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
 
             String codeIdentifier = email.concat(PhoneNumberHelper.formatPhoneNumber(phoneNumber));
