@@ -46,8 +46,6 @@ public class PhoneNumberHelper {
     }
 
     public static boolean isDomesticPhoneNumber(String phoneNumber) {
-        String countryCode = PhoneNumberHelper.getCountry(phoneNumber);
-
-        return UK_COUNTRY_CODE.equals(countryCode);
+        return maybeGetCountry(phoneNumber).map(UK_COUNTRY_CODE::equals).orElse(false);
     }
 }

@@ -3,7 +3,6 @@ package uk.gov.di.authentication.shared.helpers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.stream.Stream;
 
@@ -13,8 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PhoneNumberHelperTest {
-
-    private static final String UK_COUNTRY_CODE = "44";
 
     @Test
     void testShouldFormatPhoneNumbersUsingE164() {
@@ -37,18 +34,24 @@ public class PhoneNumberHelperTest {
 
     @ParameterizedTest
     @MethodSource("domesticPhoneNumbers")
-    void testShouldReturnTrueForDomesticNumbers(String phoneNumber) {
+    void isDomesticPhoneNumberShouldReturnTrueForDomesticNumbers(String phoneNumber) {
         assertTrue(PhoneNumberHelper.isDomesticPhoneNumber(phoneNumber));
     }
 
     @ParameterizedTest
     @MethodSource("internationalPhoneNumbers")
-    void testShouldReturnFalseForInternationalNumbers(String phoneNumber) {
+    void isDomesticPhoneNumberShouldReturnFalseForInternationalNumbers(String phoneNumber) {
         assertFalse(PhoneNumberHelper.isDomesticPhoneNumber(phoneNumber));
     }
 
+    @Test
+    void isDomesticPhoneNumberShouldDefaultToFalse() {
+        assertFalse(PhoneNumberHelper.isDomesticPhoneNumber("invalid"));
+    }
+
     private static Stream<String> domesticPhoneNumbers() {
-        return Stream.of("+447316763843", "+447700900000", "+44 7700 900000", "07777777777");
+        return Stream.of(
+                "+447316763843", "+447700900000", "+44 7700 900000", "07777777777", "07123 456789");
     }
 
     private static Stream<String> internationalPhoneNumbers() {
