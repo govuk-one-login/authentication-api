@@ -16,7 +16,10 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
     private final ConfigurationService configurationService;
 
     public InternationalSmsSendLimitService(ConfigurationService configurationService) {
-        super(InternationalSmsSendCount.class, "international-sms-send-count", configurationService);
+        super(
+                InternationalSmsSendCount.class,
+                "international-sms-send-count",
+                configurationService);
         this.configurationService = configurationService;
     }
 
@@ -28,22 +31,22 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
         this.configurationService = configurationService;
     }
 
-    public boolean canSendSms(String phoneNumber) {
+    public boolean hasReachedInternationalSmsLimit(String phoneNumber) {
         String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
 
-        if (isDomesticPhoneNumber(formattedPhoneNumber)) {
-            return true;
+        if (PhoneNumberHelper.isDomesticPhoneNumber(formattedPhoneNumber)) {
+            return false;
         }
 
         int sentCount = getSentCount(formattedPhoneNumber);
 
-        return !hasReachedSendLimit(sentCount);
+        return hasReachedSendLimit(sentCount);
     }
 
     public void recordSmsSent(String phoneNumber) {
         String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
 
-        if (isDomesticPhoneNumber(formattedPhoneNumber)) {
+        if (PhoneNumberHelper.isDomesticPhoneNumber(formattedPhoneNumber)) {
             return;
         }
 
@@ -94,15 +97,5 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
         }
 
         return record.get().getSentCount();
-    }
-
-    private boolean isDomesticPhoneNumber(String formattedPhoneNumber) {
-        if (PhoneNumberHelper.isDomesticPhoneNumber(formattedPhoneNumber)) {
-            LOG.warn(
-                    "Invalid argument - service should not be called with a domestic number. Failing gracefully.");
-            return true;
-        }
-
-        return false;
     }
 }

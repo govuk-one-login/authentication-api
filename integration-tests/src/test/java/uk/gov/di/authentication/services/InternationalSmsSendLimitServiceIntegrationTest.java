@@ -52,13 +52,13 @@ class InternationalSmsSendLimitServiceIntegrationTest {
         String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(internationalPhoneNumber);
 
         extension.recordSmsSent(internationalPhoneNumber);
-        assertTrue(extension.canSendSms(internationalPhoneNumber));
+        assertTrue(extension.hasReachedInternationalSmsLimit(internationalPhoneNumber));
 
         for (int i = 0; i < TEST_SEND_LIMIT; i++) {
             extension.recordSmsSent(internationalPhoneNumber);
         }
 
-        assertFalse(extension.canSendSms(internationalPhoneNumber));
+        assertFalse(extension.hasReachedInternationalSmsLimit(internationalPhoneNumber));
         assertTrue(extension.hasRecordForPhoneNumber(formattedPhoneNumber));
     }
 
@@ -71,78 +71,79 @@ class InternationalSmsSendLimitServiceIntegrationTest {
             extension.recordSmsSent(phoneNumber1);
         }
 
-        assertFalse(extension.canSendSms(phoneNumber1));
-        assertTrue(extension.canSendSms(phoneNumber2));
+        assertFalse(extension.hasReachedInternationalSmsLimit(phoneNumber1));
+        assertTrue(extension.hasReachedInternationalSmsLimit(phoneNumber2));
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldAllowForNewPhoneNumber(String rawPhoneNumber) {
-        boolean canSend = extension.canSendSms(rawPhoneNumber);
+    void hasReachedInternationalSmsLimitShouldAllowForNewPhoneNumber(String rawPhoneNumber) {
+        boolean canSend = extension.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertTrue(canSend);
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldAllowWhenBelowLimit(String rawPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldAllowWhenBelowLimit(String rawPhoneNumber) {
         for (int i = 0; i < TEST_SEND_LIMIT - 1; i++) {
             extension.recordSmsSent(rawPhoneNumber);
         }
 
-        boolean canSend = extension.canSendSms(rawPhoneNumber);
+        boolean canSend = extension.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertTrue(canSend);
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldBlockWhenAtLimit(String rawPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldBlockWhenAtLimit(String rawPhoneNumber) {
         for (int i = 0; i < TEST_SEND_LIMIT; i++) {
             extension.recordSmsSent(rawPhoneNumber);
         }
 
-        boolean canSend = extension.canSendSms(rawPhoneNumber);
+        boolean canSend = extension.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertFalse(canSend);
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldBlockWhenAboveLimit(String rawPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldBlockWhenAboveLimit(String rawPhoneNumber) {
         for (int i = 0; i < TEST_SEND_LIMIT + 1; i++) {
             extension.recordSmsSent(rawPhoneNumber);
         }
 
-        boolean canSend = extension.canSendSms(rawPhoneNumber);
+        boolean canSend = extension.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertFalse(canSend);
     }
 
     @ParameterizedTest
     @MethodSource("domesticPhoneNumberVariations")
-    void canSendSmsShouldAllowDomesticNumbers(String domesticPhoneNumber) {
-        boolean canSend = extension.canSendSms(domesticPhoneNumber);
+    void hasReachedInternationalSmsLimitShouldAllowDomesticNumbers(String domesticPhoneNumber) {
+        boolean canSend = extension.hasReachedInternationalSmsLimit(domesticPhoneNumber);
 
         assertTrue(canSend);
     }
 
     @ParameterizedTest
     @MethodSource("domesticPhoneNumberVariations")
-    void canSendSmsShouldAlwaysAllowDomesticNumbersRegardlessOfLimit(String domesticPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldAlwaysAllowDomesticNumbersRegardlessOfLimit(
+            String domesticPhoneNumber) {
         for (int i = 0; i < TEST_SEND_LIMIT + 5; i++) {
             extension.recordSmsSent(domesticPhoneNumber);
         }
 
-        assertTrue(extension.canSendSms(domesticPhoneNumber));
+        assertTrue(extension.hasReachedInternationalSmsLimit(domesticPhoneNumber));
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldNotCreateRecord(String internationalPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldNotCreateRecord(String internationalPhoneNumber) {
         String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(internationalPhoneNumber);
 
-        extension.canSendSms(internationalPhoneNumber);
+        extension.hasReachedInternationalSmsLimit(internationalPhoneNumber);
 
         assertFalse(extension.hasRecordForPhoneNumber(formattedPhoneNumber));
     }

@@ -39,10 +39,10 @@ class InternationalSmsSendLimitServiceTest {
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldAllowFirstRequest(String rawPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldAllowFirstRequest(String rawPhoneNumber) {
         withNoItem();
 
-        boolean canSend = service.canSendSms(rawPhoneNumber);
+        boolean canSend = service.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertTrue(canSend);
     }
@@ -79,38 +79,41 @@ class InternationalSmsSendLimitServiceTest {
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldAllowWhenBelowLimit(String rawPhoneNumber, String formattedPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldAllowWhenBelowLimit(
+            String rawPhoneNumber, String formattedPhoneNumber) {
         withExistingCount(TEST_SEND_LIMIT - 1, formattedPhoneNumber);
 
-        boolean canSend = service.canSendSms(rawPhoneNumber);
+        boolean canSend = service.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertTrue(canSend);
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldBlockWhenAtLimit(String rawPhoneNumber, String formattedPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldBlockWhenAtLimit(
+            String rawPhoneNumber, String formattedPhoneNumber) {
         withExistingCount(TEST_SEND_LIMIT, formattedPhoneNumber);
 
-        boolean canSend = service.canSendSms(rawPhoneNumber);
+        boolean canSend = service.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertFalse(canSend);
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldBlockWhenAboveLimit(String rawPhoneNumber, String formattedPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldBlockWhenAboveLimit(
+            String rawPhoneNumber, String formattedPhoneNumber) {
         withExistingCount(TEST_SEND_LIMIT + 1, formattedPhoneNumber);
 
-        boolean canSend = service.canSendSms(rawPhoneNumber);
+        boolean canSend = service.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertFalse(canSend);
     }
 
     @ParameterizedTest
     @MethodSource("domesticPhoneNumberVariations")
-    void canSendSmsShouldAllowDomesticNumbers(String domesticPhoneNumber) {
-        boolean canSend = service.canSendSms(domesticPhoneNumber);
+    void hasReachedInternationalSmsLimitShouldAllowDomesticNumbers(String domesticPhoneNumber) {
+        boolean canSend = service.hasReachedInternationalSmsLimit(domesticPhoneNumber);
 
         assertTrue(canSend);
     }
@@ -126,11 +129,11 @@ class InternationalSmsSendLimitServiceTest {
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldUseFormattedPhoneNumber(
+    void hasReachedInternationalSmsLimitShouldUseFormattedPhoneNumber(
             String rawPhoneNumber, String formattedPhoneNumber) {
         withExistingCount(TEST_SEND_LIMIT, formattedPhoneNumber);
 
-        boolean canSend = service.canSendSms(rawPhoneNumber);
+        boolean canSend = service.hasReachedInternationalSmsLimit(rawPhoneNumber);
 
         assertFalse(canSend);
         ArgumentCaptor<Key> keyCaptor = ArgumentCaptor.forClass(Key.class);
@@ -139,20 +142,21 @@ class InternationalSmsSendLimitServiceTest {
 
     @ParameterizedTest
     @MethodSource("domesticPhoneNumberVariations")
-    void canSendSmsShouldAllowDomesticNumbersEvenWhenAboveLimit(String domesticPhoneNumber) {
+    void hasReachedInternationalSmsLimitShouldAllowDomesticNumbersEvenWhenAboveLimit(
+            String domesticPhoneNumber) {
         String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(domesticPhoneNumber);
         withExistingCount(TEST_SEND_LIMIT + 5, formattedPhoneNumber);
 
-        boolean canSend = service.canSendSms(domesticPhoneNumber);
+        boolean canSend = service.hasReachedInternationalSmsLimit(domesticPhoneNumber);
 
         assertTrue(canSend);
     }
 
     @Test
-    void canSendSmsShouldNotQueryDatabaseForDomesticNumbers() {
+    void hasReachedInternationalSmsLimitShouldNotQueryDatabaseForDomesticNumbers() {
         String domesticPhoneNumber = "+447700900000";
 
-        service.canSendSms(domesticPhoneNumber);
+        service.hasReachedInternationalSmsLimit(domesticPhoneNumber);
 
         verify(table, never()).getItem(any(Key.class));
     }
