@@ -716,8 +716,8 @@ resource "aws_dynamodb_table" "id_reverification_state" {
   )
 }
 
-resource "aws_dynamodb_table" "international_sms_request_count" {
-  name         = "${var.environment}-international-sms-request-count"
+resource "aws_dynamodb_table" "international_sms_send_count" {
+  name         = "${var.environment}-international-sms-send-count"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
 
   hash_key = "PhoneNumber"
