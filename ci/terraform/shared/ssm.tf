@@ -81,6 +81,10 @@ resource "aws_ssm_parameter" "password_pepper" {
   value  = var.password_pepper
 }
 
+data "aws_ssm_parameter" "sms_international_number_send_limit" {
+  name = "/deploy/${var.environment}/sms-international-number-send-limit"
+}
+
 data "aws_iam_policy_document" "redis_parameter_policy" {
   statement {
     sid    = "AllowGetParameters"
