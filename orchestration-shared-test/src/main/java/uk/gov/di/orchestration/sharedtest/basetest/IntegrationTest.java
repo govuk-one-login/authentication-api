@@ -287,6 +287,11 @@ public class IntegrationTest {
         }
 
         @Override
+        public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
+            return orchestrationPrivateKeyJwtSigner.getKeyAlias();
+        }
+
+        @Override
         public URI getAuthFrontendBaseURL() {
             return URI.create("http://localhost:3000/");
         }
