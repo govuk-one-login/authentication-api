@@ -19,6 +19,8 @@ class InternationalSmsSendCountTest {
     }
 
     private InternationalSmsSendCount generateInternationalSmsCount() {
-        return new InternationalSmsSendCount().withPhoneNumber(PHONE_NUMBER).withSentCount(SENT_COUNT);
+        return new InternationalSmsSendCount()
+                .withPhoneNumber(PHONE_NUMBER)
+                .withSentCount(SENT_COUNT);
     }
 }
