@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -69,6 +70,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -92,6 +94,7 @@ class OrchestrationAuthorizationServiceTest {
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
             mock(CrossBrowserOrchestrationService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
+    private final JwksService jwksService = mock(JwksService.class);
     private PrivateKey privateKey;
 
     @RegisterExtension
@@ -106,7 +109,8 @@ class OrchestrationAuthorizationServiceTest {
                         dynamoClientService,
                         kmsConnectionService,
                         crossBrowserOrchestrationService,
-                        stateStorageService);
+                        stateStorageService,
+                        jwksService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         String publicCertificateAsPem =
@@ -216,9 +220,12 @@ class OrchestrationAuthorizationServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
+        when(jwksService.getPublicAuthSigningJwkWithOpaqueId())
+                .thenReturn(ecSigningKey.toPublicJWK());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwtClaimsSet = new JWTClaimsSet.Builder().claim("claim1", claim1Value).build();
-        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var jwsHeader =
+                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(hashSha256String(KEY_ID)).build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         signedJWT.sign(ecdsaSigner);
         byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
@@ -252,13 +259,16 @@ class OrchestrationAuthorizationServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
+        when(jwksService.getPublicAuthSigningJwkWithOpaqueId())
+                .thenReturn(ecSigningKey.toPublicJWK());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("claim1", claim1Value)
                         .claim("state", LONG_CLAIM)
                         .build();
-        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var jwsHeader =
+                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(hashSha256String(KEY_ID)).build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         var expectedMessage =
                 jwsHeader.toBase64URL() + "." + Base64URL.encode(jwtClaimsSet.toString());
