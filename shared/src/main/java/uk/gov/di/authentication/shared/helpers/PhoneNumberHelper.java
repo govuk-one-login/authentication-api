@@ -10,6 +10,7 @@ import java.util.Optional;
 public class PhoneNumberHelper {
 
     private static final Logger LOG = LogManager.getLogger(PhoneNumberHelper.class);
+    private static final String UK_COUNTRY_CODE = "44";
 
     public static String formatPhoneNumber(String phoneNumber) {
         var phoneUtil = PhoneNumberUtil.getInstance();
@@ -42,5 +43,11 @@ public class PhoneNumberHelper {
 
     public static String removeWhitespaceFromPhoneNumber(String phoneNumber) {
         return phoneNumber.replaceAll("\\s+", "");
+    }
+
+    public static boolean isDomesticPhoneNumber(String phoneNumber) {
+        String countryCode = PhoneNumberHelper.getCountry(phoneNumber);
+
+        return UK_COUNTRY_CODE.equals(countryCode);
     }
 }
