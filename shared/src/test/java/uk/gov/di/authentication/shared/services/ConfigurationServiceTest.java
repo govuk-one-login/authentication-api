@@ -9,6 +9,7 @@ import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
+import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -650,6 +652,13 @@ class ConfigurationServiceTest {
     @Test
     void isAccountInterventionServiceCallInAuthenticateEnabledShouldDefaultFalse() {
         assertFalse(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled());
+    }
+
+    @Test
+    void getInternationalSmsNumberSentLimitShouldThrowWhenEnvVarUnset() {
+        assertThrows(
+                MissingEnvVariableException.class,
+                () -> configurationService.getInternationalSmsNumberSendLimit());
     }
 
     private static Stream<Arguments> commaSeparatedStringContains() {
