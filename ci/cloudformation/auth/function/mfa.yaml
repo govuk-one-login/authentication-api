@@ -71,6 +71,7 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               useStronglyConsistentReads,
             ]
+          INTERNATIONAL_SMS_NUMBER_REQUEST_LIMIT: !Sub "{{resolve:ssm:/deploy/${Environment}/sms-international-number-send-limit}}"
       LoggingConfig:
         LogGroup: !Ref MfaFunctionLogGroup
       Policies:
@@ -87,6 +88,7 @@ Resources:
             !Ref TestClientEmailAllowListSecretAccessPolicy,
             !Ref AWS::NoValue,
           ]
+        - !Ref DynamoInternationalNumberSendCountReadAccessPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
