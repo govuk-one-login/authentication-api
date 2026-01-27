@@ -92,4 +92,27 @@ class PermissionContextTest {
                 "Cannot get single internalSubjectId when multiple IDs exist",
                 exception.getMessage());
     }
+
+    @Test
+    void shouldBuildPermissionContextFromExistingContext() {
+        // Given
+        AuthSessionItem authSessionItem = new AuthSessionItem();
+        authSessionItem.setSessionId("test-session-id");
+        PermissionContext original =
+                PermissionContext.builder()
+                        .withInternalSubjectId(INTERNAL_SUBJECT_ID)
+                        .withRpPairwiseId(RP_PAIRWISE_ID)
+                        .withEmailAddress(EMAIL_ADDRESS)
+                        .withAuthSessionItem(authSessionItem)
+                        .build();
+
+        // When
+        PermissionContext copy = PermissionContext.builder().from(original).build();
+
+        // Then
+        assertEquals(original.internalSubjectIds(), copy.internalSubjectIds());
+        assertEquals(original.rpPairwiseId(), copy.rpPairwiseId());
+        assertEquals(original.emailAddress(), copy.emailAddress());
+        assertEquals(original.authSessionItem(), copy.authSessionItem());
+    }
 }
