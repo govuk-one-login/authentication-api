@@ -293,3 +293,48 @@ resource "aws_iam_policy" "frontend_parameter_policy" {
   path        = "/${var.environment}/redis/${local.frontend_redis_key}/"
   name_prefix = "frontend-parameter-store-policy"
 }
+
+## International SMS number send limit parameter
+
+# data "aws_ssm_parameter" "sms_international_number_send_limit" {
+#   name  = "${var.environment}-sms-international-number-send-limit"
+# }
+
+# resource "aws_ssm_parameter" "sms_international_number_send_limit" {
+#   name  = "${var.environment}-sms-international-number-send-limit"
+#   type  = "String"
+#   value = "0"
+#
+#   lifecycle {
+#     ignore_changes = [
+#       value
+#     ]
+#   }
+# }
+
+# data "aws_iam_policy_document" "sms_international_number_send_limit_parameter_policy_document" {
+#   statement {
+#     sid    = "AllowGetParameters"
+#     effect = "Allow"
+#
+#     actions = [
+#       "ssm:GetParameter",
+#       "ssm:GetParameters",
+#     ]
+#
+#     resources = [
+#       aws_ssm_parameter.sms_international_number_send_limit.arn
+#     ]
+#   }
+# }
+#
+# resource "aws_iam_policy" "sms_international_number_send_limit_parameter_policy" {
+#   policy      = data.aws_iam_policy_document.sms_international_number_send_limit_parameter_policy_document.json
+#   path        = "/${var.environment}/lambda-parameters/"
+#   name_prefix = "sms-international-number-send-limit-parameter-store-policy"
+# }
+#
+# resource "aws_iam_role_policy_attachment" "lambda_iam_role_sms_limit_parameters" {
+#   policy_arn = aws_iam_policy.sms_international_number_send_limit_parameter_policy.arn
+#   role       = aws_iam_role.lambda_iam_role.name
+# }
