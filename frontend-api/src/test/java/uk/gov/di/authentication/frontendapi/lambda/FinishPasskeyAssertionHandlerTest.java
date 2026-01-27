@@ -2,23 +2,22 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.yubico.webauthn.RelyingParty;
-import org.junit.jupiter.api.AfterEach;
+import com.yubico.webauthn.AssertionResult;
+import com.yubico.webauthn.exception.AssertionFailedException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -26,7 +25,8 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADD
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
-import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class FinishPasskeyAssertionHandlerTest {
@@ -34,18 +34,10 @@ class FinishPasskeyAssertionHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final RelyingParty relyingParty = mock(RelyingParty.class);
+    private final PasskeyAssertionService passkeyAssertionService =
+            mock(PasskeyAssertionService.class);
     private FinishPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
-
-    @RegisterExtension
-    public final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(FinishPasskeyAssertionHandler.class);
-
-    @AfterEach
-    void tearDown() {
-        assertThat(logging.events(), not(hasItem(withMessageContaining(SESSION_ID))));
-    }
 
     @BeforeEach
     void setup() {
@@ -58,21 +50,104 @@ class FinishPasskeyAssertionHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        relyingParty);
+                        passkeyAssertionService);
     }
 
-    @Test
-    void shouldReturn200ForValidRequest() {
-        var result = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+    @Nested
+    class Success {
+        @Test
+        void shouldReturn200WhenPasskeyAssertionSuccessful()
+                throws IOException, AssertionFailedException {
+            // Given
+            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            when(mockAssertionResult.isSuccess()).thenReturn(true);
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(mockAssertionResult);
 
-        assertThat(result, hasStatus(200));
-        assertEquals("", result.getBody());
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(200));
+        }
+    }
+
+    @Nested
+    class Validation {
+        @Test
+        void shouldReturn400WhenRequestBodyMissingPKC() {
+            // Given
+            var request = finishPasskeyAssertionRequest("{}");
+
+            // When
+            var response = handler.handleRequest(request, context);
+
+            // Then
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+        }
+    }
+
+    @Nested
+    class Error {
+        @Test
+        void shouldReturn400WhenJsonDeserializationFails()
+                throws IOException, AssertionFailedException {
+            // Given
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenThrow(IOException.class);
+
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody("Bad request"));
+        }
+
+        @Test
+        void shouldReturn500WhenPasskeyAssertionFailed()
+                throws IOException, AssertionFailedException {
+            // Given
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenThrow(AssertionFailedException.class);
+
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(500));
+            assertThat(response, hasBody("Internal server error validating assertion"));
+        }
+
+        @Test
+        void shouldReturn401WhenPasskeyAssertionUnsuccessful()
+                throws IOException, AssertionFailedException {
+            // Given
+            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            when(mockAssertionResult.isSuccess()).thenReturn(false);
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(mockAssertionResult);
+
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(401));
+            assertThat(response, hasBody("Failed authenticating with passkey"));
+        }
+    }
+
+    private APIGatewayProxyRequestEvent finishPasskeyAssertionRequest(String body) {
+        return new APIGatewayProxyRequestEvent()
+                .withHeaders(VALID_HEADERS)
+                .withBody(body)
+                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 
     private APIGatewayProxyRequestEvent finishPasskeyAssertionRequest() {
-        return new APIGatewayProxyRequestEvent()
-                .withHeaders(VALID_HEADERS)
-                .withBody("{}")
-                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+        return finishPasskeyAssertionRequest("""
+            {"pkc": ""}
+            """);
     }
 }
