@@ -256,10 +256,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             /*
                 TODO: Add this to commit message:
                 Reviewed usage of this handler on the frontend, noted that the common supported error across the controllers was 1026 (BLOCKED_FOR_SENDING_MFA_OTPS).
-                Controllers reviewed: send-mfa-controller, enter-password-controller, how-do-you-want-security-codes-controller, reset-password-check-email-controller/
+                Controllers reviewed: send-mfa-controller, enter-password-controller, how-do-you-want-security-codes-controller, reset-password-check-email-controller.
+                Later we may wish to introduce a custom error code.
              */
 
-            if (internationalSmsSendLimitService.hasReachedInternationalSmsLimit(phoneNumber)) {
+            if (!internationalSmsSendLimitService.canSendSms(phoneNumber)) {
                 return generateApiGatewayProxyErrorResponse(
                         400, BLOCKED_FOR_SENDING_MFA_OTPS);
             }
