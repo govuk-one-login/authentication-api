@@ -31,6 +31,7 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
         this.configurationService = configurationService;
     }
 
+    // TODO: Rename to canSendSms
     public boolean hasReachedInternationalSmsLimit(String phoneNumber) {
         String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
 
