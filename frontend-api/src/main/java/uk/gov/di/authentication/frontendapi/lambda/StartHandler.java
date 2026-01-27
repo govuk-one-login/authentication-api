@@ -336,6 +336,7 @@ public class StartHandler
                 authSession.getInternalCommonSubjectId(),
                 startRequest.rpPairwiseIdForReauth(),
                 userContext.getUserProfile().map(UserProfile::getEmail).orElse(null),
-                authSession);
+                authSession,
+                null);
     }
 }
