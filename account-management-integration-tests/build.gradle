@@ -30,6 +30,12 @@ dependencies {
     testImplementation libs.jsonAssertJ
 
     testRuntimeOnly libs.bundles.testRuntime
+
+    constraints {
+        testImplementation('org.assertj:assertj-core:[3.27.7,)') {
+            because 'CVE-2026-24400 is fixed in org.assertj:assertj-core:3.27.7 and higher'
+        }
+    }
 }
 
 test {
