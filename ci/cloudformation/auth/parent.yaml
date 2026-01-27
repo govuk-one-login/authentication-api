@@ -191,6 +191,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5a160ba9-10ee-4e48-bcec-de21275f9201
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
+      internationalNumberSendCountTableEncryptionKey: TODO
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
@@ -225,6 +226,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9b906941-9de4-400e-84ac-65af1eccc831
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
+      internationalNumberSendCountTableEncryptionKey: TODO
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
@@ -259,6 +261,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/af014656-1c40-4ba1-b656-aba07fd258d4
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
+      internationalNumberSendCountTableEncryptionKey: TODO
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyu7XCXkDyxhHrmoOfLrl6tcd9e9VL1pzzWqVo1P546NLL2c1H2Qd7UNaa7oQX1/eNFDKaAZuJY3YUAPwNN4Ypg== #orch-signing-key-alias
       orchStubToAuthSigningPublicKey: "" # No orch Stub in Authdev3, Authdev3 uses RP Stubs
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6e26328c-9121-4247-a5a3-6ac3f28fca3f
@@ -298,6 +301,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5f9f975-760d-4c34-ade5-7cc91ba09a7e
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
+      internationalNumberSendCountTableEncryptionKey: TODO
       frontendApiFMSTagValue: "authfrontenddev"
       frontendBaseUrl: https://signin.dev.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
@@ -343,6 +347,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/bfeb0cf7-41fd-4ef5-bf3e-5cbda059a375
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
+      internationalNumberSendCountTableEncryptionKey: TODO
       frontendApiFMSTagValue: "authfrontendbuild"
       frontendBaseUrl: https://signin.build.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
@@ -391,6 +396,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/f2cbc2f5-78d9-4e13-9f23-7b46907b91e6
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
+      internationalNumberSendCountTableEncryptionKey: TODO
       frontendApiFMSTagValue: "authfrontendstaging"
       frontendBaseUrl: https://signin.staging.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
@@ -464,6 +470,7 @@ Mappings:
       UseAlarmActions: "Yes"
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
+      internationalNumberSendCountTableEncryptionKey: TODO
       useStronglyConsistentReads: false
       OrchAccountID: 058264132019
       OrchApiBaseUrl: https://oidc.integration.account.gov.uk
@@ -513,6 +520,7 @@ Mappings:
       UseAlarmActions: "Yes"
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
+      internationalNumberSendCountTableEncryptionKey: TODO
       useStronglyConsistentReads: false
       OrchAccountID: 533266965190
       OrchApiBaseUrl: https://oidc.account.gov.uk
@@ -2412,6 +2420,139 @@ Resources:
               - kms:Decrypt
             Resource:
               - !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
+
+  DynamoInternationalNumberSendCountReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read and write permissions to the International Number Send Count table"
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-international-sms-send-count/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-international-sms-send-count
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref SubEnvironment,
+                  internationalNumberSendCountTableEncryptionKey,
+                ]
+                - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  internationalNumberSendCountTableEncryptionKey,
+                ]
+
+  DynamoInternationalNumberSendCountReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the International Number Send Count table"
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-international-sms-send-count/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-international-sms-send-count
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToKms
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref SubEnvironment,
+                  internationalNumberSendCountTableEncryptionKey,
+                ]
+                - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  internationalNumberSendCountTableEncryptionKey,
+                ]
 
 Outputs:
   TestClientEmailAllowListSecretEncryptionKeyArn:

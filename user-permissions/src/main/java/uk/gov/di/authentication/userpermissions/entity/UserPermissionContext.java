@@ -4,22 +4,26 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 
 import java.util.List;
 
+// TODO rename to PermissionContext
 public record UserPermissionContext(
         List<String> internalSubjectIds,
         String rpPairwiseId,
         String emailAddress,
-        AuthSessionItem authSessionItem) {
+        AuthSessionItem authSessionItem,
+        String e164FormattedPhoneNumber) {
 
     public UserPermissionContext(
             String internalSubjectId,
             String rpPairwiseId,
             String emailAddress,
-            AuthSessionItem authSessionItem) {
+            AuthSessionItem authSessionItem,
+            String e164FormattedPhoneNumber) {
         this(
                 internalSubjectId != null ? List.of(internalSubjectId) : List.of(),
                 rpPairwiseId,
                 emailAddress,
-                authSessionItem);
+                authSessionItem,
+                e164FormattedPhoneNumber);
     }
 
     public String internalSubjectId() {
@@ -38,6 +42,7 @@ public record UserPermissionContext(
         private String rpPairwiseId;
         private String emailAddress;
         private AuthSessionItem authSessionItem;
+        private String e164FormattedPhoneNumber;
 
         public Builder withInternalSubjectId(String internalSubjectId) {
             return withInternalSubjectIds(
@@ -64,9 +69,14 @@ public record UserPermissionContext(
             return this;
         }
 
+        public Builder withE164FormattedPhoneNumber(String e164FormattedPhoneNumber) {
+            this.e164FormattedPhoneNumber = e164FormattedPhoneNumber;
+            return this;
+        }
+
         public UserPermissionContext build() {
             return new UserPermissionContext(
-                    internalSubjectIds, rpPairwiseId, emailAddress, authSessionItem);
+                    internalSubjectIds, rpPairwiseId, emailAddress, authSessionItem, e164FormattedPhoneNumber);
         }
     }
 

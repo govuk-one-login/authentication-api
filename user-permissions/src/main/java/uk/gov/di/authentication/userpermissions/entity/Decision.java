@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.Map;
 
 public sealed interface Decision
-        permits Decision.Permitted, Decision.TemporarilyLockedOut, Decision.ReauthLockedOut {
+        permits Decision.Permitted, Decision.TemporarilyLockedOut, Decision.IndefinitelyLockedOut, Decision.ReauthLockedOut {
 
     int attemptCount();
 
@@ -17,6 +17,11 @@ public sealed interface Decision
             int attemptCount,
             Instant lockedUntil,
             boolean isFirstTimeLimit)
+            implements Decision {}
+
+    record IndefinitelyLockedOut(
+            ForbiddenReason forbiddenReason,
+            int attemptCount)
             implements Decision {}
 
     record ReauthLockedOut(

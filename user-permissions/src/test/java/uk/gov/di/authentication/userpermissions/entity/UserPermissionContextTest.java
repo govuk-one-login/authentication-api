@@ -15,6 +15,7 @@ class UserPermissionContextTest {
     private static final String INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String RP_PAIRWISE_ID = "test-rp-pairwise-id";
     private static final String EMAIL_ADDRESS = "test@example.com";
+    private static final String E164_FORMATTED_PHONE_NUMBER = "+447234567890";
 
     @Test
     void shouldBuildUserPermissionContextSuccessfully() {
@@ -29,6 +30,7 @@ class UserPermissionContextTest {
                         .withRpPairwiseId(RP_PAIRWISE_ID)
                         .withEmailAddress(EMAIL_ADDRESS)
                         .withAuthSessionItem(authSessionItem)
+                        .withE164FormattedPhoneNumber(E164_FORMATTED_PHONE_NUMBER)
                         .build();
 
         // Then
@@ -37,6 +39,7 @@ class UserPermissionContextTest {
         assertEquals(EMAIL_ADDRESS, context.emailAddress());
         assertNotNull(context.authSessionItem());
         assertEquals("test-session-id", context.authSessionItem().getSessionId());
+        assertEquals(E164_FORMATTED_PHONE_NUMBER, context.e164FormattedPhoneNumber());
     }
 
     @Test
@@ -49,6 +52,7 @@ class UserPermissionContextTest {
         assertEquals(null, context.rpPairwiseId());
         assertEquals(null, context.emailAddress());
         assertEquals(null, context.authSessionItem());
+        assertEquals(null, context.e164FormattedPhoneNumber());
     }
 
     @Test
