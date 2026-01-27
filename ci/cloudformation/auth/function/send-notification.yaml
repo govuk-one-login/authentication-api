@@ -108,7 +108,6 @@ Resources:
             !Ref TestClientEmailAllowListSecretAccessPolicy,
             !Ref AWS::NoValue,
           ]
-        - !Ref DynamoInternationalNumberSendCountReadAccessPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
