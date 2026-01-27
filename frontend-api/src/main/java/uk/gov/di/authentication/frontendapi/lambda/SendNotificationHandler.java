@@ -35,6 +35,7 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -54,6 +55,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_MISSING;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
@@ -86,6 +88,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private final CodeStorageService codeStorageService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AuditService auditService;
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService;
     private final TestUserHelper testUserHelper;
 
     public SendNotificationHandler(
@@ -99,6 +102,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             AuditService auditService,
             AuthSessionService authSessionService,
             CloudwatchMetricsService cloudwatchMetricsService,
+            InternationalSmsSendLimitService internationalSmsSendLimitService,
             TestUserHelper testUserHelper) {
         super(
                 SendNotificationRequest.class,
@@ -113,6 +117,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
         this.testUserHelper = testUserHelper;
     }
 
@@ -138,6 +143,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -160,6 +167,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -396,6 +405,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         if (!testClientWithAllowedEmail) {
             if (notificationType == VERIFY_PHONE_NUMBER) {
+                if (!internationalSmsSendLimitService.canSendSms(destination)) {
+                    return generateApiGatewayProxyErrorResponse(
+                            400, BLOCKED_FOR_PHONE_VERIFICATION_CODES);
+                }
+
                 cloudwatchMetricsService.putEmbeddedValue(
                         "SendingSms",
                         1,
