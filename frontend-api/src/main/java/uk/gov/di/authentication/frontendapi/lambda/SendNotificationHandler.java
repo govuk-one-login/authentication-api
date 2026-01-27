@@ -405,7 +405,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         if (!testClientWithAllowedEmail) {
             if (notificationType == VERIFY_PHONE_NUMBER) {
-                if (internationalSmsSendLimitService.hasReachedInternationalSmsLimit(destination)) {
+                if (!internationalSmsSendLimitService.canSendSms(destination)) {
                     return generateApiGatewayProxyErrorResponse(
                             400, BLOCKED_FOR_PHONE_VERIFICATION_CODES);
                 }
