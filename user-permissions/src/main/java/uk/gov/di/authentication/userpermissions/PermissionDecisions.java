@@ -4,7 +4,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 /**
  * Interface defining permission checks for user authentication actions.
@@ -17,61 +17,61 @@ public interface PermissionDecisions {
      * Checks if a user is permitted to submit an email address.
      *
      * @param journeyType The type of authentication journey
-     * @param userPermissionContext The user's permission context
+     * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
     Result<DecisionError, Decision> canReceiveEmailAddress(
-            JourneyType journeyType, UserPermissionContext userPermissionContext);
+            JourneyType journeyType, PermissionContext permissionContext);
 
     /**
      * Checks if the system can send an email OTP notification to the user.
      *
      * @param journeyType The type of authentication journey
-     * @param userPermissionContext The user's permission context
+     * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
     Result<DecisionError, Decision> canSendEmailOtpNotification(
-            JourneyType journeyType, UserPermissionContext userPermissionContext);
+            JourneyType journeyType, PermissionContext permissionContext);
 
     /**
      * Checks if a user is permitted to verify an email OTP.
      *
      * @param journeyType The type of authentication journey
-     * @param userPermissionContext The user's permission context
+     * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
     Result<DecisionError, Decision> canVerifyEmailOtp(
-            JourneyType journeyType, UserPermissionContext userPermissionContext);
+            JourneyType journeyType, PermissionContext permissionContext);
 
     /**
      * Checks if a user is permitted to submit a password.
      *
      * @param journeyType The type of authentication journey
-     * @param userPermissionContext The user's permission context
+     * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
     Result<DecisionError, Decision> canReceivePassword(
-            JourneyType journeyType, UserPermissionContext userPermissionContext);
+            JourneyType journeyType, PermissionContext permissionContext);
 
     /**
      * Checks if the system can send an SMS OTP notification to the user.
      *
      * @param journeyType The type of authentication journey
-     * @param userPermissionContext The user's permission context
+     * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
     Result<DecisionError, Decision> canSendSmsOtpNotification(
-            JourneyType journeyType, UserPermissionContext userPermissionContext);
+            JourneyType journeyType, PermissionContext permissionContext);
 
     /**
      * Checks if a user is permitted to verify an MFA OTP.
      *
      * @param journeyType The type of authentication journey
-     * @param userPermissionContext The user's permission context
+     * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
     Result<DecisionError, Decision> canVerifyMfaOtp(
-            JourneyType journeyType, UserPermissionContext userPermissionContext);
+            JourneyType journeyType, PermissionContext permissionContext);
 
     /**
      * Checks if a user is permitted to login.
@@ -79,22 +79,22 @@ public interface PermissionDecisions {
      * <p>This is an experimental method that could replace canReceivePassword.
      *
      * @param journeyType The type of authentication journey
-     * @param userPermissionContext The user's permission context
+     * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
     @Experimental("Could be an alternative to canReceivePassword")
     default Result<DecisionError, Decision> canLogin(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        return canReceiveEmailAddress(journeyType, userPermissionContext);
+            JourneyType journeyType, PermissionContext permissionContext) {
+        return canReceiveEmailAddress(journeyType, permissionContext);
     }
 
     /**
      * Checks if a user is permitted to start an authentication journey.
      *
      * @param journeyType The type of authentication journey
-     * @param userPermissionContext The user's permission context
+     * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
     Result<DecisionError, Decision> canStartJourney(
-            JourneyType journeyType, UserPermissionContext userPermissionContext);
+            JourneyType journeyType, PermissionContext permissionContext);
 }
