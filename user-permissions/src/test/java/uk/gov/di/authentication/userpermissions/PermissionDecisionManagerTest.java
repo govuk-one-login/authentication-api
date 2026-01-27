@@ -286,7 +286,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorWhenEmailAddressIsNull() {
             var userContext =
-                    new PermissionContext("subject", "pairwise", null, new AuthSessionItem());
+                    new PermissionContext("subject", "pairwise", null, new AuthSessionItem(), null);
 
             var result =
                     permissionDecisionManager.canReceivePassword(
@@ -400,7 +400,8 @@ class PermissionDecisionManagerTest {
 
         @Test
         void shouldReturnErrorForReauthenticationJourneyWhenRpPairwiseIdIsNull() {
-            var userContext = new PermissionContext("subject", null, EMAIL, new AuthSessionItem());
+            var userContext =
+                    new PermissionContext("subject", null, EMAIL, new AuthSessionItem(), null);
 
             var result =
                     permissionDecisionManager.canReceivePassword(
@@ -747,7 +748,11 @@ class PermissionDecisionManagerTest {
         void shouldReturnErrorForReauthenticationWithNullInternalSubjectIds() {
             var userContext =
                     new PermissionContext(
-                            (List<String>) null, "rp-pairwise-id", EMAIL, new AuthSessionItem());
+                            (List<String>) null,
+                            "rp-pairwise-id",
+                            EMAIL,
+                            new AuthSessionItem(),
+                            null);
 
             var result =
                     permissionDecisionManager.canReceiveEmailAddress(
@@ -761,7 +766,11 @@ class PermissionDecisionManagerTest {
         void shouldReturnErrorForReauthenticationWithNullRpPairwiseId() {
             var userContext =
                     new PermissionContext(
-                            List.of("internal-subject-id"), null, EMAIL, new AuthSessionItem());
+                            List.of("internal-subject-id"),
+                            null,
+                            EMAIL,
+                            new AuthSessionItem(),
+                            null);
 
             var result =
                     permissionDecisionManager.canReceiveEmailAddress(
@@ -815,11 +824,17 @@ class PermissionDecisionManagerTest {
     }
 
     private PermissionContext createUserContext(int passwordResetCount) {
-        var authSession = new AuthSessionItem().withEmailAddress(EMAIL);
+        return createUserContext(passwordResetCount, EMAIL, Optional.of(PHONE_NUMBER));
+    }
+
+    private PermissionContext createUserContext(
+            int passwordResetCount, String email, Optional<String> phoneNumber) {
+        var authSession = new AuthSessionItem().withEmailAddress(email);
         for (int i = 0; i < passwordResetCount; i++) {
             authSession = authSession.incrementPasswordResetCount();
         }
 
-        return new PermissionContext("internal-subject-id", "rp-pairwise-id", EMAIL, authSession);
+        return new PermissionContext(
+                "internal-subject-id", "rp-pairwise-id", email, authSession, phoneNumber);
     }
 }

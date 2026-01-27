@@ -4,17 +4,20 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PermissionContextTest {
 
     private static final String INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String RP_PAIRWISE_ID = "test-rp-pairwise-id";
     private static final String EMAIL_ADDRESS = "test@example.com";
+    private static final String E164_FORMATTED_PHONE_NUMBER = "+447234567890";
 
     @Test
     void shouldBuildPermissionContextSuccessfully() {
@@ -29,6 +32,7 @@ class PermissionContextTest {
                         .withRpPairwiseId(RP_PAIRWISE_ID)
                         .withEmailAddress(EMAIL_ADDRESS)
                         .withAuthSessionItem(authSessionItem)
+                        .withE164FormattedPhoneNumber(E164_FORMATTED_PHONE_NUMBER)
                         .build();
 
         // Then
@@ -37,6 +41,7 @@ class PermissionContextTest {
         assertEquals(EMAIL_ADDRESS, context.emailAddress());
         assertNotNull(context.authSessionItem());
         assertEquals("test-session-id", context.authSessionItem().getSessionId());
+        assertEquals(Optional.of(E164_FORMATTED_PHONE_NUMBER), context.e164FormattedPhoneNumber());
     }
 
     @Test
@@ -49,6 +54,7 @@ class PermissionContextTest {
         assertEquals(null, context.rpPairwiseId());
         assertEquals(null, context.emailAddress());
         assertEquals(null, context.authSessionItem());
+        assertEquals(null, context.e164FormattedPhoneNumber());
     }
 
     @Test
@@ -94,6 +100,21 @@ class PermissionContextTest {
     }
 
     @Test
+    void shouldBuildPermissionContextWithNullPhoneNumber() {
+        // When
+        PermissionContext context =
+                PermissionContext.builder()
+                        .withInternalSubjectId(INTERNAL_SUBJECT_ID)
+                        .withEmailAddress(EMAIL_ADDRESS)
+                        .withE164FormattedPhoneNumber(null)
+                        .build();
+
+        // Then
+        assertNotNull(context.e164FormattedPhoneNumber());
+        assertTrue(context.e164FormattedPhoneNumber().isEmpty());
+    }
+
+    @Test
     void shouldBuildPermissionContextFromExistingContext() {
         // Given
         AuthSessionItem authSessionItem = new AuthSessionItem();
@@ -104,6 +125,7 @@ class PermissionContextTest {
                         .withRpPairwiseId(RP_PAIRWISE_ID)
                         .withEmailAddress(EMAIL_ADDRESS)
                         .withAuthSessionItem(authSessionItem)
+                        .withE164FormattedPhoneNumber(E164_FORMATTED_PHONE_NUMBER)
                         .build();
 
         // When
@@ -114,5 +136,6 @@ class PermissionContextTest {
         assertEquals(original.rpPairwiseId(), copy.rpPairwiseId());
         assertEquals(original.emailAddress(), copy.emailAddress());
         assertEquals(original.authSessionItem(), copy.authSessionItem());
+        assertEquals(original.e164FormattedPhoneNumber(), copy.e164FormattedPhoneNumber());
     }
 }

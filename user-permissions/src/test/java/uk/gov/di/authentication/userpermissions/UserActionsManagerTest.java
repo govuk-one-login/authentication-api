@@ -173,7 +173,7 @@ class UserActionsManagerTest {
         @Test
         void shouldCreateOrIncrementCountForReauthenticationJourney() {
             var contextWithSubjectId =
-                    new PermissionContext("subject-123", "pairwise-456", EMAIL, authSession);
+                    new PermissionContext("subject-123", "pairwise-456", EMAIL, authSession, null);
             when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120L);
 
             var result =
