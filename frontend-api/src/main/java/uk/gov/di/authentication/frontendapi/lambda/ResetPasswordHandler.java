@@ -231,6 +231,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     emailNotifyRequest.getNotificationType(),
                     emailNotifyRequest.getUniqueNotificationReference());
             if (shouldSendConfirmationToSms(userProfile)) {
+                // TODO: need to check this before sending off.
                 var smsNotifyRequest =
                         new NotifyRequest(
                                 userProfile.getPhoneNumber(),
