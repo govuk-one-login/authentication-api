@@ -725,14 +725,15 @@ resource "aws_dynamodb_table" "international_sms_request_count" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
-  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+  # NOTE: No data in this table in any env at present. Want to rename.
+  deletion_protection_enabled = false
 
   attribute {
     name = "PhoneNumber"
     type = "S"
   }
 
-  // NOTE: Explicit absence of TTL.
+  # NOTE: Explicit absence of TTL.
 
   point_in_time_recovery {
     enabled = true
@@ -743,8 +744,9 @@ resource "aws_dynamodb_table" "international_sms_request_count" {
     kms_key_arn = aws_kms_key.international_sms_request_count_encryption_key.arn
   }
 
+  # NOTE: No data in this table in any env at present. Want to rename.
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   tags = (
