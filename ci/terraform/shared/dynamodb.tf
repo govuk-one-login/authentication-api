@@ -716,8 +716,8 @@ resource "aws_dynamodb_table" "id_reverification_state" {
   )
 }
 
-resource "aws_dynamodb_table" "international_sms_request_count" {
-  name         = "${var.environment}-international-sms-request-count"
+resource "aws_dynamodb_table" "international_sms_send_count" {
+  name         = "${var.environment}-international-sms-send-count"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
 
   hash_key = "PhoneNumber"
@@ -725,7 +725,7 @@ resource "aws_dynamodb_table" "international_sms_request_count" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
-  deletion_protection_enabled = false
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
 
   attribute {
     name = "PhoneNumber"
@@ -740,7 +740,11 @@ resource "aws_dynamodb_table" "international_sms_request_count" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = aws_kms_key.international_sms_request_count_encryption_key.arn
+    kms_key_arn = aws_kms_key.international_sms_send_count_encryption_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 
   tags = (
@@ -800,7 +804,7 @@ resource "aws_dynamodb_resource_policy" "id_reverification_state" {
 }
 
 resource "aws_dynamodb_resource_policy" "international_sms_request_count" {
-  resource_arn = aws_dynamodb_table.international_sms_request_count.arn
+  resource_arn = aws_dynamodb_table.international_sms_send_count.arn
   policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
