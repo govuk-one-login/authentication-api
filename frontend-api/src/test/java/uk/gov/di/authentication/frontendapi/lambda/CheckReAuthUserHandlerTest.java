@@ -29,8 +29,8 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -388,7 +388,7 @@ class CheckReAuthUserHandlerTest {
 
         verify(userActionsManager)
                 .incorrectEmailAddressReceived(
-                        eq(JourneyType.REAUTHENTICATION), any(UserPermissionContext.class));
+                        eq(JourneyType.REAUTHENTICATION), any(PermissionContext.class));
     }
 
     @Test
@@ -532,7 +532,7 @@ class CheckReAuthUserHandlerTest {
                 for (var setup : mockCountsByJourneySetups) {
                     when(permissionDecisionManager.canReceiveEmailAddress(
                                     JourneyType.REAUTHENTICATION,
-                                    UserPermissionContext.builder()
+                                    PermissionContext.builder()
                                             .withInternalSubjectIds(setup.subjectIds)
                                             .withRpPairwiseId(setup.rpPairwiseId)
                                             .build()))

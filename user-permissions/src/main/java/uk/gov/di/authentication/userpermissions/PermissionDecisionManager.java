@@ -15,7 +15,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -53,20 +53,20 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public Result<DecisionError, Decision> canReceiveEmailAddress(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        if (journeyType == null || userPermissionContext == null) {
+            JourneyType journeyType, PermissionContext permissionContext) {
+        if (journeyType == null || permissionContext == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
         if (journeyType == JourneyType.REAUTHENTICATION) {
-            if (userPermissionContext.internalSubjectIds() == null
-                    || userPermissionContext.rpPairwiseId() == null) {
+            if (permissionContext.internalSubjectIds() == null
+                    || permissionContext.rpPairwiseId() == null) {
                 return Result.failure(DecisionError.INVALID_USER_CONTEXT);
             }
 
             return this.checkForAnyReauthLockout(
-                    userPermissionContext.internalSubjectIds(),
-                    userPermissionContext.rpPairwiseId(),
+                    permissionContext.internalSubjectIds(),
+                    permissionContext.rpPairwiseId(),
                     CountType.ENTER_EMAIL);
         }
 
@@ -75,18 +75,18 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public Result<DecisionError, Decision> canSendEmailOtpNotification(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         if (journeyType == JourneyType.PASSWORD_RESET) {
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
                             RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            var codeRequestCount = userPermissionContext.authSessionItem().getPasswordResetCount();
+            var codeRequestCount = permissionContext.authSessionItem().getPasswordResetCount();
             var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
 
             // Check Redis block first - use different ForbiddenReason instead of -1
             if (getCodeStorageService()
                     .isBlockedForEmail(
-                            userPermissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
+                            permissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
                 return Result.success(
                         createTemporarilyLockedOut(
                                 ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST, 0, false));
@@ -111,7 +111,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public Result<DecisionError, Decision> canVerifyEmailOtp(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         if (journeyType == JourneyType.PASSWORD_RESET) {
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
@@ -120,7 +120,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
             if (getCodeStorageService()
                     .isBlockedForEmail(
-                            userPermissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
+                            permissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
                 return Result.success(
                         createTemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
@@ -134,35 +134,35 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public Result<DecisionError, Decision> canReceivePassword(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
 
-        if (journeyType == null || userPermissionContext == null) {
+        if (journeyType == null || permissionContext == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
         if (journeyType == JourneyType.REAUTHENTICATION) {
-            if (userPermissionContext.internalSubjectIds() == null
-                    || userPermissionContext.rpPairwiseId() == null) {
+            if (permissionContext.internalSubjectIds() == null
+                    || permissionContext.rpPairwiseId() == null) {
                 return Result.failure(DecisionError.INVALID_USER_CONTEXT);
             }
 
             return this.checkForAnyReauthLockout(
-                    userPermissionContext.internalSubjectIds(),
-                    userPermissionContext.rpPairwiseId(),
+                    permissionContext.internalSubjectIds(),
+                    permissionContext.rpPairwiseId(),
                     CountType.ENTER_PASSWORD);
         }
 
-        if (userPermissionContext.emailAddress() == null) {
+        if (permissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
-        return checkForPasswordResetLockout(userPermissionContext.emailAddress());
+        return checkForPasswordResetLockout(permissionContext.emailAddress());
     }
 
     @Override
     public Result<DecisionError, Decision> canSendSmsOtpNotification(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        if (userPermissionContext.emailAddress() == null) {
+            JourneyType journeyType, PermissionContext permissionContext) {
+        if (permissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
@@ -173,7 +173,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
             long ttl =
                     getCodeStorageService()
                             .getTTL(
-                                    userPermissionContext.emailAddress(),
+                                    permissionContext.emailAddress(),
                                     CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType);
 
             // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -184,7 +184,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 long deprecatedTtl =
                         getCodeStorageService()
                                 .getTTL(
-                                        userPermissionContext.emailAddress(),
+                                        permissionContext.emailAddress(),
                                         CODE_REQUEST_BLOCKED_KEY_PREFIX
                                                 + deprecatedCodeRequestType);
                 ttl = Math.max(ttl, deprecatedTtl);
@@ -209,8 +209,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public Result<DecisionError, Decision> canVerifyMfaOtp(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        if (userPermissionContext.emailAddress() == null) {
+            JourneyType journeyType, PermissionContext permissionContext) {
+        if (permissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
@@ -221,7 +221,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
             long ttl =
                     getCodeStorageService()
                             .getTTL(
-                                    userPermissionContext.emailAddress(),
+                                    permissionContext.emailAddress(),
                                     CODE_BLOCKED_KEY_PREFIX + codeRequestType);
 
             // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -232,7 +232,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 long deprecatedTtl =
                         getCodeStorageService()
                                 .getTTL(
-                                        userPermissionContext.emailAddress(),
+                                        permissionContext.emailAddress(),
                                         CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
                 ttl = Math.max(ttl, deprecatedTtl);
             }
@@ -256,16 +256,14 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public Result<DecisionError, Decision> canStartJourney(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         if (journeyType == JourneyType.REAUTHENTICATION) {
-            if (userPermissionContext.rpPairwiseId() == null) {
+            if (permissionContext.rpPairwiseId() == null) {
                 return Result.failure(DecisionError.INVALID_USER_CONTEXT);
             }
 
             return this.checkForAnyReauthLockout(
-                    userPermissionContext.internalSubjectIds(),
-                    userPermissionContext.rpPairwiseId(),
-                    null);
+                    permissionContext.internalSubjectIds(), permissionContext.rpPairwiseId(), null);
         }
         return Result.success(new Decision.Permitted(0));
     }

@@ -11,8 +11,8 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.temporal.ChronoUnit;
 
@@ -54,14 +54,14 @@ public class UserActionsManager implements UserActions {
 
     @Override
     public Result<TrackingError, Void> incorrectEmailAddressReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         if (journeyType == JourneyType.REAUTHENTICATION) {
             try {
 
                 String identifier =
-                        userPermissionContext.internalSubjectId() != null
-                                ? userPermissionContext.internalSubjectId()
-                                : userPermissionContext.rpPairwiseId();
+                        permissionContext.internalSubjectId() != null
+                                ? permissionContext.internalSubjectId()
+                                : permissionContext.rpPairwiseId();
                 getAuthenticationAttemptsService()
                         .createOrIncrementCount(
                                 identifier,
@@ -85,11 +85,10 @@ public class UserActionsManager implements UserActions {
 
     @Override
     public Result<TrackingError, Void> sentEmailOtpNotification(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
 
         if (journeyType == JourneyType.PASSWORD_RESET) {
-            var updatedSession =
-                    userPermissionContext.authSessionItem().incrementPasswordResetCount();
+            var updatedSession = permissionContext.authSessionItem().incrementPasswordResetCount();
             getAuthSessionService().updateSession(updatedSession);
             var codeRequestCount = updatedSession.getPasswordResetCount();
             if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
@@ -100,7 +99,7 @@ public class UserActionsManager implements UserActions {
                 LOG.info("Setting block for email as user has requested too many OTPs");
                 getCodeStorageService()
                         .saveBlockedForEmail(
-                                userPermissionContext.emailAddress(),
+                                permissionContext.emailAddress(),
                                 codeRequestBlockedKeyPrefix,
                                 configurationService.getLockoutDuration());
                 getAuthSessionService().updateSession(updatedSession.resetPasswordResetCount());
@@ -112,23 +111,23 @@ public class UserActionsManager implements UserActions {
 
     @Override
     public Result<TrackingError, Void> incorrectEmailOtpReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> correctEmailOtpReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> incorrectPasswordReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         if (journeyType.equals(JourneyType.REAUTHENTICATION)) {
             getAuthenticationAttemptsService()
                     .createOrIncrementCount(
-                            userPermissionContext.internalSubjectId(),
+                            permissionContext.internalSubjectId(),
                             NowHelper.nowPlus(
                                             configurationService.getReauthEnterPasswordCountTTL(),
                                             ChronoUnit.SECONDS)
@@ -139,18 +138,18 @@ public class UserActionsManager implements UserActions {
         } else {
             var updatedCount =
                     getCodeStorageService()
-                            .increaseIncorrectPasswordCount(userPermissionContext.emailAddress());
+                            .increaseIncorrectPasswordCount(permissionContext.emailAddress());
             if (updatedCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User has now exceeded max password retries, setting block");
                 getCodeStorageService()
                         .saveBlockedForEmail(
-                                userPermissionContext.emailAddress(),
+                                permissionContext.emailAddress(),
                                 CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
                                         + JourneyType.PASSWORD_RESET,
                                 configurationService.getLockoutDuration());
 
                 getCodeStorageService()
-                        .deleteIncorrectPasswordCount(userPermissionContext.emailAddress());
+                        .deleteIncorrectPasswordCount(permissionContext.emailAddress());
             }
         }
 
@@ -159,50 +158,50 @@ public class UserActionsManager implements UserActions {
 
     @Override
     public Result<TrackingError, Void> correctPasswordReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> passwordReset(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        getCodeStorageService().deleteIncorrectPasswordCount(userPermissionContext.emailAddress());
+            JourneyType journeyType, PermissionContext permissionContext) {
+        getCodeStorageService().deleteIncorrectPasswordCount(permissionContext.emailAddress());
 
         String codeBlockedKeyPrefix = CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + journeyType;
 
         getCodeStorageService()
-                .deleteBlockForEmail(userPermissionContext.emailAddress(), codeBlockedKeyPrefix);
+                .deleteBlockForEmail(permissionContext.emailAddress(), codeBlockedKeyPrefix);
 
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> sentSmsOtpNotification(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> incorrectSmsOtpReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> correctSmsOtpReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> incorrectAuthAppOtpReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> correctAuthAppOtpReceived(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         return Result.success(null);
     }
 

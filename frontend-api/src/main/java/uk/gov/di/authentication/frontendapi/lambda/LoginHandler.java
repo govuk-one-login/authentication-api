@@ -47,7 +47,7 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -204,15 +204,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var internalCommonSubjectId = getInternalCommonSubjectId(userProfile);
         auditContext = auditContext.withUserId(internalCommonSubjectId);
 
-        UserPermissionContext userPermissionContext =
-                UserPermissionContext.builder()
+        PermissionContext permissionContext =
+                PermissionContext.builder()
                         .withInternalSubjectId(userProfile.getSubjectID())
                         .withRpPairwiseId(calculatedPairwiseId)
                         .withEmailAddress(userProfile.getEmail())
                         .build();
 
         var decisionResult =
-                permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
+                permissionDecisionManager.canReceivePassword(journeyType, permissionContext);
         if (decisionResult.isFailure()) {
             DecisionError failure = decisionResult.getFailure();
             LOG.error("Failure to get canReceivePassword decision due to {}", failure);
@@ -267,7 +267,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (!credentialsAreValid(request, userProfile)) {
             return handleInvalidCredentials(
-                    auditContext, userProfile, journeyType, authSession, userPermissionContext);
+                    auditContext, userProfile, journeyType, authSession, permissionContext);
         }
 
         return handleValidCredentials(
@@ -279,7 +279,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 auditContext,
                 authSession,
                 journeyType,
-                userPermissionContext);
+                permissionContext);
     }
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
@@ -297,7 +297,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditContext auditContext,
             AuthSessionItem authSessionItem,
             JourneyType journeyType,
-            UserPermissionContext userPermissionContext) {
+            PermissionContext permissionContext) {
 
         var userMfaDetail =
                 getUserMFADetail(
@@ -376,7 +376,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (userMfaDetail.isMfaRequired()) {
             if (defaultMfaMethod.isPresent()) {
                 Optional<ErrorResponse> codeBlocks =
-                        checkMfaCodeBlocks(journeyType, userPermissionContext);
+                        checkMfaCodeBlocks(journeyType, permissionContext);
 
                 if (codeBlocks.isPresent()) {
                     return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
@@ -408,11 +408,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserProfile userProfile,
             JourneyType journeyType,
             AuthSessionItem authSession,
-            UserPermissionContext userPermissionContext) {
-        userActionsManager.incorrectPasswordReceived(journeyType, userPermissionContext);
+            PermissionContext permissionContext) {
+        userActionsManager.incorrectPasswordReceived(journeyType, permissionContext);
 
         var decisionResult =
-                permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
+                permissionDecisionManager.canReceivePassword(journeyType, permissionContext);
         if (decisionResult.isFailure()) {
             DecisionError failure = decisionResult.getFailure();
             LOG.error("Failure to get canReceivePassword decision due to {}", failure);
@@ -425,7 +425,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                 auditContext,
-                pair(INTERNAL_SUBJECT_ID, userPermissionContext.internalSubjectId()),
+                pair(INTERNAL_SUBJECT_ID, permissionContext.internalSubjectId()),
                 pair(INCORRECT_PASSWORD_COUNT, attemptCount),
                 pair(
                         AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
@@ -438,7 +438,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
-                    ReauthMetadataBuilder.builder(userPermissionContext.rpPairwiseId())
+                    ReauthMetadataBuilder.builder(permissionContext.rpPairwiseId())
                             .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
                             .withFailureReason(reauthFailureReason)
                             .build());
@@ -477,10 +477,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private Optional<ErrorResponse> checkMfaCodeBlocks(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         var canSendSmsOtpResult =
-                permissionDecisionManager.canSendSmsOtpNotification(
-                        journeyType, userPermissionContext);
+                permissionDecisionManager.canSendSmsOtpNotification(journeyType, permissionContext);
         if (canSendSmsOtpResult.isFailure()) {
             DecisionError failure = canSendSmsOtpResult.getFailure();
             LOG.error("Failure to get canSendSmsOtpNotification decision due to {}", failure);
@@ -496,7 +495,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         var canVerifyMfaOtpResult =
-                permissionDecisionManager.canVerifyMfaOtp(journeyType, userPermissionContext);
+                permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext);
         if (canVerifyMfaOtpResult.isFailure()) {
             DecisionError failure = canVerifyMfaOtpResult.getFailure();
             LOG.error("Failure to get canVerifyMfaOtp decision due to {}", failure);

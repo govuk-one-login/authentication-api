@@ -40,7 +40,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -205,12 +205,10 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         updateAccountRecoveryBlockTable(
                 userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
 
-        UserPermissionContext userPermissionContext =
-                UserPermissionContext.builder()
-                        .withEmailAddress(userCredentials.getEmail())
-                        .build();
+        PermissionContext permissionContext =
+                PermissionContext.builder().withEmailAddress(userCredentials.getEmail()).build();
 
-        userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
+        userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, permissionContext);
 
         AuditableEvent auditableEvent;
         if (testUserHelper.isTestJourney(userContext)) {

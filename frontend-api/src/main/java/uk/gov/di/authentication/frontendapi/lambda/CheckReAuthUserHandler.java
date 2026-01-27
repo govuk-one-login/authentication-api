@@ -34,8 +34,8 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -176,8 +176,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 calculatedPairwiseIdFromUserSuppliedEmail != null
                         && calculatedPairwiseIdFromUserSuppliedEmail.equals(request.rpPairwiseId());
 
-        var userPermissionContext =
-                UserPermissionContext.builder()
+        var permissionContext =
+                PermissionContext.builder()
                         .withInternalSubjectIds(
                                 Arrays.asList(
                                         isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId
@@ -191,7 +191,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         var canReceiveEmailAddressResult =
                 permissionDecisionManager.canReceiveEmailAddress(
-                        JourneyType.REAUTHENTICATION, userPermissionContext);
+                        JourneyType.REAUTHENTICATION, permissionContext);
         if (canReceiveEmailAddressResult.isFailure()) {
             DecisionError failure = canReceiveEmailAddressResult.getFailure();
             LOG.error("Failure to get canReceiveEmailAddress decision due to {}", failure);
@@ -264,8 +264,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             String userSuppliedEmail,
             Optional<UserProfile> userProfileOfSuppliedEmail) {
 
-        var userPermissionContext =
-                UserPermissionContext.builder()
+        var permissionContext =
+                PermissionContext.builder()
                         .withRpPairwiseId(rpPairwiseId)
                         .withInternalSubjectId(
                                 userProfileOfSignedInUser
@@ -275,7 +275,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         var trackingResult =
                 userActionsManager.incorrectEmailAddressReceived(
-                        JourneyType.REAUTHENTICATION, userPermissionContext);
+                        JourneyType.REAUTHENTICATION, permissionContext);
         if (trackingResult.isFailure()) {
             TrackingError failure = trackingResult.getFailure();
             LOG.error("Failed to track incorrect email address: {}", failure);
@@ -284,7 +284,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         var canReceiveEmailAddressResult =
                 permissionDecisionManager.canReceiveEmailAddress(
-                        JourneyType.REAUTHENTICATION, userPermissionContext);
+                        JourneyType.REAUTHENTICATION, permissionContext);
         if (canReceiveEmailAddressResult.isFailure()) {
             DecisionError failure = canReceiveEmailAddressResult.getFailure();
             LOG.error("Failure to get canReceiveEmailAddress decision due to {}", failure);
