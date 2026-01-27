@@ -10,21 +10,21 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class UserPermissionContextTest {
+class PermissionContextTest {
 
     private static final String INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String RP_PAIRWISE_ID = "test-rp-pairwise-id";
     private static final String EMAIL_ADDRESS = "test@example.com";
 
     @Test
-    void shouldBuildUserPermissionContextSuccessfully() {
+    void shouldBuildPermissionContextSuccessfully() {
         // Given
         AuthSessionItem authSessionItem = new AuthSessionItem();
         authSessionItem.setSessionId("test-session-id");
 
         // When
-        UserPermissionContext context =
-                UserPermissionContext.builder()
+        PermissionContext context =
+                PermissionContext.builder()
                         .withInternalSubjectId(INTERNAL_SUBJECT_ID)
                         .withRpPairwiseId(RP_PAIRWISE_ID)
                         .withEmailAddress(EMAIL_ADDRESS)
@@ -40,9 +40,9 @@ class UserPermissionContextTest {
     }
 
     @Test
-    void shouldBuildUserPermissionContextWithNullValues() {
+    void shouldBuildPermissionContextWithNullValues() {
         // When
-        UserPermissionContext context = UserPermissionContext.builder().build();
+        PermissionContext context = PermissionContext.builder().build();
 
         // Then
         assertEquals(null, context.internalSubjectIds());
@@ -52,10 +52,10 @@ class UserPermissionContextTest {
     }
 
     @Test
-    void shouldBuildUserPermissionContextWithNullInternalSubjectIdInBuilder() {
+    void shouldBuildPermissionContextWithNullInternalSubjectIdInBuilder() {
         // When
-        UserPermissionContext context =
-                UserPermissionContext.builder()
+        PermissionContext context =
+                PermissionContext.builder()
                         .withInternalSubjectId(null)
                         .withRpPairwiseId(RP_PAIRWISE_ID)
                         .withEmailAddress(EMAIL_ADDRESS)
@@ -71,8 +71,8 @@ class UserPermissionContextTest {
     @Test
     void shouldReturnSingleInternalSubjectIdSuccessfully() {
         // When
-        UserPermissionContext context =
-                UserPermissionContext.builder().withInternalSubjectId(INTERNAL_SUBJECT_ID).build();
+        PermissionContext context =
+                PermissionContext.builder().withInternalSubjectId(INTERNAL_SUBJECT_ID).build();
 
         // Then
         assertEquals(List.of(INTERNAL_SUBJECT_ID), context.internalSubjectIds());
@@ -82,10 +82,8 @@ class UserPermissionContextTest {
     @Test
     void shouldThrowExceptionWhenAccessingSingleInternalSubjectIdWhenThereAreMultipleIds() {
         // Given
-        UserPermissionContext context =
-                UserPermissionContext.builder()
-                        .withInternalSubjectIds(List.of("id1", "id2"))
-                        .build();
+        PermissionContext context =
+                PermissionContext.builder().withInternalSubjectIds(List.of("id1", "id2")).build();
 
         // When/Then
         IllegalStateException exception =

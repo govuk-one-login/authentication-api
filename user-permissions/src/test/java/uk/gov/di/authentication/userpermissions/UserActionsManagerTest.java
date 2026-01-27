@@ -11,8 +11,8 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,8 +42,8 @@ class UserActionsManagerTest {
     private static final String SESSION_ID = "session-123";
     private final AuthSessionItem authSession =
             new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);
-    private final UserPermissionContext userPermissionContext =
-            UserPermissionContext.builder()
+    private final PermissionContext permissionContext =
+            PermissionContext.builder()
                     .withEmailAddress(EMAIL)
                     .withAuthSessionItem(authSession)
                     .build();
@@ -66,8 +66,7 @@ class UserActionsManagerTest {
         @Test
         void passwordResetShouldDeleteIncorrectPasswordCountAndBlock() {
             var result =
-                    userActionsManager.passwordReset(
-                            JourneyType.PASSWORD_RESET, userPermissionContext);
+                    userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, permissionContext);
 
             verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
             verify(codeStorageService)
@@ -80,8 +79,7 @@ class UserActionsManagerTest {
 
         @Test
         void passwordResetShouldHandleDifferentJourneyTypes() {
-            var result =
-                    userActionsManager.passwordReset(JourneyType.SIGN_IN, userPermissionContext);
+            var result = userActionsManager.passwordReset(JourneyType.SIGN_IN, permissionContext);
 
             verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
             verify(codeStorageService)
@@ -99,7 +97,7 @@ class UserActionsManagerTest {
         void sentEmailOtpNotificationShouldIncrementPasswordResetCountForPasswordResetJourney() {
             var result =
                     userActionsManager.sentEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, userPermissionContext);
+                            JourneyType.PASSWORD_RESET, permissionContext);
 
             verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertTrue(result.isSuccess());
@@ -112,7 +110,7 @@ class UserActionsManagerTest {
                 sessionWithMaxCount = sessionWithMaxCount.incrementPasswordResetCount();
             }
             var contextWithMaxCount =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withEmailAddress(EMAIL)
                             .withAuthSessionItem(sessionWithMaxCount)
                             .build();
@@ -138,7 +136,7 @@ class UserActionsManagerTest {
                 sessionWithExactMaxCount = sessionWithExactMaxCount.incrementPasswordResetCount();
             }
             var contextWithExactMaxCount =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withEmailAddress(EMAIL)
                             .withAuthSessionItem(sessionWithExactMaxCount)
                             .build();
@@ -161,7 +159,7 @@ class UserActionsManagerTest {
         void sentEmailOtpNotificationShouldNotBlockForNonPasswordResetJourney() {
             var result =
                     userActionsManager.sentEmailOtpNotification(
-                            JourneyType.SIGN_IN, userPermissionContext);
+                            JourneyType.SIGN_IN, permissionContext);
 
             verify(codeStorageService, never())
                     .saveBlockedForEmail(anyString(), anyString(), anyLong());
@@ -175,7 +173,7 @@ class UserActionsManagerTest {
         @Test
         void shouldCreateOrIncrementCountForReauthenticationJourney() {
             var contextWithSubjectId =
-                    new UserPermissionContext("subject-123", "pairwise-456", EMAIL, authSession);
+                    new PermissionContext("subject-123", "pairwise-456", EMAIL, authSession);
             when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120L);
 
             var result =
@@ -198,7 +196,7 @@ class UserActionsManagerTest {
 
             var result =
                     userActionsManager.incorrectPasswordReceived(
-                            JourneyType.SIGN_IN, userPermissionContext);
+                            JourneyType.SIGN_IN, permissionContext);
 
             verify(codeStorageService).increaseIncorrectPasswordCount(EMAIL);
             verify(codeStorageService, never())
@@ -215,7 +213,7 @@ class UserActionsManagerTest {
 
             var result =
                     userActionsManager.incorrectPasswordReceived(
-                            JourneyType.SIGN_IN, userPermissionContext);
+                            JourneyType.SIGN_IN, permissionContext);
 
             verify(codeStorageService).increaseIncorrectPasswordCount(EMAIL);
             verify(codeStorageService)
@@ -235,7 +233,7 @@ class UserActionsManagerTest {
         @Test
         void shouldIncrementCountForReauthenticationJourney() {
             var context =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withInternalSubjectId("internal-subject-id")
                             .withRpPairwiseId("rp-pairwise-id")
                             .build();
@@ -257,7 +255,7 @@ class UserActionsManagerTest {
         @Test
         void shouldUseRpPairwiseIdWhenInternalSubjectIdIsNull() {
             var context =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withInternalSubjectId(null)
                             .withRpPairwiseId("rp-pairwise-id")
                             .build();
@@ -279,7 +277,7 @@ class UserActionsManagerTest {
         @Test
         void shouldReturnStorageErrorWhenExceptionThrown() {
             var context =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withInternalSubjectId("internal-subject-id")
                             .withRpPairwiseId("rp-pairwise-id")
                             .build();
@@ -303,7 +301,7 @@ class UserActionsManagerTest {
         @Test
         void allNoOpMethodsShouldReturnSuccessWithNull() {
             var journeyType = JourneyType.SIGN_IN;
-            var context = userPermissionContext;
+            var context = permissionContext;
 
             assertTrue(
                     userActionsManager

@@ -16,7 +16,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -286,7 +286,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorWhenEmailAddressIsNull() {
             var userContext =
-                    new UserPermissionContext("subject", "pairwise", null, new AuthSessionItem());
+                    new PermissionContext("subject", "pairwise", null, new AuthSessionItem());
 
             var result =
                     permissionDecisionManager.canReceivePassword(
@@ -384,7 +384,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorForReauthenticationJourneyWhenInternalSubjectIdIsNull() {
             var userContext =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withRpPairwiseId("pairwise")
                             .withEmailAddress(EMAIL)
                             .withAuthSessionItem(new AuthSessionItem())
@@ -400,8 +400,7 @@ class PermissionDecisionManagerTest {
 
         @Test
         void shouldReturnErrorForReauthenticationJourneyWhenRpPairwiseIdIsNull() {
-            var userContext =
-                    new UserPermissionContext("subject", null, EMAIL, new AuthSessionItem());
+            var userContext = new PermissionContext("subject", null, EMAIL, new AuthSessionItem());
 
             var result =
                     permissionDecisionManager.canReceivePassword(
@@ -605,7 +604,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldUseGetCountsByJourneyWhenInternalSubjectIdIsNull() {
             var userContext =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withRpPairwiseId("rp-pairwise-id")
                             .withEmailAddress(EMAIL)
                             .withAuthSessionItem(new AuthSessionItem())
@@ -747,7 +746,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorForReauthenticationWithNullInternalSubjectIds() {
             var userContext =
-                    new UserPermissionContext(
+                    new PermissionContext(
                             (List<String>) null, "rp-pairwise-id", EMAIL, new AuthSessionItem());
 
             var result =
@@ -761,7 +760,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorForReauthenticationWithNullRpPairwiseId() {
             var userContext =
-                    new UserPermissionContext(
+                    new PermissionContext(
                             List.of("internal-subject-id"), null, EMAIL, new AuthSessionItem());
 
             var result =
@@ -815,13 +814,12 @@ class PermissionDecisionManagerTest {
         }
     }
 
-    private UserPermissionContext createUserContext(int passwordResetCount) {
+    private PermissionContext createUserContext(int passwordResetCount) {
         var authSession = new AuthSessionItem().withEmailAddress(EMAIL);
         for (int i = 0; i < passwordResetCount; i++) {
             authSession = authSession.incrementPasswordResetCount();
         }
 
-        return new UserPermissionContext(
-                "internal-subject-id", "rp-pairwise-id", EMAIL, authSession);
+        return new PermissionContext("internal-subject-id", "rp-pairwise-id", EMAIL, authSession);
     }
 }

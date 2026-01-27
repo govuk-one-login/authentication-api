@@ -4,13 +4,13 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 
 import java.util.List;
 
-public record UserPermissionContext(
+public record PermissionContext(
         List<String> internalSubjectIds,
         String rpPairwiseId,
         String emailAddress,
         AuthSessionItem authSessionItem) {
 
-    public UserPermissionContext(
+    public PermissionContext(
             String internalSubjectId,
             String rpPairwiseId,
             String emailAddress,
@@ -64,8 +64,8 @@ public record UserPermissionContext(
             return this;
         }
 
-        public UserPermissionContext build() {
-            return new UserPermissionContext(
+        public PermissionContext build() {
+            return new PermissionContext(
                     internalSubjectIds, rpPairwiseId, emailAddress, authSessionItem);
         }
     }

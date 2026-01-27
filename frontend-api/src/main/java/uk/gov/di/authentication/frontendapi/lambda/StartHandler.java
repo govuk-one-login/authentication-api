@@ -31,7 +31,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -242,7 +242,7 @@ public class StartHandler
             boolean isBlockedForReauth = false;
             if (configurationService.isAuthenticationAttemptsServiceEnabled() && reauthenticate) {
                 var permissionContext =
-                        buildUserPermissionContext(authSession, startRequest, userContext);
+                        buildPermissionContext(authSession, startRequest, userContext);
                 var permissionResult =
                         permissionDecisionManager.canStartJourney(
                                 JourneyType.REAUTHENTICATION, permissionContext);
@@ -330,9 +330,9 @@ public class StartHandler
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
-    private UserPermissionContext buildUserPermissionContext(
+    private PermissionContext buildPermissionContext(
             AuthSessionItem authSession, StartRequest startRequest, UserContext userContext) {
-        return new UserPermissionContext(
+        return new PermissionContext(
                 authSession.getInternalCommonSubjectId(),
                 startRequest.rpPairwiseIdForReauth(),
                 userContext.getUserProfile().map(UserProfile::getEmail).orElse(null),
