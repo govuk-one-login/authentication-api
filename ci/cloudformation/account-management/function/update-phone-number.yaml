@@ -4,7 +4,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-account-management-update-phone-number-lambda
+        - ${Env}-update-phone-number-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       MemorySize:
@@ -112,13 +112,13 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-account-management-update-phone-number-errors
+        - ${Env}-update-phone-number-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref UpdatePhoneNumberFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-account-management-update-phone-number-error-count
+            - ${Env}-update-phone-number-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
@@ -132,7 +132,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-management-update-phone-number-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-update-phone-number-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -149,12 +149,12 @@ Resources:
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-account-management-update-phone-number-alarm
+        - ${Env}-update-phone-number-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-account-management-update-phone-number-error-count
+        - ${Env}-update-phone-number-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -175,7 +175,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-account-management-update-phone-number-lambda. ${RunbookLink}"
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-update-phone-number-lambda. ${RunbookLink}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ErrorRateThreshold:
             !FindInMap [
@@ -192,7 +192,7 @@ Resources:
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-account-management-update-phone-number-error-rate-alarm
+        - ${Env}-update-phone-number-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -211,7 +211,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-management-update-phone-number-lambda
+                    - ${Env}-update-phone-number-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -230,7 +230,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-management-update-phone-number-lambda
+                    - ${Env}-update-phone-number-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
