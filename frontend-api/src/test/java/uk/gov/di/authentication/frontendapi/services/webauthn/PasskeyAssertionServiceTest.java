@@ -9,11 +9,11 @@ import com.yubico.webauthn.exception.AssertionFailedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -42,7 +42,8 @@ public class PasskeyAssertionServiceTest {
             when(relyingParty.finishAssertion(any())).thenReturn(mockAssertionResult);
 
             // When
-            AssertionResult actualAssertionResult = passkeyAssertionService.finishAssertion("", "");
+            AssertionResult actualAssertionResult =
+                    passkeyAssertionService.finishAssertion("", "").getSuccess();
 
             // Then
             assertEquals(actualAssertionResult, mockAssertionResult);
@@ -52,36 +53,39 @@ public class PasskeyAssertionServiceTest {
     @Nested
     class Error {
         @Test
-        void shouldThrowIOExceptionWhenAssertionRequestJsonParsingFails()
+        void shouldFailWithParsingAssertionRequestErrorWhenAssertionRequestJsonParsingFails()
                 throws JsonProcessingException {
             // Given
             when(jsonParser.parseAssertionRequest(any())).thenThrow(JsonProcessingException.class);
 
-            // When/Then
-            assertThrows(
-                    IOException.class,
-                    () -> {
-                        passkeyAssertionService.finishAssertion("", "");
-                    });
+            // When
+            FinishPasskeyAssertionFailureReason actualFailureReason =
+                    passkeyAssertionService.finishAssertion("", "").getFailure();
+
+            // Then
+            assertEquals(
+                    FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR,
+                    actualFailureReason);
         }
 
         @Test
-        void shouldThrowIOExceptionWhenPKCJsonParsingFails() throws IOException {
+        void shouldFailWithParsingPkcErrorWhenPKCJsonParsingFails() throws IOException {
             // Given
             when(jsonParser.parseAssertionRequest(any())).thenReturn(mock(AssertionRequest.class));
             when(jsonParser.parsePublicKeyCredential(any())).thenThrow(IOException.class);
 
-            // When/Then
-            assertThrows(
-                    IOException.class,
-                    () -> {
-                        passkeyAssertionService.finishAssertion("", "");
-                    });
+            // When
+            FinishPasskeyAssertionFailureReason actualFailureReason =
+                    passkeyAssertionService.finishAssertion("", "").getFailure();
+
+            // Then
+            assertEquals(
+                    FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR, actualFailureReason);
         }
 
         @Test
         @SuppressWarnings("unchecked")
-        void shouldThrowAssertionFailedExceptionWhenAssertionFails()
+        void shouldFailWithAssertionFailedErrorWhenAssertionFails()
                 throws IOException, AssertionFailedException {
             // Given
             when(jsonParser.parseAssertionRequest(any())).thenReturn(mock(AssertionRequest.class));
@@ -89,12 +93,14 @@ public class PasskeyAssertionServiceTest {
                     .thenReturn(mock(PublicKeyCredential.class));
             when(relyingParty.finishAssertion(any())).thenThrow(AssertionFailedException.class);
 
-            // When/Then
-            assertThrows(
-                    AssertionFailedException.class,
-                    () -> {
-                        passkeyAssertionService.finishAssertion("", "");
-                    });
+            // When
+            FinishPasskeyAssertionFailureReason actualFailureReason =
+                    passkeyAssertionService.finishAssertion("", "").getFailure();
+
+            // Then
+            assertEquals(
+                    FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR,
+                    actualFailureReason);
         }
     }
 }

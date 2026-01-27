@@ -3,18 +3,18 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.yubico.webauthn.AssertionResult;
-import com.yubico.webauthn.exception.AssertionFailedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
-import java.io.IOException;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,13 +56,12 @@ class FinishPasskeyAssertionHandlerTest {
     @Nested
     class Success {
         @Test
-        void shouldReturn200WhenPasskeyAssertionSuccessful()
-                throws IOException, AssertionFailedException {
+        void shouldReturn200WhenPasskeyAssertionSuccessful() {
             // Given
             AssertionResult mockAssertionResult = mock(AssertionResult.class);
             when(mockAssertionResult.isSuccess()).thenReturn(true);
             when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenReturn(mockAssertionResult);
+                    .thenReturn(Result.success(mockAssertionResult));
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
@@ -91,50 +90,67 @@ class FinishPasskeyAssertionHandlerTest {
     @Nested
     class Error {
         @Test
-        void shouldReturn400WhenJsonDeserializationFails()
-                throws IOException, AssertionFailedException {
+        void shouldReturn500WhenAssertionRequestDeserializationFails() {
             // Given
             when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenThrow(IOException.class);
-
-            // When
-            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
-
-            // Then
-            assertThat(response, hasStatus(400));
-            assertThat(response, hasBody("Bad request"));
-        }
-
-        @Test
-        void shouldReturn500WhenPasskeyAssertionFailed()
-                throws IOException, AssertionFailedException {
-            // Given
-            when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenThrow(AssertionFailedException.class);
+                    .thenReturn(
+                            Result.failure(
+                                    FinishPasskeyAssertionFailureReason
+                                            .PARSING_ASSERTION_REQUEST_ERROR));
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
 
             // Then
             assertThat(response, hasStatus(500));
-            assertThat(response, hasBody("Internal server error validating assertion"));
+            assertThat(response, hasBody("Error parsing stored assertion request"));
         }
 
         @Test
-        void shouldReturn401WhenPasskeyAssertionUnsuccessful()
-                throws IOException, AssertionFailedException {
+        void shouldReturn400WhenPKCDeserializationFails() {
             // Given
-            AssertionResult mockAssertionResult = mock(AssertionResult.class);
-            when(mockAssertionResult.isSuccess()).thenReturn(false);
             when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenReturn(mockAssertionResult);
+                    .thenReturn(
+                            Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR));
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
 
             // Then
-            assertThat(response, hasStatus(401));
-            assertThat(response, hasBody("Failed authenticating with passkey"));
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody("Error parsing PKC object"));
+        }
+
+        @Test
+        void shouldReturn400WhenPasskeyAssertionFailed() {
+            // Given
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(
+                            Result.failure(
+                                    FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR));
+
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody("Assertion failed"));
+        }
+
+        @Test
+        void shouldReturn400WhenPasskeyAssertionUnsuccessful() {
+            // Given
+            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            when(mockAssertionResult.isSuccess()).thenReturn(false);
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(Result.success(mockAssertionResult));
+
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody("Assertion failed"));
         }
     }
 

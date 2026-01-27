@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services.webauthn;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.FinishAssertionOptions;
@@ -8,6 +9,8 @@ import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import com.yubico.webauthn.exception.AssertionFailedException;
+import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
+import uk.gov.di.authentication.shared.entity.Result;
 
 import java.io.IOException;
 
@@ -20,18 +23,37 @@ public class PasskeyAssertionService {
         this.jsonParser = jsonParser;
     }
 
-    public AssertionResult finishAssertion(
-            String assertionRequestJson, String publicKeyCredentialJson)
-            throws IOException, AssertionFailedException {
+    public Result<FinishPasskeyAssertionFailureReason, AssertionResult> finishAssertion(
+            String assertionRequestJson, String publicKeyCredentialJson) {
 
-        AssertionRequest assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
+        AssertionRequest assertionRequest;
+        try {
+            assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
+        } catch (JsonProcessingException e) {
+            return Result.failure(
+                    FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
+        }
+
         PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
-                credential = jsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
+                credential;
+        try {
+            credential = jsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
+        } catch (IOException e) {
+            return Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR);
+        }
 
-        return relyingParty.finishAssertion(
-                FinishAssertionOptions.builder()
-                        .request(assertionRequest)
-                        .response(credential)
-                        .build());
+        AssertionResult assertionResult;
+        try {
+            assertionResult =
+                    relyingParty.finishAssertion(
+                            FinishAssertionOptions.builder()
+                                    .request(assertionRequest)
+                                    .response(credential)
+                                    .build());
+        } catch (AssertionFailedException e) {
+            return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
+        }
+
+        return Result.success(assertionResult);
     }
 }
