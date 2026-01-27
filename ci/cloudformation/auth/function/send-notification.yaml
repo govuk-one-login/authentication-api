@@ -106,7 +106,7 @@ Resources:
             !Ref TestClientEmailAllowListSecretAccessPolicy,
             !Ref AWS::NoValue,
           ]
-#        TODO: Need read access to new dynamo table.
+        - !Ref DynamoInternationalNumberSendCountReadAccessPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:

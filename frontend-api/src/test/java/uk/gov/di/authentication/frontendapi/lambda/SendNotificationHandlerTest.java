@@ -1477,7 +1477,7 @@ class SendNotificationHandlerTest {
             @Test
             void shouldReturn400WhenInternationalSmsLimitReached() {
                 when(internationalSmsSendLimitService.hasReachedInternationalSmsLimit(anyString()))
-                        .thenReturn(false);
+                        .thenReturn(true);
                 usingValidSession();
 
                 var body =
