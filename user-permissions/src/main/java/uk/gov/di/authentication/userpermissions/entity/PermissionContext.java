@@ -39,6 +39,15 @@ public record PermissionContext(
         private String emailAddress;
         private AuthSessionItem authSessionItem;
 
+        public Builder from(PermissionContext permissionContext) {
+            this.internalSubjectIds = permissionContext.internalSubjectIds;
+            this.rpPairwiseId = permissionContext.rpPairwiseId;
+            this.emailAddress = permissionContext.emailAddress;
+            this.authSessionItem = permissionContext.authSessionItem;
+            this.e164FormattedPhoneNumber = permissionContext.e164FormattedPhoneNumber;
+            return this;
+        }
+
         public Builder withInternalSubjectId(String internalSubjectId) {
             return withInternalSubjectIds(
                     internalSubjectId != null ? List.of(internalSubjectId) : List.of());
