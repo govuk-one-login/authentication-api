@@ -257,9 +257,18 @@ public class IntegrationTest {
             super.systemService = systemService;
         }
 
+        public String getKeyId() {
+            return externalTokenSigningKey.getKeyId();
+        }
+
         @Override
         public String getExternalTokenSigningKeyAlias() {
             return externalTokenSigningKey.getKeyAlias();
+        }
+
+        @Override
+        public String getNextExternalTokenSigningKeyAlias() {
+            return externalTokenSigningKey.getNewKeyAlias();
         }
 
         @Override

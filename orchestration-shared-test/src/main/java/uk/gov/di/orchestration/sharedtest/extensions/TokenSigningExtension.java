@@ -17,6 +17,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
+
 public class TokenSigningExtension extends KmsKeyExtension {
 
     private KmsConnectionService kmsConnectionService;
@@ -33,13 +35,18 @@ public class TokenSigningExtension extends KmsKeyExtension {
     public void beforeAll(ExtensionContext context) {
         super.beforeAll(context);
         kmsConnectionService =
-                new KmsConnectionService(Optional.of(LOCALSTACK_ENDPOINT), REGION, getKeyAlias());
+                new KmsConnectionService(
+                        Optional.of(LOCALSTACK_ENDPOINT), REGION, getKeyId(), getNewKeyId());
     }
 
     public SignedJWT signJwt(JWTClaimsSet claimsSet) {
         try {
             JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(getKeyAlias()).build();
+                    new JWSHeader.Builder(JWSAlgorithm.ES256)
+                            .keyID(
+                                    hashSha256String(
+                                            "arn:aws:kms:eu-west-2:000000000000:key/" + getKeyId()))
+                            .build();
             Base64URL encodedHeader = jwsHeader.toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;

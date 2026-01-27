@@ -2,6 +2,7 @@ package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -46,7 +47,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -339,7 +339,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet)
             throws JOSEException, NoSuchAlgorithmException {
-        var jwsHeader = new JWSHeader(ES256);
+        var jwsHeader =
+                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(configuration.getKeyId()).build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
 
         var keyPairGenerator = KeyPairGenerator.getInstance("EC");

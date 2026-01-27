@@ -22,9 +22,14 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     protected KmsClient kms;
     protected final String keyAliasSuffix;
+    protected final String newKeyAliasSuffix;
 
     private String keyAlias;
+    private String newKeyAlias;
     private final KeyUsageType keyUsageType;
+
+    private String keyId;
+    private String newKeyId;
 
     public KmsKeyExtension(String keyAliasSuffix) {
         this(keyAliasSuffix, SIGN_VERIFY);
@@ -32,6 +37,7 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     public KmsKeyExtension(String keyAliasSuffix, KeyUsageType keyUsageType) {
         this.keyAliasSuffix = keyAliasSuffix;
+        this.newKeyAliasSuffix = "new-" + keyAliasSuffix;
         this.keyUsageType = keyUsageType;
     }
 
@@ -50,18 +56,29 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         keyAliasSuffix);
 
+        newKeyAlias =
+                format(
+                        "alias/{0}-{1}",
+                        context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
+                        newKeyAliasSuffix);
+
         if (!keyExists(keyAlias)) {
             if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
-                createEncryptionKey(keyAlias);
+                createEncryptionKey();
             } else {
-                createTokenSigningKey(keyAlias);
+                createTokenSigningKeys();
             }
         }
     }
 
+    protected void createTokenSigningKeys() {
+        keyId = createTokenSigningKey(keyAlias);
+        newKeyId = createTokenSigningKey(newKeyAlias);
+    }
+
     // https://github.com/aws/aws-sdk/issues/125
     @SuppressWarnings("deprecation")
-    protected void createTokenSigningKey(String keyAlias) {
+    protected String createTokenSigningKey(String keyAlias) {
         var keyRequest =
                 CreateKeyRequest.builder()
                         .keyUsage(SIGN_VERIFY)
@@ -76,9 +93,11 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         .build();
 
         kms.createAlias(aliasRequest);
+
+        return keyResponse.keyMetadata().keyId();
     }
 
-    protected void createEncryptionKey(String keyAlias) {
+    protected void createEncryptionKey() {
         CreateKeyRequest keyRequest =
                 CreateKeyRequest.builder()
                         .keySpec(KeySpec.RSA_2048)
@@ -86,6 +105,8 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         .build();
 
         var keyResponse = kms.createKey(keyRequest);
+
+        keyId = keyResponse.keyMetadata().keyId();
 
         CreateAliasRequest aliasRequest =
                 CreateAliasRequest.builder()
@@ -108,5 +129,17 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     public String getKeyAlias() {
         return keyAlias;
+    }
+
+    public String getNewKeyAlias() {
+        return newKeyAlias;
+    }
+
+    public String getKeyId() {
+        return keyId;
+    }
+
+    public String getNewKeyId() {
+        return newKeyId;
     }
 }
