@@ -43,6 +43,7 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -85,6 +86,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.USER_SUBM
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
+import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -96,6 +98,7 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PER
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
@@ -127,6 +130,8 @@ class SendNotificationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService =
+            mock(InternationalSmsSendLimitService.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
 
     private final Context context = mock(Context.class);
@@ -164,6 +169,7 @@ class SendNotificationHandlerTest {
                     auditService,
                     authSessionService,
                     cloudwatchMetricsService,
+                    internationalSmsSendLimitService,
                     testUserHelper);
 
     @RegisterExtension
@@ -194,6 +200,7 @@ class SendNotificationHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.isInternalApiNewInternationalSmsEnabled()).thenReturn(true);
+        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(true);
 
         var userCreds =
                 new UserCredentials()
@@ -1073,7 +1080,7 @@ class SendNotificationHandlerTest {
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL,
                                 VERIFY_PHONE_NUMBER,
-                                CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                                INTERNATIONAL_MOBILE_NUMBER,
                                 journeyType);
                 var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -1139,6 +1146,24 @@ class SendNotificationHandlerTest {
 
                 assertEquals(400, result.getStatusCode());
                 assertThat(result, hasJsonBody(ErrorResponse.PHONE_NUMBER_MISSING));
+                verifyNoInteractions(emailSqsClient);
+                verifyNoInteractions(auditService);
+            }
+
+            @Test
+            void shouldReturn400ForMfaSmsRequest() {
+                usingValidSession();
+
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL, MFA_SMS, UK_MOBILE_NUMBER, SIGN_IN);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertThat(result, hasStatus(400));
+                assertThat(result, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(auditService);
             }
@@ -1448,6 +1473,24 @@ class SendNotificationHandlerTest {
 
                 assertEquals(400, result.getStatusCode());
                 assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
+            }
+
+            @Test
+            void shouldReturn400WhenInternationalSmsLimitReached() {
+                when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(false);
+                usingValidSession();
+
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL, VERIFY_PHONE_NUMBER, INTERNATIONAL_MOBILE_NUMBER, SIGN_IN);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertThat(result, hasStatus(400));
+                assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES));
+                verifyNoInteractions(emailSqsClient);
             }
         }
     }

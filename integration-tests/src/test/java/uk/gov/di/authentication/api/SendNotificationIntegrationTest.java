@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.api;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
+import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
 
 import java.util.List;
 import java.util.Map;
@@ -30,11 +32,16 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
+    private static final int INTERNATIONAL_SMS_SEND_LIMIT = 3;
     private String SESSION_ID;
 
     @RegisterExtension
     protected static final EmailCheckResultExtension emailCheckResultExtension =
             new EmailCheckResultExtension();
+
+    @RegisterExtension
+    protected static final InternationalSmsSendCountExtension internationalSmsSendCountStore =
+            new InternationalSmsSendCountExtension(INTERNATIONAL_SMS_SEND_LIMIT);
 
     private static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
@@ -105,5 +112,106 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 hasBody(
                         objectMapper.writeValueAsString(
                                 ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED)));
+    }
+
+    @Nested
+    class InternationalSmsSendLimitTests {
+        private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
+
+        @BeforeEach
+        void setup() throws Json.JsonException {
+            SESSION_ID = IdGenerator.generate();
+            authSessionExtension.addSession(SESSION_ID);
+            authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
+            var config =
+                    new IntegrationTestConfigurationService(
+                            notificationsQueue,
+                            tokenSigner,
+                            docAppPrivateKeyJwtSigner,
+                            configurationParameters) {
+                        @Override
+                        public String getTxmaAuditQueueUrl() {
+                            return txmaAuditQueue.getQueueUrl();
+                        }
+
+                        @Override
+                        public int getInternationalSmsNumberSendLimit() {
+                            return INTERNATIONAL_SMS_SEND_LIMIT;
+                        }
+                    };
+            handler = new SendNotificationHandler(config, redisConnectionService);
+        }
+
+        @Test
+        void shouldReturn400WhenInternationalNumberHasHitLimit() {
+            for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
+                internationalSmsSendCountStore.recordSmsSent(INTERNATIONAL_PHONE_NUMBER);
+            }
+
+            var requestBody =
+                    Map.of(
+                            "email",
+                            USER_EMAIL,
+                            "notificationType",
+                            NotificationType.VERIFY_PHONE_NUMBER,
+                            "phoneNumber",
+                            INTERNATIONAL_PHONE_NUMBER,
+                            "journeyType",
+                            JourneyType.REGISTRATION);
+
+            var response =
+                    makeRequest(
+                            Optional.of(requestBody),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(400));
+        }
+
+        @Test
+        void shouldReturn204WhenInternationalNumberIsBelowLimit() {
+            var requestBody =
+                    Map.of(
+                            "email",
+                            USER_EMAIL,
+                            "notificationType",
+                            NotificationType.VERIFY_PHONE_NUMBER,
+                            "phoneNumber",
+                            INTERNATIONAL_PHONE_NUMBER,
+                            "journeyType",
+                            JourneyType.REGISTRATION);
+
+            var response =
+                    makeRequest(
+                            Optional.of(requestBody),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(204));
+        }
+
+        @Test
+        void shouldReturn204ForDomesticNumberRegardlessOfLimit() {
+            String domesticNumber = "+447712345432";
+
+            var requestBody =
+                    Map.of(
+                            "email",
+                            USER_EMAIL,
+                            "notificationType",
+                            NotificationType.VERIFY_PHONE_NUMBER,
+                            "phoneNumber",
+                            domesticNumber,
+                            "journeyType",
+                            JourneyType.REGISTRATION);
+
+            var response =
+                    makeRequest(
+                            Optional.of(requestBody),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(204));
+        }
     }
 }
