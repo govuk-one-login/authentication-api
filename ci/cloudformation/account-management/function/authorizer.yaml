@@ -37,16 +37,6 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
-          USE_ACCESS_TOKEN_JWKS_ENDPOINT: !If
-            - UseAccessTokenJwksEndpoint
-            - true
-            - false
-          ACCESS_TOKEN_JWKS_URL:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              accessTokenJwksUrl,
-            ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:
@@ -60,11 +50,10 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
-          - !Ref HttpsEgressSecurityGroup
         SubnetIds:
-          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
-          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
-          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
   AuthorizerFunctionPermission:
     Type: AWS::Lambda::Permission
