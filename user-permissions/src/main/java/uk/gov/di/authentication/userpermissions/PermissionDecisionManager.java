@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelpe
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
@@ -20,6 +21,7 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -31,6 +33,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
     private final ConfigurationService configurationService;
     private CodeStorageService codeStorageService;
     private AuthenticationAttemptsService authenticationAttemptsService;
+    private InternationalSmsSendLimitService internationalSmsSendLimitService;
 
     public PermissionDecisionManager(ConfigurationService configurationService) {
         this.configurationService = configurationService;
@@ -45,10 +48,12 @@ public class PermissionDecisionManager implements PermissionDecisions {
     public PermissionDecisionManager(
             ConfigurationService configurationService,
             CodeStorageService codeStorageService,
-            AuthenticationAttemptsService authenticationAttemptsService) {
+            AuthenticationAttemptsService authenticationAttemptsService,
+            InternationalSmsSendLimitService internationalSmsSendLimitService) {
         this.configurationService = configurationService;
         this.codeStorageService = codeStorageService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
     }
 
     @Override
@@ -160,10 +165,28 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
+    @SuppressWarnings("java:S2789")
     public Result<DecisionError, Decision> canSendSmsOtpNotification(
             JourneyType journeyType, PermissionContext permissionContext) {
-        if (permissionContext.emailAddress() == null) {
+        Optional<String> phoneNumberMaybe = permissionContext.e164FormattedPhoneNumber();
+        if (permissionContext.emailAddress() == null || phoneNumberMaybe == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
+
+        if (phoneNumberMaybe.isPresent()) {
+            try {
+                var canSendSms =
+                        getInternationalSmsSendLimitService().canSendSms(phoneNumberMaybe.get());
+                if (!canSendSms) {
+                    return Result.success(
+                            new Decision.IndefinitelyLockedOut(
+                                    ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                    configurationService.getInternationalSmsNumberSendLimit()));
+                }
+            } catch (RuntimeException e) {
+                LOG.error("Could not retrieve international SMS send limit details.", e);
+                return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
+            }
         }
 
         try {
@@ -282,6 +305,14 @@ public class PermissionDecisionManager implements PermissionDecisions {
                             configurationService, new RedisConnectionService(configurationService));
         }
         return codeStorageService;
+    }
+
+    private InternationalSmsSendLimitService getInternationalSmsSendLimitService() {
+        if (internationalSmsSendLimitService == null) {
+            internationalSmsSendLimitService =
+                    new InternationalSmsSendLimitService(configurationService);
+        }
+        return internationalSmsSendLimitService;
     }
 
     private Result<DecisionError, Decision> checkForAnyReauthLockout(

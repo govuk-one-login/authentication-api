@@ -26,6 +26,8 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -69,6 +71,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
@@ -370,13 +373,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
-        var defaultMfaMethod =
+        var defaultMfaMethodMaybe =
                 MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
 
         if (userMfaDetail.isMfaRequired()) {
-            if (defaultMfaMethod.isPresent()) {
+            if (defaultMfaMethodMaybe.isPresent()) {
+                var permissionContextBuilder = PermissionContext.builder().from(permissionContext);
+                permissionContextBuilder.withE164FormattedPhoneNumber(
+                        getFormattedPhoneNumberFromMfaMethod(defaultMfaMethodMaybe.get()));
+
                 Optional<ErrorResponse> codeBlocks =
-                        checkMfaCodeBlocks(journeyType, permissionContext);
+                        checkMfaCodeBlocks(journeyType, permissionContextBuilder.build());
 
                 if (codeBlocks.isPresent()) {
                     return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
@@ -490,6 +497,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut) {
             LOG.info("User is blocked from requesting any OTP codes");
             return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+        } else if (canSendSmsOtpDecision instanceof Decision.IndefinitelyLockedOut) {
+            LOG.info("User is indefinitely blocked from requesting OTP codes");
+            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
             return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
@@ -556,5 +566,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             LOG.error("Unable to check if password was a common password");
             return false;
         }
+    }
+
+    private String getFormattedPhoneNumberFromMfaMethod(MFAMethod mfaMethod) {
+        if (mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.toString())) {
+            return formatPhoneNumber(mfaMethod.getDestination());
+        }
+        return null;
     }
 }

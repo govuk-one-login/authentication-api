@@ -68,6 +68,10 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               useStronglyConsistentReads,
             ]
+          INTERNATIONAL_SMS_NUMBER_SEND_LIMIT: !Sub
+            - "{{resolve:ssm:${env}-sms-international-number-send-limit}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       LoggingConfig:
         LogGroup: !Ref LoginFunctionLogGroup
       Policies:
@@ -79,6 +83,7 @@ Resources:
         - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoCommonPasswordsReadAccessPolicy
+        - !Ref DynamoInternationalNumberSendCountReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref PepperParametersAccessPolicy
