@@ -189,6 +189,12 @@ public class PermissionDecisionManager implements PermissionDecisions {
             }
         }
 
+        if (journeyType.equals(JourneyType.PASSWORD_RESET)) {
+            // We exit early here as there is no suppoerted CodeRequestType for PASSWORD_RESET
+            // Which means we do not yet have a counter for that
+            return Result.success(new Decision.Permitted(0));
+        }
+
         try {
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(

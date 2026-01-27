@@ -40,6 +40,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.Collections;
@@ -51,6 +52,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 
 public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompletionRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -205,10 +207,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         updateAccountRecoveryBlockTable(
                 userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
 
-        PermissionContext permissionContext =
-                PermissionContext.builder().withEmailAddress(userCredentials.getEmail()).build();
+        PermissionContext.Builder permissionContextBuilder =
+                PermissionContext.builder().withEmailAddress(userCredentials.getEmail());
 
-        userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, permissionContext);
+        userActionsManager.passwordReset(
+                JourneyType.PASSWORD_RESET, permissionContextBuilder.build());
 
         AuditableEvent auditableEvent;
         if (testUserHelper.isTestJourney(userContext)) {
@@ -228,7 +231,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     "{} EMAIL placed on queue with reference: {}",
                     emailNotifyRequest.getNotificationType(),
                     emailNotifyRequest.getUniqueNotificationReference());
-            if (shouldSendConfirmationToSms(userProfile)) {
+            if (shouldSendConfirmationToSms(userProfile, permissionContextBuilder)) {
                 var smsNotifyRequest =
                         new NotifyRequest(
                                 userProfile.getPhoneNumber(),
@@ -262,8 +265,38 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         }
     }
 
-    private boolean shouldSendConfirmationToSms(UserProfile userProfile) {
+    private boolean hasVerifiedPhoneNumber(UserProfile userProfile) {
         return Objects.nonNull(userProfile.getPhoneNumber()) && userProfile.isPhoneNumberVerified();
+    }
+
+    private boolean shouldSendConfirmationToSms(
+            UserProfile userProfile, PermissionContext.Builder permissionContextBuilder) {
+        if (!hasVerifiedPhoneNumber(userProfile)) {
+            return false;
+        }
+
+        var canSendSmsOtpResult =
+                permissionDecisionManager.canSendSmsOtpNotification(
+                        JourneyType.PASSWORD_RESET,
+                        permissionContextBuilder
+                                .withE164FormattedPhoneNumber(
+                                        formatPhoneNumber(userProfile.getPhoneNumber()))
+                                .build());
+
+        if (canSendSmsOtpResult.isFailure()) {
+            LOG.error(
+                    "Failure to get canSendSmsOtpNotification decision due to {}",
+                    canSendSmsOtpResult.getFailure());
+            return false;
+        }
+
+        var decision = canSendSmsOtpResult.getSuccess();
+        if (decision instanceof Decision.Permitted) {
+            return true;
+        } else {
+            LOG.info("User is {} from receiving SMS notifications", decision.getClass().getName());
+            return false;
+        }
     }
 
     private static boolean verifyPassword(String hashedPassword, String password) {
