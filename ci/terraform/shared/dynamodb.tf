@@ -725,7 +725,7 @@ resource "aws_dynamodb_table" "international_sms_request_count" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
-  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+  deletion_protection_enabled = false
 
   attribute {
     name = "PhoneNumber"
@@ -741,10 +741,6 @@ resource "aws_dynamodb_table" "international_sms_request_count" {
   server_side_encryption {
     enabled     = true
     kms_key_arn = aws_kms_key.international_sms_request_count_encryption_key.arn
-  }
-
-  lifecycle {
-    prevent_destroy = true
   }
 
   tags = (
