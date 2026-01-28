@@ -35,8 +35,8 @@ Resources:
             - IsNotProduction
             - !If
               - UseSubEnvironment
-              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
-              - !Sub "https://identity.${Environment}.account.gov.uk/"
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           LEGACY_ACCOUNT_DELETION_TOPIC_ARN: !If
@@ -65,7 +65,7 @@ Resources:
         - !Ref S3AcceptanceTestsBucketPolicy
         - !Ref AuditEventsSnsPolicy
       SnapStart:
-        ApplyOn: None
+        ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup

@@ -152,6 +152,18 @@ Resources:
             - Templates
             - SWITCHEDMFAMETHODSTEMPLATEID
           CONTACT_US_LINK_ROUTE: contact-gov-uk-one-login
+          FRONTEND_BASE_URL: !Sub
+            - "${BaseUrl}/"
+            - BaseUrl:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  frontendBaseUrl,
+                ]
       LoggingConfig:
         LogGroup: !Ref NotificationHandlerFunctionLogGroup
       Policies:
@@ -176,7 +188,14 @@ Resources:
                         !Ref Environment,
                       ]
       SnapStart:
-        ApplyOn: None
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref EgressLambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
 
   NotificationHandlerEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
