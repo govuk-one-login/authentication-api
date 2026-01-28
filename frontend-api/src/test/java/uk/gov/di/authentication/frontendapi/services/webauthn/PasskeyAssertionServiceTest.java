@@ -39,6 +39,7 @@ public class PasskeyAssertionServiceTest {
             when(jsonParser.parsePublicKeyCredential(any()))
                     .thenReturn(mock(PublicKeyCredential.class));
             AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            when(mockAssertionResult.isSuccess()).thenReturn(true);
             when(relyingParty.finishAssertion(any())).thenReturn(mockAssertionResult);
 
             // When
@@ -92,6 +93,28 @@ public class PasskeyAssertionServiceTest {
             when(jsonParser.parsePublicKeyCredential(any()))
                     .thenReturn(mock(PublicKeyCredential.class));
             when(relyingParty.finishAssertion(any())).thenThrow(AssertionFailedException.class);
+
+            // When
+            FinishPasskeyAssertionFailureReason actualFailureReason =
+                    passkeyAssertionService.finishAssertion("", "").getFailure();
+
+            // Then
+            assertEquals(
+                    FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR,
+                    actualFailureReason);
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldFailWithAssertionFailedErrorWhenAssertionIsNotSuccessful()
+                throws IOException, AssertionFailedException {
+            // Given
+            when(jsonParser.parseAssertionRequest(any())).thenReturn(mock(AssertionRequest.class));
+            when(jsonParser.parsePublicKeyCredential(any()))
+                    .thenReturn(mock(PublicKeyCredential.class));
+            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            when(mockAssertionResult.isSuccess()).thenReturn(false);
+            when(relyingParty.finishAssertion(any())).thenReturn(mockAssertionResult);
 
             // When
             FinishPasskeyAssertionFailureReason actualFailureReason =

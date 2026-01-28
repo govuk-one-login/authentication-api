@@ -54,6 +54,10 @@ public class PasskeyAssertionService {
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
 
+        if (!assertionResult.isSuccess()) {
+            return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
+        }
+
         return Result.success(assertionResult);
     }
 }

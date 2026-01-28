@@ -83,14 +83,7 @@ public class FinishPasskeyAssertionHandler
                             case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
                                     401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
                         },
-                assertionResult -> {
-                    if (!assertionResult.isSuccess()) {
-                        return generateApiGatewayProxyErrorResponse(
-                                401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
-                    }
-
-                    return generateApiGatewayProxyResponse(200, "");
-                });
+                assertionResult -> generateApiGatewayProxyResponse(200, ""));
 
         // TODO - AUT-4938 - Update database with latest passkey values
     }

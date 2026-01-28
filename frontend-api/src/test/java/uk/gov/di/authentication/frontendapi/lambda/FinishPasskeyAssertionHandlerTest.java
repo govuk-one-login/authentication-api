@@ -58,7 +58,6 @@ class FinishPasskeyAssertionHandlerTest {
         void shouldReturn200WhenPasskeyAssertionSuccessful() {
             // Given
             AssertionResult mockAssertionResult = mock(AssertionResult.class);
-            when(mockAssertionResult.isSuccess()).thenReturn(true);
             when(passkeyAssertionService.finishAssertion(any(), any()))
                     .thenReturn(Result.success(mockAssertionResult));
 
@@ -127,22 +126,6 @@ class FinishPasskeyAssertionHandlerTest {
                     .thenReturn(
                             Result.failure(
                                     FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR));
-
-            // When
-            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
-
-            // Then
-            assertThat(response, hasStatus(401));
-            assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ASSERTION_FAILED));
-        }
-
-        @Test
-        void shouldReturn401WhenPasskeyAssertionUnsuccessful() {
-            // Given
-            AssertionResult mockAssertionResult = mock(AssertionResult.class);
-            when(mockAssertionResult.isSuccess()).thenReturn(false);
-            when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenReturn(Result.success(mockAssertionResult));
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
