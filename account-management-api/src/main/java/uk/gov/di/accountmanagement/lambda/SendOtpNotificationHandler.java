@@ -372,8 +372,9 @@ public class SendOtpNotificationHandler
                 sendNotificationRequest.getNotificationType());
 
         LOG.info(
-                "Sending message to SQS queue for notificationType: {}.  Is test user journey: {}",
+                "Sending message to SQS queue for notificationType: {}, reference {}.  Is test user journey: {}",
                 sendNotificationRequest.getNotificationType(),
+                notifyRequest.getUniqueNotificationReference(),
                 isTestUserRequest);
 
         try {
