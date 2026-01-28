@@ -14,12 +14,13 @@ Resources:
           sendOtpNotificationMemorySize,
         ]
       ProvisionedConcurrencyConfig: !If
-        - SendOtpNotificationProvisionedConcurrency
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
-              sendOtpNotificationProvisionedConcurrency,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
             ]
         - !Ref AWS::NoValue
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip

@@ -15,13 +15,13 @@ Resources:
           DefaultValue: 1536,
         ]
       ProvisionedConcurrencyConfig: !If
-        - UpdateEmailProvisionedConcurrency
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
-              updateEmailProvisionedConcurrency,
-              DefaultValue: 1,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
             ]
         - !Ref AWS::NoValue
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip

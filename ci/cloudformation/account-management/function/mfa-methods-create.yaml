@@ -16,12 +16,12 @@ Resources:
         ]
 
       ProvisionedConcurrencyConfig: !If
-        - MfaMethodsProvisionedConcurrency
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
-              mfaMethodsCreateProvisionedConcurrency,
+              lambdaMinConcurrency,
               DefaultValue: 0,
             ]
         - !Ref AWS::NoValue

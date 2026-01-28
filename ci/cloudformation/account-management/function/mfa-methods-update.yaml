@@ -61,6 +61,16 @@ Resources:
         - !Ref EmailCheckResultsTableKmsPolicy
         - !Ref UserProfileTableKmsPolicy
         - !Ref AuditEventsSnsPolicy
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
+            ]
+        - !Ref AWS::NoValue
       SnapStart:
         ApplyOn: None
       VpcConfig:
