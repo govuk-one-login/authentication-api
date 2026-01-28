@@ -88,7 +88,7 @@ public class AMCAuthorizationService {
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopeValues)
                         .issuer(configurationService.getAuthIssuerClaim())
-                        .audience(configurationService.getAuthToAuthAudience())
+                        .audience(configurationService.getAuthToAMAPIAudience())
                         .expirationTime(expiryDate)
                         .issueTime(issueTime)
                         .notBeforeTime(issueTime)

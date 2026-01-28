@@ -774,6 +774,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "GOV.UK One Login");
     }
 
+    public String getAuthToAMAPIAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_AUTH_AUDIENCE", "");
+    }
+
     public int getInternationalSmsNumberSendLimit() throws MissingEnvVariableException {
         String key = System.getenv("INTERNATIONAL_SMS_NUMBER_SEND_LIMIT");
 
@@ -782,10 +786,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
 
         return Integer.parseInt(key);
-    }
-
-    public String getAuthToAuthAudience() {
-        return System.getenv().getOrDefault("AUTH_TO_AUTH_AUDIENCE", "");
     }
 
     public String getAuthToAccountManagementPrivateSigningKeyAlias() {
