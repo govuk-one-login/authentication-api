@@ -80,6 +80,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
+// QualityGateUnitTest
 class TokenServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -146,6 +147,7 @@ class TokenServiceTest {
         assertThat(logging.events(), not(hasItem(withMessageContaining(CLIENT_ID))));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGenerateTokenResponseWithRefreshToken() throws ParseException, JOSEException {
         when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
@@ -185,6 +187,7 @@ class TokenServiceTest {
                         JOURNEY_ID);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGenerateWellFormedStorageToken() throws JOSEException, ParseException {
         when(configurationService.getCredentialStoreURI())
@@ -205,6 +208,7 @@ class TokenServiceTest {
                 new Options(Scrubbers.scrubAll(unixTimestampScrubber, guidScrubber)));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
             throws ParseException, JOSEException, com.nimbusds.oauth2.sdk.ParseException {
@@ -267,6 +271,7 @@ class TokenServiceTest {
                         JOURNEY_ID);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
             throws ParseException, JOSEException {
@@ -296,6 +301,7 @@ class TokenServiceTest {
         assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotIncludeInternalIdentifiersInTokens() throws ParseException, JOSEException {
         when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
@@ -333,6 +339,7 @@ class TokenServiceTest {
         assertFalse(parsedRefreshToken.contains(INTERNAL_PAIRWISE_SUBJECT.getValue()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidateTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
@@ -347,6 +354,7 @@ class TokenServiceTest {
         assertThat(errorObject, equalTo(Optional.empty()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorIfRedirectUriIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
@@ -366,6 +374,7 @@ class TokenServiceTest {
                                 "Request is missing redirect_uri parameter")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorIfGrantTypeIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
@@ -384,6 +393,7 @@ class TokenServiceTest {
                                 "Request is missing grant_type parameter")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorIfCodeIsMissingWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
@@ -403,6 +413,7 @@ class TokenServiceTest {
                                 "Request is missing code parameter")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorIfCodeIEmptyStringWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
@@ -423,6 +434,7 @@ class TokenServiceTest {
                                 "Request is missing code parameter")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorIfCodeIsNullWhenValidatingTokenRequest() {
         var requestBody =
@@ -444,6 +456,7 @@ class TokenServiceTest {
                                 "Request is missing code parameter")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorIfGrantIsInvalidWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
@@ -457,6 +470,7 @@ class TokenServiceTest {
         assertThat(errorObject, equalTo(Optional.of(OAuth2Error.UNSUPPORTED_GRANT_TYPE)));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidateRefreshTokenRequest() {
         Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
@@ -473,6 +487,7 @@ class TokenServiceTest {
         assertTrue(errorObject.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorWhenValidatingRefreshTokenRequestWithWrongGrant() {
         Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);

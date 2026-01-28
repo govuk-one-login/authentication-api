@@ -45,6 +45,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
+// QualityGateUnitTest
 class ClientSignatureValidationServiceTest {
 
     private static final String REDIRECT_URI = "https://localhost:8080";
@@ -81,6 +82,7 @@ class ClientSignatureValidationServiceTest {
                             configurationService, rpPublicKeyCacheService, lambdaClient, oidcAPI);
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldSuccessfullyReturnWhenValidatingValidSignedJWT() {
             var signedJWT = generateSignedJWT(keyPair.getPrivate());
@@ -88,6 +90,7 @@ class ClientSignatureValidationServiceTest {
             assertDoesNotThrow(() -> clientSignatureValidationService.validate(signedJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldSuccessfullyReturnWhenValidatingValidPrivateKeyJWT() {
             var privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
@@ -98,6 +101,7 @@ class ClientSignatureValidationServiceTest {
                                     privateKeyJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldSuccessfullyReturnWhenValidatingPrivateKeyJWTWithIssuerAud() {
             var privateKeyJWT =
@@ -109,6 +113,7 @@ class ClientSignatureValidationServiceTest {
                                     privateKeyJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowWhenInvalidAudProvided() throws URISyntaxException {
             var privateKeyJWT =
@@ -123,6 +128,7 @@ class ClientSignatureValidationServiceTest {
                                     privateKeyJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowExceptionWhenValidatingInvalidSignedJWT() {
             var keyPair2 = generateRsaKeyPair();
@@ -133,6 +139,7 @@ class ClientSignatureValidationServiceTest {
                     () -> clientSignatureValidationService.validate(signedJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowExceptionWhenValidatingInvalidPrivateKeyJWT() {
             var keyPair2 = generateRsaKeyPair();
@@ -145,6 +152,7 @@ class ClientSignatureValidationServiceTest {
                                     privateKeyJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowExceptionWhenPublicKeySourceIsStaticButPublicKeyIsNull() {
             var client = generateClientWithStaticPublicKeySourceAndNullPublicKey();
@@ -167,6 +175,7 @@ class ClientSignatureValidationServiceTest {
                             configurationService, rpPublicKeyCacheService, lambdaClient, oidcAPI);
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldSuccessfullyReturnWhenValidatingValidSignedJWT() {
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair.getPublic());
@@ -176,6 +185,7 @@ class ClientSignatureValidationServiceTest {
             assertDoesNotThrow(() -> clientSignatureValidationService.validate(signedJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowExceptionWhenFetchJwksHandlerReturnsError() {
             InvokeResponse response = generateFetchJwksLambdaErrorResponse();
@@ -187,6 +197,7 @@ class ClientSignatureValidationServiceTest {
                     () -> clientSignatureValidationService.validate(signedJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldSuccessfullyReturnWhenValidatingValidPrivateKeyJWT() {
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair.getPublic());
@@ -199,6 +210,7 @@ class ClientSignatureValidationServiceTest {
                                     privateKeyJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowExceptionWhenValidatingInvalidSignedJWT() {
             var keyPair2 = generateRsaKeyPair();
@@ -211,6 +223,7 @@ class ClientSignatureValidationServiceTest {
                     () -> clientSignatureValidationService.validate(signedJWT, client));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowExceptionWhenValidatingInvalidPrivateKeyJWT() {
             var keyPair2 = generateRsaKeyPair();
