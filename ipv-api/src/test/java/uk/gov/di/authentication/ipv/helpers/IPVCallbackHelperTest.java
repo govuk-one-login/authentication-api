@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -77,8 +78,10 @@ class IPVCallbackHelperTest {
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient spotSqsClient = mock(AwsSqsClient.class);
     private final OidcAPI oidcAPI = mock(OidcAPI.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
 
@@ -210,9 +213,11 @@ class IPVCallbackHelperTest {
                         authCodeResponseService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
+                        configurationService,
                         dynamoIdentityService,
                         SerializationService.getInstance(),
                         sqsClient,
+                        spotSqsClient,
                         oidcAPI,
                         orchSessionService);
 
@@ -223,6 +228,7 @@ class IPVCallbackHelperTest {
                         anyLong(),
                         eq(TEST_INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(AUTH_CODE);
+        when(configurationService.isNewSpotRequestQueueWritingEnabled()).thenReturn(true);
     }
 
     @Test
@@ -340,6 +346,7 @@ class IPVCallbackHelperTest {
                         + CLIENT_ID.getValue()
                         + "\"}";
         verify(sqsClient).send(spotRequestString);
+        verify(spotSqsClient).send(spotRequestString);
         assertThat(
                 logging.events(), hasItem(withMessageContaining("SPOT request placed on queue")));
     }
@@ -354,9 +361,11 @@ class IPVCallbackHelperTest {
                         authCodeResponseService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
+                        configurationService,
                         dynamoIdentityService,
                         objectMapperMock,
                         sqsClient,
+                        spotSqsClient,
                         oidcAPI,
                         orchSessionService);
         when(objectMapperMock.writeValueAsString(any()))
@@ -379,6 +388,7 @@ class IPVCallbackHelperTest {
                 logging.events(),
                 hasItem(withMessageContaining("Constructing SPOT request ready to queue")));
         verifyNoInteractions(sqsClient);
+        verifyNoInteractions(spotSqsClient);
         assertEquals("json-exception", exception.getMessage());
 
         assertNoAuthorisationCodeGeneratedAndSaved();
