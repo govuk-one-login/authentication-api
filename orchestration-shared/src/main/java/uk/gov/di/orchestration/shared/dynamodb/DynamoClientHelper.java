@@ -5,6 +5,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.validation.ClientRegistryDynamoExtensions;
 
 import java.net.URI;
 
@@ -26,5 +27,15 @@ public class DynamoClientHelper {
             ConfigurationService configurationService) {
         var dynamoDbClient = createDynamoClient(configurationService);
         return DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDbClient).build();
+    }
+
+    public static DynamoDbEnhancedClient createDynamoEnhancedClient(
+            ConfigurationService configurationService,
+            ClientRegistryDynamoExtensions clientRegistryExtension) {
+        var dynamoDbClient = createDynamoClient(configurationService);
+        return DynamoDbEnhancedClient.builder()
+                .extensions(clientRegistryExtension)
+                .dynamoDbClient(dynamoDbClient)
+                .build();
     }
 }
