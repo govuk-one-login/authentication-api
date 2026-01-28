@@ -32,21 +32,6 @@ Resources:
                 !Ref Environment,
                 TokenSigningkeyArn,
               ]
-          TEST_TOKEN_SIGNING_KEY_ALIAS: !If
-            - IsAcceptanceTestEnv
-            - !If
-              - UseSubEnvironment
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref SubEnvironment,
-                  TestIdTokenSigningKeyArn,
-                ]
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  TestIdTokenSigningKeyArn,
-                ]
-            - !Ref AWS::NoValue
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
@@ -60,11 +45,6 @@ Resources:
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref AuditEventsSnsPolicy
         - !Ref IdTokenSigningKeyPolicy
-        - !If [
-            IsAcceptanceTestEnv,
-            !Ref TestIdTokenSigningKeyPolicy,
-            !Ref "AWS::NoValue",
-          ]
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

@@ -56,17 +56,6 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyRsaAlias());
     }
 
-    public JWK getPublicTestTokenJwkWithOpaqueId() {
-        LOG.info("Retrieving EC public key for acceptance tests");
-        String testTokenSigningKeyAlias = configurationService.getTestTokenSigningKeyAlias();
-
-        if (testTokenSigningKeyAlias == null) {
-            return null;
-        }
-
-        return getPublicJWKWithKeyId(configurationService.getTestTokenSigningKeyAlias());
-    }
-
     public JWK getPublicDocAppSigningJwkWithOpaqueId() {
         LOG.info("Retrieving Doc App public key");
         return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
