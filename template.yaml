@@ -1826,6 +1826,14 @@ Resources:
               !Ref Environment,
               idTokenKeyArn,
             ]
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
+            - PublishNextExternalTokenSigningKeys
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
+            - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2235,6 +2243,18 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
+            - PublishNextExternalTokenSigningKeys
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
+            - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2440,6 +2460,18 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
+            - PublishNextExternalTokenSigningKeys
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
+            - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -3659,6 +3691,14 @@ Resources:
               !Ref Environment,
               idTokenKeyArn,
             ]
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
+            - PublishNextExternalTokenSigningKeys
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
+            - !Ref AWS::NoValue
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
@@ -3897,6 +3937,18 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
+            - PublishNextExternalTokenSigningKeys
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
+            - PublishNextExternalTokenSigningKeys
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
+            - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:

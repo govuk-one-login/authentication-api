@@ -22,11 +22,15 @@ public class KmsConnectionService {
         this(
                 configurationService.getLocalstackEndpointUri(),
                 configurationService.getAwsRegion(),
-                configurationService.getExternalTokenSigningKeyAlias());
+                configurationService.getExternalTokenSigningKeyAlias(),
+                configurationService.getNextExternalTokenSigningKeyAlias());
     }
 
     public KmsConnectionService(
-            Optional<String> localstackEndpointUri, String awsRegion, String tokenSigningKeyId) {
+            Optional<String> localstackEndpointUri,
+            String awsRegion,
+            String tokenSigningKeyId,
+            String newTokenSigningKeyId) {
         if (localstackEndpointUri.isPresent()) {
             LOG.info("Localstack endpoint URI is present: {}", localstackEndpointUri.get());
             this.kmsClient =
@@ -43,6 +47,7 @@ public class KmsConnectionService {
                             .build();
         }
         warmUp(tokenSigningKeyId);
+        warmUp(newTokenSigningKeyId);
     }
 
     public GetPublicKeyResponse getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
