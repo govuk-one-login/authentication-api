@@ -289,11 +289,11 @@ Mappings:
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3be3cbe9-d030-4a96-9738-420ee063a1d7
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/2dcfcf9b-6c30-49a9-b3c6-421af0e3040a
-      emailAcctCreationOtpCodeTtlDuration: 600
+      emailAcctCreationOtpCodeTtlDuration: 7200
       AMApiFMSTagValue: accountmanagement
-      lockoutCountTtl: 600
-      lockoutDuration: 600
-      otpCodeTtlDuration: 600
+      frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
+      lockoutDuration: 900
+      otpCodeTtlDuration: 900
       lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
@@ -350,11 +350,11 @@ Mappings:
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/bc782157-0e0f-4b5d-93c7-ddadd4d538a0
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/01b45239-4243-4c5f-8188-d09ef2da842d
-      emailAcctCreationOtpCodeTtlDuration: 600
+      emailAcctCreationOtpCodeTtlDuration: 7200
       AMApiFMSTagValue: accountmanagement
-      lockoutCountTtl: 600
-      lockoutDuration: 600
-      otpCodeTtlDuration: 600
+      frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
+      lockoutDuration: 900
+      otpCodeTtlDuration: 900
       lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
@@ -410,11 +410,11 @@ Mappings:
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f944cc04-ec31-4ff5-843f-c72e87f5f334
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
-      emailAcctCreationOtpCodeTtlDuration: 600
+      emailAcctCreationOtpCodeTtlDuration: 60
       AMApiFMSTagValue: accountmanagement
-      lockoutCountTtl: 600
-      lockoutDuration: 600
-      otpCodeTtlDuration: 600
+      frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
+      lockoutDuration: 30
+      otpCodeTtlDuration: 120
       lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
@@ -475,6 +475,7 @@ Mappings:
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/55684f22-2ed2-4dab-bbde-c4381c66ff79
       AMApiFMSTagValue: accountmanagement
+      frontendBaseUrl: https://signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
@@ -509,10 +510,9 @@ Mappings:
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       UseAlarmActions: "No"
-      emailAcctCreationOtpCodeTtlDuration: 3600
-      lockoutCountTtl: 60
-      lockoutDuration: 60
-      otpCodeTtlDuration: 60
+      emailAcctCreationOtpCodeTtlDuration: 60
+      lockoutDuration: 30
+      otpCodeTtlDuration: 120
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
       supportReauthSignoutEnabled: false
@@ -543,6 +543,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
       AMApiFMSTagValue: accountmanagementbuild
+      frontendBaseUrl: https://signin.build.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -578,10 +579,9 @@ Mappings:
       manuallyDeleteAccountReservedConcurrency: 1
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
       UseAlarmActions: "Yes"
-      emailAcctCreationOtpCodeTtlDuration: 60
-      lockoutCountTtl: 60
-      lockoutDuration: 60
-      otpCodeTtlDuration: 60
+      emailAcctCreationOtpCodeTtlDuration: 7200
+      lockoutDuration: 900
+      otpCodeTtlDuration: 900
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
       supportReauthSignoutEnabled: true
@@ -616,6 +616,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       AMApiFMSTagValue: accountmanagementstaging
+      frontendBaseUrl: https://signin.staging.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -652,9 +653,8 @@ Mappings:
       manuallyDeleteAccountReservedConcurrency: 1
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
       UseAlarmActions: "Yes"
-      emailAcctCreationOtpCodeTtlDuration: 3600
-      lockoutCountTtl: 900
-      lockoutDuration: 7200
+      emailAcctCreationOtpCodeTtlDuration: 7200
+      lockoutDuration: 900
       otpCodeTtlDuration: 900
       reauthEnterEmailCountTtl: 300
       reducedLockoutDuration: 900
@@ -684,12 +684,13 @@ Mappings:
       dataStoreAccountId: 761723964695
       docAppDomain: https://api.review-b.integration.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      emailAcctCreationOtpCodeTtlDuration: 3600
+      emailAcctCreationOtpCodeTtlDuration: 7200
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
       EnforceLambdaDeploymentOrder: "Yes"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       AMApiFMSTagValue: accountmanagementint
+      frontendBaseUrl: https://signin.integration.account.gov.uk
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
       HomeApiVpcEndpointId: ["vpce-0e594accb3d775457", "vpce-00865f4c00dcdbb83"]
@@ -723,8 +724,7 @@ Mappings:
       bulkRemoveAccountMaxConcurrency: 15
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
-      lockoutCountTtl: 900
-      lockoutDuration: 7200
+      lockoutDuration: 900
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       reauthEnterEmailCountTtl: 3600
@@ -759,12 +759,13 @@ Mappings:
       dataStoreAccountId: 172348255554
       docAppDomain: https://api.review-b.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
-      emailAcctCreationOtpCodeTtlDuration: 3600
+      emailAcctCreationOtpCodeTtlDuration: 7200
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/aca649a0-488b-4696-b94a-49156254afd2
       EnforceLambdaDeploymentOrder: "Yes"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
       AMApiFMSTagValue: accountmanagementprod
+      frontendBaseUrl: https://signin.account.gov.uk
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       HomeApiVpcEndpointId: ["vpce-0d7972874707185a0", "vpce-08bfce415b33dc8f6"]
       IPVApiEnabled: true
@@ -797,8 +798,7 @@ Mappings:
       bulkRemoveAccountMaxConcurrency: 15
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
-      lockoutCountTtl: 900
-      lockoutDuration: 7200
+      lockoutDuration: 900
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
       reauthEnterEmailCountTtl: 3600
@@ -999,6 +999,19 @@ Resources:
           IpProtocol: tcp
           FromPort: 443
           ToPort: 443
+
+  EgressLambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda Security Group permissions ruleset
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - Description: Allow outbound HTTPS traffic to internet
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
 
   RedisParametersAccessPolicy:
     Type: AWS::IAM::ManagedPolicy

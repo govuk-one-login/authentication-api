@@ -54,8 +54,8 @@ Resources:
             - IsNotProduction
             - !If
               - UseSubEnvironment
-              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
-              - !Sub "https://identity.${Environment}.account.gov.uk/"
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
