@@ -1,18 +1,9 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Conditions:
-  DeployAMCAuthorize: !Or
-    - !Equals [!Ref Environment, "build"]
-    - !Equals [!Ref Environment, "dev"]
-    - !Equals [!Ref SubEnvironment, "authdev1"]
-    - !Equals [!Ref SubEnvironment, "authdev2"]
-    - !Equals [!Ref SubEnvironment, "authdev3"]
-  DeployAMCAuthorizeWithSplunk: !And
-    - !Condition DeployAMCAuthorize
-    - !Condition IsSplunkEnabled
+  DeployAMCAuthorizeWithSplunk: !Condition IsSplunkEnabled
 Resources:
   AMCAuthorizeFunction:
     Type: AWS::Serverless::Function
-    Condition: DeployAMCAuthorize
     Properties:
       FunctionName: !Sub
         - ${Env}-amc-authorize-lambda
@@ -92,16 +83,8 @@ Resources:
         - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              lambdaMinConcurrency,
-              DefaultValue: 0,
-            ]
-        - !Ref AWS::NoValue
+      SnapStart:
+        ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
           - !Ref HttpsEgressSecurityGroup
@@ -115,7 +98,6 @@ Resources:
 
   AMCAuthorizeFunctionPermission:
     Type: AWS::Lambda::Permission
-    Condition: DeployAMCAuthorize
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt AMCAuthorizeFunction.Arn
@@ -123,7 +105,6 @@ Resources:
 
   AMCAuthorizeFunctionAliasPermission:
     Type: AWS::Lambda::Permission
-    Condition: DeployAMCAuthorize
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref AMCAuthorizeFunction.Alias
@@ -131,7 +112,6 @@ Resources:
 
   AMCAuthorizeFunctionLogGroup:
     Type: AWS::Logs::LogGroup
-    Condition: DeployAMCAuthorize
     Properties:
       LogGroupName: !Sub
         - /aws/lambda/${Env}-amc-authorize-lambda
