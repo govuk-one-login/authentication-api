@@ -146,10 +146,10 @@ public class OrchestrationAuthorizationService {
     public SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet) {
         LOG.info("Generating signed and encrypted JWT");
         var signingKey = jwksService.getPublicAuthSigningJwkWithOpaqueId();
+        LOG.info("Key ID in header: {}", signingKey.getKeyID());
+        LOG.info("Hashed key ID in header: {}", hashSha256String(signingKey.getKeyID()));
         var jwsHeader =
-                new JWSHeader.Builder(SIGNING_ALGORITHM)
-                        .keyID(hashSha256String(signingKey.getKeyID()))
-                        .build();
+                new JWSHeader.Builder(SIGNING_ALGORITHM).keyID(signingKey.getKeyID()).build();
 
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(jwtClaimsSet.toString());

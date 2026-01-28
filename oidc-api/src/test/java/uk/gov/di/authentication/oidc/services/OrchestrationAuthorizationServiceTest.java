@@ -70,7 +70,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -224,8 +223,7 @@ class OrchestrationAuthorizationServiceTest {
                 .thenReturn(ecSigningKey.toPublicJWK());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwtClaimsSet = new JWTClaimsSet.Builder().claim("claim1", claim1Value).build();
-        var jwsHeader =
-                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(hashSha256String(KEY_ID)).build();
+        var jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KEY_ID).build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         signedJWT.sign(ecdsaSigner);
         byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
@@ -267,8 +265,7 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("claim1", claim1Value)
                         .claim("state", LONG_CLAIM)
                         .build();
-        var jwsHeader =
-                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(hashSha256String(KEY_ID)).build();
+        var jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KEY_ID).build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         var expectedMessage =
                 jwsHeader.toBase64URL() + "." + Base64URL.encode(jwtClaimsSet.toString());
