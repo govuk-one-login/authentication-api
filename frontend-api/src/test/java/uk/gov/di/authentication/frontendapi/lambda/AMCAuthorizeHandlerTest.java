@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AMCJourneyType;
@@ -148,25 +149,9 @@ class AMCAuthorizeHandlerTest {
                 handler.handleRequestWithUserContext(
                         event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
-        int expectedStatusCode =
-                switch (failureReason) {
-                    case JWT_ENCODING_ERROR, TRANSCODING_ERROR -> 400;
-                    case SIGNING_ERROR,
-                            ENCRYPTION_ERROR,
-                            UNKNOWN_JWT_SIGNING_ERROR,
-                            UNKNOWN_JWT_ENCRYPTING_ERROR -> 500;
-                };
-
-        ErrorResponse expectedError =
-                switch (failureReason) {
-                    case JWT_ENCODING_ERROR -> ErrorResponse.AMC_JWT_ENCODING_ERROR;
-                    case TRANSCODING_ERROR -> ErrorResponse.AMC_TRANSCODING_ERROR;
-                    case SIGNING_ERROR -> ErrorResponse.AMC_SIGNING_ERROR;
-                    case ENCRYPTION_ERROR -> ErrorResponse.AMC_ENCRYPTION_ERROR;
-                    case UNKNOWN_JWT_SIGNING_ERROR -> ErrorResponse.AMC_UNKNOWN_JWT_SIGNING_ERROR;
-                    case UNKNOWN_JWT_ENCRYPTING_ERROR -> ErrorResponse
-                            .AMC_UNKNOWN_JWT_ENCRYPTING_ERROR;
-                };
+        var httpResponse = AMCFailureAntiCorruption.toHttpResponse(failureReason);
+        int expectedStatusCode = httpResponse.statusCode();
+        ErrorResponse expectedError = httpResponse.errorResponse();
 
         assertEquals(expectedStatusCode, result.getStatusCode());
         assertTrue(result.getBody().contains(expectedError.getMessage()));
