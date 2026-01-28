@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeResponse;
@@ -89,21 +90,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         userProfile.getPublicSubjectID());
 
         return result.fold(
-                failure ->
-                        switch (failure) {
-                            case JWT_ENCODING_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.AMC_JWT_ENCODING_ERROR);
-                            case TRANSCODING_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.AMC_TRANSCODING_ERROR);
-                            case SIGNING_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    500, ErrorResponse.AMC_SIGNING_ERROR);
-                            case ENCRYPTION_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    500, ErrorResponse.AMC_ENCRYPTION_ERROR);
-                            case UNKNOWN_JWT_SIGNING_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    500, ErrorResponse.AMC_UNKNOWN_JWT_SIGNING_ERROR);
-                            case UNKNOWN_JWT_ENCRYPTING_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    500, ErrorResponse.AMC_UNKNOWN_JWT_ENCRYPTING_ERROR);
-                        },
+                AMCFailureAntiCorruption::toApiGatewayProxyErrorResponse,
                 success -> {
                     try {
                         return generateApiGatewayProxyResponse(
