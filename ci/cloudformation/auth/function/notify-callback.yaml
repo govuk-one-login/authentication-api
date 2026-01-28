@@ -1,0 +1,365 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Mappings:
+  ProdNotifyTemplateMap:
+    Templates:
+      VERIFYEMAILTEMPLATEID: "09f29c9a-3f34-4a56-88f5-8197aede7f85,bda5cfb3-3d91-407e-90cc-b690c1fa8bf9"
+      PASSWORDRESETCONFIRMATIONTEMPLATEID: "c5a6a8d6-0a45-4496-bec8-37167fc6ecaa,4afbd99d-7745-4c9e-9caf-a1c054b74998"
+      ACCOUNTCREATEDCONFIRMATIONTEMPLATEID: "99580afe-9d3f-4ed1-816d-3b583a7b9167,08e0027d-a087-41f1-a5ae-7c862732ed99"
+      RESETPASSWORDWITHCODETEMPLATEID: "4f76b165-8935-49fe-8ba8-8ca62a1fe723,ed08fced-e960-4261-8b28-12cb2907cbdf"
+      EMAILUPDATEDTEMPLATEID: "22aac1ce-38c7-45f5-97b2-26ac1a54a235,17540bf2-5d77-4ac2-be34-ba89c728c60b"
+      DELETEACCOUNTTEMPLATEID: "1540bdda-fdff-4297-b627-92102e061bfa,9a212a1d-5bfc-4e7f-80fa-033d3ae03a1c"
+      PHONENUMBERUPDATEDTEMPLATEID: "8907d080-e69c-42c6-8cf5-54ca1558a2e4,d12aaa12-1590-4d3d-b75e-e513d299b1b6"
+      PASSWORDUPDATEDTEMPLATEID: "ebf3730c-0769-462b-ab39-7d9a7439bac1,435cf040-2dfc-4d1c-838d-2f349c8d11f1"
+      VERIFYPHONENUMBERTEMPLATEID: "8babad52-0e2e-443a-8a5a-c296dc1696cc,4bbc0a5c-833a-490e-89c6-5e286a030ac6"
+      MFASMSTEMPLATEID: "31e48dbf-6db6-4864-9710-081b72746698,044a2369-420c-4518-85ca-3fe1b9a93244"
+      AMVERIFYEMAILTEMPLATEID: "98fdb807-d0d8-41c8-a1d7-7d0abff06b3c"
+      AMVERIFYPHONENUMBERTEMPLATEID: "b1b3935d-ffdc-4853-a3cd-a9fce09dbff5"
+      PASSWORDRESETCONFIRMATIONSMSTEMPLATEID: "86a27ea9-e8ac-423f-a444-b2751e165887"
+      VERIFYCHANGEHOWGETSECURITYCODESTEMPLATEID: "49b3aea6-9a67-4ef4-af08-3297c1cce82c"
+      CHANGEHOWGETSECURITYCODESCONFIRMATIONTEMPLATEID: "d253a170-8144-4471-b339-c35965c9298a"
+      TERMSANDCONDITIONSBULKEMAILTEMPLATEID: "173418a1-c442-4c4b-a6d1-d23f473f3dd0"
+      REPORTSUSPICIOUSACTIVITYEMAILTEMPLATEID: "0674c6e3-219c-4e3a-b04c-3786bac7f228"
+      BACKUPMETHODADDEDTEMPLATEID: "569ae40c-2631-4de3-9d85-7f8ffd9182e9"
+      BACKUPMETHODREMOVEDTEMPLATEID: "8c8d2392-cecc-452d-88a5-2bd8418fb257"
+      CHANGEDAUTHENTICATORAPPTEMPLATEID: "de419864-17bf-488c-93e5-da791352e2db"
+      CHANGEDDEFAULTMFATEMPLATEID: "2d17c6db-8d2d-42af-95f1-5d096cd74212"
+      SWITCHEDMFAMETHODSTEMPLATEID: "0b856ef8-07d6-4dca-ab6a-8a45044182cc"
+
+  NonProdNotifyTemplateMap:
+    Templates:
+      VERIFYEMAILTEMPLATEID: "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
+      RESETPASSWORDTEMPLATEID: "0aaf3ae8-1825-4528-af95-3093eb13fda0"
+      PASSWORDRESETCONFIRMATIONTEMPLATEID: "052d4e96-e6ca-4da2-b657-5649f28bd6c0"
+      ACCOUNTCREATEDCONFIRMATIONTEMPLATEID: "a15995f7-94a3-4a1b-9da0-54b1a8b5cc12"
+      RESETPASSWORDWITHCODETEMPLATEID: "503a8096-d22e-49dc-9f81-007cad156f01"
+      EMAILUPDATEDTEMPLATEID: "0a200a63-97b2-4920-bc40-48e9a9e1121e"
+      DELETEACCOUNTTEMPLATEID: "0706adcc-b593-4d2d-afa6-c3da7149e426"
+      PHONENUMBERUPDATEDTEMPLATEID: "8274a2a3-5121-4630-a27e-e8578f8cba59"
+      PASSWORDUPDATEDTEMPLATEID: "323ebef4-cfa7-414f-bfba-1db324acdd66"
+      VERIFYPHONENUMBERTEMPLATEID: "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
+      MFASMSTEMPLATEID: "97b956c8-9a12-451a-994b-5d51741b63d4"
+      AMVERIFYEMAILTEMPLATEID: "2564a2fe-df04-43df-b086-08831b1034d7"
+      AMVERIFYPHONENUMBERTEMPLATEID: "86fbfd12-e428-4579-b0ee-42ba2b840eac"
+      PASSWORDRESETCONFIRMATIONSMSTEMPLATEID: "ee9928fb-c716-4409-acd7-9b93fc02d0f8"
+      VERIFYCHANGEHOWGETSECURITYCODESTEMPLATEID: "31259695-e0b8-4c1f-8392-995d5a3b6978"
+      CHANGEHOWGETSECURITYCODESCONFIRMATIONTEMPLATEID: "10b2ebeb-16fb-450a-8dc3-5f94d2b7029f"
+      TERMSANDCONDITIONSBULKEMAILTEMPLATEID: "067548f2-420d-4da9-923f-ec9a941706cf"
+      REPORTSUSPICIOUSACTIVITYEMAILTEMPLATEID: "2b3170b5-159e-457f-a282-f30f6006dc32"
+      BACKUPMETHODADDEDTEMPLATEID: "2abd5f54-15b6-4957-b4d3-f310f2437b9f"
+      BACKUPMETHODREMOVEDTEMPLATEID: "5a101e35-8b8d-456d-bcfe-8c7470bf63e4"
+      CHANGEDAUTHENTICATORAPPTEMPLATEID: "b0bb3667-985b-428c-9eb3-6b778b50fb6b"
+      CHANGEDDEFAULTMFATEMPLATEID: "ab62d5fa-79a8-4dba-beb0-283118d2450f"
+      SWITCHEDMFAMETHODSTEMPLATEID: "be78564b-b9a6-4b3d-b438-7b30e45caf54"
+
+Resources:
+  NotifyCallbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-delivery-receipts-api-notify-callback
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./delivery-receipts-api/build/distributions/delivery-receipts-api.zip
+      Handler: uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler::handleRequest
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          VERIFY_EMAIL_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              VERIFYEMAILTEMPLATEID,
+            ]
+          PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              PASSWORDRESETCONFIRMATIONTEMPLATEID,
+            ]
+          ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              ACCOUNTCREATEDCONFIRMATIONTEMPLATEID,
+            ]
+          RESET_PASSWORD_WITH_CODE_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              RESETPASSWORDWITHCODETEMPLATEID,
+            ]
+          EMAIL_UPDATED_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              EMAILUPDATEDTEMPLATEID,
+            ]
+          DELETE_ACCOUNT_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              DELETEACCOUNTTEMPLATEID,
+            ]
+          PHONE_NUMBER_UPDATED_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              PHONENUMBERUPDATEDTEMPLATEID,
+            ]
+          PASSWORD_UPDATED_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              PASSWORDUPDATEDTEMPLATEID,
+            ]
+          VERIFY_PHONE_NUMBER_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              VERIFYPHONENUMBERTEMPLATEID,
+            ]
+          MFA_SMS_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              MFASMSTEMPLATEID,
+            ]
+          AM_VERIFY_EMAIL_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              AMVERIFYEMAILTEMPLATEID,
+            ]
+          AM_VERIFY_PHONE_NUMBER_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              AMVERIFYPHONENUMBERTEMPLATEID,
+            ]
+          PASSWORD_RESET_CONFIRMATION_SMS_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              PASSWORDRESETCONFIRMATIONSMSTEMPLATEID,
+            ]
+          VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              VERIFYCHANGEHOWGETSECURITYCODESTEMPLATEID,
+            ]
+          CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              CHANGEHOWGETSECURITYCODESCONFIRMATIONTEMPLATEID,
+            ]
+          TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              TERMSANDCONDITIONSBULKEMAILTEMPLATEID,
+            ]
+          REPORT_SUSPICIOUS_ACTIVITY_EMAIL_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              REPORTSUSPICIOUSACTIVITYEMAILTEMPLATEID,
+            ]
+          BACKUP_METHOD_ADDED_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              BACKUPMETHODADDEDTEMPLATEID,
+            ]
+          BACKUP_METHOD_REMOVED_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              BACKUPMETHODREMOVEDTEMPLATEID,
+            ]
+          CHANGED_AUTHENTICATOR_APP_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              CHANGEDAUTHENTICATORAPPTEMPLATEID,
+            ]
+          CHANGED_DEFAULT_MFA_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              CHANGEDDEFAULTMFATEMPLATEID,
+            ]
+          SWITCHED_MFA_METHODS_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              SWITCHEDMFAMETHODSTEMPLATEID,
+            ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+      LoggingConfig:
+        LogGroup: !Ref NotifyCallbackFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder:
+          !If [
+            EnforceLambdaDeploymentOrder,
+            !Ref TicfCriFunctionAliasactive,
+            "",
+          ]
+
+  NotifyCallbackFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotifyCallbackFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
+
+  NotifyCallbackFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref NotifyCallbackFunction.Alias
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
+
+  NotifyCallbackFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-delivery-receipts-api-notify-callback
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NotifyCallbackFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/notify-callback.yaml
+
+Outputs:
+  NotifyCallbackLambdaArn:
+    Description: "ARN of the NotifyCallback Lambda function"
+    Value: !GetAtt NotifyCallbackFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-NotifyCallbackLambdaArn"
+
+  NotifyCallbackLambdaName:
+    Description: "Name of the NotifyCallback Lambda function"
+    Value: !Ref NotifyCallbackFunction
+    Export:
+      Name: !Sub "${AWS::StackName}-NotifyCallbackLambdaName"
