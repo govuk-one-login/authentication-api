@@ -434,7 +434,7 @@ class AMCAuthorizationServiceTest {
 
     private void mockConfigurationService(Date expiryDate) {
         when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
-        when(configurationService.getAuthToAuthAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
+        when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
         when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
