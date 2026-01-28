@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
-import com.yubico.webauthn.RelyingParty;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.PublicKeyCredentialRequestOptions;
 import org.junit.jupiter.api.AfterEach;
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -53,7 +53,8 @@ class StartPasskeyAssertionHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final RelyingParty relyingParty = mock(RelyingParty.class);
+    private final PasskeyAssertionService passkeyAssertionService =
+            mock(PasskeyAssertionService.class);
     private StartPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
@@ -76,7 +77,7 @@ class StartPasskeyAssertionHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        relyingParty);
+                        passkeyAssertionService);
     }
 
     @Nested
@@ -88,7 +89,7 @@ class StartPasskeyAssertionHandlerTest {
                     .thenReturn(Optional.of(USER_PROFILE));
             var assertionRequest = createAssertionRequest();
             var expectedJson = assertionRequest.toJson();
-            when(relyingParty.startAssertion(any())).thenReturn(assertionRequest);
+            when(passkeyAssertionService.startAssertion(any())).thenReturn(assertionRequest);
 
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
@@ -148,7 +149,7 @@ class StartPasskeyAssertionHandlerTest {
             doThrow(new JsonProcessingException("test") {})
                     .when(spyAssertionRequest)
                     .toCredentialsGetJson();
-            when(relyingParty.startAssertion(any())).thenReturn(spyAssertionRequest);
+            when(passkeyAssertionService.startAssertion(any())).thenReturn(spyAssertionRequest);
 
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
@@ -164,7 +165,7 @@ class StartPasskeyAssertionHandlerTest {
 
             var spyAssertionRequest = spy(createAssertionRequest());
             doThrow(new JsonProcessingException("test") {}).when(spyAssertionRequest).toJson();
-            when(relyingParty.startAssertion(any())).thenReturn(spyAssertionRequest);
+            when(passkeyAssertionService.startAssertion(any())).thenReturn(spyAssertionRequest);
 
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
