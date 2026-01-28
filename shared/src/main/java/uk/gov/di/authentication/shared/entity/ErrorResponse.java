@@ -115,14 +115,7 @@ public enum ErrorResponse {
     EMAIL_ADDRESS_DENIED(1089, "Email address is denied"),
     UNHANDLED_NEGATIVE_DECISION(1090, "Permissions manager negative decision was not handled"),
     INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED(1091, "International phone numbers are not supported"),
-    UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error"),
-    AMC_JWT_ENCODING_ERROR(1091, "Failed to encode JWT for AMC authorization"),
-    AMC_TRANSCODING_ERROR(1092, "Failed to transcode data for AMC authorization"),
-    AMC_SIGNING_ERROR(1093, "Failed to sign JWT for AMC authorization"),
-    AMC_ENCRYPTION_ERROR(1094, "Failed to encrypt JWT for AMC authorization"),
-    AMC_UNKNOWN_JWT_SIGNING_ERROR(1095, "Unknown error signing JWT for AMC authorization"),
-    AMC_UNKNOWN_JWT_ENCRYPTING_ERROR(1096, "Unknown error encrypting JWT for AMC authorization"),
-    SERIALIZATION_ERROR(1097, "Failed to serialize API Gateway proxy response");
+    UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error");
 
     private int code;
 
