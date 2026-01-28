@@ -25,7 +25,6 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADD
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -103,7 +102,7 @@ class FinishPasskeyAssertionHandlerTest {
 
             // Then
             assertThat(response, hasStatus(500));
-            assertThat(response, hasBody("Error parsing stored assertion request"));
+            assertThat(response, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
         }
 
         @Test
@@ -118,11 +117,11 @@ class FinishPasskeyAssertionHandlerTest {
 
             // Then
             assertThat(response, hasStatus(400));
-            assertThat(response, hasBody("Error parsing PKC object"));
+            assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC));
         }
 
         @Test
-        void shouldReturn400WhenPasskeyAssertionFailed() {
+        void shouldReturn401WhenPasskeyAssertionFailed() {
             // Given
             when(passkeyAssertionService.finishAssertion(any(), any()))
                     .thenReturn(
@@ -133,12 +132,12 @@ class FinishPasskeyAssertionHandlerTest {
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
 
             // Then
-            assertThat(response, hasStatus(400));
-            assertThat(response, hasBody("Assertion failed"));
+            assertThat(response, hasStatus(401));
+            assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ASSERTION_FAILED));
         }
 
         @Test
-        void shouldReturn400WhenPasskeyAssertionUnsuccessful() {
+        void shouldReturn401WhenPasskeyAssertionUnsuccessful() {
             // Given
             AssertionResult mockAssertionResult = mock(AssertionResult.class);
             when(mockAssertionResult.isSuccess()).thenReturn(false);
@@ -149,8 +148,8 @@ class FinishPasskeyAssertionHandlerTest {
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
 
             // Then
-            assertThat(response, hasStatus(400));
-            assertThat(response, hasBody("Assertion failed"));
+            assertThat(response, hasStatus(401));
+            assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ASSERTION_FAILED));
         }
     }
 

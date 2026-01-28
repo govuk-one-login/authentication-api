@@ -12,6 +12,7 @@ import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -19,6 +20,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class FinishPasskeyAssertionHandler
@@ -74,22 +76,22 @@ public class FinishPasskeyAssertionHandler
         return result.fold(
                 failure ->
                         switch (failure) {
-                            case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyResponse(
-                                    500, "Error parsing stored assertion request");
-                            case PARSING_PKC_ERROR -> generateApiGatewayProxyResponse(
-                                    400, "Error parsing PKC object");
-                            case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyResponse(
-                                    400, "Assertion failed");
+                            case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
+                                    500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+                            case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
+                            case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
+                                    401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
                         },
                 assertionResult -> {
                     if (!assertionResult.isSuccess()) {
-                        return generateApiGatewayProxyResponse(400, "Assertion failed");
+                        return generateApiGatewayProxyErrorResponse(
+                                401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
                     }
 
                     return generateApiGatewayProxyResponse(200, "");
                 });
 
-        // TODO - AUT-4938 - Double-check response codes are suitable
         // TODO - AUT-4938 - Update database with latest passkey values
     }
 }
