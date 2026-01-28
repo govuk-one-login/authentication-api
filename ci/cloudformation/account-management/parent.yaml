@@ -1114,14 +1114,7 @@ Resources:
           - Sid: AllowAccessToTestIdTokenSigningKey
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - "arn:aws:iam::${DataStoreAccountId}:root"
-                - DataStoreAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      dataStoreAccountId,
-                    ]
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
             Action:
               - "kms:GetPublicKey"
               - "kms:Sign"
