@@ -5,7 +5,9 @@ import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.FinishAssertionOptions;
 import com.yubico.webauthn.RelyingParty;
+import com.yubico.webauthn.StartAssertionOptions;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import com.yubico.webauthn.exception.AssertionFailedException;
@@ -13,6 +15,8 @@ import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailure
 import uk.gov.di.authentication.shared.entity.Result;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 public class PasskeyAssertionService {
     private final RelyingParty relyingParty;
@@ -21,6 +25,12 @@ public class PasskeyAssertionService {
     public PasskeyAssertionService(RelyingParty relyingParty, PasskeyJsonParser jsonParser) {
         this.relyingParty = relyingParty;
         this.jsonParser = jsonParser;
+    }
+
+    public AssertionRequest startAssertion(String subjectId) {
+        var userHandle = new ByteArray(subjectId.getBytes(StandardCharsets.UTF_8));
+        return relyingParty.startAssertion(
+                StartAssertionOptions.builder().userHandle(Optional.of(userHandle)).build());
     }
 
     public Result<FinishPasskeyAssertionFailureReason, AssertionResult> finishAssertion(
