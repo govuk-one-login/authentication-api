@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -44,6 +45,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.EMAIL_HAS_NO_USER_PROFILE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
@@ -72,6 +74,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private final AwsSqsClient sqsClient;
     private final MFAMethodsService mfaMethodsService;
     private final TestUserHelper testUserHelper;
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService;
 
     public MfaHandler(
             ConfigurationService configurationService,
@@ -82,7 +85,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             AwsSqsClient sqsClient,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
-            TestUserHelper testUserHelper) {
+            TestUserHelper testUserHelper,
+            InternationalSmsSendLimitService internationalSmsSendLimitService) {
         super(MfaRequest.class, configurationService, authenticationService, authSessionService);
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
@@ -90,6 +94,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.sqsClient = sqsClient;
         this.mfaMethodsService = mfaMethodsService;
         this.testUserHelper = testUserHelper;
+        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
     }
 
     public MfaHandler(
@@ -107,6 +112,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getSqsEndpointUri());
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
     }
 
     public MfaHandler() {
@@ -121,6 +128,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getSqsEndpointUri());
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
     }
 
     @Override
@@ -244,6 +253,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
                 return generateApiGatewayProxyErrorResponse(
                         400, thisRequestExceedsMaximumAllowedRequests.get());
+            }
+
+            if (!internationalSmsSendLimitService.canSendSms(phoneNumber)) {
+                return generateApiGatewayProxyErrorResponse(400, BLOCKED_FOR_SENDING_MFA_OTPS);
             }
 
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
