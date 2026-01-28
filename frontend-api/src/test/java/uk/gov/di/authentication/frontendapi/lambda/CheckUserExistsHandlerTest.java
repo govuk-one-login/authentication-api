@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -45,7 +46,6 @@ import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +59,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -68,9 +69,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
@@ -90,6 +96,7 @@ class CheckUserExistsHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String CLIENT_ID = "test-client-id";
@@ -140,15 +147,19 @@ class CheckUserExistsHandlerTest {
                         authSessionService,
                         authenticationService,
                         auditService,
-                        permissionDecisionManager);
+                        permissionDecisionManager,
+                        mfaMethodsService);
         reset(authenticationService);
         reset(permissionDecisionManager);
+        reset(mfaMethodsService);
 
         // Setup default PermissionDecisionManager behavior after reset
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
         when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(mfaMethodsService.getMfaMethods(any(), any(), eq(true)))
+                .thenReturn(Result.success(List.of()));
     }
 
     @Nested
@@ -163,11 +174,13 @@ class CheckUserExistsHandlerTest {
 
         @Test
         void shouldReturn200WithRelevantMfaMethod() {
-            MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
-            MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
+            MFAMethod mfaMethod1 = BACKUP_AUTH_APP_METHOD;
+            MFAMethod mfaMethod2 = DEFAULT_SMS_METHOD;
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(
                             new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
+            when(mfaMethodsService.getMfaMethods(any(), any(), eq(true)))
+                    .thenReturn(Result.success(List.of(mfaMethod1, mfaMethod2)));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
             var phoneNumber = CommonTestVariables.UK_MOBILE_NUMBER;
@@ -181,7 +194,8 @@ class CheckUserExistsHandlerTest {
                     "mfaMethodType":"SMS",
                     "phoneNumberLastThree":"%s",
                     "lockoutInformation":[],
-                    "hasActivePasskey":false}
+                    "hasActivePasskey":false,
+                    "hasInternationalPhoneNumber":false}
                     """,
                             EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
             assertEquals(
@@ -221,6 +235,8 @@ class CheckUserExistsHandlerTest {
             setupUserProfileAndClient(Optional.of(userProfile));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+            when(mfaMethodsService.getMfaMethods(any(), any(), eq(true)))
+                    .thenReturn(Result.success(List.of(mfaMethod)));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
@@ -237,7 +253,8 @@ class CheckUserExistsHandlerTest {
                     "mfaMethodType":"%s",
                     "phoneNumberLastThree": %s,
                     "lockoutInformation":[],
-                    "hasActivePasskey":false}
+                    "hasActivePasskey":false,
+                    "hasInternationalPhoneNumber":false}
                     """,
                             EMAIL_ADDRESS,
                             expectedMfaMethodType,
@@ -308,9 +325,11 @@ class CheckUserExistsHandlerTest {
                             eq(JourneyType.PASSWORD_RESET_MFA), any()))
                     .thenReturn(Result.success(passwordResetLockout));
 
-            MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
+            MFAMethod mfaMethod1 = DEFAULT_AUTH_APP_METHOD;
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
+            when(mfaMethodsService.getMfaMethods(any(), any(), eq(true)))
+                    .thenReturn(Result.success(List.of(mfaMethod1)));
             var event = userExistsRequest(EMAIL_ADDRESS);
 
             var result = handler.handleRequest(event, context);
@@ -334,6 +353,7 @@ class CheckUserExistsHandlerTest {
                                             MFAMethodType.AUTH_APP,
                                             lockoutExpiry.getEpochSecond(),
                                             JourneyType.PASSWORD_RESET_MFA)),
+                            false,
                             false);
             assertThat(result, hasJsonBody(expectedResponse));
         }
@@ -342,9 +362,8 @@ class CheckUserExistsHandlerTest {
         void shouldReturnNoRedactedPhoneNumberIfNotPresent() throws Json.JsonException {
             setupUserProfileAndClient(Optional.of(generateUserProfile()));
 
-            MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
-                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(DEFAULT_SMS_METHOD)));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
@@ -353,6 +372,39 @@ class CheckUserExistsHandlerTest {
                     objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
             assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.email());
             assertNull(checkUserExistsResponse.phoneNumberLastThree());
+        }
+
+        private static Stream<Arguments> internationalPhoneNumberScenarios() {
+            return Stream.of(
+                    Arguments.of(
+                            List.of(
+                                    new MFAMethod(DEFAULT_SMS_METHOD)
+                                            .withDestination(INTERNATIONAL_MOBILE_NUMBER))),
+                    Arguments.of(
+                            List.of(
+                                    DEFAULT_AUTH_APP_METHOD,
+                                    new MFAMethod(BACKUP_SMS_METHOD)
+                                            .withDestination(INTERNATIONAL_MOBILE_NUMBER))));
+        }
+
+        @ParameterizedTest
+        @MethodSource("internationalPhoneNumberScenarios")
+        void shouldReturnTrueForHasInternationalPhoneNumberWhenUserHasInternationalSmsMfa(
+                List<MFAMethod> mfaMethods) throws Json.JsonException {
+            setupUserProfileAndClient(Optional.of(generateUserProfile()));
+
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(mfaMethods));
+            when(mfaMethodsService.getMfaMethods(any(), any(), eq(true)))
+                    .thenReturn(Result.success(mfaMethods));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.email());
+            assertTrue(checkUserExistsResponse.hasInternationalPhoneNumber());
         }
 
         @Test
@@ -493,15 +545,6 @@ class CheckUserExistsHandlerTest {
                 .withHeaders(VALID_HEADERS)
                 .withBody(format("{\"email\": \"%s\" }", email))
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
-    }
-
-    private MFAMethod verifiedMfaMethod(MFAMethodType mfaMethodType, Boolean enabled) {
-        return new MFAMethod(
-                mfaMethodType.getValue(),
-                "some-credential-value",
-                true,
-                enabled,
-                NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
     }
 
     @Nested

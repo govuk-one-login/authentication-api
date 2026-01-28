@@ -6,16 +6,17 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -39,12 +41,12 @@ import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
-import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.isDomesticPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 
 public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -52,13 +54,15 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
     private final AuditService auditService;
     private final PermissionDecisionManager permissionDecisionManager;
+    private final MFAMethodsService mfaMethodsService;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
             AuthSessionService authSessionService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            PermissionDecisionManager permissionDecisionManager) {
+            PermissionDecisionManager permissionDecisionManager,
+            MFAMethodsService mfaMethodsService) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
@@ -66,6 +70,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSessionService);
         this.auditService = auditService;
         this.permissionDecisionManager = permissionDecisionManager;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public CheckUserExistsHandler() {
@@ -76,6 +81,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     @Override
@@ -160,7 +166,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
-            var userMfaDetail = UserMfaDetail.noMfa();
+            var allMfaMethods = List.<MFAMethod>of();
+            var defaultMfaMethod = Optional.<MFAMethod>empty();
             var hasActivePasskey = false;
 
             AuthSessionItem authSession = userContext.getAuthSession();
@@ -179,11 +186,20 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSession.setInternalCommonSubjectId(internalCommonSubjectId);
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
-                userMfaDetail =
-                        getUserMFADetail(
-                                authSession.getRequestedCredentialStrength(),
-                                userCredentials,
-                                userProfile.get());
+                var allMfaMethodsResult =
+                        mfaMethodsService.getMfaMethods(userProfile.get(), userCredentials, true);
+                if (allMfaMethodsResult.isFailure()) {
+                    return switch (allMfaMethodsResult.getFailure()) {
+                        case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
+                        case USER_DOES_NOT_HAVE_ACCOUNT -> generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.ACCT_DOES_NOT_EXIST);
+                        case UNKNOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.INVALID_MFA_METHOD);
+                    };
+                }
+                allMfaMethods = allMfaMethodsResult.getSuccess();
+                defaultMfaMethod = getMfaMethodOrDefaultMfaMethod(allMfaMethods, null, null);
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
             } else {
                 authSession.setInternalCommonSubjectId(null);
@@ -202,14 +218,34 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var lockoutInformation = lockoutInformationResult.getSuccess();
 
+            var mfaMethodType =
+                    defaultMfaMethod
+                            .map(m -> MFAMethodType.valueOf(m.getMfaMethodType()))
+                            .orElse(MFAMethodType.NONE);
+            var phoneNumberLastThree =
+                    mfaMethodType == MFAMethodType.SMS
+                            ? defaultMfaMethod
+                                    .map(MFAMethod::getDestination)
+                                    .map(FrontendApiPhoneNumberHelper::getLastDigitsOfPhoneNumber)
+                                    .orElse(null)
+                            : null;
+            var hasInternationalPhoneNumber =
+                    allMfaMethods.stream()
+                            .anyMatch(
+                                    m ->
+                                            MFAMethodType.SMS.name().equals(m.getMfaMethodType())
+                                                    && m.getDestination() != null
+                                                    && !isDomesticPhoneNumber(m.getDestination()));
+
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
                             emailAddress,
                             userExists,
-                            userMfaDetail.mfaMethodType(),
-                            getLastDigitsOfPhoneNumber(userMfaDetail),
+                            mfaMethodType,
+                            phoneNumberLastThree,
                             lockoutInformation,
-                            hasActivePasskey);
+                            hasActivePasskey,
+                            hasInternationalPhoneNumber);
 
             authSessionService.updateSession(authSession);
 
