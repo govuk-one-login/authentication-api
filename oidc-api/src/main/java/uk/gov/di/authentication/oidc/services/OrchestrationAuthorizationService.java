@@ -40,6 +40,7 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
@@ -53,6 +54,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
+
 public class OrchestrationAuthorizationService {
     public static final String VTR_PARAM = "vtr";
     public static final String AUTHENTICATION_STATE_STORAGE_PREFIX = "auth-state:";
@@ -62,6 +65,7 @@ public class OrchestrationAuthorizationService {
     private final KmsConnectionService kmsConnectionService;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final StateStorageService stateStorageService;
+    private final JwksService jwksService;
     private static final Logger LOG = LogManager.getLogger(OrchestrationAuthorizationService.class);
 
     public OrchestrationAuthorizationService(
@@ -69,12 +73,14 @@ public class OrchestrationAuthorizationService {
             DynamoClientService dynamoClientService,
             KmsConnectionService kmsConnectionService,
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
-            StateStorageService stateStorageService) {
+            StateStorageService stateStorageService,
+            JwksService jwksService) {
         this.configurationService = configurationService;
         this.dynamoClientService = dynamoClientService;
         this.kmsConnectionService = kmsConnectionService;
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.stateStorageService = stateStorageService;
+        this.jwksService = jwksService;
     }
 
     public OrchestrationAuthorizationService(ConfigurationService configurationService) {
@@ -83,7 +89,9 @@ public class OrchestrationAuthorizationService {
                 new DynamoClientService(configurationService),
                 new KmsConnectionService(configurationService),
                 new CrossBrowserOrchestrationService(configurationService),
-                new StateStorageService(configurationService));
+                new StateStorageService(configurationService),
+                new JwksService(
+                        configurationService, new KmsConnectionService(configurationService)));
     }
 
     public OrchestrationAuthorizationService(
@@ -96,7 +104,8 @@ public class OrchestrationAuthorizationService {
                 new DynamoClientService(configurationService),
                 kmsConnectionService,
                 crossBrowserOrchestrationService,
-                stateStorageService);
+                stateStorageService,
+                new JwksService(configurationService, kmsConnectionService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -136,7 +145,11 @@ public class OrchestrationAuthorizationService {
 
     public SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet) {
         LOG.info("Generating signed and encrypted JWT");
-        var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
+        var signingKey = jwksService.getPublicAuthSigningJwkWithOpaqueId();
+        LOG.info("Key ID in header: {}", signingKey.getKeyID());
+        LOG.info("Hashed key ID in header: {}", hashSha256String(signingKey.getKeyID()));
+        var jwsHeader =
+                new JWSHeader.Builder(SIGNING_ALGORITHM).keyID(signingKey.getKeyID()).build();
 
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(jwtClaimsSet.toString());
