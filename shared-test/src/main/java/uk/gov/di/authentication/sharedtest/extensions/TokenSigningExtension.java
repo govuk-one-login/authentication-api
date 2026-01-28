@@ -3,6 +3,7 @@ package uk.gov.di.authentication.sharedtest.extensions;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -15,7 +16,11 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.interfaces.ECPrivateKey;
 import java.util.Optional;
+
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 
 public class TokenSigningExtension extends KmsKeyExtension {
 
@@ -39,7 +44,7 @@ public class TokenSigningExtension extends KmsKeyExtension {
     public SignedJWT signJwt(JWTClaimsSet claimsSet) {
         try {
             JWSHeader jwsHeader =
-                    new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(getKeyAlias()).build();
+                    new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(getKeyId()).build();
             Base64URL encodedHeader = jwsHeader.toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;
@@ -61,5 +66,16 @@ public class TokenSigningExtension extends KmsKeyExtension {
         } catch (java.text.ParseException | JOSEException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public SignedJWT signJwtWithoutKms(JWTClaimsSet claimsSet, KeyPair keyPair)
+            throws JOSEException {
+        var jwsHeader = new JWSHeader(ES256);
+        var signedJWT = new SignedJWT(jwsHeader, claimsSet);
+
+        var ecdsaSigner = new ECDSASigner((ECPrivateKey) keyPair.getPrivate());
+
+        signedJWT.sign(ecdsaSigner);
+        return signedJWT;
     }
 }

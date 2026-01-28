@@ -1,16 +1,27 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
+import java.net.MalformedURLException;
+import java.security.KeyPair;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
+import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -18,16 +29,26 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 
 class JwksServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
     private final JwksService jwksService =
-            new JwksService(configurationService, kmsConnectionService);
+            new JwksService(configurationService, kmsConnectionService, jwkSource);
+    private static final KeyPair TEST_KEY_PAIR = GENERATE_RSA_KEY_PAIR();
+    private static final RSAPublicKey TEST_PUBLIC_KEY = (RSAPublicKey) TEST_KEY_PAIR.getPublic();
+
+    @BeforeEach
+    void testSetup() throws KeySourceException {
+        when(jwkSource.get(Mockito.any(JWKSelector.class), Mockito.isNull()))
+                .thenReturn(Collections.singletonList(new RSAKey.Builder(TEST_PUBLIC_KEY).build()));
+    }
 
     @Test
-    void shouldRetrievePublicTokenSigningKeyFromKmsAndParseToJwk() {
+    void shouldRetrievePublicTokenSigningKeyFromKmsAndParseToJwk() throws MalformedURLException {
         byte[] publicKey =
                 Base64.getDecoder()
                         .decode(
@@ -47,7 +68,8 @@ class JwksServiceTest {
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
 
-        JWK publicKeyJwk = jwksService.getPublicTokenJwkWithOpaqueId();
+        JWK publicKeyJwk =
+                jwksService.getPublicTokenJwkWithOpaqueId(hashSha256String("14342354354353"));
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String("14342354354353")));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
@@ -55,7 +77,7 @@ class JwksServiceTest {
     }
 
     @Test
-    void shouldRetrievePublicTokenSigningRsaKeyFromKmsAndParseToJwk() {
+    void shouldRetrievePublicTokenSigningRsaKeyFromKmsAndParseToJwk() throws MalformedURLException {
         byte[] publicKey =
                 Base64.getDecoder()
                         .decode(
@@ -75,7 +97,8 @@ class JwksServiceTest {
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
 
-        JWK publicKeyJwk = jwksService.getPublicTokenRsaJwkWithOpaqueId();
+        JWK publicKeyJwk =
+                jwksService.getPublicTokenRsaJwkWithOpaqueId(hashSha256String("25252525252525"));
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String("25252525252525")));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.RS256));
