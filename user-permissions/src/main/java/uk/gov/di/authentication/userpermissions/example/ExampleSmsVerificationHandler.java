@@ -9,7 +9,7 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisions;
 import uk.gov.di.authentication.userpermissions.UserActions;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -34,8 +34,8 @@ public class ExampleSmsVerificationHandler {
 
     public String handle(String submittedOtp) {
         JourneyType journeyType = JourneyType.SIGN_IN;
-        var userPermissionContext =
-                UserPermissionContext.builder()
+        var permissionContext =
+                PermissionContext.builder()
                         .withInternalSubjectId("439qklhxm39qfja3sdg43")
                         .withRpPairwiseId(
                                 "urn:fdc:gov.uk:2022:D0eushEU31EeUDUi_EJVz2seIGwfF_QfTZSm_yq1Rfs")
@@ -43,7 +43,7 @@ public class ExampleSmsVerificationHandler {
                         .withAuthSessionItem(new AuthSessionItem())
                         .build();
 
-        var checkResult = permissionDecisions.canVerifyMfaOtp(journeyType, userPermissionContext);
+        var checkResult = permissionDecisions.canVerifyMfaOtp(journeyType, permissionContext);
         if (checkResult.isFailure()) {
             return (format("500: %s", checkResult.getFailure().name()));
         }
@@ -61,7 +61,7 @@ public class ExampleSmsVerificationHandler {
         }
 
         if (!submittedOtp.equals(EXPECTED_OTP)) {
-            userActions.incorrectSmsOtpReceived(journeyType, userPermissionContext);
+            userActions.incorrectSmsOtpReceived(journeyType, permissionContext);
             return ("400: Incorrect OTP received");
         }
 
@@ -70,7 +70,7 @@ public class ExampleSmsVerificationHandler {
                 AuditContext.emptyAuditContext()
                         .withMetadataItem(pair("attempts", decision.attemptCount() + 1)));
 
-        userActions.correctSmsOtpReceived(journeyType, userPermissionContext);
+        userActions.correctSmsOtpReceived(journeyType, permissionContext);
         return ("200: Success");
     }
 

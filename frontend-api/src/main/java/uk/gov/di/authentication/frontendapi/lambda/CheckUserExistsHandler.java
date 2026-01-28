@@ -32,7 +32,7 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -129,12 +129,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             : AuditService.UNKNOWN;
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
-            UserPermissionContext userPermissionContext =
-                    UserPermissionContext.builder().withEmailAddress(emailAddress).build();
+            PermissionContext permissionContext =
+                    PermissionContext.builder().withEmailAddress(emailAddress).build();
 
             var decisionResult =
                     permissionDecisionManager.canReceivePassword(
-                            JourneyType.PASSWORD_RESET, userPermissionContext);
+                            JourneyType.PASSWORD_RESET, permissionContext);
 
             if (decisionResult.isFailure()) {
                 LOG.info("No decision made: {}", decisionResult.getFailure());
@@ -193,7 +193,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             auditService.submitAuditEvent(
                     auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
 
-            var lockoutInformationResult = determineLockoutInformation(userPermissionContext);
+            var lockoutInformationResult = determineLockoutInformation(permissionContext);
 
             if (lockoutInformationResult.isFailure()) {
                 return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
@@ -223,12 +223,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     }
 
     private Result<DecisionError, List<LockoutInformation>> determineLockoutInformation(
-            UserPermissionContext userPermissionContext) {
+            PermissionContext permissionContext) {
         var lockoutInformation = new ArrayList<LockoutInformation>();
 
         var signInResult =
-                permissionDecisionManager.canVerifyMfaOtp(
-                        JourneyType.SIGN_IN, userPermissionContext);
+                permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, permissionContext);
         if (signInResult.isFailure()) {
             return Result.failure(signInResult.getFailure());
         }
@@ -241,7 +240,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
         var passwordResetResult =
                 permissionDecisionManager.canVerifyMfaOtp(
-                        JourneyType.PASSWORD_RESET_MFA, userPermissionContext);
+                        JourneyType.PASSWORD_RESET_MFA, permissionContext);
         if (passwordResetResult.isFailure()) {
             return Result.failure(passwordResetResult.getFailure());
         }

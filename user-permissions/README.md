@@ -42,7 +42,7 @@ The `UserActions` interface defines methods to track user authentication actions
 
 ### Supporting Entities
 
-- `UserPermissionContext` - Contains user context information for permission decisions
+- `PermissionContext` - Contains context information for permission decisions
 - `Decision` - Sealed interface representing permission decisions (Permitted or TemporarilyLockedOut)
 - `ForbiddenReason` - Enum of reasons why a user might be temporarily locked out
 - `TrackingError` - Error types for action tracking
@@ -52,7 +52,7 @@ The `UserActions` interface defines methods to track user authentication actions
 
 The module includes an `ExampleSmsVerificationHandler` that demonstrates how to use the interfaces:
 
-1. Create a `UserPermissionContext` with user information
+1. Create a `PermissionContext` with user information
 2. Check if the user is permitted to verify an SMS OTP
 3. Handle temporary lockouts if applicable
 4. Track incorrect/correct OTP submissions
@@ -60,7 +60,7 @@ The module includes an `ExampleSmsVerificationHandler` that demonstrates how to 
 
 ```java
 // Check if user can verify SMS OTP
-var checkResult = permissionDecisions.canVerifySmsOtp(journeyType, userPermissionContext);
+var checkResult = permissionDecisions.canVerifySmsOtp(journeyType, permissionContext);
 if (checkResult.isFailure()) {
     return errorResponse;
 }
@@ -73,12 +73,12 @@ if (decision instanceof Decision.TemporarilyLockedOut lockedOut) {
 
 if (!isOtpValid(submittedOtp)) {
     // Track incorrect submission
-    userActions.incorrectSmsOtpReceived(journeyType, userPermissionContext);
+    userActions.incorrectSmsOtpReceived(journeyType, permissionContext);
     return incorrectOtpResponse;
 }
 
 // Track correct submission
-userActions.correctSmsOtpReceived(journeyType, userPermissionContext);
+userActions.correctSmsOtpReceived(journeyType, permissionContext);
 return successResponse;
 ```
 

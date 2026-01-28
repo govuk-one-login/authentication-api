@@ -37,7 +37,7 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -158,8 +158,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
             }
 
-            var userPermissionContext =
-                    UserPermissionContext.builder()
+            var permissionContext =
+                    PermissionContext.builder()
                             .withInternalSubjectId(
                                     userContext.getAuthSession().getInternalCommonSubjectId())
                             .withEmailAddress(request.getEmail())
@@ -177,7 +177,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             // Call the action to increment the count
             userActionsManager.sentEmailOtpNotification(
-                    JourneyType.PASSWORD_RESET, userPermissionContext);
+                    JourneyType.PASSWORD_RESET, permissionContext);
 
             authSessionService.updateSession(
                     userContext
@@ -315,8 +315,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
     private Result<APIGatewayProxyResponseEvent, Void> checkUserPermissions(
             String email, UserContext userContext) {
-        var userPermissionContext =
-                UserPermissionContext.builder()
+        var permissionContext =
+                PermissionContext.builder()
                         .withInternalSubjectId(
                                 userContext.getAuthSession().getInternalCommonSubjectId())
                         .withEmailAddress(email)
@@ -325,12 +325,12 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         var canSendResult =
                 permissionDecisionManager.canSendEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, userPermissionContext);
+                        JourneyType.PASSWORD_RESET, permissionContext);
 
         if (canSendResult.isSuccess()) {
             var decision = canSendResult.getSuccess();
             if (decision instanceof Decision.TemporarilyLockedOut lockedOut) {
-                var result = handleTemporarilyLockedOut(lockedOut, userPermissionContext);
+                var result = handleTemporarilyLockedOut(lockedOut, permissionContext);
                 if (result.isFailure()) {
                     return result;
                 }
@@ -349,11 +349,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> handleTemporarilyLockedOut(
-            Decision.TemporarilyLockedOut lockedOut, UserPermissionContext userPermissionContext) {
+            Decision.TemporarilyLockedOut lockedOut, PermissionContext permissionContext) {
         if (lockedOut.forbiddenReason()
                 == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
             userActionsManager.sentEmailOtpNotification(
-                    JourneyType.PASSWORD_RESET, userPermissionContext);
+                    JourneyType.PASSWORD_RESET, permissionContext);
             var errorResponse =
                     lockedOut.isFirstTimeLimit()
                             ? ErrorResponse.TOO_MANY_PW_RESET_REQUESTS
@@ -366,8 +366,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private Optional<ErrorResponse> hasUserExceededMaxAllowedRequests(
             String email, UserContext userContext) {
         LOG.info("Validating Password Reset Count");
-        var userPermissionContext =
-                UserPermissionContext.builder()
+        var permissionContext =
+                PermissionContext.builder()
                         .withInternalSubjectId(
                                 userContext.getAuthSession().getInternalCommonSubjectId())
                         .withEmailAddress(email)
@@ -376,7 +376,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         var canSendResult =
                 permissionDecisionManager.canSendEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, userPermissionContext);
+                        JourneyType.PASSWORD_RESET, permissionContext);
 
         if (canSendResult.isSuccess()
                 && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
@@ -394,7 +394,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         var canVerifyResult =
                 permissionDecisionManager.canVerifyEmailOtp(
-                        JourneyType.PASSWORD_RESET, userPermissionContext);
+                        JourneyType.PASSWORD_RESET, permissionContext);
 
         if (canVerifyResult.isSuccess()
                 && canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
