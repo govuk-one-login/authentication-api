@@ -8,12 +8,14 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -30,6 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AuthoriseAccessTokenIntegrationTest
         extends HandlerIntegrationTest<TokenAuthorizerContext, AuthPolicy> {
+
+    @RegisterExtension
+    protected static final TokenSigningExtension testTokenSigner =
+            new TokenSigningExtension("test-token-signing-key");
 
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String REQUEST_CONTEXT_OBJECT_CLIENT_ID_KEY = "clientId";
@@ -116,6 +122,54 @@ class AuthoriseAccessTokenIntegrationTest
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
     }
 
+    @Test
+    void shouldValidateTokenSignedWithTestKey() {
+        var configServiceWithTestToken =
+                new IntegrationTestConfigurationService(
+                        notificationsQueue,
+                        tokenSigner,
+                        docAppPrivateKeyJwtSigner,
+                        configurationParameters) {
+                    @Override
+                    public String getTestTokenSigningKeyAlias() {
+                        return testTokenSigner.getKeyAlias();
+                    }
+
+                    @Override
+                    public boolean isTestSigningKeyEnabled() {
+                        return true;
+                    }
+                };
+
+        var customHandler = new AuthoriseAccessTokenHandler(configServiceWithTestToken);
+
+        var scopes =
+                asList(
+                        OIDCScopeValue.OPENID.getValue(),
+                        CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
+
+        var accessToken =
+                generateSignedAccessTokenWithSigner(
+                        testTokenSigner,
+                        scopes,
+                        Optional.of(CLIENT_ID.getValue()),
+                        PUBLIC_SUBJECT.getValue(),
+                        validDate);
+
+        var request =
+                new TokenAuthorizerContext(
+                        "TOKEN",
+                        accessToken.toAuthorizationHeader(),
+                        "arn:aws:execute-api:region:12344566:hfmsi48564/test/$connect");
+
+        var authPolicy = customHandler.handleRequest(request, context);
+
+        assertThat(authPolicy.getPrincipalId(), equalTo(PUBLIC_SUBJECT.getValue()));
+        assertThat(
+                authPolicy.getContext().get(REQUEST_CONTEXT_OBJECT_CLIENT_ID_KEY),
+                equalTo(CLIENT_ID.getValue()));
+    }
+
     private void expectException(Supplier<AuthPolicy> performAction) {
         var ex = assertThrows(RuntimeException.class, performAction::get);
 
@@ -123,6 +177,16 @@ class AuthoriseAccessTokenIntegrationTest
     }
 
     private AccessToken generateSignedAccessToken(
+            List<String> scopes,
+            Optional<String> clientIdOpt,
+            String publicSubject,
+            Date expiryDate) {
+        return generateSignedAccessTokenWithSigner(
+                tokenSigner, scopes, clientIdOpt, publicSubject, expiryDate);
+    }
+
+    private AccessToken generateSignedAccessTokenWithSigner(
+            TokenSigningExtension signer,
             List<String> scopes,
             Optional<String> clientIdOpt,
             String publicSubject,
@@ -136,7 +200,7 @@ class AuthoriseAccessTokenIntegrationTest
                         .subject(publicSubject)
                         .jwtID(UUID.randomUUID().toString());
         clientIdOpt.ifPresent(clientId -> claimsSetBuilder.claim("client_id", clientId));
-        var signedJWT = tokenSigner.signJwt(claimsSetBuilder.build());
+        var signedJWT = signer.signJwt(claimsSetBuilder.build());
         return new BearerAccessToken(signedJWT.serialize());
     }
 }

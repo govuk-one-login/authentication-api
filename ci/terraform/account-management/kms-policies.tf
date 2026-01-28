@@ -15,6 +15,23 @@ data "aws_iam_policy_document" "kms_policy_document" {
       data.aws_kms_key.id_token_public_key.arn,
     ]
   }
+
+  dynamic "statement" {
+    for_each = local.is_acceptance_test_env ? [1] : []
+    content {
+      sid    = "AllowAccessToTestIDTokenKey"
+      effect = "Allow"
+
+      actions = [
+        "kms:GetPublicKey",
+        "kms:Sign",
+        "kms:Verify",
+      ]
+      resources = [
+        aws_kms_key.test_id_token_signing_key[0].arn,
+      ]
+    }
+  }
 }
 
 resource "aws_iam_policy" "lambda_kms_policy" {

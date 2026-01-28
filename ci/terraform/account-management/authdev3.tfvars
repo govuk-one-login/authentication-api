@@ -13,6 +13,7 @@ email_acct_creation_otp_code_ttl_duration = 60
 mfa_method_management_api_enabled            = true
 test_clients_enabled                         = true
 account_management_international_sms_enabled = false
+test_signing_key_enabled                     = true
 
 openapi_spec_filename = "openapi_v2.yaml"
 
