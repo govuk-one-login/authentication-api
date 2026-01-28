@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Conditions:
+  DeployAMCAuthorizeWithSplunk: !Condition IsSplunkEnabled
+Resources:
+  AMCAuthorizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-amc-authorize-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler::handleRequest
+      Environment:
+        Variables:
+          AMC_AUTHORIZE_URI: !Sub
+            - "{{resolve:ssm:/deploy/${env}/amc_authorize_uri}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AMC_CLIENT_ID: "auth_amc"
+          AMC_REDIRECT_URI: !Sub
+            - "{{resolve:ssm:/deploy/${env}/amc_redirect_uri}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_ISSUER_CLAIM:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendBaseUrl,
+            ]
+          AUTH_TO_ACCOUNT_MANAGEMENT_PRIVATE_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-management-signing-key
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_TO_AMC_AUDIENCE: !Sub
+            - "{{resolve:ssm:/deploy/${env}/amc_audience}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_TO_AMC_PRIVATE_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-amc-signing-key
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_TO_AMC_PUBLIC_ENCRYPTION_KEY: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/auth_to_amc_public_encryption_key}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_TO_AUTH_AUDIENCE: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://manage.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://manage.${Environment}.account.gov.uk"
+            - "https://manage.account.gov.uk"
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          SESSION_EXPIRY: "3600"
+          USE_STRONGLY_CONSISTENT_READS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              useStronglyConsistentReads,
+            ]
+      LoggingConfig:
+        LogGroup: !Ref AMCAuthorizeFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuthToAMCPublicEncryptionKeyParameterPolicy
+        - !Ref AuthToAMCSigningKeyPolicy
+        - !Ref AuthToAccountManagementSigningKeyPolicy
+        - !Ref DynamoAuthSessionStoreReadAccessPolicy
+        - !Ref DynamoClientRegistryReadAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref HttpsEgressSecurityGroup
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder: ""
+
+  AMCAuthorizeFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt AMCAuthorizeFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  AMCAuthorizeFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AMCAuthorizeFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  AMCAuthorizeFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-amc-authorize-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AMCAuthorizeFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/amc-authorize.yaml
+
+  AMCAuthorizeFunctionSubscriptionFilter:
+    Condition: DeployAMCAuthorizeWithSplunk
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AMCAuthorizeFunctionLogGroup
