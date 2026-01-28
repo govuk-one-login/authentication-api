@@ -162,6 +162,10 @@ subprojects {
                         because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
                     }
 
+                    add(conf.name, 'org.apache.logging.log4j:log4j-core:[2.25.3,)') {
+                        because 'CVE-2025-68161 is fixed in org.apache.logging.log4j:log4j-core:2.25.3 and higher'
+                    }
+
                     // Other constraints
                     add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
                         because 'CVE-2024-7254 is fixed in 3.25.5 and above'
