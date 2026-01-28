@@ -294,24 +294,17 @@ Mappings:
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
       lockoutDuration: 900
       otpCodeTtlDuration: 900
-      lambdaMinConcurrency: 0
       lambdaMaxConcurrency: 10
+      lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
       mfaMethodsCreateMemorySize: 1536
-      mfaMethodsCreateMaxConcurrency: 10
       mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteMaxConcurrency: 10
       mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateMaxConcurrency: 10
       updateEmailMemorySize: 1536
-      updateEmailMaxConcurrency: 10
       updatePasswordMemorySize: 1536
-      updatePasswordMaxConcurrency: 10
       updatePhoneNumberMemorySize: 1536
-      updatePhoneNumberMaxConcurrency: 10
       bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountMaxConcurrency: 10
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
@@ -348,24 +341,17 @@ Mappings:
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
       lockoutDuration: 900
       otpCodeTtlDuration: 900
-      lambdaMinConcurrency: 0
       lambdaMaxConcurrency: 10
+      lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
       mfaMethodsCreateMemorySize: 1536
-      mfaMethodsCreateMaxConcurrency: 10
       mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteMaxConcurrency: 10
       mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateMaxConcurrency: 10
       updateEmailMemorySize: 1536
-      updateEmailMaxConcurrency: 10
       updatePasswordMemorySize: 1536
-      updatePasswordMaxConcurrency: 10
       updatePhoneNumberMemorySize: 1536
-      updatePhoneNumberMaxConcurrency: 10
       bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountMaxConcurrency: 10
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
@@ -401,24 +387,17 @@ Mappings:
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
       lockoutDuration: 30
       otpCodeTtlDuration: 120
-      lambdaMinConcurrency: 0
       lambdaMaxConcurrency: 10
+      lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
       mfaMethodsCreateMemorySize: 1536
-      mfaMethodsCreateMaxConcurrency: 10
       mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteMaxConcurrency: 10
       mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateMaxConcurrency: 10
       updateEmailMemorySize: 1536
-      updateEmailMaxConcurrency: 10
       updatePasswordMemorySize: 1536
-      updatePasswordMaxConcurrency: 10
       updatePhoneNumberMemorySize: 1536
-      updatePhoneNumberMaxConcurrency: 10
       bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountMaxConcurrency: 10
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
@@ -461,24 +440,17 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
       IsSplunkEnabled: "No"
-      lambdaMinConcurrency: 0
       lambdaMaxConcurrency: 10
+      lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
       mfaMethodsCreateMemorySize: 1536
-      mfaMethodsCreateMaxConcurrency: 10
       mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteMaxConcurrency: 10
       mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateMaxConcurrency: 10
       updateEmailMemorySize: 1536
-      updateEmailMaxConcurrency: 10
       updatePasswordMemorySize: 1536
-      updatePasswordMaxConcurrency: 10
       updatePhoneNumberMemorySize: 1536
-      updatePhoneNumberMaxConcurrency: 10
       bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountMaxConcurrency: 10
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       UseAlarmActions: "No"
@@ -522,23 +494,17 @@ Mappings:
       HomeApiVpcEndpointId: ["vpce-0e1bb7e9c33b0e516", "vpce-0f4845b63ae267db4"]
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
+      lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
       mfaMethodsCreateMemorySize: 1536
-      mfaMethodsCreateMaxConcurrency: 20
       mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteMaxConcurrency: 20
       mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateMaxConcurrency: 20
       updateEmailMemorySize: 1536
-      updateEmailMaxConcurrency: 20
       updatePasswordMemorySize: 1536
-      updatePasswordMaxConcurrency: 20
       updatePhoneNumberMemorySize: 1536
-      updatePhoneNumberMaxConcurrency: 20
       bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountMaxConcurrency: 20
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
@@ -588,23 +554,15 @@ Mappings:
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
-      lambdaMaxConcurrency: 10
       authenticateMemorySize: 2048
       sendOtpNotificationMemorySize: 2048
       mfaMethodsCreateMemorySize: 2048
-      mfaMethodsCreateMaxConcurrency: 50
       mfaMethodsDeleteMemorySize: 2048
-      mfaMethodsDeleteMaxConcurrency: 50
       mfaMethodsUpdateMemorySize: 2048
-      mfaMethodsUpdateMaxConcurrency: 50
       updateEmailMemorySize: 2048
-      updateEmailMaxConcurrency: 50
       updatePasswordMemorySize: 2048
-      updatePasswordMaxConcurrency: 50
       updatePhoneNumberMemorySize: 2048
-      updatePhoneNumberMaxConcurrency: 50
       bulkRemoveAccountMemorySize: 2048
-      bulkRemoveAccountMaxConcurrency: 50
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
@@ -657,19 +615,12 @@ Mappings:
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
       mfaMethodsCreateMemorySize: 1536
-      mfaMethodsCreateMaxConcurrency: 15
       mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteMaxConcurrency: 15
       mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateMaxConcurrency: 15
       updateEmailMemorySize: 1536
-      updateEmailMaxConcurrency: 15
       updatePasswordMemorySize: 1536
-      updatePasswordMaxConcurrency: 15
       updatePhoneNumberMemorySize: 1536
-      updatePhoneNumberMaxConcurrency: 15
       bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountMaxConcurrency: 15
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutDuration: 900
@@ -723,19 +674,12 @@ Mappings:
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
       mfaMethodsCreateMemorySize: 1536
-      mfaMethodsCreateMaxConcurrency: 15
       mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteMaxConcurrency: 15
       mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateMaxConcurrency: 15
       updateEmailMemorySize: 1536
-      updateEmailMaxConcurrency: 15
       updatePasswordMemorySize: 1536
-      updatePasswordMaxConcurrency: 15
       updatePhoneNumberMemorySize: 1536
-      updatePhoneNumberMaxConcurrency: 15
       bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountMaxConcurrency: 15
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutDuration: 900
