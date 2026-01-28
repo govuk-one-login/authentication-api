@@ -387,8 +387,12 @@ public class TokenService {
             JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
         String alias =
                 algorithm == JWSAlgorithm.ES256
-                        ? configService.getExternalTokenSigningKeyAlias()
-                        : configService.getExternalTokenSigningKeyRsaAlias();
+                        ? configService.isUseNewTokenSigningKeysEnabled()
+                                ? configService.getNextExternalTokenSigningKeyAlias()
+                                : configService.getExternalTokenSigningKeyAlias()
+                        : configService.isUseNewTokenSigningKeysEnabled()
+                                ? configService.getNextExternalTokenSigningKeyRsaAlias()
+                                : configService.getExternalTokenSigningKeyRsaAlias();
         return generateSignedJWT(claimsSet, type, algorithm, alias);
     }
 
