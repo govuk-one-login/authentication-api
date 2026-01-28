@@ -777,4 +777,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getWebAuthnRelyingPartyName() {
         return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "GOV.UK One Login");
     }
+
+    public int getInternationalSmsNumberSendLimit() throws MissingEnvVariableException {
+        String key = System.getenv("INTERNATIONAL_SMS_NUMBER_SEND_LIMIT");
+
+        if (key == null || key.isEmpty()) {
+            throw new MissingEnvVariableException("INTERNATIONAL_SMS_NUMBER_SEND_LIMIT");
+        }
+
+        return Integer.parseInt(key);
+    }
 }
