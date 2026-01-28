@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -41,6 +42,8 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -148,6 +151,8 @@ class ResetPasswordHandlerTest {
                 .validate("password");
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
         usingValidSession();
         handler =
                 new ResetPasswordHandler(
@@ -234,6 +239,69 @@ class ResetPasswordHandlerTest {
             verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
             verifyNoInteractions(accountModifiersService);
             verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        @Test
+        void shouldNotSendSmsWhenUserIsIndefinitelyLockedOut() throws Json.JsonException {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(true));
+            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.IndefinitelyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                            10)));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(sqsClient, never())
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_SMS_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+        }
+
+        @Test
+        void shouldSendSmsWhenUserIsPermitted() throws Json.JsonException {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(true));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_SMS_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
         }
 
         @Test

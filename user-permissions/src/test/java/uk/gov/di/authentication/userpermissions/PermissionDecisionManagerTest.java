@@ -13,16 +13,18 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,6 +34,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -40,21 +43,29 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_R
 class PermissionDecisionManagerTest {
 
     private static final String EMAIL = "test@example.com";
+    private static final String PHONE_NUMBER = "+447123456789";
     private static final long LOCKOUT_DURATION = 799;
+    private static final int INTERNATIONAL_SMS_SEND_LIMIT = 10;
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService =
+            mock(InternationalSmsSendLimitService.class);
 
     private final PermissionDecisionManager permissionDecisionManager =
             new PermissionDecisionManager(
-                    configurationService, codeStorageService, authenticationAttemptsService);
+                    configurationService,
+                    codeStorageService,
+                    authenticationAttemptsService,
+                    internationalSmsSendLimitService);
 
     @BeforeEach
     void setup() {
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(true);
     }
 
     @Nested
@@ -286,7 +297,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorWhenEmailAddressIsNull() {
             var userContext =
-                    new UserPermissionContext("subject", "pairwise", null, new AuthSessionItem());
+                    new PermissionContext("subject", "pairwise", null, new AuthSessionItem(), null);
 
             var result =
                     permissionDecisionManager.canReceivePassword(
@@ -384,7 +395,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorForReauthenticationJourneyWhenInternalSubjectIdIsNull() {
             var userContext =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withRpPairwiseId("pairwise")
                             .withEmailAddress(EMAIL)
                             .withAuthSessionItem(new AuthSessionItem())
@@ -401,7 +412,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorForReauthenticationJourneyWhenRpPairwiseIdIsNull() {
             var userContext =
-                    new UserPermissionContext("subject", null, EMAIL, new AuthSessionItem());
+                    new PermissionContext("subject", null, EMAIL, new AuthSessionItem(), null);
 
             var result =
                     permissionDecisionManager.canReceivePassword(
@@ -433,6 +444,85 @@ class PermissionDecisionManagerTest {
                     ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                     lockedOut.forbiddenReason());
             assertEquals(7, lockedOut.attemptCount());
+        }
+    }
+
+    @Nested
+    class CanSendSmsOtpNotification {
+
+        @Test
+        void shouldReturnErrorWhenPhoneNumberIsNull() {
+            var userContext = createUserContext(0, EMAIL, null);
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isFailure());
+            assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+        }
+
+        @Test
+        void shouldReturnErrorWhenEmailIsNull() {
+            var userContext = createUserContext(0, null, Optional.of(PHONE_NUMBER));
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isFailure());
+            assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+        }
+
+        @Test
+        void shouldReturnIndefinitelyLockedOutWhenInternationalSmsLimitExceeded() {
+            var userContext = createUserContext(0);
+
+            when(internationalSmsSendLimitService.canSendSms(PHONE_NUMBER)).thenReturn(false);
+            when(configurationService.getInternationalSmsNumberSendLimit())
+                    .thenReturn(INTERNATIONAL_SMS_SEND_LIMIT);
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            verify(internationalSmsSendLimitService).canSendSms(PHONE_NUMBER);
+            assertTrue(result.isSuccess());
+            var decision =
+                    assertInstanceOf(Decision.IndefinitelyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                    decision.forbiddenReason());
+            assertEquals(INTERNATIONAL_SMS_SEND_LIMIT, decision.attemptCount());
+        }
+
+        @Test
+        void shouldReturnPermittedWhenInternationalSmsLimitNotExceeded() {
+            var userContext = createUserContext(0);
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            verify(internationalSmsSendLimitService).canSendSms(PHONE_NUMBER);
+            assertTrue(result.isSuccess());
+            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            assertEquals(0, decision.attemptCount());
+        }
+
+        @Test
+        void shouldReturnStorageErrorWhenInternationalSmsServiceThrowsException() {
+            var userContext = createUserContext(0);
+
+            when(internationalSmsSendLimitService.canSendSms(anyString()))
+                    .thenThrow(new RuntimeException("Service error"));
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isFailure());
+            assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
         }
     }
 
@@ -605,7 +695,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldUseGetCountsByJourneyWhenInternalSubjectIdIsNull() {
             var userContext =
-                    UserPermissionContext.builder()
+                    PermissionContext.builder()
                             .withRpPairwiseId("rp-pairwise-id")
                             .withEmailAddress(EMAIL)
                             .withAuthSessionItem(new AuthSessionItem())
@@ -747,8 +837,12 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorForReauthenticationWithNullInternalSubjectIds() {
             var userContext =
-                    new UserPermissionContext(
-                            (List<String>) null, "rp-pairwise-id", EMAIL, new AuthSessionItem());
+                    new PermissionContext(
+                            (List<String>) null,
+                            "rp-pairwise-id",
+                            EMAIL,
+                            new AuthSessionItem(),
+                            null);
 
             var result =
                     permissionDecisionManager.canReceiveEmailAddress(
@@ -761,8 +855,12 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorForReauthenticationWithNullRpPairwiseId() {
             var userContext =
-                    new UserPermissionContext(
-                            List.of("internal-subject-id"), null, EMAIL, new AuthSessionItem());
+                    new PermissionContext(
+                            List.of("internal-subject-id"),
+                            null,
+                            EMAIL,
+                            new AuthSessionItem(),
+                            null);
 
             var result =
                     permissionDecisionManager.canReceiveEmailAddress(
@@ -775,19 +873,6 @@ class PermissionDecisionManagerTest {
 
     @Nested
     class SimplePermissionMethods {
-
-        @Test
-        void canSendSmsOtpNotificationShouldAlwaysReturnPermitted() {
-            var userContext = createUserContext(0);
-
-            var result =
-                    permissionDecisionManager.canSendSmsOtpNotification(
-                            JourneyType.SIGN_IN, userContext);
-
-            assertTrue(result.isSuccess());
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
-            assertEquals(0, decision.attemptCount());
-        }
 
         @Test
         void canVerifySmsOtpShouldAlwaysReturnPermitted() {
@@ -815,13 +900,18 @@ class PermissionDecisionManagerTest {
         }
     }
 
-    private UserPermissionContext createUserContext(int passwordResetCount) {
-        var authSession = new AuthSessionItem().withEmailAddress(EMAIL);
+    private PermissionContext createUserContext(int passwordResetCount) {
+        return createUserContext(passwordResetCount, EMAIL, Optional.of(PHONE_NUMBER));
+    }
+
+    private PermissionContext createUserContext(
+            int passwordResetCount, String email, Optional<String> phoneNumber) {
+        var authSession = new AuthSessionItem().withEmailAddress(email);
         for (int i = 0; i < passwordResetCount; i++) {
             authSession = authSession.incrementPasswordResetCount();
         }
 
-        return new UserPermissionContext(
-                "internal-subject-id", "rp-pairwise-id", EMAIL, authSession);
+        return new PermissionContext(
+                "internal-subject-id", "rp-pairwise-id", email, authSession, phoneNumber);
     }
 }

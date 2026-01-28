@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.userpermissions;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.lang.reflect.Method;
 
@@ -40,8 +41,7 @@ class ExperimentalTest {
                 PermissionDecisions.class.getMethod(
                         "canLogin",
                         uk.gov.di.authentication.shared.entity.JourneyType.class,
-                        uk.gov.di.authentication.userpermissions.entity.UserPermissionContext
-                                .class);
+                        PermissionContext.class);
 
         // When
         Experimental annotation = canLoginMethod.getAnnotation(Experimental.class);

@@ -9,7 +9,7 @@ import uk.gov.di.authentication.userpermissions.UserActions;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.Instant;
 
@@ -49,7 +49,7 @@ class ExampleSmsVerificationHandlerTest {
         // Then
         assertEquals("200: Success", result);
         verify(userActions)
-                .correctSmsOtpReceived(any(JourneyType.class), any(UserPermissionContext.class));
+                .correctSmsOtpReceived(any(JourneyType.class), any(PermissionContext.class));
     }
 
     @Test
@@ -65,7 +65,7 @@ class ExampleSmsVerificationHandlerTest {
         // Then
         assertEquals("400: Incorrect OTP received", result);
         verify(userActions)
-                .incorrectSmsOtpReceived(any(JourneyType.class), any(UserPermissionContext.class));
+                .incorrectSmsOtpReceived(any(JourneyType.class), any(PermissionContext.class));
     }
 
     @Test

@@ -13,6 +13,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
@@ -55,6 +56,7 @@ import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -1332,6 +1334,37 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(expectedError));
+    }
+
+    @Test
+    void shouldReturn400ErrorWhenUserIsIndefinitelyLockedOutFromSendingSmsOtp() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.IndefinitelyLockedOut(
+                                        ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                        10)));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS));
+
+        var permissionContextCaptor = ArgumentCaptor.forClass(PermissionContext.class);
+        verify(permissionDecisionManager)
+                .canSendSmsOtpNotification(any(), permissionContextCaptor.capture());
+        assertEquals(
+                Optional.of(CommonTestVariables.UK_MOBILE_NUMBER),
+                permissionContextCaptor.getValue().e164FormattedPhoneNumber());
     }
 
     private void usingValidAuthSessionWithAchievedCredentialStrength(

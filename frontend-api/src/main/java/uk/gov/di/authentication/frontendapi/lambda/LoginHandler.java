@@ -26,6 +26,8 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -47,7 +49,7 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -69,6 +71,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
@@ -204,15 +207,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var internalCommonSubjectId = getInternalCommonSubjectId(userProfile);
         auditContext = auditContext.withUserId(internalCommonSubjectId);
 
-        UserPermissionContext userPermissionContext =
-                UserPermissionContext.builder()
+        PermissionContext permissionContext =
+                PermissionContext.builder()
                         .withInternalSubjectId(userProfile.getSubjectID())
                         .withRpPairwiseId(calculatedPairwiseId)
                         .withEmailAddress(userProfile.getEmail())
                         .build();
 
         var decisionResult =
-                permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
+                permissionDecisionManager.canReceivePassword(journeyType, permissionContext);
         if (decisionResult.isFailure()) {
             DecisionError failure = decisionResult.getFailure();
             LOG.error("Failure to get canReceivePassword decision due to {}", failure);
@@ -267,7 +270,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (!credentialsAreValid(request, userProfile)) {
             return handleInvalidCredentials(
-                    auditContext, userProfile, journeyType, authSession, userPermissionContext);
+                    auditContext, userProfile, journeyType, authSession, permissionContext);
         }
 
         return handleValidCredentials(
@@ -279,7 +282,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 auditContext,
                 authSession,
                 journeyType,
-                userPermissionContext);
+                permissionContext);
     }
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
@@ -297,7 +300,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditContext auditContext,
             AuthSessionItem authSessionItem,
             JourneyType journeyType,
-            UserPermissionContext userPermissionContext) {
+            PermissionContext permissionContext) {
 
         var userMfaDetail =
                 getUserMFADetail(
@@ -370,13 +373,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
-        var defaultMfaMethod =
+        var defaultMfaMethodMaybe =
                 MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
 
         if (userMfaDetail.isMfaRequired()) {
-            if (defaultMfaMethod.isPresent()) {
+            if (defaultMfaMethodMaybe.isPresent()) {
+                var permissionContextBuilder = PermissionContext.builder().from(permissionContext);
+                permissionContextBuilder.withE164FormattedPhoneNumber(
+                        getFormattedPhoneNumberFromMfaMethod(defaultMfaMethodMaybe.get()));
+
                 Optional<ErrorResponse> codeBlocks =
-                        checkMfaCodeBlocks(journeyType, userPermissionContext);
+                        checkMfaCodeBlocks(journeyType, permissionContextBuilder.build());
 
                 if (codeBlocks.isPresent()) {
                     return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
@@ -408,11 +415,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserProfile userProfile,
             JourneyType journeyType,
             AuthSessionItem authSession,
-            UserPermissionContext userPermissionContext) {
-        userActionsManager.incorrectPasswordReceived(journeyType, userPermissionContext);
+            PermissionContext permissionContext) {
+        userActionsManager.incorrectPasswordReceived(journeyType, permissionContext);
 
         var decisionResult =
-                permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
+                permissionDecisionManager.canReceivePassword(journeyType, permissionContext);
         if (decisionResult.isFailure()) {
             DecisionError failure = decisionResult.getFailure();
             LOG.error("Failure to get canReceivePassword decision due to {}", failure);
@@ -425,7 +432,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                 auditContext,
-                pair(INTERNAL_SUBJECT_ID, userPermissionContext.internalSubjectId()),
+                pair(INTERNAL_SUBJECT_ID, permissionContext.internalSubjectId()),
                 pair(INCORRECT_PASSWORD_COUNT, attemptCount),
                 pair(
                         AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
@@ -438,7 +445,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
-                    ReauthMetadataBuilder.builder(userPermissionContext.rpPairwiseId())
+                    ReauthMetadataBuilder.builder(permissionContext.rpPairwiseId())
                             .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
                             .withFailureReason(reauthFailureReason)
                             .build());
@@ -477,10 +484,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private Optional<ErrorResponse> checkMfaCodeBlocks(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            JourneyType journeyType, PermissionContext permissionContext) {
         var canSendSmsOtpResult =
-                permissionDecisionManager.canSendSmsOtpNotification(
-                        journeyType, userPermissionContext);
+                permissionDecisionManager.canSendSmsOtpNotification(journeyType, permissionContext);
         if (canSendSmsOtpResult.isFailure()) {
             DecisionError failure = canSendSmsOtpResult.getFailure();
             LOG.error("Failure to get canSendSmsOtpNotification decision due to {}", failure);
@@ -491,12 +497,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut) {
             LOG.info("User is blocked from requesting any OTP codes");
             return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+        } else if (canSendSmsOtpDecision instanceof Decision.IndefinitelyLockedOut) {
+            LOG.info("User is indefinitely blocked from requesting OTP codes");
+            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
             return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         var canVerifyMfaOtpResult =
-                permissionDecisionManager.canVerifyMfaOtp(journeyType, userPermissionContext);
+                permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext);
         if (canVerifyMfaOtpResult.isFailure()) {
             DecisionError failure = canVerifyMfaOtpResult.getFailure();
             LOG.error("Failure to get canVerifyMfaOtp decision due to {}", failure);
@@ -557,5 +566,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             LOG.error("Unable to check if password was a common password");
             return false;
         }
+    }
+
+    private String getFormattedPhoneNumberFromMfaMethod(MFAMethod mfaMethod) {
+        if (mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.toString())) {
+            return formatPhoneNumber(mfaMethod.getDestination());
+        }
+        return null;
     }
 }
