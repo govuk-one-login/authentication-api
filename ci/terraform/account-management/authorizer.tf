@@ -47,10 +47,9 @@ resource "aws_lambda_function" "authorizer" {
   }
   environment {
     variables = {
-      TOKEN_SIGNING_KEY_ALIAS      = data.aws_kms_key.id_token_public_key.key_id
-      TEST_TOKEN_SIGNING_KEY_ALIAS = local.is_acceptance_test_env ? aws_kms_key.test_id_token_signing_key[0].key_id : ""
-      ENVIRONMENT                  = var.environment
-      JAVA_TOOL_OPTIONS            = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      TOKEN_SIGNING_KEY_ALIAS = data.aws_kms_key.id_token_public_key.key_id
+      ENVIRONMENT             = var.environment
+      JAVA_TOOL_OPTIONS       = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
