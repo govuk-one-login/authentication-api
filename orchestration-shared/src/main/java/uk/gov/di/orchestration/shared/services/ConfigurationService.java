@@ -376,6 +376,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .contains(getEnvironment());
     }
 
+    public boolean isUseNewTokenSigningKeysEnabled() {
+        return getFlagOrFalse("USE_NEW_TOKEN_SIGNING_KEYS");
+    }
+
     public boolean isSingleFactorAccountDeletionEnabled() {
         return getFlagOrFalse("SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED");
     }

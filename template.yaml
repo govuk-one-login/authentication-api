@@ -95,6 +95,12 @@ Conditions:
       true,
     ]
   UseSingleFactorAccountDeletion: !Equals [dev, !Ref Environment]
+  UseSyncWaitForSpot:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
   ProvisionNewExternalTokenSigningKeys:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -110,11 +116,10 @@ Conditions:
         !Equals [staging, !Ref Environment],
       ],
     ]
-  UseSyncWaitForSpot:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
+  UseNewSigningKeys:
+    !And [
+      !Condition PublishNextExternalTokenSigningKeys,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
     ]
 
 Mappings:
@@ -1842,6 +1847,10 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          USE_NEW_TOKEN_SIGNING_KEYS: !If
+            - UseNewSigningKeys
+            - true
+            - false
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref BackChannelLogoutQueueConsumePolicy
@@ -2255,6 +2264,10 @@ Resources:
             - PublishNextExternalTokenSigningKeys
             - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
             - !Ref AWS::NoValue
+          USE_NEW_TOKEN_SIGNING_KEYS: !If
+            - UseNewSigningKeys
+            - true
+            - false
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
