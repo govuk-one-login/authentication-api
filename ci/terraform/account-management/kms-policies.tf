@@ -82,7 +82,7 @@ resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
 
 # Test ID Token Signing KMS key (for acceptance tests)
 resource "aws_kms_key" "test_id_token_signing_key" {
-  count = var.environment != "production" ? 1 : 0
+  count = local.is_acceptance_test_env ? 1 : 0
 
   description              = "KMS signing key for ID tokens used for acceptance tests"
   deletion_window_in_days  = 30
@@ -91,14 +91,14 @@ resource "aws_kms_key" "test_id_token_signing_key" {
 }
 
 resource "aws_kms_alias" "test_id_token_signing_key_alias" {
-  count = var.environment != "production" ? 1 : 0
+  count = local.is_acceptance_test_env ? 1 : 0
 
   name          = "alias/${var.environment}-test-id-token-signing-key-alias"
   target_key_id = aws_kms_key.test_id_token_signing_key[0].key_id
 }
 
 data "aws_iam_policy_document" "test_id_token_signing_key_access_policy" {
-  count = var.environment != "production" ? 1 : 0
+  count = local.is_acceptance_test_env ? 1 : 0
 
   statement {
     sid    = "DefaultAccessPolicy"
@@ -117,7 +117,7 @@ data "aws_iam_policy_document" "test_id_token_signing_key_access_policy" {
 }
 
 resource "aws_kms_key_policy" "test_id_token_signing_key_policy" {
-  count = var.environment != "production" ? 1 : 0
+  count = local.is_acceptance_test_env ? 1 : 0
 
   key_id = aws_kms_key.test_id_token_signing_key[0].id
   policy = data.aws_iam_policy_document.test_id_token_signing_key_access_policy[0].json

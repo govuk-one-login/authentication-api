@@ -1,5 +1,6 @@
 locals {
-  vpc_environment = var.vpc_environment == null ? var.environment : var.vpc_environment
+  vpc_environment        = var.vpc_environment == null ? var.environment : var.vpc_environment
+  is_acceptance_test_env = !contains(["production", "integration"], var.environment)
 }
 
 data "terraform_remote_state" "core" {
