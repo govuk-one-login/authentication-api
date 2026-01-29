@@ -139,31 +139,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                             entry("local-auth-public-signing-key", EC_PUBLIC_KEY),
                             entry("local-notify-callback-bearer-token", BEARER_TOKEN)));
 
-    protected static final IntegrationTestConfigurationService
-            TEST_CONFIGURATION_SERVICE_JWKS_ENABLED =
-                    new IntegrationTestConfigurationService(
-                            notificationsQueue,
-                            tokenSigner,
-                            docAppPrivateKeyJwtSigner,
-                            configurationParameters) {
-                        @Override
-                        public boolean useAccessTokenJwksEndpoint() {
-                            return true;
-                        }
-                    };
-
-    protected static final ConfigurationService TEST_CONFIGURATION_SERVICE_JWKS_DISABLED =
-            new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
-                @Override
-                public boolean useAccessTokenJwksEndpoint() {
-                    return false;
-                }
-            };
-
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
                     notificationsQueue,
@@ -390,10 +365,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
             this.tokenSigningKey = tokenSigningKey;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
             super.systemService = systemService;
-        }
-
-        public String getTokenSigningKeyId() {
-            return tokenSigningKey.getKeyId();
         }
 
         @Override

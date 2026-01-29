@@ -260,15 +260,3 @@ variable "test_signing_key_enabled" {
   type        = bool
   default     = false
 }
-
-variable "use_access_token_jwks_endpoint" {
-  type        = bool
-  default     = false
-  description = "Use endpoint to get the Access Token JWKS to encrypt and verify JWTs"
-}
-
-variable "access_token_jwks_url" {
-  type        = string
-  default     = ""
-  description = "Endpoint to get the Access Token JWKS to encrypt and verify JWTs"
-}

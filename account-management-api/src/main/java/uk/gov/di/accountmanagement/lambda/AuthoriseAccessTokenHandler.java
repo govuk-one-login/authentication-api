@@ -48,8 +48,7 @@ public class AuthoriseAccessTokenHandler
                 new TokenValidationService(
                         new JwksService(
                                 configurationService,
-                                new KmsConnectionService(configurationService),
-                                true),
+                                new KmsConnectionService(configurationService)),
                         configurationService);
     }
 
