@@ -286,7 +286,6 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/a7f93e1c-d441-4237-8b01-b0c1b4ff39bb
-      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3be3cbe9-d030-4a96-9738-420ee063a1d7
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/2dcfcf9b-6c30-49a9-b3c6-421af0e3040a
       emailAcctCreationOtpCodeTtlDuration: 7200
@@ -333,7 +332,6 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f7f540ee-5bac-4785-a3eb-a5653bd7c137
-      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/bc782157-0e0f-4b5d-93c7-ddadd4d538a0
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/01b45239-4243-4c5f-8188-d09ef2da842d
       emailAcctCreationOtpCodeTtlDuration: 7200
@@ -409,10 +407,6 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
-      OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979
-      OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/7a1d86fe-1ca0-499c-95e9-ee8593a850f9
-      OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/e284a04a-bac2-42b0-b723-ef0d32722ad5
-      OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/84243770-7ba6-42c6-a26c-28bc82e3efa2
       testSigningKeyEnabled: true
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
@@ -492,7 +486,6 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
       HomeApiVpcEndpointId: ["vpce-0e1bb7e9c33b0e516", "vpce-0f4845b63ae267db4"]
-      IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
@@ -521,10 +514,7 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 767397776536
       OrchApiBaseUrl: https://oidc.build.account.gov.uk
-      OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979
-      OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/7a1d86fe-1ca0-499c-95e9-ee8593a850f9
-      OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/e284a04a-bac2-42b0-b723-ef0d32722ad5
-      OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/84243770-7ba6-42c6-a26c-28bc82e3efa2
+
       testSigningKeyEnabled: true
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
@@ -551,7 +541,6 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
       HomeApiVpcEndpointId: ["vpce-0c9ce65be09f99db7", "vpce-0fed7b2d44a0bde33"]
-      IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
       authenticateMemorySize: 2048
@@ -579,10 +568,7 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 590183975515
       OrchApiBaseUrl: https://oidc.staging.account.gov.uk
-      OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/156f87e0-001a-4ae8-a6c1-23f8f68b6e84
-      OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/b94d81a1-a41f-4e61-859c-87dcacb32e51
-      OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/d0bdb864-8478-4411-a44a-a4232fc97cf3
-      OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/4373aa74-95b2-454c-bd86-9716f105a1c4
+
       testSigningKeyEnabled: true
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
@@ -608,7 +594,6 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
       HomeApiVpcEndpointId: ["vpce-0e594accb3d775457", "vpce-00865f4c00dcdbb83"]
-      IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
@@ -638,10 +623,7 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 058264132019
       OrchApiBaseUrl: https://oidc.integration.account.gov.uk
-      OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/1b5c001b-ed53-4a7b-bfbe-5d0f596110b5
-      OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/fdf1686f-2d4d-4c7b-b3be-324b6ebba370
-      OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/808a8c1e-82d8-487e-abb8-e13d6564b426
-      OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/11948d7f-8e88-41d3-afe5-5ec9f37f979d
+
       testSigningKeyEnabled: false
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
@@ -667,7 +649,6 @@ Mappings:
       frontendBaseUrl: https://signin.account.gov.uk
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       HomeApiVpcEndpointId: ["vpce-0d7972874707185a0", "vpce-08bfce415b33dc8f6"]
-      IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
@@ -697,10 +678,7 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 533266965190
       OrchApiBaseUrl: https://oidc.account.gov.uk
-      OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/7ad27a55-9d21-47f2-be03-b61f2c9a8ce6
-      OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/9b57120e-3bcd-4fce-ada8-89ea9d1412d6
-      OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/b2979629-c62f-458d-992b-ac4239c2cf81
-      OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/e9f1350d-75e2-4532-be84-8bec6de99755
+
       legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:172348255554:legacy-account-deletion-topic
       testSigningKeyEnabled: false
   LambdaConfiguration:
@@ -2636,144 +2614,6 @@ Resources:
             Effect: Allow
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
-
-  DynamoOrchCombinedAccessPolicy:
-    Condition: UseOrchdataAccess
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "Combined IAM policy for orchestration session, client session, and identity credentials cross-account access"
-      Path: !Sub
-        - /${Env}/auth-am-shared/
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          # Orch Session Encryption Key
-          - Sid: AllowOrchSessionEncryptionKeyCrossAccountEncryptDecryptAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    OrchSessionTableEncryptionkey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    OrchSessionTableEncryptionkey,
-                  ]
-          # Orch Session Table - Read/Write/Delete
-          - Sid: AllowOrchSessionCrossAccountReadWriteDeleteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:PutItem
-              - dynamodb:UpdateItem
-              - dynamodb:DeleteItem
-            Resource:
-              - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${Env}-Orch-Session"
-                - OrchAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      OrchAccountID,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-
-          # Orch Client Session Encryption Key - Decrypt
-          - Sid: AllowOrchClientSessionEncryptionKeyCrossAccountDecryptAccess
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    OrchClientSessionTableEncryptionkey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    OrchClientSessionTableEncryptionkey,
-                  ]
-
-          # Orch Client Session Table - Read/Delete
-          - Sid: AllowOrchClientSessionCrossAccountReadAndDeleteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:DeleteItem
-            Resource:
-              - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${Env}-Client-Session"
-                - OrchAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      OrchAccountID,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-
-          # Orch Identity Credentials Encryption Key - Decrypt
-          - Sid: AllowOrchIdentityCredentialsEncryptionKeyCrossAccountDecryptAccess
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    OrchIdentityCredentialsTableEncryptionkey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    OrchIdentityCredentialsTableEncryptionkey,
-                  ]
-
-          # Orch Identity Credentials Table - Read
-          - Sid: AllowOrchIdentityCredentialsCrossAccountReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-            Resource:
-              - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${Env}-Orch-Identity-Credentials"
-                - OrchAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      OrchAccountID,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
 
   S3SmokeTestPolicy:
     Type: AWS::IAM::ManagedPolicy
