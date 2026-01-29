@@ -115,6 +115,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
+                    spotRequestQueue,
                     docAppPrivateKeyJwtSigner);
 
     private static final String CLIENT_ID = "test-client-id";
@@ -404,12 +405,14 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
+                SqsQueueExtension spotRequestQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner) {
             super(
                     tokenSigningKey,
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
+                    spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
             this.criStubExtension = criStubExtension;

@@ -171,6 +171,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         externalTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
+                        spotRequestQueue,
                         docAppPrivateKeyJwtSigner,
                         accountInterventionApiStub,
                         false);
@@ -1058,6 +1059,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         externalTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
+                        spotRequestQueue,
                         docAppPrivateKeyJwtSigner,
                         accountInterventionApiStub,
                         abortOnAisErrorResponse);
@@ -1095,6 +1097,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
+                SqsQueueExtension spotRequestQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 AccountInterventionsStubExtension accountInterventionsStubExtension,
                 boolean abortOnAisErrorResponse) {
@@ -1103,6 +1106,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
+                    spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
             this.authExternalApiStub = authExternalApiStub;

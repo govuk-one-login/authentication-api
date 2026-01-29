@@ -408,6 +408,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
+                    spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
         }
