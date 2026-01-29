@@ -91,9 +91,7 @@ class AMCAuthorizeHandlerTest {
         var event =
                 ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
                         CommonTestVariables.VALID_HEADERS,
-                        format(
-                                "{\"email\":\"%s\",\"journeyType\":\"%s\"}",
-                                EMAIL, AMCJourneyType.SFAD));
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
@@ -117,9 +115,7 @@ class AMCAuthorizeHandlerTest {
         var event =
                 ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
                         CommonTestVariables.VALID_HEADERS,
-                        format(
-                                "{\"email\":\"%s\",\"journeyType\":\"%s\"}",
-                                EMAIL, AMCJourneyType.SFAD));
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
@@ -141,9 +137,7 @@ class AMCAuthorizeHandlerTest {
         var event =
                 ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
                         CommonTestVariables.VALID_HEADERS,
-                        format(
-                                "{\"email\":\"%s\",\"journeyType\":\"%s\"}",
-                                EMAIL, AMCJourneyType.SFAD));
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
