@@ -4,7 +4,8 @@ common_state_bucket = "di-auth-staging-tfstate"
 am_api_fms_tag_value = "accountmanagementstaging"
 
 # URIs
-internal_sector_uri = "https://identity.staging.account.gov.uk"
+internal_sector_uri   = "https://identity.staging.account.gov.uk"
+access_token_jwks_url = "https://oidc.staging.account.gov.uk/.well-known/jwks.json"
 
 # SNS
 legacy_account_deletion_topic_arn     = "arn:aws:sns:eu-west-2:539729775994:UserAccountDeletion"
@@ -35,6 +36,7 @@ mfa_method_management_api_enabled            = true
 ais_call_in_authenticate_enabled             = true
 account_management_international_sms_enabled = false
 test_signing_key_enabled                     = true
+use_access_token_jwks_endpoint               = true
 
 #Vpc endpoint IDs
 # di-account-staging, di-account-components-staging
