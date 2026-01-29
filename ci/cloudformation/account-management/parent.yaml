@@ -295,16 +295,6 @@ Mappings:
       otpCodeTtlDuration: 900
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
-      mfaMethodsCreateMemorySize: 1536
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsUpdateMemorySize: 1536
-      updateEmailMemorySize: 1536
-      updatePasswordMemorySize: 1536
-      updatePhoneNumberMemorySize: 1536
-      bulkRemoveAccountMemorySize: 1536
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -341,16 +331,6 @@ Mappings:
       otpCodeTtlDuration: 900
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
-      mfaMethodsCreateMemorySize: 1536
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsUpdateMemorySize: 1536
-      updateEmailMemorySize: 1536
-      updatePasswordMemorySize: 1536
-      updatePhoneNumberMemorySize: 1536
-      bulkRemoveAccountMemorySize: 1536
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -387,16 +367,6 @@ Mappings:
       otpCodeTtlDuration: 120
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
-      mfaMethodsCreateMemorySize: 1536
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsUpdateMemorySize: 1536
-      updateEmailMemorySize: 1536
-      updatePasswordMemorySize: 1536
-      updatePhoneNumberMemorySize: 1536
-      bulkRemoveAccountMemorySize: 1536
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -436,16 +406,6 @@ Mappings:
       IsSplunkEnabled: "No"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
-      mfaMethodsCreateMemorySize: 1536
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsUpdateMemorySize: 1536
-      updateEmailMemorySize: 1536
-      updatePasswordMemorySize: 1536
-      updatePhoneNumberMemorySize: 1536
-      bulkRemoveAccountMemorySize: 1536
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       UseAlarmActions: "No"
       emailAcctCreationOtpCodeTtlDuration: 60
@@ -489,16 +449,6 @@ Mappings:
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
-      mfaMethodsCreateMemorySize: 1536
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsUpdateMemorySize: 1536
-      updateEmailMemorySize: 1536
-      updatePasswordMemorySize: 1536
-      updatePhoneNumberMemorySize: 1536
-      bulkRemoveAccountMemorySize: 1536
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
       UseAlarmActions: "Yes"
@@ -514,7 +464,6 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 767397776536
       OrchApiBaseUrl: https://oidc.build.account.gov.uk
-
       testSigningKeyEnabled: true
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
@@ -543,16 +492,6 @@ Mappings:
       HomeApiVpcEndpointId: ["vpce-0c9ce65be09f99db7", "vpce-0fed7b2d44a0bde33"]
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
-      authenticateMemorySize: 2048
-      sendOtpNotificationMemorySize: 2048
-      mfaMethodsCreateMemorySize: 2048
-      mfaMethodsDeleteMemorySize: 2048
-      mfaMethodsUpdateMemorySize: 2048
-      updateEmailMemorySize: 2048
-      updatePasswordMemorySize: 2048
-      updatePhoneNumberMemorySize: 2048
-      bulkRemoveAccountMemorySize: 2048
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
       UseAlarmActions: "Yes"
@@ -568,7 +507,6 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 590183975515
       OrchApiBaseUrl: https://oidc.staging.account.gov.uk
-
       testSigningKeyEnabled: true
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
@@ -597,16 +535,6 @@ Mappings:
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
-      mfaMethodsCreateMemorySize: 1536
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsUpdateMemorySize: 1536
-      updateEmailMemorySize: 1536
-      updatePasswordMemorySize: 1536
-      updatePhoneNumberMemorySize: 1536
-      bulkRemoveAccountMemorySize: 1536
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutDuration: 900
       otpCodeTtlDuration: 900
@@ -623,7 +551,6 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 058264132019
       OrchApiBaseUrl: https://oidc.integration.account.gov.uk
-
       testSigningKeyEnabled: false
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
@@ -652,16 +579,6 @@ Mappings:
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
-      mfaMethodsCreateMemorySize: 1536
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsUpdateMemorySize: 1536
-      updateEmailMemorySize: 1536
-      updatePasswordMemorySize: 1536
-      updatePhoneNumberMemorySize: 1536
-      bulkRemoveAccountMemorySize: 1536
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutDuration: 900
       otpCodeTtlDuration: 900
@@ -678,9 +595,9 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       OrchAccountID: 533266965190
       OrchApiBaseUrl: https://oidc.account.gov.uk
-
       legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:172348255554:legacy-account-deletion-topic
       testSigningKeyEnabled: false
+
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
