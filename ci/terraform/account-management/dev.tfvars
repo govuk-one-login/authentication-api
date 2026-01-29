@@ -15,6 +15,7 @@ mfa_method_management_api_enabled            = true
 test_clients_enabled                         = true
 ais_call_in_authenticate_enabled             = true
 account_management_international_sms_enabled = false
+test_signing_key_enabled                     = true
 
 # Durations
 lockout_duration                          = 30

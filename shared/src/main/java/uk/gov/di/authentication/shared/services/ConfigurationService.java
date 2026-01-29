@@ -519,6 +519,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
 
+    public String getTestTokenSigningKeyAlias() {
+        return System.getenv("TEST_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
     public boolean isRsaSigningAvailable() {
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
@@ -752,6 +756,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", "true")
                 .equals("true");
+    }
+
+    public boolean isTestSigningKeyEnabled() {
+        return System.getenv()
+                .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isBulkAccountDeletionEnabled() {
