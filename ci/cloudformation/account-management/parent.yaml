@@ -3058,3 +3058,18 @@ Resources:
                     !Ref Environment,
                     commonPasswordsTableEncryptionKey,
                   ]
+
+  AccountManagementApiIdParameter:
+    Type: AWS::SSM::Parameter
+    Condition: IsAcceptanceTestEnv
+    Properties:
+      Name: !Sub
+        - "/acceptance-tests/${Env}/AUTH_TEST_ID_TOKEN_KMS_ARN"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Type: String
+      Value: !GetAtt TestIdTokenSigningKey.Arn
+      Description: "Account Management test-id-token-signing-key used by Acceptance test"
+      Tags:
+        Name: !Sub "${AWS::StackName}-AccountManagementApiId"
+        Environment: !Ref Environment
+        Source: govuk-one-login/authentication-api/ci/cloudformation/account-management/parent.yaml
