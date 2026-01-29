@@ -138,3 +138,30 @@ Resources:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Ref AMCAuthorizeFunctionLogGroup
+
+  AMCAuthorizeUriParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub
+        - /deploy/${env}/amc_authorize_uri
+        - env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Type: String
+      Value: ""
+
+  AMCRedirectUriParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub
+        - /deploy/${env}/amc_redirect_uri
+        - env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Type: String
+      Value: ""
+
+  AMCAudienceParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub
+        - /deploy/${env}/amc_audience
+        - env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Type: String
+      Value: ""
