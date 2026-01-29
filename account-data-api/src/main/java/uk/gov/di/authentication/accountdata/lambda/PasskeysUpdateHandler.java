@@ -35,7 +35,8 @@ public class PasskeysUpdateHandler
 
     public APIGatewayProxyResponseEvent passkeysUpdateHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOG.info("PasskeysUpdateHandler invoked");
+
+        LOG.info("PasskeysUpdateHandler called");
 
         Result<PasskeysUpdateFailureReason, PasskeysUpdateRequest> result =
                 validateUpdateRequest(input);
