@@ -3080,7 +3080,7 @@ Resources:
                     commonPasswordsTableEncryptionKey,
                   ]
 
-  AccountManagementApiIdParameter:
+  AccountManagementTestIdTokenParameter:
     Type: AWS::SSM::Parameter
     Condition: IsAcceptanceTestEnv
     Properties:
