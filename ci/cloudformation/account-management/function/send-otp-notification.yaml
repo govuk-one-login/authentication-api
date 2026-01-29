@@ -14,12 +14,13 @@ Resources:
           sendOtpNotificationMemorySize,
         ]
       ProvisionedConcurrencyConfig: !If
-        - SendOtpNotificationProvisionedConcurrency
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
-              sendOtpNotificationProvisionedConcurrency,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
             ]
         - !Ref AWS::NoValue
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
@@ -46,24 +47,21 @@ Resources:
           LOCKOUT_DURATION:
             !FindInMap [
               EnvironmentConfiguration,
-              !Ref Environment,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               lockoutDuration,
             ]
           DEFAULT_OTP_CODE_EXPIRY:
             !FindInMap [
               EnvironmentConfiguration,
-              !Ref Environment,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               otpCodeTtlDuration,
             ]
           EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY:
             !FindInMap [
               EnvironmentConfiguration,
-              !Ref Environment,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               emailAcctCreationOtpCodeTtlDuration,
             ]
-          LOCKOUT_COUNT_TTL: "600"
-          USE_STRONGLY_CONSISTENT_READS: "true"
-          SUPPORT_REAUTH_SIGNOUT_ENABLED: "true"
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -76,8 +74,8 @@ Resources:
             - IsNotProduction
             - !If
               - UseSubEnvironment
-              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
-              - !Sub "https://identity.${Environment}.account.gov.uk/"
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           TEST_CLIENT_VERIFY_EMAIL_OTP: !Sub
             - "{{resolve:secretsmanager:/deploy/${env}/test_client_verify_email_otp}}"

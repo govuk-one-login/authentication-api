@@ -43,8 +43,8 @@ Resources:
             - IsNotProduction
             - !If
               - UseSubEnvironment
-              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
-              - !Sub "https://identity.${Environment}.account.gov.uk/"
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
@@ -61,6 +61,16 @@ Resources:
         - !Ref EmailCheckResultsTableKmsPolicy
         - !Ref UserProfileTableKmsPolicy
         - !Ref AuditEventsSnsPolicy
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
+            ]
+        - !Ref AWS::NoValue
       SnapStart:
         ApplyOn: None
       VpcConfig:
