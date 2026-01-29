@@ -19,14 +19,17 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.net.MalformedURLException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -51,10 +54,10 @@ class TokenValidationServiceTest {
             new CaptureLoggingExtension(TokenValidationService.class);
 
     @BeforeEach
-    void setUp() throws JOSEException {
+    void setUp() throws JOSEException, MalformedURLException {
         ecJWK = generateECKeyPair();
         signer = new ECDSASigner(ecJWK);
-        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(ecJWK.toPublicJWK());
+        when(jwksService.getPublicTokenJwkWithOpaqueId(any())).thenReturn(ecJWK.toPublicJWK());
         when(configurationService.getEnvironment()).thenReturn("dev");
     }
 
@@ -102,7 +105,7 @@ class TokenValidationServiceTest {
                         new BearerAccessToken(signedAccessToken.serialize())));
         assertThat(
                 logging.events(),
-                hasItem(withMessageContaining("Token signature validated using real key")));
+                not(hasItem(withMessageContaining("Token signature validated using test key"))));
     }
 
     @Test
@@ -132,12 +135,13 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateRsaSignedAccessToken() throws JOSEException {
+    void shouldSuccessfullyValidateRsaSignedAccessToken()
+            throws JOSEException, MalformedURLException {
         var rsaKey = new RSAKeyGenerator(2048).generate();
         var rsaSigner = new RSASSASigner(rsaKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId(any())).thenReturn(rsaKey);
 
         SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(

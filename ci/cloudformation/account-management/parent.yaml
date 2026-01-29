@@ -251,7 +251,6 @@ Conditions:
         !Equals [!Ref Environment, integration],
       ],
     ]
-
   CreateTestBucket:
     !Not [
       !Or [
@@ -259,13 +258,18 @@ Conditions:
         !Equals [!Ref Environment, integration],
       ],
     ]
-
   IsAcceptanceTestEnv:
     !Not [
       !Or [
         !Equals [!Ref Environment, production],
         !Equals [!Ref Environment, integration],
       ],
+    ]
+  UseAccessTokenJwksEndpoint:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
     ]
 
 Mappings:
@@ -306,6 +310,7 @@ Mappings:
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev1.dev.account.gov.uk
       testSigningKeyEnabled: true
+      accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -342,6 +347,7 @@ Mappings:
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev2.dev.account.gov.uk
       testSigningKeyEnabled: true
+      accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ce9680d3-953a-4b6a-9098-a0380d0afc70
@@ -378,6 +384,7 @@ Mappings:
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
       testSigningKeyEnabled: true
+      accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -421,6 +428,7 @@ Mappings:
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.dev.account.gov.uk
       testSigningKeyEnabled: true
+      accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574
@@ -465,6 +473,7 @@ Mappings:
       OrchAccountID: 767397776536
       OrchApiBaseUrl: https://oidc.build.account.gov.uk
       testSigningKeyEnabled: true
+      accessTokenJwksUrl: https://oidc.build.account.gov.uk/.well-known/jwks.json
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
@@ -508,6 +517,7 @@ Mappings:
       OrchAccountID: 590183975515
       OrchApiBaseUrl: https://oidc.staging.account.gov.uk
       testSigningKeyEnabled: true
+      accessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
@@ -552,6 +562,7 @@ Mappings:
       OrchAccountID: 058264132019
       OrchApiBaseUrl: https://oidc.integration.account.gov.uk
       testSigningKeyEnabled: false
+      accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/075774c2-b836-452f-9684-dcd742146f81
@@ -597,7 +608,7 @@ Mappings:
       OrchApiBaseUrl: https://oidc.account.gov.uk
       legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:172348255554:legacy-account-deletion-topic
       testSigningKeyEnabled: false
-
+      accessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
@@ -749,6 +760,19 @@ Resources:
   # ----------------
   # Common Resources
   # ----------------
+
+  HttpsEgressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow egress to external services
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - Description: Allow all outgoing HTTPS requests from security group
+          CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -2815,3 +2839,18 @@ Resources:
                     !Ref Environment,
                     commonPasswordsTableEncryptionKey,
                   ]
+
+  AccountManagementTestIdTokenParameter:
+    Type: AWS::SSM::Parameter
+    Condition: IsAcceptanceTestEnv
+    Properties:
+      Name: !Sub
+        - "/acceptance-tests/${Env}/AUTH_TEST_ID_TOKEN_KMS_ARN"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Type: String
+      Value: !GetAtt TestIdTokenSigningKey.Arn
+      Description: "Account Management test-id-token-signing-key used by Acceptance test"
+      Tags:
+        Name: !Sub "${AWS::StackName}-AccountManagementApiId"
+        Environment: !Ref Environment
+        Source: govuk-one-login/authentication-api/ci/cloudformation/account-management/parent.yaml

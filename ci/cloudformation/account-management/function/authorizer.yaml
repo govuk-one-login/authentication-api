@@ -40,6 +40,16 @@ Resources:
               !Ref Environment,
               testSigningKeyEnabled,
             ]
+          USE_ACCESS_TOKEN_JWKS_ENDPOINT: !If
+            - UseAccessTokenJwksEndpoint
+            - true
+            - false
+          ACCESS_TOKEN_JWKS_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              accessTokenJwksUrl,
+            ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:
@@ -58,10 +68,11 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
         SubnetIds:
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
 
   AuthorizerFunctionPermission:
     Type: AWS::Lambda::Permission

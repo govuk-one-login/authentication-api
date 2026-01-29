@@ -96,7 +96,8 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       "kms:Sign"
     ]
     resources = [
-      aws_kms_key.id_token_signing_key.arn
+      aws_kms_key.id_token_signing_key.arn,
+      "arn:aws:kms:eu-west-2:${var.auth_new_account_id}:key/*"
     ]
   }
 
