@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.lambda.NotificationHandler;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
@@ -150,5 +151,49 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                 hasFieldWithValue(
                         "contact-us-link",
                         equalTo("http://localhost:3000/frontend/contact-gov-uk-one-login")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberLimitTestCases")
+    void shouldEnforceInternationalSmsLimitAfterMultipleSends(
+            String phoneNumber, int expectedSuccessfulSends) {
+        int limit = configurationService.getInternationalSmsNumberSendLimit();
+        int initialRequestCount = notifyStub.getCountOfRequests();
+
+        for (int i = 0; i < limit; i++) {
+            handler.handleRequest(
+                    createSqsEvent(
+                            new NotifyRequest(
+                                    phoneNumber,
+                                    MFA_SMS,
+                                    CODE,
+                                    SupportedLanguage.EN,
+                                    SESSION_ID,
+                                    CLIENT_SESSION_ID)),
+                    mock(Context.class));
+        }
+
+        for (int i = 0; i < 2; i++) {
+            handler.handleRequest(
+                    createSqsEvent(
+                            new NotifyRequest(
+                                    phoneNumber,
+                                    MFA_SMS,
+                                    CODE,
+                                    SupportedLanguage.EN,
+                                    SESSION_ID,
+                                    CLIENT_SESSION_ID)),
+                    mock(Context.class));
+        }
+
+        int actualRequestsSent = notifyStub.getCountOfRequests() - initialRequestCount;
+        assertThat(actualRequestsSent, equalTo(expectedSuccessfulSends));
+    }
+
+    private static Stream<Arguments> phoneNumberLimitTestCases() {
+        int limit = 10;
+        return Stream.of(
+                Arguments.of(CommonTestVariables.UK_MOBILE_NUMBER, limit + 2),
+                Arguments.of(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER, limit));
     }
 }
