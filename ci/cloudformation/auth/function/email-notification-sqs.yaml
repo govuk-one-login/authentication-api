@@ -85,6 +85,10 @@ Resources:
             - ${env}-smoke-new-test-sms-codes
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          INTERNATIONAL_SMS_NUMBER_SEND_LIMIT: !Sub
+            - "{{resolve:ssm:${env}-sms-international-number-send-limit}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Events:
         SQSEvent:
           Type: SQS
@@ -97,6 +101,7 @@ Resources:
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref S3SmokeTestPolicy
+        - !Ref DynamoInternationalNumberSendCountReadWriteAccessPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:

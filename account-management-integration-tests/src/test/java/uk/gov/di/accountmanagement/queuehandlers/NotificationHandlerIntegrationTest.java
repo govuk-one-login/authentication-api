@@ -2,13 +2,18 @@ package uk.gov.di.accountmanagement.queuehandlers;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.NotificationHandler;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
 
 import java.security.SecureRandom;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -69,5 +74,49 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         assertThat(request, hasField("personalisation"));
         var personalisation = request.getAsJsonObject().get("personalisation");
         assertThat(personalisation, hasFieldWithValue("validation-code", equalTo(CODE)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberLimitTestCases")
+    void shouldEnforceInternationalSmsLimitAfterMultipleSends(
+            String phoneNumber, int expectedSuccessfulSends) {
+        int limit = configurationService.getInternationalSmsNumberSendLimit();
+        int initialRequestCount = notifyStub.getCountOfRequests();
+
+        for (int i = 0; i < limit; i++) {
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            phoneNumber,
+                            VERIFY_PHONE_NUMBER,
+                            CODE,
+                            SupportedLanguage.EN,
+                            false,
+                            null);
+
+            handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
+        }
+
+        for (int i = 0; i < 2; i++) {
+            NotifyRequest beyondLimitRequest =
+                    new NotifyRequest(
+                            phoneNumber,
+                            VERIFY_PHONE_NUMBER,
+                            CODE,
+                            SupportedLanguage.EN,
+                            false,
+                            null);
+
+            handler.handleRequest(createSqsEvent(beyondLimitRequest), mock(Context.class));
+        }
+
+        int actualRequestsSent = notifyStub.getCountOfRequests() - initialRequestCount;
+        assertThat(actualRequestsSent, equalTo(expectedSuccessfulSends));
+    }
+
+    private static Stream<Arguments> phoneNumberLimitTestCases() {
+        int limit = 10;
+        return Stream.of(
+                Arguments.of(CommonTestVariables.UK_MOBILE_NUMBER, limit + 2),
+                Arguments.of(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER, limit));
     }
 }

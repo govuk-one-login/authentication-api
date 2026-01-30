@@ -285,3 +285,48 @@ resource "aws_iam_policy" "check_email_fraud_block_read_dynamo_read_access_polic
 
   policy = data.aws_iam_policy_document.check_email_fraud_block_read_dynamo_read_access_policy.json
 }
+
+data "aws_iam_policy_document" "dynamo_international_sms_send_count_read_write_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:GetItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+
+    resources = [
+      "arn:aws:dynamodb:${var.aws_region}:${local.datastore_account_id}:table/${var.environment}-international-sms-send-count",
+      "arn:aws:dynamodb:${var.aws_region}:${local.datastore_account_id}:table/${var.environment}-international-sms-send-count/index/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+
+    resources = [
+      data.terraform_remote_state.shared.outputs.international_sms_send_count_encryption_key_arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "dynamo_international_sms_send_count_read_write_access_policy" {
+  name_prefix = "dynamo-international-sms-send-count-read-write-policy"
+  path        = "/${var.environment}/am-shared/"
+  description = "IAM policy for managing read and write permissions to the International SMS Send Count table"
+
+  policy = data.aws_iam_policy_document.dynamo_international_sms_send_count_read_write_policy_document.json
+}

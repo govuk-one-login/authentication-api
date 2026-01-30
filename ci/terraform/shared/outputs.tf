@@ -240,3 +240,7 @@ output "id_reverification_state_key_arn" {
 output "test_client_allow_list_secret_access_policy_arn" {
   value = var.provision_test_client_secret ? aws_iam_policy.test_client_allow_list_secret_policy[0].arn : null
 }
+
+output "international_sms_send_count_encryption_key_arn" {
+  value = aws_kms_key.international_sms_send_count_encryption_key.arn
+}
