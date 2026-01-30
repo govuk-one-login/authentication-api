@@ -7,13 +7,6 @@ Resources:
         - ${Env}-update-phone-number-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          updatePhoneNumberMemorySize,
-          DefaultValue: 1536,
-        ]
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
