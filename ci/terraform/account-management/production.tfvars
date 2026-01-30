@@ -1,7 +1,8 @@
 common_state_bucket = "digital-identity-prod-tfstate"
 
 # URIs
-internal_sector_uri = "https://identity.account.gov.uk"
+internal_sector_uri   = "https://identity.account.gov.uk"
+access_token_jwks_url = "https://oidc.account.gov.uk/.well-known/jwks.json"
 
 # Notify
 notify_template_map = {
@@ -41,6 +42,7 @@ mfa_method_management_api_enabled            = true
 ais_call_in_authenticate_enabled             = true
 account_management_international_sms_enabled = false
 test_signing_key_enabled                     = false
+use_access_token_jwks_endpoint               = true
 
 # Logging
 cloudwatch_log_retention = 30
