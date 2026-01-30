@@ -3,6 +3,7 @@ package uk.gov.di.authentication.local;
 import io.javalin.Javalin;
 import uk.gov.di.authentication.external.lambda.TokenHandler;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
+import uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler;
 import uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler;
 import uk.gov.di.authentication.frontendapi.lambda.AccountRecoveryHandler;
 import uk.gov.di.authentication.frontendapi.lambda.AuthenticationAuthCodeHandler;
@@ -47,6 +48,7 @@ public class LocalAuthApi {
         app.post("/id-reverification-state", handlerFor(new IDReverificationStateHandler()));
         app.post("/login", handlerFor(new LoginHandler()));
         app.post("/mfa", handlerFor(new MfaHandler()));
+        app.post("/amc-authorize", handlerFor(new AMCAuthorizeHandler()));
         app.post("/mfa-reset-authorize", handlerFor(new MfaResetAuthorizeHandler()));
         app.post("/reset-password-request", handlerFor(new ResetPasswordRequestHandler()));
         app.post("/reset-password", handlerFor(new ResetPasswordHandler()));

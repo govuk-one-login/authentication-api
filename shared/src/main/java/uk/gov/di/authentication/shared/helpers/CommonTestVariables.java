@@ -28,6 +28,7 @@ public class CommonTestVariables {
     public static final String CLIENT_NAME = "client-name";
     public static final String CLIENT_ID = "client-id";
     public static final String INTERNAL_COMMON_SUBJECT_ID = "urn:some:subject:identifier";
+    public static final String PUBLIC_SUBJECT_ID = "public-subject-id";
     public static final String JOURNEY_ID = "journey-id";
     public static final String TEST_OTP_CODE = "123456";
     public static final Map<String, String> VALID_HEADERS =
