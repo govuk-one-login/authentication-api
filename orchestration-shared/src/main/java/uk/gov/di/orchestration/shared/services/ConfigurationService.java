@@ -208,6 +208,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("SPOT_QUEUE_URL");
     }
 
+    public String getSpotRequestQueueURI() {
+        return System.getenv("SPOT_REQUEST_QUEUE_URL");
+    }
+
     public URI getAuthFrontendBaseURL() {
         return getURIOrThrow("AUTH_FRONTEND_BASE_URL");
     }
@@ -382,6 +386,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isSingleFactorAccountDeletionEnabled() {
         return getFlagOrFalse("SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED");
+    }
+
+    public boolean isNewSpotRequestQueueWritingEnabled() {
+        return getFlagOrFalse("NEW_SPOT_REQUEST_QUEUE_WRITING");
     }
 
     public String getStorageTokenSigningKeyAlias() {

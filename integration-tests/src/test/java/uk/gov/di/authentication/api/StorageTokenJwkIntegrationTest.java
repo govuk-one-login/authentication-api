@@ -24,6 +24,7 @@ class StorageTokenJwkIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         storageTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
+                        spotRequestQueue,
                         docAppPrivateKeyJwtSigner,
                         configurationParameters);
         handler = new StorageTokenJwkHandler(configurationService);

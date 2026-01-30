@@ -85,6 +85,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
 
     @RegisterExtension
+    protected static final SqsQueueExtension spotRequestQueue =
+            new SqsQueueExtension("spot-request-queue");
+
+    @RegisterExtension
     protected static final SqsQueueExtension txmaAuditQueue =
             new SqsQueueExtension("txma-audit-queue");
 

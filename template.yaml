@@ -121,6 +121,12 @@ Conditions:
       !Condition PublishNextExternalTokenSigningKeys,
       !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
     ]
+  NewSpotRequestQueueWriting:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -4825,6 +4831,10 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
+          NEW_SPOT_REQUEST_QUEUE_WRITING: !If
+            - NewSpotRequestQueueWriting
+            - true
+            - false
           SPOT_QUEUE_URL: !If
             - IpvExists
             - !Sub
@@ -4842,6 +4852,7 @@ Resources:
                     authEnvironment,
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
+          SPOT_REQUEST_QUEUE_URL: !Sub https://sqs.eu-west-2.amazonaws.com/${AWS::AccountId}/${Environment}-spot-request-queue
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_SYNC_WAIT_FOR_SPOT: !If
             - UseSyncWaitForSpot
@@ -4859,6 +4870,7 @@ Resources:
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy
         - !Ref SpotRequestQueueWritePolicy
+        - !Ref SpotRequestQueueWriteAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy

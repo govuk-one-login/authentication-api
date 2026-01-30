@@ -163,6 +163,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
+                    spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters) {
                 @Override

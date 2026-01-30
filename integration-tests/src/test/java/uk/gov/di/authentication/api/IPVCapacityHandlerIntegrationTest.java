@@ -46,6 +46,7 @@ class IPVCapacityHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 storageTokenSigner,
                 ipvPrivateKeyJwtSigner,
                 spotQueue,
+                spotRequestQueue,
                 docAppPrivateKeyJwtSigner,
                 configurationParameters) {
 
