@@ -14,9 +14,11 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
+import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
 
 import java.util.List;
 import java.util.Map;
@@ -30,13 +32,36 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
+    private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
+    private static final int INTERNATIONAL_SMS_SEND_LIMIT = 3;
     private String SESSION_ID;
 
     @RegisterExtension
     protected static final EmailCheckResultExtension emailCheckResultExtension =
             new EmailCheckResultExtension();
 
+    @RegisterExtension
+    protected static final InternationalSmsSendCountExtension internationalSmsSendCountStore =
+            new InternationalSmsSendCountExtension(INTERNATIONAL_SMS_SEND_LIMIT);
+
     private static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
+
+    private static final ConfigurationService TXMA_WITH_INT_SMS_LIMIT_CONFIG =
+            new IntegrationTestConfigurationService(
+                    notificationsQueue,
+                    tokenSigner,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+
+                @Override
+                public int getInternationalSmsNumberSendLimit() {
+                    return INTERNATIONAL_SMS_SEND_LIMIT;
+                }
+            };
 
     @BeforeEach
     void setup() throws Json.JsonException {
@@ -105,5 +130,79 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 hasBody(
                         objectMapper.writeValueAsString(
                                 ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED)));
+    }
+
+    @Test
+    void shouldReturn400WhenInternationalNumberHasHitLimit() {
+        handler =
+                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
+
+        for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
+            internationalSmsSendCountStore.recordSmsSent(INTERNATIONAL_PHONE_NUMBER);
+        }
+
+        var requestBody =
+                Map.of(
+                        "email",
+                        USER_EMAIL,
+                        "notificationType",
+                        NotificationType.VERIFY_PHONE_NUMBER,
+                        "phoneNumber",
+                        INTERNATIONAL_PHONE_NUMBER,
+                        "journeyType",
+                        JourneyType.REGISTRATION);
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody), constructFrontendHeaders(SESSION_ID), Map.of());
+
+        assertThat(response, hasStatus(400));
+    }
+
+    @Test
+    void shouldReturn204WhenInternationalNumberIsBelowLimit() {
+        handler =
+                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
+
+        var requestBody =
+                Map.of(
+                        "email",
+                        USER_EMAIL,
+                        "notificationType",
+                        NotificationType.VERIFY_PHONE_NUMBER,
+                        "phoneNumber",
+                        INTERNATIONAL_PHONE_NUMBER,
+                        "journeyType",
+                        JourneyType.REGISTRATION);
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody), constructFrontendHeaders(SESSION_ID), Map.of());
+
+        assertThat(response, hasStatus(204));
+    }
+
+    @Test
+    void shouldReturn204ForDomesticNumberRegardlessOfLimit() {
+        handler =
+                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
+        String domesticNumber = "+447712345432";
+
+        var requestBody =
+                Map.of(
+                        "email",
+                        USER_EMAIL,
+                        "notificationType",
+                        NotificationType.VERIFY_PHONE_NUMBER,
+                        "phoneNumber",
+                        domesticNumber,
+                        "journeyType",
+                        JourneyType.REGISTRATION);
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody), constructFrontendHeaders(SESSION_ID), Map.of());
+
+        assertThat(response, hasStatus(204));
     }
 }
