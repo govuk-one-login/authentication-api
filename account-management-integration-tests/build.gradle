@@ -55,6 +55,7 @@ test {
     environment "SNS_ENDPOINT", "http://localhost:45678"
     environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
+    environment "INTERNATIONAL_SMS_NUMBER_SEND_LIMIT", "10"
 
     testLogging {
         showStandardStreams = false

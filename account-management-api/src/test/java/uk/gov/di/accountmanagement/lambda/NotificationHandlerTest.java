@@ -14,10 +14,12 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -33,6 +35,8 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -78,6 +82,8 @@ class NotificationHandlerTest {
     private final S3Client s3Client = mock(S3Client.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService =
+            mock(InternationalSmsSendLimitService.class);
     private NotificationHandler handler;
 
     @RegisterExtension
@@ -89,9 +95,14 @@ class NotificationHandlerTest {
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
         when(configService.getEnvironment()).thenReturn("unit-test");
+        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(true);
         handler =
                 new NotificationHandler(
-                        notificationService, configService, s3Client, cloudwatchMetricsService);
+                        notificationService,
+                        configService,
+                        s3Client,
+                        cloudwatchMetricsService,
+                        internationalSmsSendLimitService);
     }
 
     @Test
@@ -680,6 +691,61 @@ class NotificationHandlerTest {
                             ONE_LOGIN_HOME,
                             (NotificationClientException) exception);
         }
+    }
+
+    @Test
+    void shouldRecordSmsSentAfterSuccessfulSmsSend()
+            throws Json.JsonException, NotificationClientException {
+        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(true);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "123456",
+                        SupportedLanguage.EN,
+                        false,
+                        null);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(internationalSmsSendLimitService)
+                .canSendSms(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER);
+        verify(notificationService)
+                .sendText(
+                        eq(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER), any(Map.class), any());
+        verify(internationalSmsSendLimitService)
+                .recordSmsSent(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER);
+    }
+
+    @Test
+    void shouldNotSendSmsWhenInternationalLimitReached() throws Json.JsonException {
+        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(false);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "123456",
+                        SupportedLanguage.EN,
+                        "session-id",
+                        "client-session-id");
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(internationalSmsSendLimitService)
+                .canSendSms(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER);
+        verifyNoInteractions(notificationService);
+        verify(internationalSmsSendLimitService, never()).recordSmsSent(anyString());
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "International SMS send limit reached. NotificationType: VERIFY_PHONE_NUMBER")));
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {
