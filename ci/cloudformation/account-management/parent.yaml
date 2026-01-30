@@ -270,6 +270,8 @@ Conditions:
       !Equals [dev, !Ref Environment],
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
+      !Equals [!Ref Environment, production],
+      !Equals [!Ref Environment, integration],
     ]
 
 Mappings:
