@@ -43,7 +43,14 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     private final int windowTime;
     private final int allowedWindows;
     private final CodeRequest codeRequest;
-    private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
+    private static final Base32 base32 =
+            Base32.builder()
+                    .setLineLength(0)
+                    .setLineSeparator(null)
+                    .setHexDecodeTable(false)
+                    .setPadding((byte) '=')
+                    .setDecodingPolicy(CodecPolicy.STRICT)
+                    .get();
 
     public AuthAppCodeProcessor(
             UserContext userContext,
