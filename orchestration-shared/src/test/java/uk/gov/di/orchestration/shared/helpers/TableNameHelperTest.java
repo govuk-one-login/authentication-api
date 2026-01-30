@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class TableNameHelperTest {
     private static final String TEST_AUTH_DYNAMO_ARN_PREFIX =
             "arn:aws:dynamodb:eu-west-2:12345:table/test-";
@@ -16,6 +17,7 @@ class TableNameHelperTest {
             "arn:aws:dynamodb:eu-west-2:56789:table/test-";
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnTableArnForAuthTableWhenCalledInOrchAccount() {
         when(configurationService.getDynamoArnPrefix())
@@ -27,6 +29,7 @@ class TableNameHelperTest {
         assertEquals(TEST_AUTH_DYNAMO_ARN_PREFIX + "auth-table", fullTableName);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnTableArnForOrchTableWhenCalledInAuthAccount() {
         when(configurationService.getOrchDynamoArnPrefix())
@@ -38,6 +41,7 @@ class TableNameHelperTest {
         assertEquals(TEST_ORCH_DYNAMO_ARN_PREFIX + "orch-table", fullTableName);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnTableNameIfNoPrefixDefined() {
         when(configurationService.getEnvironment()).thenReturn("dev");

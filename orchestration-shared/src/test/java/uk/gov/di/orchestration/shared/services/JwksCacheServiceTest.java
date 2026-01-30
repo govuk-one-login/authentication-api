@@ -25,6 +25,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
+// QualityGateUnitTest
 class JwksCacheServiceTest extends BaseDynamoServiceTest<JwksCacheItem> {
     private static final String JWKS_URL = "http://localhost/.well-known/jwks.json";
     private static final String KEY_ID_1 = "test-enc-key-1";
@@ -56,6 +57,7 @@ class JwksCacheServiceTest extends BaseDynamoServiceTest<JwksCacheItem> {
         }
     }
 
+    // QualityGateRegressionTest
     @Test
     void getOrGenerateIpvJwksCacheItemReturnsJwksCacheWithValidTtl() {
         withValidJwksCache();
@@ -64,6 +66,7 @@ class JwksCacheServiceTest extends BaseDynamoServiceTest<JwksCacheItem> {
         assertThat(jwksCacheItem.getTimeToLive(), equalTo(VALID_TTL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void getOrGenerateIpvJwksCacheItemReturnsFirstJwksCache() {
         withMultipleValidJwksCache();
@@ -72,6 +75,7 @@ class JwksCacheServiceTest extends BaseDynamoServiceTest<JwksCacheItem> {
         assertThat(jwksCacheItem.getTimeToLive(), equalTo(VALID_TTL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void getOrGenerateIpvJwksCacheItemGeneratesJwksIfNone() {
         Stream<JwksCacheItem> jwksCacheItemStream = Stream.of();

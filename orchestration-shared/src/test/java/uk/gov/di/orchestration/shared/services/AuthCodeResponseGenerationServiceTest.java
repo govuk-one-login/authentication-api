@@ -19,6 +19,7 @@ import static uk.gov.di.orchestration.sharedtest.helper.Constants.CLIENT_SESSION
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.ENVIRONMENT;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.SESSION_ID;
 
+// QualityGateUnitTest
 class AuthCodeResponseGenerationServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -38,6 +39,7 @@ class AuthCodeResponseGenerationServiceTest {
                 new AuthCodeResponseGenerationService(configurationService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void getDimensionsReturnsMapOfValues() {
         Map<String, String> expectedValues =
@@ -62,6 +64,7 @@ class AuthCodeResponseGenerationServiceTest {
         assertEquals(expectedValues, actualValues);
     }
 
+    // QualityGateRegressionTest
     @Test
     void saveSessionUpdatesNonDocAppSessionWithAuthenticatedAndAccountState() {
         authCodeResponseGenerationService.saveSession(false, orchSessionService, orchSession);
@@ -75,6 +78,7 @@ class AuthCodeResponseGenerationServiceTest {
                                                         == OrchSessionItem.AccountState.EXISTING));
     }
 
+    // QualityGateRegressionTest
     @Test
     void saveSessionUpdatesDocAppSessionWithDocAppState() {
         authCodeResponseGenerationService.saveSession(true, orchSessionService, orchSession);
