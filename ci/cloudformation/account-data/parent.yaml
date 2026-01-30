@@ -95,50 +95,44 @@ Conditions:
       - !FindInMap [EnvironmentConfiguration, !Ref Environment, IsSplunkEnabled]
       - "Yes"
 
+  UseAlarmActions:
+    Fn::Equals:
+      - !FindInMap [EnvironmentConfiguration, !Ref Environment, UseAlarmActions]
+      - "Yes"
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
-      dataStoreAccountId: ""
-      accountDataTableEncryptionKey: ""
       cloudwatchLogRetentionInDays: 1
     authdev2:
-      dataStoreAccountId: ""
-      accountDataTableEncryptionKey: ""
       cloudwatchLogRetentionInDays: 1
     authdev3:
-      dataStoreAccountId: ""
-      accountDataTableEncryptionKey: ""
       cloudwatchLogRetentionInDays: 1
     dev:
-      dataStoreAccountId: ""
-      accountDataTableEncryptionKey: ""
       cloudwatchLogRetentionInDays: 1
       IsSplunkEnabled: "No"
       dynatraceSecretArn: ""
+      UseAlarmActions: "No"
     build:
-      dataStoreAccountId: ""
-      accountDataTableEncryptionKey: ""
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: ""
+      UseAlarmActions: "Yes"
     staging:
-      dataStoreAccountId: ""
-      accountDataTableEncryptionKey: ""
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: ""
+      UseAlarmActions: "Yes"
     integration:
-      dataStoreAccountId: ""
-      accountDataTableEncryptionKey: ""
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: ""
+      UseAlarmActions: "Yes"
     production:
-      dataStoreAccountId: ""
-      accountDataTableEncryptionKey: ""
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: ""
+      UseAlarmActions: "Yes"
   LambdaConfiguration:
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
@@ -355,77 +349,3 @@ Resources:
             Effect: Allow
             Action: xray:*
             Resource: "*"
-
-  DynamoAccountDataReadWriteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "IAM policy for managing read and write permissions to the Dynamo Account Data tables"
-      Path: !Sub
-        - /${Env}/auth-ad-default/
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowAccessToDynamoTables
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeStream
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:BatchWriteItem
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-account-data/index/*
-                - DataStoreAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      dataStoreAccountId,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-              - !Sub
-                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-account-data
-                - DataStoreAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      dataStoreAccountId,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-          - Sid: AllowAccessToKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    accountDataTableEncryptionKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    accountDataTableEncryptionKey,
-                  ]
