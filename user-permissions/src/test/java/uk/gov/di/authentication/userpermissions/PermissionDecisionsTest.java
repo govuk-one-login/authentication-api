@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.userpermissions;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -91,6 +92,11 @@ class PermissionDecisionsTest {
         public Result<DecisionError, Decision> canStartJourney(
                 JourneyType journeyType, PermissionContext permissionContext) {
             return Result.success(new Decision.Permitted(0));
+        }
+
+        @Override
+        public boolean canIssueAuthCode(AuthSessionItem authSession) {
+            return true;
         }
     }
 }
