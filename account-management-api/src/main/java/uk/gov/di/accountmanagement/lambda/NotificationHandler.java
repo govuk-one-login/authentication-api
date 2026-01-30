@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
@@ -54,16 +55,19 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private final ConfigurationService configurationService;
     private final S3Client s3Client;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService;
 
     public NotificationHandler(
             NotificationService notificationService,
             ConfigurationService configService,
             S3Client s3Client,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            InternationalSmsSendLimitService internationalSmsSendLimitService) {
         this.notificationService = notificationService;
         this.configurationService = configService;
         this.s3Client = s3Client;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
     }
 
     public NotificationHandler() {
@@ -86,6 +90,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         this.s3Client =
                 S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
     }
 
     @Override
@@ -258,6 +264,15 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             NotifyRequest notifyRequest,
             Map<String, Object> personalisation,
             String notificationType) {
+        if (!internationalSmsSendLimitService.canSendSms(notifyRequest.getDestination())) {
+            LOG.warn(
+                    "International SMS send limit reached. NotificationType: {}, sessionId: {}, clientSessionId: {}",
+                    notificationType,
+                    notifyRequest.getSessionId(),
+                    notifyRequest.getClientSessionId());
+            return;
+        }
+
         sendNotification(
                 notifyRequest,
                 personalisation,
@@ -266,6 +281,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     try {
                         notificationService.sendText(
                                 destination, per, NotificationType.valueOf(type));
+                        internationalSmsSendLimitService.recordSmsSent(destination);
                         LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
                         cloudwatchMetricsService.emitMetricForNotification(
                                 notifyRequest.getNotificationType(),
