@@ -80,6 +80,7 @@ public class ClientRegistrationHandler
 
         try {
             LOG.info("Client registration request received");
+            LOG.info("Message body: {}", input.getBody());
             var clientRegistrationRequest =
                     objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
             var errorResponse =
@@ -94,6 +95,8 @@ public class ClientRegistrationHandler
                 return generateApiGatewayProxyResponse(
                         400, errorResponse.get().toJSONObject().toJSONString());
             }
+
+            LOG.info("Client LOCs: {}", clientRegistrationRequest.getClientLoCs());
 
             var clientID = clientService.generateClientID().toString();
 
