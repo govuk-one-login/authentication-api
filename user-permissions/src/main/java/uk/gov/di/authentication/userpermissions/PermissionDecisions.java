@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.userpermissions;
 
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -97,4 +98,15 @@ public interface PermissionDecisions {
      */
     Result<DecisionError, Decision> canStartJourney(
             JourneyType journeyType, PermissionContext permissionContext);
+
+    // NOTE - AUT-4789 - See AUT-5248 to change how we handle decisions.
+    //  This is a temporary implementation.
+
+    /**
+     * Checks if the user has passed the required checks in order to issue an auth code.
+     *
+     * @param authSession The user's current session
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    boolean canIssueAuthCode(AuthSessionItem authSession);
 }
