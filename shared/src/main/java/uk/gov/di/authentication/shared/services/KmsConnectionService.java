@@ -19,23 +19,10 @@ public class KmsConnectionService {
     private static final Logger LOG = LogManager.getLogger(KmsConnectionService.class);
 
     public KmsConnectionService(ConfigurationService configurationService) {
-        this(
-                configurationService.getLocalstackEndpointUri(),
-                configurationService.getAwsRegion(),
-                configurationService.getTokenSigningKeyAlias(),
-                !configurationService.useAccessTokenJwksEndpoint());
+        this(configurationService.getLocalstackEndpointUri(), configurationService.getAwsRegion());
     }
 
-    public KmsConnectionService(
-            Optional<String> localstackEndpointUri, String awsRegion, String tokenSigningKeyId) {
-        this(localstackEndpointUri, awsRegion, tokenSigningKeyId, true);
-    }
-
-    public KmsConnectionService(
-            Optional<String> localstackEndpointUri,
-            String awsRegion,
-            String tokenSigningKeyId,
-            boolean useTokenSigningKeyId) {
+    public KmsConnectionService(Optional<String> localstackEndpointUri, String awsRegion) {
         if (localstackEndpointUri.isPresent()) {
             LOG.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
             this.kmsClient =
@@ -51,9 +38,6 @@ public class KmsConnectionService {
                             .credentialsProvider(DefaultCredentialsProvider.builder().build())
                             .build();
         }
-        if (useTokenSigningKeyId) {
-            warmUp(tokenSigningKeyId);
-        }
     }
 
     public GetPublicKeyResponse getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
@@ -64,14 +48,5 @@ public class KmsConnectionService {
     public SignResponse sign(SignRequest signRequest) {
         LOG.info("Calling KMS with SignRequest and KeyId {}", signRequest.keyId());
         return kmsClient.sign(signRequest);
-    }
-
-    private void warmUp(String keyId) {
-        GetPublicKeyRequest request = GetPublicKeyRequest.builder().keyId(keyId).build();
-        try {
-            kmsClient.getPublicKey(request);
-        } catch (Exception e) {
-            LOG.info("Unable to retrieve Public Key whilst warming up");
-        }
     }
 }

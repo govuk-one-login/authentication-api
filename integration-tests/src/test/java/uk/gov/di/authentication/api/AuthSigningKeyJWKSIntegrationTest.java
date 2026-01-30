@@ -94,22 +94,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @Test
     void shouldReturnJWKSetContainingTheReverificationSigningKey() {
-        handler = new MfaResetJarJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
-
-        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
-
-        assertThat(response, hasStatus(200));
-
-        JsonObject jwk = JsonParser.parseString(response.getBody()).getAsJsonObject();
-        JsonArray keys = jwk.get("keys").getAsJsonArray();
-        assertEquals(1, keys.size(), "JWKS endpoint must return a single key.");
-
-        checkPublicSigningKeyResponseMeetsADR0030(keys.get(0).getAsJsonObject());
-    }
-
-    @Test
-    void shouldReturnJWKSetContainingTheReverificationSigningKeyWithJwksEnabled() {
-        handler = new MfaResetJarJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_ENABLED);
+        handler = new MfaResetJarJwkHandler(TEST_CONFIGURATION_SERVICE);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
@@ -126,7 +111,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void shouldNotAllowExceptionsToEscape() {
         environment.set("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS", "wrong-key-alias");
 
-        handler = new MfaResetJarJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
+        handler = new MfaResetJarJwkHandler(TEST_CONFIGURATION_SERVICE);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 

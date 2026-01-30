@@ -17,7 +17,6 @@ test_clients_enabled                         = true
 ais_call_in_authenticate_enabled             = true
 account_management_international_sms_enabled = false
 test_signing_key_enabled                     = true
-use_access_token_jwks_endpoint               = true
 
 # Durations
 lockout_duration                          = 30

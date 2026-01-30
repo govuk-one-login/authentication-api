@@ -100,22 +100,7 @@ class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerInt
 
     @Test
     void shouldReturnJWKSetContainingTheStorageTokenSigningKey() {
-        handler = new MfaResetStorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
-
-        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
-
-        assertThat(response, hasStatus(200));
-
-        JsonObject jwk = JsonParser.parseString(response.getBody()).getAsJsonObject();
-        JsonArray keys = jwk.get("keys").getAsJsonArray();
-        assertEquals(1, keys.size(), "JWKS endpoint must return a single key.");
-
-        checkPublicSigningKeyResponseMeetsADR0030(keys.get(0).getAsJsonObject());
-    }
-
-    @Test
-    void shouldReturnJWKSetContainingTheStorageTokenSigningKeyWithJwksEnabled() {
-        handler = new MfaResetStorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_ENABLED);
+        handler = new MfaResetStorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
@@ -132,7 +117,7 @@ class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerInt
     void shouldNotAllowExceptionsToEscape() {
         environment.set("MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS", "wrong-key-alias");
 
-        handler = new MfaResetStorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
+        handler = new MfaResetStorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
