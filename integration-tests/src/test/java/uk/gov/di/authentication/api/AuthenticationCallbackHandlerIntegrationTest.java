@@ -1143,11 +1143,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Override
-        public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
-            return orchestrationPrivateKeyJwtSigner.getKeyAlias();
-        }
-
-        @Override
         public boolean isIdentityEnabled() {
             return true;
         }

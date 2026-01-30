@@ -3607,6 +3607,133 @@ Resources:
             Unit: Count
   #endregion
 
+  #region Auth Jwks Lambda
+  AuthJwksFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-AuthJwksFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
+      Handler: uk.gov.di.authentication.oidc.lambda.AuthJwksHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref AuthJwksFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: AuthJwksFunctionErrorAnomalyAlarm
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              orchToAuthKeyArn,
+            ]
+      Policies:
+        - !Ref OrchToAuthSigningKmsAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  AuthJwksFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthJwksFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/auth-jwks.json"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  AuthJwksFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-auth-jwks-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  AuthJwksSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthJwksFunctionLogGroup
+
+  AuthJwksFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-auth-jwks-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref AuthJwksFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-auth-jwks-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthJwksFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-auth-jwks-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} auth jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref SecondLineSlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthJwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthJwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
   #region Authorisation Lambda
 
   AuthorisationFunction:
@@ -8517,6 +8644,44 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub ${Environment}-IpvJwksFunction
+            Period: 60
+            Stat: Average
+  #endregion
+
+  #region AuthJwks Function Anomaly Alarms
+  AuthJwksFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-AuthJwksFunction
+
+  AuthJwksFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-AuthJwksFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthJwksFunction
             Period: 60
             Stat: Average
   #endregion
