@@ -1,0 +1,24 @@
+openapi: 3.0.3
+info:
+  title: AMC Internal Access Token
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    AmcAccessTokenClaims:
+      type: object
+      description: "Authentication-issued access token for use by AMC to authorize requests to APIs"
+      required: [iss, sub, aud, client_id, scope, exp, iat, nbf, jti]
+      properties:
+        iss: { type: string }
+        sub: { type: string, description: "Internal Pairwise Subject" }
+        aud: { type: string, description: "Audience" }
+        client_id: { type: string }
+        sid: { type: string, description: "Session ID" }
+        jti: { type: string, format: uuid }
+        scope:
+          type: array
+          items: { type: string }
+        exp: { type: integer, format: int64 }
+        iat: { type: integer, format: int64 }
+        nbf: { type: integer, format: int64 }

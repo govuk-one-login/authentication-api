@@ -17,6 +17,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
+import uk.gov.di.authentication.frontendapi.model.AmcAccessTokenClaims;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -84,31 +85,37 @@ public class AMCAuthorizationService {
                 nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
         List<String> scopeValues = Arrays.stream(scope).map(AMCScope::getValue).toList();
 
-        var claims =
-                new JWTClaimsSet.Builder()
-                        .claim("scope", scopeValues)
-                        .issuer(configurationService.getAuthIssuerClaim())
-                        .audience(configurationService.getAuthToAMAPIAudience())
-                        .expirationTime(expiryDate)
-                        .issueTime(issueTime)
-                        .notBeforeTime(issueTime)
-                        .subject(internalPairwiseSubject)
-                        .claim("client_id", configurationService.getAMCClientId())
-                        .claim("sid", authSessionItem.getSessionId())
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
+        AmcAccessTokenClaims contractClaims = new AmcAccessTokenClaims(); // POJO
 
-        return signJWT(
-                        claims,
-                        configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
-                .map(
-                        signedJWT -> {
-                            Scope oauthScope = new Scope(scopeValues.toArray(new String[0]));
-                            return new BearerAccessToken(
-                                    signedJWT.serialize(),
-                                    configurationService.getSessionExpiry(),
-                                    oauthScope);
-                        });
+        contractClaims.setIss(configurationService.getAuthIssuerClaim());
+        contractClaims.setSub(internalPairwiseSubject);
+        contractClaims.setClientId(configurationService.getAMCClientId());
+        contractClaims.setSid(authSessionItem.getSessionId());
+        contractClaims.setJti(UUID.randomUUID());
+        contractClaims.setScope(scopeValues);
+        contractClaims.setAud(configurationService.getAuthToAMAPIAudience());
+        contractClaims.setIat(issueTime.toInstant().getEpochSecond());
+        contractClaims.setNbf(issueTime.toInstant().getEpochSecond());
+        contractClaims.setExp(expiryDate.toInstant().getEpochSecond());
+
+        try {
+            JWTClaimsSet nimbusClaims = JWTClaimsSet.parse(contractClaims.toJson());
+
+            return signJWT(
+                            nimbusClaims,
+                            configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
+                    .map(
+                            signedJWT -> {
+                                Scope oauthScope = new Scope(scopeValues.toArray(new String[0]));
+                                return new BearerAccessToken(
+                                        signedJWT.serialize(),
+                                        configurationService.getSessionExpiry(),
+                                        oauthScope);
+                            });
+        } catch (ParseException e) {
+            LOG.error("Generated POJO produced invalid JSON", e);
+            return Result.failure(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR);
+        }
     }
 
     private Result<AMCAuthorizeFailureReason, EncryptedJWT> createCompositeJWT(
