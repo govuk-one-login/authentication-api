@@ -2,6 +2,7 @@ plugins {
     id "java"
     id "jacoco"
     alias libs.plugins.pact
+    id "org.openapi.generator" version "7.2.0"
 }
 
 group = "uk.gov.di.authentication.frontendapi"
@@ -10,7 +11,6 @@ version = "unspecified"
 File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 
 dependencies {
-
     implementation project(path: ':shared')
     implementation project(':user-permissions')
     implementation project(':audit-events')
@@ -36,6 +36,9 @@ dependencies {
             libs.webauthnServer,
             libs.jacksonDatabind
 
+    implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+
     runtimeOnly libs.bundles.loggingRuntime,
             platform(libs.openTelemetryBom),
             libs.openTelemetryAwsSdk
@@ -54,6 +57,49 @@ dependencies {
     testRuntimeOnly libs.bundles.testRuntime
 }
 
+openApiGenerate {
+    generatorName = "java"
+    inputSpec = "$projectDir/src/main/resources/jwt-contracts/amc-access-token.yaml"
+    outputDir = layout.buildDirectory.dir("generated/openapi").get().asFile.path
+    modelPackage = "uk.gov.di.authentication.frontendapi.model"
+
+    invokerPackage = "uk.gov.di.authentication.frontendapi.helpers"
+
+    // Use okhttp-gson to ensure we get @SerializedName annotations
+    library = "okhttp-gson"
+
+    globalProperties = [
+        models: "",
+        apis: "false",
+        modelTests: "false",
+        apiTests: "false",
+        modelDocs: "false",
+
+        // CRITICAL FIX: Turn OFF supporting files.
+        // This prevents the generator from creating the 'JSON.java' file that
+        // imports forbidden libraries (gson-fire, okio).
+        // Provided our own JSON.java file at /frontendapi/helpers/JSON.java
+        supportingFiles: "false"
+    ]
+
+    configOptions = [
+        serializationLibrary: "gson",
+        useSwaggerAnnotations: "false",
+        useBeanValidation: "false",
+        openApiNullable: "false",
+        useJakartaEe: "true",      // Correct for Java 17
+        dateLibrary: "java8",      // Correct for Java 17
+        hideGenerationTimestamp: "true",
+
+        // Ensure forward compatibility (ignore unknown fields instead of crashing)
+        disallowAdditionalPropertiesIfNotPresent: "false"
+    ]
+}
+
+sourceSets.main.java.srcDir layout.buildDirectory.dir("generated/openapi/src/main/java")
+
+compileJava.dependsOn tasks.openApiGenerate
+
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
@@ -62,7 +108,8 @@ test {
 
 var pactDir = "$rootDir/frontend-api/src/test/pact"
 
-task pactConsumerTests (type: Test, group: "verification") {
+tasks.register('pactConsumerTests', Test) {
+    group = "verification"
     useJUnitPlatform()
     include 'uk/gov/di/authentication/frontendapi/contract/**'
     systemProperties['pact.rootDir'] = pactDir
@@ -82,8 +129,8 @@ pact {
     }
 }
 
-task buildZip(type: Zip) {
-    if (isDevDeployBuild) {
+tasks.register('buildZip', Zip) {
+    if (project.hasProperty('isDevDeployBuild') && project.isDevDeployBuild) {
         destinationDirectory = new File(terraformDir, "artifacts")
     }
     from compileJava
