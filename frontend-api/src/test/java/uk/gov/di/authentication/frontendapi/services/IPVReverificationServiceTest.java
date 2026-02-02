@@ -142,7 +142,7 @@ class IPVReverificationServiceTest {
                         Base64URL.encode(testJwtClaims.toString()),
                         TEST_ENCODED_JWS_SIGNATURE);
         testEncryptedJwt = constructTestEncryptedJWT(testSignedJwt);
-        when(jwtService.signJWT(any(), any())).thenReturn(testSignedJwt);
+        when(jwtService.signJWT(any(), any(), any())).thenReturn(testSignedJwt);
         when(jwtService.encryptJWT(any(), any())).thenReturn(testEncryptedJwt);
         mockIdGen = Mockito.mockStatic(IdGenerator.class);
         mockIdGen.when(IdGenerator::generate).thenReturn(TEST_UUID);
@@ -191,7 +191,8 @@ class IPVReverificationServiceTest {
                             .build()
                             .toRSAPublicKey();
 
-            verify(jwtService).signJWT(constructTestClaimSet(), TEST_KEY_ID);
+            verify(jwtService)
+                    .signJWT(TEST_SIGNING_ALGORITHM, constructTestClaimSet(), TEST_KEY_ID);
             verify(jwtService).encryptJWT(testSignedJwt, expectedPublicKey);
             verify(tokenService).generateStorageTokenForMfaReset(TEST_SUBJECT);
 
@@ -232,7 +233,7 @@ class IPVReverificationServiceTest {
                         .build()
                         .toRSAPublicKey();
 
-        verify(jwtService).signJWT(constructTestClaimSet(), TEST_KEY_ID);
+        verify(jwtService).signJWT(TEST_SIGNING_ALGORITHM, constructTestClaimSet(), TEST_KEY_ID);
         verify(jwtService).encryptJWT(testSignedJwt, expectedPublicKey);
         verify(tokenService).generateStorageTokenForMfaReset(TEST_SUBJECT);
 
