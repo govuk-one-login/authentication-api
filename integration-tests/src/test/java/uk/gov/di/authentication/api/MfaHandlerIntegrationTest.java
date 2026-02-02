@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -16,6 +17,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 
 import java.util.List;
@@ -36,7 +38,12 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
     private static final String USER_PASSWORD = "Password123!";
+    private static final int INTERNATIONAL_SMS_SEND_LIMIT = 3;
     private String SESSION_ID;
+
+    @RegisterExtension
+    protected static final InternationalSmsSendCountExtension internationalSmsSendCountStore =
+            new InternationalSmsSendCountExtension(INTERNATIONAL_SMS_SEND_LIMIT);
 
     @BeforeEach
     void setup() {
@@ -335,6 +342,84 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
+        }
+    }
+
+    @Nested
+    class InternationalSmsSendLimitTests {
+        private static final ConfigurationService TXMA_WITH_INT_SMS_LIMIT_CONFIG =
+                new IntegrationTestConfigurationService(
+                        notificationsQueue,
+                        tokenSigner,
+                        docAppPrivateKeyJwtSigner,
+                        configurationParameters) {
+                    @Override
+                    public String getTxmaAuditQueueUrl() {
+                        return txmaAuditQueue.getQueueUrl();
+                    }
+
+                    @Override
+                    public int getInternationalSmsNumberSendLimit() {
+                        return INTERNATIONAL_SMS_SEND_LIMIT;
+                    }
+                };
+
+        private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
+
+        @BeforeEach
+        void setup() throws Json.JsonException {
+            SESSION_ID = IdGenerator.generate();
+            authSessionStore.addSession(SESSION_ID);
+            authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
+            userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject("new-subject"));
+            handler = new MfaHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
+        }
+
+        @Test
+        void shouldReturn400WhenInternationalNumberHasHitLimit() throws Json.JsonException {
+            userStore.addVerifiedPhoneNumber(USER_EMAIL, INTERNATIONAL_PHONE_NUMBER);
+
+            for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
+                internationalSmsSendCountStore.recordSmsSent(INTERNATIONAL_PHONE_NUMBER);
+            }
+
+            var response =
+                    makeRequest(
+                            Optional.of(new MfaRequest(USER_EMAIL, false)),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasJsonBody(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS));
+        }
+
+        @Test
+        void shouldReturn204WhenInternationalNumberIsBelowLimit() {
+            userStore.addVerifiedPhoneNumber(USER_EMAIL, INTERNATIONAL_PHONE_NUMBER);
+
+            var response =
+                    makeRequest(
+                            Optional.of(new MfaRequest(USER_EMAIL, false)),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(204));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+        }
+
+        @Test
+        void shouldReturn204ForDomesticNumberRegardlessOfLimit() {
+            String domesticNumber = "+447712345432";
+            userStore.addVerifiedPhoneNumber(USER_EMAIL, domesticNumber);
+
+            var response =
+                    makeRequest(
+                            Optional.of(new MfaRequest(USER_EMAIL, false)),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(204));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
         }
     }
 
