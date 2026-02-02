@@ -13,15 +13,19 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler::handleRequest
       Environment:
         Variables:
-          AMC_AUTHORIZE_URI: !Sub
-            - "{{resolve:ssm:/deploy/${env}/amc_authorize_uri}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AMC_AUTHORIZE_URI:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcAuthorizeUri,
+            ]
           AMC_CLIENT_ID: "auth_amc"
-          AMC_REDIRECT_URI: !Sub
-            - "{{resolve:ssm:/deploy/${env}/amc_redirect_uri}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AMC_REDIRECT_URI:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcRedirectUri,
+            ]
           AUTH_ISSUER_CLAIM:
             !FindInMap [
               EnvironmentConfiguration,
@@ -32,10 +36,12 @@ Resources:
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-management-signing-key
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          AUTH_TO_AMC_AUDIENCE: !Sub
-            - "{{resolve:ssm:/deploy/${env}/amc_audience}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_TO_AMC_AUDIENCE:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcAudience,
+            ]
           AUTH_TO_AMC_PRIVATE_SIGNING_KEY: !Sub
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-amc-signing-key
             - env:
@@ -138,30 +144,3 @@ Resources:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Ref AMCAuthorizeFunctionLogGroup
-
-  AMCAuthorizeUriParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub
-        - /deploy/${env}/amc_authorize_uri
-        - env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      Type: String
-      Value: ""
-
-  AMCRedirectUriParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub
-        - /deploy/${env}/amc_redirect_uri
-        - env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      Type: String
-      Value: ""
-
-  AMCAudienceParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub
-        - /deploy/${env}/amc_audience
-        - env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      Type: String
-      Value: ""

@@ -211,6 +211,9 @@ Mappings:
       useStronglyConsistentReads: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev1.dev.account.gov.uk
+      amcAudience: https://api.manage.authdev1.dev.account.gov.uk
+      amcAuthorizeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/authorize
+      amcRedirectUri: https://signin.authdev1.dev.account.gov.uk/amc-callback
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -246,6 +249,9 @@ Mappings:
       useStronglyConsistentReads: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev2.dev.account.gov.uk
+      amcAudience: https://api.manage.authdev2.dev.account.gov.uk
+      amcAuthorizeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/authorize
+      amcRedirectUri: https://signin.authdev2.dev.account.gov.uk/amc-callback
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ce9680d3-953a-4b6a-9098-a0380d0afc70
@@ -285,6 +291,9 @@ Mappings:
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/2652846f-2767-4d53-a33c-5d1bd5d3f350
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/6c12b394-e3b7-4ca6-a137-2d3a9da8ad9f
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/12a2f192-542c-48f5-9c88-20c62e8944c4
+      amcAudience: https://api.manage.authdev3.dev.account.gov.uk
+      amcAuthorizeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/authorize
+      amcRedirectUri: https://signin.authdev3.dev.account.gov.uk/amc-callback
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -329,6 +338,9 @@ Mappings:
       useStronglyConsistentReads: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.dev.account.gov.uk
+      amcAudience: https://api.manage.dev.account.gov.uk
+      amcAuthorizeUri: https://amcstub.signin.dev.account.gov.uk/authorize
+      amcRedirectUri: https://signin.dev.account.gov.uk/amc-callback
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574
@@ -378,6 +390,9 @@ Mappings:
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/7a1d86fe-1ca0-499c-95e9-ee8593a850f9
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/e284a04a-bac2-42b0-b723-ef0d32722ad5
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/84243770-7ba6-42c6-a26c-28bc82e3efa2
+      amcAudience: https://api.manage.build.account.gov.uk
+      amcAuthorizeUri: https://amcstub.signin.build.account.gov.uk/authorize
+      amcRedirectUri: https://signin.build.account.gov.uk/amc-callback
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
@@ -428,6 +443,9 @@ Mappings:
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/b94d81a1-a41f-4e61-859c-87dcacb32e51
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/d0bdb864-8478-4411-a44a-a4232fc97cf3
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/4373aa74-95b2-454c-bd86-9716f105a1c4
+      amcAudience: https://api.manage.staging.account.gov.uk
+      amcAuthorizeUri: https://amcstub.signin.staging.account.gov.uk/authorize
+      amcRedirectUri: https://signin.staging.account.gov.uk/amc-callback
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
@@ -478,6 +496,9 @@ Mappings:
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/fdf1686f-2d4d-4c7b-b3be-324b6ebba370
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/808a8c1e-82d8-487e-abb8-e13d6564b426
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/11948d7f-8e88-41d3-afe5-5ec9f37f979d
+      amcAudience: https://api.manage.integration.account.gov.uk
+      amcAuthorizeUri: https://amcstub.signin.integration.account.gov.uk/authorize
+      amcRedirectUri: https://signin.integration.account.gov.uk/amc-callback
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/075774c2-b836-452f-9684-dcd742146f81
@@ -528,6 +549,9 @@ Mappings:
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/9b57120e-3bcd-4fce-ada8-89ea9d1412d6
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/b2979629-c62f-458d-992b-ac4239c2cf81
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/e9f1350d-75e2-4532-be84-8bec6de99755
+      amcAudience: https://api.manage.account.gov.uk
+      amcAuthorizeUri: https://amcstub.signin.account.gov.uk/authorize
+      amcRedirectUri: https://signin.account.gov.uk/amc-callback
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
