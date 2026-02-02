@@ -801,10 +801,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "GOV.UK One Login");
     }
 
-    public String getAuthToAMAPIAudience() {
-        return System.getenv().getOrDefault("AUTH_TO_AUTH_AUDIENCE", "");
-    }
-
     public int getInternationalSmsNumberSendLimit() throws MissingEnvVariableException {
         String key = System.getenv("INTERNATIONAL_SMS_NUMBER_SEND_LIMIT");
 
@@ -813,33 +809,5 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
 
         return Integer.parseInt(key);
-    }
-
-    public String getAuthToAccountManagementPrivateSigningKeyAlias() {
-        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_PRIVATE_SIGNING_KEY", "");
-    }
-
-    public String getAuthToAMCPrivateSigningKeyAlias() {
-        return System.getenv().getOrDefault("AUTH_TO_AMC_PRIVATE_SIGNING_KEY", "");
-    }
-
-    public String getAuthToAMCAudience() {
-        return System.getenv().getOrDefault("AUTH_TO_AMC_AUDIENCE", "");
-    }
-
-    public String getAMCRedirectURI() {
-        return System.getenv().getOrDefault("AMC_REDIRECT_URI", "");
-    }
-
-    public String getAuthToAMCPublicEncryptionKey() {
-        return System.getenv().getOrDefault("AUTH_TO_AMC_PUBLIC_ENCRYPTION_KEY", "");
-    }
-
-    public String getAMCClientId() {
-        return System.getenv().getOrDefault("AMC_CLIENT_ID", "");
-    }
-
-    public URI getAMCAuthorizeURI() {
-        return URI.create(System.getenv().getOrDefault("AMC_AUTHORIZE_URI", ""));
     }
 }
