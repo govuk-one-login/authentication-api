@@ -323,7 +323,9 @@ public class IPVCallbackHelper {
                         logIds,
                         clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);
-        sqsClient.send(spotRequestString);
+        if (configurationService.isOldSpotRequestQueueWritingEnabled()) {
+            sqsClient.send(spotRequestString);
+        }
         if (configurationService.isNewSpotRequestQueueWritingEnabled()) {
             spotSqsClient.send(spotRequestString);
         }
