@@ -50,7 +50,6 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.CrossBrowserStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksCacheExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
@@ -129,9 +128,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final JwksCacheExtension jwksCacheExtension = new JwksCacheExtension();
 
     @RegisterExtension
-    public static final KmsKeyExtension tokenSigningKey = new KmsKeyExtension("token-signing-key");
-
-    @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
             new RpPublicKeyCacheExtension(180);
 
@@ -199,11 +195,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 @Override
                 public URI getDocAppAuthorisationCallbackURI() {
                     return CALLBACK_URI;
-                }
-
-                @Override
-                public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
-                    return tokenSigningKey.getKeyAlias();
                 }
 
                 @Override
