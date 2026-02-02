@@ -59,7 +59,7 @@ jobs:
 
       - name: Gradle build
         run: |
-          ./gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip
+          ./gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip :delivery-receipts-api:buildZip
 
       - name: Install Rain
         env:
