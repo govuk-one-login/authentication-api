@@ -134,6 +134,12 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  ProvisionNewDocAppSigningKey:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -7923,6 +7929,35 @@ Resources:
               AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: kms:*
             Resource: "*"
+
+  #endregion
+
+  #region DocApp signing key pair
+
+  OrchDocAppSigningKmsKey:
+    Condition: ProvisionNewDocAppSigningKey
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS signing key for authentication to DocApp
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  OrchDocAppSigningKmsKeyAlias:
+    Condition: ProvisionNewDocAppSigningKey
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-docapp-auth-kms-key-alias"
+      TargetKeyId: !Ref OrchDocAppSigningKmsKey
 
   #endregion
 
