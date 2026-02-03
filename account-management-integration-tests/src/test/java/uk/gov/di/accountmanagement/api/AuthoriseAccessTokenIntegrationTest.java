@@ -83,7 +83,18 @@ class AuthoriseAccessTokenIntegrationTest
 
     @BeforeEach
     void setup() {
-        handler = new AuthoriseAccessTokenHandler(TEST_CONFIGURATION_SERVICE_JWKS_DISABLED);
+        handler = new AuthoriseAccessTokenHandler(TEST_CONFIGURATION_SERVICE);
+        ecKeyPair = createTestEncryptionKeyPair();
+        JWKSet jwkSet =
+                new JWKSet(
+                        singletonList(
+                                new ECKey.Builder(P_256, (ECPublicKey) ecKeyPair.getPublic())
+                                        .privateKey(ecKeyPair.getPrivate())
+                                        .keyID(TEST_CONFIGURATION_SERVICE.getTokenSigningKeyId())
+                                        .keyUse(KeyUse.SIGNATURE)
+                                        .algorithm(JWSAlgorithm.ES256)
+                                        .build()));
+        jwksExtension.init(jwkSet);
         validDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
     }
 
@@ -98,7 +109,7 @@ class AuthoriseAccessTokenIntegrationTest
     }
 
     @Test
-    void shouldReturnAuthPolicyForSuccessfulRequest() {
+    void shouldReturnAuthPolicyForSuccessfulRequest() throws JOSEException {
         var scopes =
                 asList(
                         OIDCScopeValue.OPENID.getValue(),
@@ -119,43 +130,7 @@ class AuthoriseAccessTokenIntegrationTest
     }
 
     @Test
-    void shouldReturnAuthPolicyForSuccessfulRequestWithJwksEnabled() throws JOSEException {
-        handler = new AuthoriseAccessTokenHandler(TEST_CONFIGURATION_SERVICE_JWKS_ENABLED);
-        ecKeyPair = createTestEncryptionKeyPair();
-        JWKSet jwkSet =
-                new JWKSet(
-                        singletonList(
-                                new ECKey.Builder(P_256, (ECPublicKey) ecKeyPair.getPublic())
-                                        .privateKey(ecKeyPair.getPrivate())
-                                        .keyID(
-                                                TEST_CONFIGURATION_SERVICE_JWKS_ENABLED
-                                                        .getTokenSigningKeyId())
-                                        .keyUse(KeyUse.SIGNATURE)
-                                        .algorithm(JWSAlgorithm.ES256)
-                                        .build()));
-        jwksExtension.init(jwkSet);
-
-        var scopes =
-                asList(
-                        OIDCScopeValue.OPENID.getValue(),
-                        CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
-        var accessToken =
-                generateSignedAccessTokenWithoutKms(
-                        scopes,
-                        Optional.of(CLIENT_ID.getValue()),
-                        PUBLIC_SUBJECT.getValue(),
-                        validDate);
-
-        var authPolicy = makeRequest(accessToken.toAuthorizationHeader());
-
-        assertThat(authPolicy.getPrincipalId(), equalTo(PUBLIC_SUBJECT.getValue()));
-        assertThat(
-                authPolicy.getContext().get(REQUEST_CONTEXT_OBJECT_CLIENT_ID_KEY),
-                equalTo(CLIENT_ID.getValue()));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenAccessTokenHasExpired() {
+    void shouldThrowExceptionWhenAccessTokenHasExpired() throws JOSEException {
         var expiryDate = NowHelper.nowMinus(1, ChronoUnit.MINUTES);
         var scopes =
                 asList(
@@ -172,7 +147,7 @@ class AuthoriseAccessTokenIntegrationTest
     }
 
     @Test
-    void shouldThrowExceptionWhenAccessTokenIsMissingAmScope() {
+    void shouldThrowExceptionWhenAccessTokenIsMissingAmScope() throws JOSEException {
         var scopes = List.of(OIDCScopeValue.OPENID.getValue());
         var accessToken =
                 generateSignedAccessToken(
@@ -185,7 +160,7 @@ class AuthoriseAccessTokenIntegrationTest
     }
 
     @Test
-    void shouldThrowExceptionWhenAccessTokenHasMissingClientId() {
+    void shouldThrowExceptionWhenAccessTokenHasMissingClientId() throws JOSEException {
         var scopes =
                 asList(
                         OIDCScopeValue.OPENID.getValue(),
@@ -198,7 +173,7 @@ class AuthoriseAccessTokenIntegrationTest
     }
 
     @Test
-    void shouldValidateTokenSignedWithTestKey() {
+    void shouldValidateTokenSignedWithTestKey() throws JOSEException {
         var configServiceWithTestToken =
                 new IntegrationTestConfigurationService(
                         notificationsQueue,
@@ -224,8 +199,7 @@ class AuthoriseAccessTokenIntegrationTest
                         CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
 
         var accessToken =
-                generateSignedAccessTokenWithSigner(
-                        testTokenSigner,
+                generateSignedAccessToken(
                         scopes,
                         Optional.of(CLIENT_ID.getValue()),
                         PUBLIC_SUBJECT.getValue(),
@@ -255,34 +229,6 @@ class AuthoriseAccessTokenIntegrationTest
             List<String> scopes,
             Optional<String> clientIdOpt,
             String publicSubject,
-            Date expiryDate) {
-        return generateSignedAccessTokenWithSigner(
-                tokenSigner, scopes, clientIdOpt, publicSubject, expiryDate);
-    }
-
-    private AccessToken generateSignedAccessTokenWithSigner(
-            TokenSigningExtension signer,
-            List<String> scopes,
-            Optional<String> clientIdOpt,
-            String publicSubject,
-            Date expiryDate) {
-        var claimsSetBuilder =
-                new JWTClaimsSet.Builder()
-                        .claim("scope", scopes)
-                        .issuer("issuer-id")
-                        .expirationTime(expiryDate)
-                        .issueTime(NowHelper.now())
-                        .subject(publicSubject)
-                        .jwtID(UUID.randomUUID().toString());
-        clientIdOpt.ifPresent(clientId -> claimsSetBuilder.claim("client_id", clientId));
-        var signedJWT = signer.signJwt(claimsSetBuilder.build());
-        return new BearerAccessToken(signedJWT.serialize());
-    }
-
-    private AccessToken generateSignedAccessTokenWithoutKms(
-            List<String> scopes,
-            Optional<String> clientIdOpt,
-            String publicSubject,
             Date expiryDate)
             throws JOSEException {
         var claimsSetBuilder =
@@ -294,7 +240,7 @@ class AuthoriseAccessTokenIntegrationTest
                         .subject(publicSubject)
                         .jwtID(UUID.randomUUID().toString());
         clientIdOpt.ifPresent(clientId -> claimsSetBuilder.claim("client_id", clientId));
-        var signedJWT = tokenSigner.signJwtWithoutKms(claimsSetBuilder.build(), ecKeyPair);
+        var signedJWT = tokenSigner.signJwt(claimsSetBuilder.build(), ecKeyPair);
         return new BearerAccessToken(signedJWT.serialize());
     }
 }
