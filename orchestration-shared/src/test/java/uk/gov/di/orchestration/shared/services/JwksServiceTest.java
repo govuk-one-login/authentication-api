@@ -20,7 +20,6 @@ import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
@@ -63,13 +62,43 @@ class JwksServiceTest {
         assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
     }
 
+    @Test
+    void shouldRetrievePublicDocAppSigningKeyFromKmsAndParseToJwk() throws Exception {
+        var keyAlias = "test-doc-app-key-alias";
+        when(configurationService.getDocAppTokenSigningKeyAlias()).thenReturn(keyAlias);
+
+        var publicKey = generateECKey().toPublicKey().getEncoded();
+        mockKmsPublicKeyResponse(publicKey, keyAlias);
+
+        JWK publicKeyJwk = jwksService.getPublicDocAppSigningJwkWithOpaqueId();
+
+        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(keyAlias)));
+        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
+    }
+
+    @Test
+    void shouldRetrieveNextPublicDocAppSigningKeyFromKmsAndParseToJwk() throws Exception {
+        var keyAlias = "next-doc-app-key-alias";
+        when(configurationService.getNextDocAppTokenSigningKeyAlias()).thenReturn(keyAlias);
+
+        var publicKey = generateECKey().toPublicKey().getEncoded();
+        mockKmsPublicKeyResponse(publicKey, keyAlias);
+
+        JWK publicKeyJwk = jwksService.getNextPublicDocAppSigningJwkWithOpaqueId();
+
+        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(keyAlias)));
+        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
+    }
+
     private void mockKmsPublicKeyResponse(byte[] publicKey, String alias) {
         mockKmsPublicKeyResponse(publicKey, SigningAlgorithmSpec.ECDSA_SHA_256, alias);
     }
 
     private void mockKmsPublicKeyResponse(
             byte[] publicKey, SigningAlgorithmSpec signingAlgorithmSpec, String alias) {
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+        when(kmsConnectionService.getPublicKey(GetPublicKeyRequest.builder().keyId(alias).build()))
                 .thenReturn(
                         GetPublicKeyResponse.builder()
                                 .keyUsage(KeyUsageType.SIGN_VERIFY)
