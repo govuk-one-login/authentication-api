@@ -233,7 +233,7 @@ public class IPVCallbackHelper {
                 rpPairwiseSubjectId,
                 internalPairwiseSubjectId,
                 authCode);
-        sendCloudwatchMetrics(orchSession, clientSessionId, clientId, clientName);
+        sendCloudwatchMetrics(orchSession, clientId, clientName);
         authCodeResponseService.saveSession(false, orchSessionService, orchSession);
         return authenticationResponse;
     }
@@ -272,13 +272,9 @@ public class IPVCallbackHelper {
     }
 
     private void sendCloudwatchMetrics(
-            OrchSessionItem orchSession,
-            String clientSessionId,
-            String clientId,
-            String clientName) {
+            OrchSessionItem orchSession, String clientId, String clientName) {
         var dimensions =
-                authCodeResponseService.getDimensions(
-                        orchSession, clientName, clientSessionId, false);
+                authCodeResponseService.getDimensions(orchSession, clientName, clientId, false);
 
         cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
