@@ -79,6 +79,10 @@ public class JwksHandler
                 }
             }
 
+            if (configurationService.isPublishNextDocAppSigningKeyEnabled()) {
+                signingKeys.add(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId());
+            }
+
             JWKSet jwkSet = new JWKSet(signingKeys);
 
             LOG.info("Generating JWKs successful response");

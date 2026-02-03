@@ -140,6 +140,11 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  PublishNextDocAppSigningKey:
+    !And [
+      !Condition ProvisionNewDocAppSigningKey,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3378,6 +3383,15 @@ Resources:
             - PublishNextExternalTokenSigningKeys
             - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
             - !Ref AWS::NoValue
+          PUBLISH_NEXT_DOC_APP_SIGNING_KEY: !If
+            - PublishNextDocAppSigningKey
+            - true
+            - false
+          NEXT_DOC_APP_SIGNING_KEY_ALIAS: !If
+            - PublishNextDocAppSigningKey
+            - !Ref OrchDocAppSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
@@ -6587,6 +6601,16 @@ Resources:
                 !Ref Environment,
                 docAppSigningKeyArn,
               ]
+          - Fn::If:
+              - ProvisionNewDocAppSigningKey
+              - Sid: AllowNewDocAppSigningKey
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchDocAppSigningKmsKey.Arn
+              - !Ref AWS::NoValue
 
   StorageTokenSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
