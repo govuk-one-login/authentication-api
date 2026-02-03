@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
+import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.List;
@@ -49,9 +50,11 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.ATTEMPT_NO_FAILED_AT;
@@ -97,6 +100,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
             new AuthenticationAttemptsStoreExtension();
+
+    @RegisterExtension
+    protected static final InternationalSmsSendCountExtension internationalSmsSendLimit =
+            new InternationalSmsSendCountExtension(10);
 
     @Nested
     class SuccessfulLoginScenarios {
@@ -298,6 +305,76 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(
                     authSessionExtension.getSession(sessionId).get().getIsNewAccount(),
                     equalTo(AuthSessionItem.AccountState.EXISTING));
+        }
+
+        @Test
+        void shouldReturn400WhenInternationalNumberIsLockedOut() throws Json.JsonException {
+            var email = "joe.bloggs+intl@digital.cabinet-office.gov.uk";
+            var password = "password-1";
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, MEDIUM_LEVEL);
+            authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+
+            userStore.signUp(email, password);
+            userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
+            userStore.setPhoneNumberAndVerificationStatus(
+                    email, INTERNATIONAL_MOBILE_NUMBER, true, true);
+
+            for (int i = 0; i < 10; i++) {
+                internationalSmsSendLimit.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+            }
+
+            var response =
+                    makeRequest(
+                            Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                            validHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    response,
+                    hasBody(
+                            objectMapper.writeValueAsString(
+                                    ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS)));
+        }
+
+        @Test
+        void shouldSuccessfullyLoginWithInternationalNumberWhenNotLockedOut()
+                throws Json.JsonException {
+            var email = "joe.bloggs+intl2@digital.cabinet-office.gov.uk";
+            var password = "password-1";
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, MEDIUM_LEVEL);
+            authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+
+            userStore.signUp(email, password);
+            userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
+            userStore.setPhoneNumberAndVerificationStatus(
+                    email, INTERNATIONAL_MOBILE_NUMBER, true, true);
+
+            var response =
+                    makeRequest(
+                            Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                            validHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+
+            var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
+            assertThat(loginResponse.mfaRequired(), equalTo(true));
+            assertThat(loginResponse.mfaMethodType(), equalTo(SMS));
+            assertThat(loginResponse.mfaMethodVerified(), equalTo(true));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
         }
     }
 

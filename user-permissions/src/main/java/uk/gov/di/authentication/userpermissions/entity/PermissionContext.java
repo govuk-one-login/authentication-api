@@ -3,23 +3,27 @@ package uk.gov.di.authentication.userpermissions.entity;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 
 import java.util.List;
+import java.util.Optional;
 
 public record PermissionContext(
         List<String> internalSubjectIds,
         String rpPairwiseId,
         String emailAddress,
-        AuthSessionItem authSessionItem) {
+        AuthSessionItem authSessionItem,
+        Optional<String> e164FormattedPhoneNumber) {
 
     public PermissionContext(
             String internalSubjectId,
             String rpPairwiseId,
             String emailAddress,
-            AuthSessionItem authSessionItem) {
+            AuthSessionItem authSessionItem,
+            Optional<String> e164FormattedPhoneNumber) {
         this(
                 internalSubjectId != null ? List.of(internalSubjectId) : List.of(),
                 rpPairwiseId,
                 emailAddress,
-                authSessionItem);
+                authSessionItem,
+                e164FormattedPhoneNumber);
     }
 
     public String internalSubjectId() {
@@ -38,6 +42,16 @@ public record PermissionContext(
         private String rpPairwiseId;
         private String emailAddress;
         private AuthSessionItem authSessionItem;
+        private Optional<String> e164FormattedPhoneNumber;
+
+        public Builder from(PermissionContext permissionContext) {
+            this.internalSubjectIds = permissionContext.internalSubjectIds;
+            this.rpPairwiseId = permissionContext.rpPairwiseId;
+            this.emailAddress = permissionContext.emailAddress;
+            this.authSessionItem = permissionContext.authSessionItem;
+            this.e164FormattedPhoneNumber = permissionContext.e164FormattedPhoneNumber;
+            return this;
+        }
 
         public Builder withInternalSubjectId(String internalSubjectId) {
             return withInternalSubjectIds(
@@ -64,9 +78,18 @@ public record PermissionContext(
             return this;
         }
 
+        public Builder withE164FormattedPhoneNumber(String e164FormattedPhoneNumber) {
+            this.e164FormattedPhoneNumber = Optional.ofNullable(e164FormattedPhoneNumber);
+            return this;
+        }
+
         public PermissionContext build() {
             return new PermissionContext(
-                    internalSubjectIds, rpPairwiseId, emailAddress, authSessionItem);
+                    internalSubjectIds,
+                    rpPairwiseId,
+                    emailAddress,
+                    authSessionItem,
+                    e164FormattedPhoneNumber);
         }
     }
 

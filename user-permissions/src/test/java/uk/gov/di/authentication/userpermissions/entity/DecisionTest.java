@@ -48,4 +48,17 @@ class DecisionTest {
         assertEquals(lockedUntil, ((Decision.TemporarilyLockedOut) decision).lockedUntil());
         assertEquals(true, ((Decision.TemporarilyLockedOut) decision).isFirstTimeLimit());
     }
+
+    @Test
+    void shouldCreateIndefinitelyLockedOutDecision() {
+        // Given
+        ForbiddenReason reason = ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT;
+
+        // When
+        var decision = new Decision.IndefinitelyLockedOut(reason, 5);
+
+        // Then
+        assertEquals(reason, decision.forbiddenReason());
+        assertEquals(5, decision.attemptCount());
+    }
 }
