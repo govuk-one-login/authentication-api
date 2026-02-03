@@ -115,6 +115,8 @@ public enum ErrorResponse {
     EMAIL_ADDRESS_DENIED(1089, "Email address is denied"),
     UNHANDLED_NEGATIVE_DECISION(1090, "Permissions manager negative decision was not handled"),
     INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED(1091, "International phone numbers are not supported"),
+    INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS(
+            1092, "User is indefinitely blocked from sending SMS to international numbers"),
     UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error"),
     // Passkeys
     PASSKEY_ASSERTION_INVALID_PKC(1100, "Invalid passkey PKC object"),

@@ -62,6 +62,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.TOO_MANY_MFA_OTPS_SENT;
@@ -958,7 +959,7 @@ class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(BLOCKED_FOR_SENDING_MFA_OTPS));
+        assertThat(result, hasJsonBody(INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
         verify(sqsClient, never()).send(any());
         verify(codeStorageService, never()).saveOtpCode(any(), any(), anyLong(), any());
     }

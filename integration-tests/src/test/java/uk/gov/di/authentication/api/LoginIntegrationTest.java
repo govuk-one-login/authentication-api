@@ -340,7 +340,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     response,
                     hasBody(
                             objectMapper.writeValueAsString(
-                                    ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS)));
+                                    ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS)));
         }
 
         @Test

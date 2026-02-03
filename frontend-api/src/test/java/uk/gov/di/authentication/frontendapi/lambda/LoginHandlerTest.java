@@ -1357,7 +1357,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS));
+        assertThat(result, hasJsonBody(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
 
         var permissionContextCaptor = ArgumentCaptor.forClass(PermissionContext.class);
         verify(permissionDecisionManager)
