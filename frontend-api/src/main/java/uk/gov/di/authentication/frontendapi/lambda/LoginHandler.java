@@ -499,7 +499,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         } else if (canSendSmsOtpDecision instanceof Decision.IndefinitelyLockedOut) {
             LOG.info("User is indefinitely blocked from requesting OTP codes");
-            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+            return Optional.of(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
         } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
             return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }

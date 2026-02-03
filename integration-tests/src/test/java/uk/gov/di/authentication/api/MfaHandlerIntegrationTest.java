@@ -390,7 +390,9 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS));
+            assertThat(
+                    response,
+                    hasJsonBody(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
         }
 
         @Test

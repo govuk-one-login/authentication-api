@@ -55,7 +55,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_MISSING;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
@@ -407,7 +407,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             if (notificationType == VERIFY_PHONE_NUMBER) {
                 if (!internationalSmsSendLimitService.canSendSms(destination)) {
                     return generateApiGatewayProxyErrorResponse(
-                            400, BLOCKED_FOR_PHONE_VERIFICATION_CODES);
+                            400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
                 }
 
                 cloudwatchMetricsService.putEmbeddedValue(
