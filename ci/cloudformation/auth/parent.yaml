@@ -2554,6 +2554,29 @@ Resources:
                     internationalNumberSendCountTableEncryptionKey,
                   ]
 
+  NotifyCallbackFunctionParameterPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Path: !Sub
+        - /${Env}/lambda-parameters/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetnotifyBeartokenParameters
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource: !Sub
+              - arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Env}-notify-callback-bearer-token
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
 Outputs:
   TestClientEmailAllowListSecretEncryptionKeyArn:
     Condition: ProvisionTestClientSecret
