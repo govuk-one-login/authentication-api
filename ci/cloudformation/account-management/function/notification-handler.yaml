@@ -152,6 +152,14 @@ Resources:
             - Templates
             - SWITCHEDMFAMETHODSTEMPLATEID
           CONTACT_US_LINK_ROUTE: contact-gov-uk-one-login
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           FRONTEND_BASE_URL: !Sub
             - "${BaseUrl}/"
             - BaseUrl:
@@ -164,12 +172,17 @@ Resources:
                   ],
                   frontendBaseUrl,
                 ]
+          INTERNATIONAL_SMS_NUMBER_SEND_LIMIT: !Sub
+            - "{{resolve:ssm:${env}-sms-international-number-send-limit}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       LoggingConfig:
         LogGroup: !Ref NotificationHandlerFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref S3AcceptanceTestsBucketPolicy
         - !Ref AuditEventsSnsPolicy
+        - !Ref DynamoInternationalNumberSendCountReadWriteAccessPolicy
         - Version: 2012-10-17
           Statement:
             - Sid: AllowSQSAccess

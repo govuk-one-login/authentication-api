@@ -7,6 +7,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -21,8 +22,10 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.net.URI;
@@ -32,12 +35,16 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -56,6 +63,7 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class NotificationHandlerTest {
 
@@ -70,10 +78,16 @@ public class NotificationHandlerTest {
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final S3Client s3Client = mock(S3Client.class);
-    private NotificationHandler handler;
-    private static final Json objectMapper = SerializationService.getInstance();
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService =
+            mock(InternationalSmsSendLimitService.class);
+    private NotificationHandler handler;
+    private static final Json objectMapper = SerializationService.getInstance();
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(NotificationHandler.class);
 
     private static final String EXPECTED_REFERENCE =
             String.format(
@@ -88,9 +102,14 @@ public class NotificationHandlerTest {
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
         when(configService.getGovUKAccountsURL()).thenReturn(GOV_UK_ACCOUNTS_URL);
         when(configService.getEnvironment()).thenReturn("unit-test");
+        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(true);
         handler =
                 new NotificationHandler(
-                        notificationService, configService, s3Client, cloudwatchMetricsService);
+                        notificationService,
+                        configService,
+                        s3Client,
+                        cloudwatchMetricsService,
+                        internationalSmsSendLimitService);
     }
 
     @Test
@@ -493,6 +512,42 @@ public class NotificationHandlerTest {
                         isTestDestination,
                         AUTHENTICATION,
                         exception);
+    }
+
+    @Test
+    void shouldRecordSmsSentAfterSuccessfulSmsSend()
+            throws Json.JsonException, NotificationClientException {
+        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(true);
+
+        SQSEvent sqsEvent = notifyRequestEvent(INTERNATIONAL_MOBILE_NUMBER, MFA_SMS, "123456");
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(internationalSmsSendLimitService).canSendSms(INTERNATIONAL_MOBILE_NUMBER);
+        verify(notificationService)
+                .sendText(
+                        eq(INTERNATIONAL_MOBILE_NUMBER),
+                        any(Map.class),
+                        eq(MFA_SMS),
+                        eq(EXPECTED_REFERENCE));
+        verify(internationalSmsSendLimitService).recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+    }
+
+    @Test
+    void shouldNotSendSmsWhenInternationalLimitReached() throws Json.JsonException {
+        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(false);
+
+        SQSEvent sqsEvent =
+                notifyRequestEvent(INTERNATIONAL_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "123456");
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(internationalSmsSendLimitService).canSendSms(INTERNATIONAL_MOBILE_NUMBER);
+        verifyNoInteractions(notificationService);
+        verify(internationalSmsSendLimitService, never()).recordSmsSent(anyString());
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("International SMS send limit reached")));
     }
 
     private String buildContactUsUrl() {

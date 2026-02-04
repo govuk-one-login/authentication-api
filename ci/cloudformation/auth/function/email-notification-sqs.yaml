@@ -72,6 +72,14 @@ Resources:
             - "https://account.gov.uk/"
           RESET_PASSWORD_ROUTE: "reset-password?code="
           CONTACT_US_LINK_ROUTE: "contact-us"
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           GOV_UK_ACCOUNTS_URL: "https://www.gov.uk/account"
           NOTIFY_API_KEY: !Sub
             - "{{resolve:secretsmanager:/deploy/${env}/notify_api_key}}"
@@ -83,6 +91,10 @@ Resources:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           SMOKETEST_SMS_BUCKET_NAME: !Sub
             - ${env}-smoke-new-test-sms-codes
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          INTERNATIONAL_SMS_NUMBER_SEND_LIMIT: !Sub
+            - "{{resolve:ssm:${env}-sms-international-number-send-limit}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Events:
@@ -97,6 +109,7 @@ Resources:
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref S3SmokeTestPolicy
+        - !Ref DynamoInternationalNumberSendCountReadWriteAccessPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:

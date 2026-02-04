@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
@@ -49,16 +50,19 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
     private final S3Client s3Client;
     private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService;
 
     public NotificationHandler(
             NotificationService notificationService,
             ConfigurationService configurationService,
             S3Client s3Client,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            InternationalSmsSendLimitService internationalSmsSendLimitService) {
         this.notificationService = notificationService;
         this.configurationService = configurationService;
         this.s3Client = s3Client;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
     }
 
     public NotificationHandler() {
@@ -79,6 +83,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
         this.s3Client =
                 S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
     }
 
     @Override
@@ -163,6 +169,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
         var isTestDestination =
                 isTestDestination(request.getNotificationType(), request.getDestination());
 
+        if (isPhoneNotification(request.getNotificationType())) {
+            if (!internationalSmsSendLimitService.canSendSms(request.getDestination())) {
+                LOG.warn(
+                        "International SMS send limit reached. NotificationType: {}, reference: {}",
+                        request.getNotificationType(),
+                        reference);
+                return;
+            }
+        }
+
         try {
             var personalisation = getPersonalisation(request);
 
@@ -178,6 +194,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                         personalisation,
                         request.getNotificationType(),
                         reference);
+                internationalSmsSendLimitService.recordSmsSent(request.getDestination());
             }
 
             if (isTestDestination) {

@@ -2,6 +2,10 @@ locals {
   redis_key = "account-management"
 }
 
+data "aws_ssm_parameter" "international_sms_number_send_limit" {
+  name = "${var.environment}-sms-international-number-send-limit"
+}
+
 data "aws_iam_policy_document" "key_policy" {
   policy_id = "key-policy-ssm"
   statement {
