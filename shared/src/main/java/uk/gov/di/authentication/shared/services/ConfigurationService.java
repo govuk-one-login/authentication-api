@@ -322,7 +322,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
     }
 
-    private Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
+    public Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
         var orchStubKey =
                 systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", "");
         if (orchStubKey.isEmpty()) {

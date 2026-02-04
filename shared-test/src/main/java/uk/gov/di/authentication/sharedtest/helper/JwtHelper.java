@@ -17,14 +17,14 @@ public class JwtHelper {
     public static String jsonToSignedJwt(String jsonString, ECKey ecKey)
             throws JOSEException, ParseException {
         JWSSigner signer = new ECDSASigner(ecKey.toECPrivateKey());
-        return jsonToSignedJwt(jsonString, signer, JWSAlgorithm.ES256);
+        return jsonToSignedJwt(jsonString, signer, JWSAlgorithm.ES256, ecKey.getKeyID());
     }
 
     public static String jsonToSignedJwt(
-            String jsonString, JWSSigner signer, JWSAlgorithm algorithm)
+            String jsonString, JWSSigner signer, JWSAlgorithm algorithm, String keyId)
             throws ParseException, JOSEException {
         JWTClaimsSet claimsSet = JWTClaimsSet.parse(jsonString);
-        JWSHeader header = new JWSHeader.Builder(algorithm).build();
+        JWSHeader header = new JWSHeader.Builder(algorithm).keyID(keyId).build();
         SignedJWT jwt = new SignedJWT(header, claimsSet);
         jwt.sign(signer);
         return jwt.serialize();

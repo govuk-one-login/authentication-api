@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
@@ -36,6 +37,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -69,6 +71,7 @@ class TokenHandlerTest {
     private static final AccessTokenResponse SUCCESS_TOKEN_RESPONSE =
             new AccessTokenResponse(new Tokens(SUCCESS_TOKEN_RESPONSE_ACCESS_TOKEN, null));
     private static final DynamoAuthCodeService authCodeService = mock(DynamoAuthCodeService.class);
+    private static final RemoteJwksService authJwksService = mock(RemoteJwksService.class);
     private static final long UNIX_TIME_16_08_2099 = 4090554490L;
     private static final String VALID_AUTH_CODE = "valid-auth-code";
     private static final String SUBJECT_ID = "any";
@@ -136,6 +139,7 @@ class TokenHandlerTest {
         when(configurationService.getOrchestrationBackendURI())
                 .thenReturn(URI.create("https://orch-test-backend.com"));
         when(configurationService.getInternalSectorUri()).thenReturn("https://test-backend.com");
+        when(configurationService.isUseAuthJwksEnabled()).thenReturn(false);
 
         accessTokenService = mock(AccessTokenService.class);
         tokenRequestValidator = mock(TokenRequestValidator.class);
@@ -148,7 +152,8 @@ class TokenHandlerTest {
                         tokenUtilityService,
                         tokenRequestValidator,
                         auditService,
-                        dynamoService);
+                        dynamoService,
+                        authJwksService);
         ecKeyPair = new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
     }
 
@@ -202,6 +207,23 @@ class TokenHandlerTest {
         assertEquals(400, response.getStatusCode());
         assertTrue(response.getBody().contains(OAuth2Error.INVALID_CLIENT_CODE));
         assertTrue(response.getBody().contains(testErrorDescription));
+    }
+
+    @Test
+    void shouldReturn400WithErrorMessageWhenNoKeysFoundOnJwksEndpoint() throws JOSEException {
+        when(configurationService.isUseAuthJwksEnabled()).thenReturn(true);
+        doThrow(new KeySourceException("No keys found"))
+                .when(authJwksService)
+                .retrieveJwkFromURLWithKeyId(any());
+
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody(privateKeyJWTBody());
+
+        APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
+
+        assertEquals(400, response.getStatusCode());
+        assertTrue(response.getBody().contains(OAuth2Error.INVALID_CLIENT_CODE));
+        assertTrue(response.getBody().contains("Invalid signature in private_key_jwt"));
     }
 
     @Test
