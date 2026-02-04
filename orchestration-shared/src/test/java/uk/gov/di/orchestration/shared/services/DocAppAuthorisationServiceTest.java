@@ -73,6 +73,7 @@ class DocAppAuthorisationServiceTest {
     private static final String SESSION_ID = "session-id";
     private static final Long SESSION_EXPIRY = 3600L;
     private static final String KEY_ID = "14342354354353";
+    private static final String KEY_ALIAS = "test-key-alias";
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
     private static final URI DOC_APP_CALLBACK_URI =
             URI.create("http://localhost/oidc/doc-app/callback");
@@ -97,8 +98,8 @@ class DocAppAuthorisationServiceTest {
                     jwksCacheService,
                     stateStorageService,
                     FIXED_CLOCK);
-    private PrivateKey privateKey;
-    private RSAKey publicRsaKey;
+    private PrivateKey privateEncryptionKey;
+    private RSAKey publicEncryptionRsaKey;
 
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
 
@@ -117,8 +118,8 @@ class DocAppAuthorisationServiceTest {
         when(configurationService.getDocAppAuthorisationURI())
                 .thenReturn(DOC_APP_AUTHORISATION_URI);
         var keyPair = generateRsaKeyPair();
-        privateKey = keyPair.getPrivate();
-        publicRsaKey =
+        privateEncryptionKey = keyPair.getPrivate();
+        publicEncryptionRsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
                         .keyID(ENCRYPTION_KID)
@@ -240,7 +241,7 @@ class DocAppAuthorisationServiceTest {
         var pairwise = new Subject("pairwise-identifier");
         when(clientRegistry.isTestClient()).thenReturn(isTestClient);
         when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
-                .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
+                .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicEncryptionRsaKey, 300));
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
@@ -296,7 +297,8 @@ class DocAppAuthorisationServiceTest {
             var pairwise = new Subject("pairwise-identifier");
             when(clientRegistry.isTestClient()).thenReturn(isTestClient);
             when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
-                    .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
+                    .thenReturn(
+                            new JwksCacheItem(JWKS_URL.toString(), publicEncryptionRsaKey, 300));
 
             EncryptedJWT requestJWT;
 
@@ -328,7 +330,7 @@ class DocAppAuthorisationServiceTest {
         var pairwise = new Subject("pairwise-identifier");
 
         when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
-                .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
+                .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicEncryptionRsaKey, 300));
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
                         state, pairwise.getValue(), clientRegistry, "client-session-id");
@@ -339,6 +341,15 @@ class DocAppAuthorisationServiceTest {
     }
 
     private void setupSigning() throws JOSEException {
+        setupSigning("789789789789789");
+    }
+
+    private void setupSigning(String keyAlias) throws JOSEException {
+        when(configurationService.getDocAppTokenSigningKeyAlias()).thenReturn(keyAlias);
+        when(kmsConnectionService.getPublicKey(
+                        GetPublicKeyRequest.builder().keyId(keyAlias).build()))
+                .thenReturn(GetPublicKeyResponse.builder().keyId(keyAlias).build());
+
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
@@ -355,16 +366,13 @@ class DocAppAuthorisationServiceTest {
                 SignResponse.builder()
                         .signature(SdkBytes.fromByteArray(signatureToDER))
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .keyId(KEY_ID)
+                        .keyId(KEY_ALIAS)
                         .build();
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
-
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
-        encryptedJWT.decrypt(new RSADecrypter(privateKey));
+        encryptedJWT.decrypt(new RSADecrypter(privateEncryptionKey));
         return encryptedJWT.getPayload().toSignedJWT();
     }
 }
