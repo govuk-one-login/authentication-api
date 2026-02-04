@@ -315,22 +315,6 @@ Resources:
             "",
           ]
 
-  NotifyCallbackFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt NotifyCallbackFunction.Arn
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
-
-  NotifyCallbackFunctionAliasPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref NotifyCallbackFunction.Alias
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
-
   NotifyCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
