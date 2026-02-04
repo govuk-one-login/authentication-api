@@ -297,6 +297,7 @@ Resources:
         LogGroup: !Ref NotifyCallbackFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref NotifyCallbackFunctionParameterPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
