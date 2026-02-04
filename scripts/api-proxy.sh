@@ -20,7 +20,7 @@ esac
 
 case "${ENVIRONMENT}" in
   authdev* | dev)
-    export AWS_PROFILE="di-auth-development-admin"
+    export AWS_PROFILE="di-auth-development-AdministratorAccessPermission"
     ;;
   *)
     echo "Invalid environment: ${ENVIRONMENT}. Valid environments are: authdev1, authdev2, dev"
