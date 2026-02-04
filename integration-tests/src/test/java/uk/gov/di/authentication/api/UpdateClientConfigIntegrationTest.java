@@ -5,8 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
@@ -18,11 +18,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.HIGH_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.LOW_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.MEDIUM_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
@@ -77,9 +83,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         var expectedClientType = ClientType.WEB.getValue();
         updateRequest.setClientType(expectedClientType);
         var expectedAcceptedLevelsOfConfidence =
-                List.of(
-                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue());
+                List.of(MEDIUM_LEVEL.getValue(), HIGH_LEVEL.getValue());
         updateRequest.setClientLoCs(expectedAcceptedLevelsOfConfidence);
         var expectedBackchannelLogoutUri = "https://api.example.com/backchannel/logout";
         updateRequest.setBackChannelLogoutUri(expectedBackchannelLogoutUri);
@@ -225,5 +229,218 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(UPDATE_CLIENT_REQUEST_RECEIVED, UPDATE_CLIENT_REQUEST_RECEIVED));
+    }
+
+    @Test
+    void shouldEnsureTheClientLocFieldIsSetToAnEmptyList()
+            throws Json.JsonException, NoSuchFieldException, IllegalAccessException {
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withRedirectUris(singletonList("http://localhost:1000/redirect"))
+                .withClientLoCs(emptyList())
+                .withContacts(singletonList("test-client@test.com"))
+                .saveToDynamo();
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        var expectedClientName = "new-client-name";
+        updateRequest.setClientName(expectedClientName);
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
+
+        assertThat(response, hasStatus(200));
+
+        var clientResponse =
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+
+        Optional<ClientRegistry> client = clientStore.getClient(clientResponse.getClientId());
+        assertThat(response, hasStatus(200));
+        assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+        assertTrue(client.isPresent());
+
+        var clientLocField = client.get().getClass().getDeclaredField("clientLoCs");
+
+        // We need to set the clientLoCs field accessible at runtime to be able to inspect it
+        clientLocField.setAccessible(true);
+
+        assertEquals(emptyList(), clientLocField.get(client.get()));
+    }
+
+    @Test
+    void shouldIgnoreAnExistingClientWhenConfiguredWithAP1LocValue()
+            throws Json.JsonException, NoSuchFieldException, IllegalAccessException {
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withRedirectUris(singletonList("http://localhost:1000/redirect"))
+                .withContacts(singletonList("test-client@test.com"))
+                .withClientLoCs(List.of(NONE.getValue(), LOW_LEVEL.getValue()))
+                .saveToDynamo();
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        var expectedClientName = "new-client-name";
+        updateRequest.setClientName(expectedClientName);
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
+
+        assertThat(response, hasStatus(200));
+
+        var clientResponse =
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+
+        Optional<ClientRegistry> client = clientStore.getClient(clientResponse.getClientId());
+        assertThat(response, hasStatus(200));
+        assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+        assertTrue(client.isPresent());
+
+        var clientLocField = client.get().getClass().getDeclaredField("clientLoCs");
+
+        // We need to set the clientLoCs field accessible at runtime to be able to inspect it
+        clientLocField.setAccessible(true);
+
+        assertEquals(
+                List.of(NONE.getValue(), LOW_LEVEL.getValue()), clientLocField.get(client.get()));
+    }
+
+    @Test
+    void shouldIgnoreAnExistingClientWhenConfiguredWithAP3LocValue()
+            throws Json.JsonException, NoSuchFieldException, IllegalAccessException {
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withRedirectUris(singletonList("http://localhost:1000/redirect"))
+                .withContacts(singletonList("test-client@test.com"))
+                .withClientLoCs(List.of(MEDIUM_LEVEL.getValue(), HIGH_LEVEL.getValue()))
+                .saveToDynamo();
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        var expectedClientName = "new-client-name";
+        updateRequest.setClientName(expectedClientName);
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
+
+        assertThat(response, hasStatus(200));
+
+        var clientResponse =
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+
+        Optional<ClientRegistry> client = clientStore.getClient(clientResponse.getClientId());
+        assertThat(response, hasStatus(200));
+        assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+        assertTrue(client.isPresent());
+
+        var clientLocField = client.get().getClass().getDeclaredField("clientLoCs");
+
+        // We need to set the clientLoCs field accessible at runtime to be able to inspect it
+        clientLocField.setAccessible(true);
+
+        assertEquals(
+                List.of(MEDIUM_LEVEL.getValue(), HIGH_LEVEL.getValue()),
+                clientLocField.get(client.get()));
+    }
+
+    @Test
+    void shouldOverwriteAnExistingClientConfiguredWithJustP0()
+            throws Json.JsonException, NoSuchFieldException, IllegalAccessException {
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withRedirectUris(singletonList("http://localhost:1000/redirect"))
+                .withContacts(singletonList("test-client@test.com"))
+                .withClientLoCs(List.of(NONE.getValue()))
+                .saveToDynamo();
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        var expectedClientName = "new-client-name";
+        updateRequest.setClientName(expectedClientName);
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
+
+        assertThat(response, hasStatus(200));
+
+        var clientResponse =
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+
+        Optional<ClientRegistry> client = clientStore.getClient(clientResponse.getClientId());
+        assertThat(response, hasStatus(200));
+        assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+        assertTrue(client.isPresent());
+
+        var clientLocField = client.get().getClass().getDeclaredField("clientLoCs");
+
+        // We need to set the clientLoCs field accessible at runtime to be able to inspect it
+        clientLocField.setAccessible(true);
+
+        assertEquals(emptyList(), clientLocField.get(client.get()));
+    }
+
+    @Test
+    void
+            whenAnExistingClientHasP0AndIdentityVerificationIsEnabledOurRuntimeDefaultingAllowsP0AndP2()
+                    throws Json.JsonException, NoSuchFieldException, IllegalAccessException {
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withRedirectUris(singletonList("http://localhost:1000/redirect"))
+                .withContacts(singletonList("test-client@test.com"))
+                .withClientLoCs(List.of(NONE.getValue()))
+                .withIdentityVerificationSupported(false)
+                .saveToDynamo();
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        var expectedClientName = "new-client-name";
+        updateRequest.setClientName(expectedClientName);
+        updateRequest.setIdentityVerificationSupported(true);
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
+
+        assertThat(response, hasStatus(200));
+
+        var clientResponse =
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+
+        Optional<ClientRegistry> client = clientStore.getClient(clientResponse.getClientId());
+        assertThat(response, hasStatus(200));
+        assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+        assertTrue(client.isPresent());
+
+        var clientLocField = client.get().getClass().getDeclaredField("clientLoCs");
+
+        // We need to set the clientLoCs field accessible at runtime to be able to inspect it
+        clientLocField.setAccessible(true);
+
+        assertEquals(emptyList(), clientLocField.get(client.get()));
+        assertEquals(
+                List.of(MEDIUM_LEVEL.getValue(), NONE.getValue()), client.get().getClientLoCs());
     }
 }

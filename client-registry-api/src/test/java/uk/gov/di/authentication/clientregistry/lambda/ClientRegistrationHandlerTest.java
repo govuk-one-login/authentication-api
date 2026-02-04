@@ -47,8 +47,6 @@ import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAudit
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
 import static uk.gov.di.orchestration.audit.TxmaAuditUser.user;
-import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.MEDIUM_LEVEL;
-import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -141,7 +139,7 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    void shouldRegisterWithLOCs() throws Json.JsonException {
+    void shouldIgnoreTheProvidedLOCsInTheRequest() throws Json.JsonException {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
                 .thenReturn(Optional.empty());
@@ -183,7 +181,7 @@ class ClientRegistrationHandlerTest {
                         null,
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                         "ES256",
-                        List.of(NONE.getValue(), MEDIUM_LEVEL.getValue()),
+                        emptyList(),
                         Channel.WEB.getValue(),
                         false,
                         false,

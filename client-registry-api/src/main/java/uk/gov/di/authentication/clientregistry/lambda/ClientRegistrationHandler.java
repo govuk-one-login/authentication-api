@@ -13,6 +13,7 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.dynamodb.SelfServiceClientRegistryExtension;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -22,6 +23,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
+import static java.util.Collections.emptyList;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -50,7 +52,11 @@ public class ClientRegistrationHandler
     }
 
     public ClientRegistrationHandler(ConfigurationService configurationService) {
-        this.clientService = new DynamoClientService(configurationService);
+        this.clientService =
+                new DynamoClientService(
+                        configurationService,
+                        // HACK! See commit message
+                        new SelfServiceClientRegistryExtension());
         this.validationService = new ClientConfigValidationService();
         this.auditService = new AuditService(configurationService);
     }
@@ -120,7 +126,9 @@ public class ClientRegistrationHandler
                     null,
                     ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                     clientRegistrationRequest.getIdTokenSigningAlgorithm(),
-                    clientRegistrationRequest.getClientLoCs(),
+                    // We are intentionally forcing this value to be an empty list
+                    // As we don't want the SSE tool to be able to set this field
+                    emptyList(),
                     clientRegistrationRequest.getChannel(),
                     clientRegistrationRequest.isMaxAgeEnabled(),
                     clientRegistrationRequest.isPkceEnforced(),
