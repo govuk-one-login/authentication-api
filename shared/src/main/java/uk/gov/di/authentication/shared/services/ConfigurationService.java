@@ -838,4 +838,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public URI getAMCAuthorizeURI() {
         return URI.create(System.getenv().getOrDefault("AMC_AUTHORIZE_URI", ""));
     }
+
+    public URL getAuthJwksUrl() throws MalformedURLException {
+        try {
+            return new URL(System.getenv().getOrDefault("AUTH_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid auth JWKS URL: {}", e.getMessage());
+            throw new MalformedURLException(e.getMessage());
+        }
+    }
 }
