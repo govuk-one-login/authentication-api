@@ -120,7 +120,15 @@ public enum ErrorResponse {
     UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error"),
     // Passkeys
     PASSKEY_ASSERTION_INVALID_PKC(1100, "Invalid passkey PKC object"),
-    PASSKEY_ASSERTION_FAILED(1101, "Passkey assertion failed");
+    PASSKEY_ASSERTION_FAILED(1101, "Passkey assertion failed"),
+    // AMC
+    AMC_JWT_ENCODING_ERROR(1200, "Failed to encode JWT for AMC authorization"),
+    AMC_TRANSCODING_ERROR(1201, "Failed to transcode data for AMC authorization"),
+    AMC_SIGNING_ERROR(1202, "Failed to sign JWT for AMC authorization"),
+    AMC_ENCRYPTION_ERROR(1203, "Failed to encrypt JWT for AMC authorization"),
+    AMC_UNKNOWN_JWT_SIGNING_ERROR(1204, "Unknown error signing JWT for AMC authorization"),
+    AMC_UNKNOWN_JWT_ENCRYPTING_ERROR(1205, "Unknown error encrypting JWT for AMC authorization"),
+    SERIALIZATION_ERROR(1097, "Failed to serialize API Gateway proxy response");
 
     private int code;
 
