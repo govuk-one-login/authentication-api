@@ -56,7 +56,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-notify-callback-lambda
+        - ${Env}-delivery-receipts-api-notify-callback
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./delivery-receipts-api/build/distributions/delivery-receipts-api.zip
