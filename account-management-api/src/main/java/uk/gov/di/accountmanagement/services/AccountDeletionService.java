@@ -83,12 +83,14 @@ public class AccountDeletionService {
 
         if (sendNotification) {
             try {
-                LOG.info("User account removed. Adding notification message to SQS queue");
                 NotifyRequest notifyRequest =
                         new NotifyRequest(
                                 email,
                                 NotificationType.DELETE_ACCOUNT,
                                 LocaleHelper.SupportedLanguage.EN);
+                LOG.info(
+                        "User account removed. Adding notification message to SQS queue, reference: {}",
+                        notifyRequest.getUniqueNotificationReference());
                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             } catch (Exception e) {
                 LOG.error("Failed to send account deletion email: ", e);

@@ -136,12 +136,14 @@ public class UpdatePhoneNumberHandler
             }
             dynamoService.updatePhoneNumber(
                     updatePhoneNumberRequest.getEmail(), updatePhoneNumberRequest.getPhoneNumber());
-            LOG.info("Phone Number has successfully been updated. Adding message to SQS queue");
             NotifyRequest notifyRequest =
                     new NotifyRequest(
                             updatePhoneNumberRequest.getEmail(),
                             NotificationType.PHONE_NUMBER_UPDATED,
                             userLanguage);
+            LOG.info(
+                    "Phone Number has successfully been updated. Adding message to SQS queue,  reference: {}",
+                    notifyRequest.getUniqueNotificationReference());
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
             LOG.info("Calculating internal common subject identifier");
