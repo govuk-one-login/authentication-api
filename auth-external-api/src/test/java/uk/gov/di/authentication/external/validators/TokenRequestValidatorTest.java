@@ -3,6 +3,7 @@ package uk.gov.di.authentication.external.validators;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -36,6 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -254,22 +257,32 @@ class TokenRequestValidatorTest {
                             "string-not-jwt",
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid private_key_jwt",
-                            validPublicKeyAsX509String),
+                            validPublicKeyAsX509String,
+                            false),
                     arguments(
                             incompleteRequestBodyValidSignature,
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid private_key_jwt",
-                            validPublicKeyAsX509String),
+                            validPublicKeyAsX509String,
+                            false),
                     arguments(
                             validRequestBodyRsaSignature,
                             OAuth2Error.INVALID_CLIENT_CODE,
                             "Client authentication failed",
-                            rsaPublicKeyAsX509String),
+                            rsaPublicKeyAsX509String,
+                            false),
                     arguments(
                             validRequestBodyInvalidSignature,
                             OAuth2Error.INVALID_CLIENT_CODE,
                             "Client authentication failed",
-                            validPublicKeyAsX509String));
+                            validPublicKeyAsX509String,
+                            false),
+                    arguments(
+                            validRequestBodyInvalidSignature,
+                            OAuth2Error.INVALID_CLIENT_CODE,
+                            "Invalid signature in private_key_jwt",
+                            null,
+                            true));
         }
 
         @ParameterizedTest
@@ -278,7 +291,14 @@ class TokenRequestValidatorTest {
                 String requestBody,
                 String expectedErrorCode,
                 String expectedErrorDescription,
-                String orchStubPublicKey) {
+                String orchStubPublicKey,
+                boolean useAuthStub)
+                throws KeySourceException {
+            if (useAuthStub) {
+                doThrow(new KeySourceException("No key found"))
+                        .when(authJwksService)
+                        .retrieveJwkFromURLWithKeyId(anyString());
+            }
             TokenAuthInvalidException exception =
                     assertThrows(
                             TokenAuthInvalidException.class,
@@ -286,8 +306,10 @@ class TokenRequestValidatorTest {
                                     validator.validatePrivateKeyJwtClientAuth(
                                             requestBody,
                                             EXPECTED_AUDIENCE,
-                                            Collections.singletonList(orchStubPublicKey),
-                                            false));
+                                            orchStubPublicKey == null
+                                                    ? List.of()
+                                                    : Collections.singletonList(orchStubPublicKey),
+                                            useAuthStub));
 
             assertEquals(expectedErrorCode, exception.getErrorObject().getCode());
             assertEquals(expectedErrorDescription, exception.getErrorObject().getDescription());
@@ -320,6 +342,22 @@ class TokenRequestValidatorTest {
         @Test
         void
                 shouldNotThrowAnyExceptionsIfValidPublicKeyIsUsedToSignValidClientAssertionAsPartOfValidRequestBodyWhenUsingJwks() {
+            assertDoesNotThrow(
+                    () ->
+                            validator.validatePrivateKeyJwtClientAuth(
+                                    validRequestBodyValidSignature,
+                                    EXPECTED_AUDIENCE,
+                                    List.of(alternateEcKeyAsX509String),
+                                    true));
+        }
+
+        @Test
+        void
+                shouldNotThrowAnyExceptionsIfValidSignatureUsedWhenNoKeyFoundOnJwksEndpointButStubKeyPresent()
+                        throws Exception {
+            doThrow(new KeySourceException("No key found"))
+                    .when(authJwksService)
+                    .retrieveJwkFromURLWithKeyId(anyString());
             assertDoesNotThrow(
                     () ->
                             validator.validatePrivateKeyJwtClientAuth(
