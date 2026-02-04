@@ -59,6 +59,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,6 +75,7 @@ class DocAppAuthorisationServiceTest {
     private static final Long SESSION_EXPIRY = 3600L;
     private static final String KEY_ID = "14342354354353";
     private static final String KEY_ALIAS = "test-key-alias";
+    private static final String NEXT_KEY_ALIAS = "test-new-key-alias";
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
     private static final URI DOC_APP_CALLBACK_URI =
             URI.create("http://localhost/oidc/doc-app/callback");
@@ -283,6 +285,38 @@ class DocAppAuthorisationServiceTest {
                             .getExpirationTime()
                             .before(NowHelper.nowPlus(3, ChronoUnit.MINUTES)),
                     equalTo(true));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldSignWithCorrectKeyBasedOnFeatureFlag(boolean useNewSigningKey) throws JOSEException {
+        when(configurationService.isUseNewDocAppSigningKey()).thenReturn(useNewSigningKey);
+        when(configurationService.getDocAppTokenSigningKeyAlias()).thenReturn(KEY_ALIAS);
+        when(configurationService.getNextDocAppTokenSigningKeyAlias()).thenReturn(NEXT_KEY_ALIAS);
+        setupSigning(useNewSigningKey ? NEXT_KEY_ALIAS : KEY_ALIAS);
+
+        var state = new State();
+        var pairwise = new Subject("pairwise-identifier");
+        when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
+                .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicEncryptionRsaKey, 300));
+
+        var encryptedJWT =
+                authorisationService.constructRequestJWT(
+                        state, pairwise.getValue(), clientRegistry, "client-session-id");
+
+        var signedJWTResponse = decryptJWT(encryptedJWT);
+        if (useNewSigningKey) {
+            assertThat(
+                    signedJWTResponse.getHeader().getKeyID(),
+                    equalTo(hashSha256String(NEXT_KEY_ALIAS)));
+            verify(kmsConnectionService)
+                    .sign(argThat(signRequest -> NEXT_KEY_ALIAS.equals(signRequest.keyId())));
+        } else {
+            assertThat(
+                    signedJWTResponse.getHeader().getKeyID(), equalTo(hashSha256String(KEY_ALIAS)));
+            verify(kmsConnectionService)
+                    .sign(argThat(signRequest -> KEY_ALIAS.equals(signRequest.keyId())));
         }
     }
 
