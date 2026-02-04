@@ -137,10 +137,14 @@ public class TokenHandler
                     Set.of(
                             new Audience(authExternalApiTokenEndpoint),
                             new Audience(orchAuthExternalApiTokenEndpoint));
-            var validPublicKeys =
+            var validKeys =
                     configurationService.getOrchestrationToAuthenticationSigningPublicKeys();
+
             tokenRequestValidator.validatePrivateKeyJwtClientAuth(
-                    input.getBody(), expectedAudience, validPublicKeys);
+                    input.getBody(),
+                    expectedAudience,
+                    validKeys,
+                    configurationService.isUseAuthJwksEnabled());
 
             String suppliedAuthCode = requestBody.get("code");
 

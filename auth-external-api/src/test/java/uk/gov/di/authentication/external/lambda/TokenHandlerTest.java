@@ -20,7 +20,11 @@ import uk.gov.di.authentication.shared.entity.AuthCodeStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.services.*;
+import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -31,6 +35,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -91,7 +96,7 @@ class TokenHandlerTest {
                     .withTimeToExist(0L);
 
     @BeforeAll
-    public static void init() {
+    static void init() {
         when(authCodeService.getAuthCodeStore(VALID_AUTH_CODE))
                 .thenReturn(Optional.of(VALID_AUTH_CODE_STORE));
         when(authCodeService.getAuthCodeStore(EXPIRED_AUTH_CODE))
@@ -107,7 +112,7 @@ class TokenHandlerTest {
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         configurationService = mock(ConfigurationService.class);
         when(configurationService.getAuthenticationAuthCallbackURI())
                 .thenReturn(URI.create("https://test-callback.com"));
@@ -160,7 +165,7 @@ class TokenHandlerTest {
                                 ClientAuthenticationMethod.PRIVATE_KEY_JWT,
                                 "tbc"))
                 .when(tokenRequestValidator)
-                .validatePrivateKeyJwtClientAuth(any(), any(), any());
+                .validatePrivateKeyJwtClientAuth(any(), any(), any(), anyBoolean());
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
@@ -173,7 +178,10 @@ class TokenHandlerTest {
     @Test
     void shouldReturn400WithErrorMessageWhenAuthCodeNotFoundInDataStore() {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        String formData = "code=" + "auth-code-not-registered-for-mock-auth-code-store-service";
+        String formData =
+                "code="
+                        + "auth-code-not-registered-for-mock-auth-code-store-service&client_id="
+                        + CLIENT_ID;
         request.setBody(formData);
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
