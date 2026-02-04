@@ -47,6 +47,8 @@ import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAudit
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
 import static uk.gov.di.orchestration.audit.TxmaAuditUser.user;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.MEDIUM_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -132,6 +134,56 @@ class ClientRegistrationHandlerTest {
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                         "ES256",
                         emptyList(),
+                        Channel.WEB.getValue(),
+                        false,
+                        false,
+                        "https://landing-page.com");
+    }
+
+    @Test
+    void shouldRegisterWithLOCs() throws Json.JsonException {
+        when(configValidationService.validateClientRegistrationConfig(
+                        any(ClientRegistrationRequest.class)))
+                .thenReturn(Optional.empty());
+        when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+
+        event.setBody(
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"], \"public_key_source\": \"STATIC\",  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\", \"channel\": \"web\", \"landing_page_url\": \"https://landing-page.com\", \"accepted_levels_of_confidence\": [P0, P2]}");
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
+
+        assertThat(result, hasStatus(200));
+        ClientRegistrationResponse clientRegistrationResponseResult =
+                objectMapper.readValue(result.getBody(), ClientRegistrationResponse.class);
+        assertThat(clientRegistrationResponseResult.getClientId(), equalTo(clientId));
+        assertThat(
+                clientRegistrationResponseResult.getTokenAuthMethod(), equalTo("private_key_jwt"));
+        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo(SUBJECT_TYPE));
+        assertThat(clientRegistrationResponseResult.getScopes(), equalTo(singletonList("openid")));
+        verify(clientService)
+                .addClient(
+                        clientId,
+                        CLIENT_NAME,
+                        REDIRECT_URIS,
+                        CONTACTS,
+                        PublicKeySource.STATIC.getValue(),
+                        "some-public-key",
+                        null,
+                        singletonList("openid"),
+                        singletonList("http://localhost:8080/post-logout-redirect-uri"),
+                        "http://localhost:8080/back-channel-logout-uri",
+                        SERVICE_TYPE,
+                        SECTOR_IDENTIFIER,
+                        SUBJECT_TYPE,
+                        false,
+                        emptyList(),
+                        ClientType.WEB.getValue(),
+                        false,
+                        null,
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        "ES256",
+                        List.of(NONE.getValue(), MEDIUM_LEVEL.getValue()),
                         Channel.WEB.getValue(),
                         false,
                         false,
