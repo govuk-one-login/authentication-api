@@ -19,6 +19,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -307,11 +308,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
-        var orchKey = getOrchestrationToAuthenticationSigningPublicKey();
+        var hardcodedOrchKey = getOrchestrationToAuthenticationSigningPublicKey();
         var orchStubKey = getOrchestrationStubToAuthenticationSigningPublicKey();
-        return orchStubKey
-                .map(stubKey -> List.of(stubKey, orchKey))
-                .orElseGet(() -> List.of(orchKey));
+        var keyList = new ArrayList<String>();
+        orchStubKey.ifPresent(keyList::add);
+        if (!isUseAuthJwksEnabled()) {
+            keyList.add(hardcodedOrchKey);
+        }
+        return keyList;
     }
 
     private String getOrchestrationToAuthenticationSigningPublicKey() {
@@ -522,6 +526,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             LOG.error("Invalid JWKS URL: {}", e.getMessage());
             throw new MalformedURLException(e.getMessage());
         }
+    }
+
+    public boolean isUseAuthJwksEnabled() {
+        return FEATURE_SWITCH_ON.equals(
+                systemService.getOrDefault("USE_AUTH_JWKS", FEATURE_SWITCH_OFF));
     }
 
     public String getTokenSigningKeyRsaAlias() {
@@ -837,5 +846,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URI getAMCAuthorizeURI() {
         return URI.create(System.getenv().getOrDefault("AMC_AUTHORIZE_URI", ""));
+    }
+
+    public URL getAuthJwksUrl() {
+        try {
+            return new URL(System.getenv().getOrDefault("AUTH_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid auth JWKS URL: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 }

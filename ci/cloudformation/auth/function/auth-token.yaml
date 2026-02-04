@@ -66,6 +66,26 @@ Resources:
                 DefaultValue: "",
               ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthExternalApiTxMAAuditQueue.QueueUrl
+          AUTH_JWKS_URL: !Sub
+            - "${OrchApiBaseUrl}/.well-known/auth-jwks.json"
+            - OrchApiBaseUrl: !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    OrchApiBaseUrl,
+                    DefaultValue: "",
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    OrchApiBaseUrl,
+                    DefaultValue: "",
+                  ]
+          USE_AUTH_JWKS: !If
+            - UseAuthJwks
+            - true
+            - false
       LoggingConfig:
         LogGroup: !Ref AuthTokenFunctionLogGroup
       Policies:
