@@ -146,7 +146,12 @@ public class DocAppAuthorisationService {
             ClientRegistry clientRegistry,
             String clientSessionId) {
         LOG.info("Generating request JWT");
-        var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
+
+        var docAppTokenSigningKeyAlias =
+                configurationService.isUseNewDocAppSigningKey()
+                        ? configurationService.getNextDocAppTokenSigningKeyAlias()
+                        : configurationService.getDocAppTokenSigningKeyAlias();
+
         var signingKeyId =
                 kmsConnectionService
                         .getPublicKey(
