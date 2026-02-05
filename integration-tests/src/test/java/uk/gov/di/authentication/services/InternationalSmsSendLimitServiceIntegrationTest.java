@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.services;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,6 +13,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 
 class InternationalSmsSendLimitServiceIntegrationTest {
 
@@ -77,68 +80,6 @@ class InternationalSmsSendLimitServiceIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldAllowForNewPhoneNumber(String rawPhoneNumber) {
-        boolean canSendSms = extension.canSendSms(rawPhoneNumber);
-
-        assertTrue(canSendSms);
-    }
-
-    @ParameterizedTest
-    @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldAllowWhenBelowLimit(String rawPhoneNumber) {
-        for (int i = 0; i < TEST_SEND_LIMIT - 1; i++) {
-            extension.recordSmsSent(rawPhoneNumber);
-        }
-
-        boolean canSendSms = extension.canSendSms(rawPhoneNumber);
-
-        assertTrue(canSendSms);
-    }
-
-    @ParameterizedTest
-    @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldBlockWhenAtLimit(String rawPhoneNumber) {
-        for (int i = 0; i < TEST_SEND_LIMIT; i++) {
-            extension.recordSmsSent(rawPhoneNumber);
-        }
-
-        boolean canSendSms = extension.canSendSms(rawPhoneNumber);
-
-        assertFalse(canSendSms);
-    }
-
-    @ParameterizedTest
-    @MethodSource("phoneNumberVariations")
-    void canSendSmsShouldBlockWhenAboveLimit(String rawPhoneNumber) {
-        for (int i = 0; i < TEST_SEND_LIMIT + 1; i++) {
-            extension.recordSmsSent(rawPhoneNumber);
-        }
-
-        boolean canSendSms = extension.canSendSms(rawPhoneNumber);
-
-        assertFalse(canSendSms);
-    }
-
-    @ParameterizedTest
-    @MethodSource("domesticPhoneNumberVariations")
-    void canSendSmsShouldAllowDomesticNumbers(String domesticPhoneNumber) {
-        boolean canSendSms = extension.canSendSms(domesticPhoneNumber);
-
-        assertTrue(canSendSms);
-    }
-
-    @ParameterizedTest
-    @MethodSource("domesticPhoneNumberVariations")
-    void canSendSmsShouldAlwaysAllowDomesticNumbersRegardlessOfLimit(String domesticPhoneNumber) {
-        for (int i = 0; i < TEST_SEND_LIMIT + 5; i++) {
-            extension.recordSmsSent(domesticPhoneNumber);
-        }
-
-        assertTrue(extension.canSendSms(domesticPhoneNumber));
-    }
-
-    @ParameterizedTest
-    @MethodSource("phoneNumberVariations")
     void canSendSmsShouldNotCreateRecord(String internationalPhoneNumber) {
         String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(internationalPhoneNumber);
 
@@ -156,6 +97,142 @@ class InternationalSmsSendLimitServiceIntegrationTest {
         assertFalse(
                 extension.hasRecordForPhoneNumber(formattedPhoneNumber),
                 "Domestic phone numbers should not be stored in the database");
+    }
+
+    @Nested
+    class WhenExistingInternationalSmsFeatureFlagEnabled {
+        @RegisterExtension
+        protected static final InternationalSmsSendCountExtension extensionWithFlagEnabled =
+                new InternationalSmsSendCountExtension(TEST_SEND_LIMIT, true);
+
+        @Test
+        void canSendSmsShouldAllowInternationalNumbersBelowSendLimit() {
+            for (int i = 0; i < TEST_SEND_LIMIT - 1; i++) {
+                extensionWithFlagEnabled.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+            }
+
+            boolean canSendSms = extensionWithFlagEnabled.canSendSms(INTERNATIONAL_MOBILE_NUMBER);
+
+            assertTrue(canSendSms);
+        }
+
+        @Test
+        void canSendSmsShouldBlockInternationalNumbersAtSendLimit() {
+            for (int i = 0; i < TEST_SEND_LIMIT; i++) {
+                extensionWithFlagEnabled.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+            }
+
+            boolean canSendSms = extensionWithFlagEnabled.canSendSms(INTERNATIONAL_MOBILE_NUMBER);
+
+            assertFalse(canSendSms);
+        }
+
+        @Test
+        void canSendSmsShouldBlockInternationalNumbersAboveSendLimit() {
+            for (int i = 0; i < TEST_SEND_LIMIT + 1; i++) {
+                extensionWithFlagEnabled.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+            }
+
+            boolean canSendSms = extensionWithFlagEnabled.canSendSms(INTERNATIONAL_MOBILE_NUMBER);
+
+            assertFalse(canSendSms);
+        }
+
+        @Test
+        void canSendSmsShouldAllowDomesticNumbers() {
+            boolean canSendSms = extensionWithFlagEnabled.canSendSms(UK_MOBILE_NUMBER);
+
+            assertTrue(canSendSms);
+        }
+
+        @Test
+        void canSendSmsShouldAllowDomesticNumbersAboveSendLimit() {
+            for (int i = 0; i < TEST_SEND_LIMIT + 1; i++) {
+                extensionWithFlagEnabled.recordSmsSent(UK_MOBILE_NUMBER);
+            }
+
+            boolean canSendSms = extensionWithFlagEnabled.canSendSms(UK_MOBILE_NUMBER);
+
+            assertTrue(canSendSms);
+        }
+
+        @Test
+        void recordSmsSentShouldStillRecordInternationalNumbers() {
+            String formattedPhoneNumber =
+                    PhoneNumberHelper.formatPhoneNumber(INTERNATIONAL_MOBILE_NUMBER);
+
+            extensionWithFlagEnabled.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+
+            assertTrue(extensionWithFlagEnabled.hasRecordForPhoneNumber(formattedPhoneNumber));
+        }
+    }
+
+    @Nested
+    class WhenExistingInternationalSmsFeatureFlagDisabled {
+        @RegisterExtension
+        protected static final InternationalSmsSendCountExtension extensionWithFlagDisabled =
+                new InternationalSmsSendCountExtension(TEST_SEND_LIMIT, false);
+
+        @Test
+        void canSendSmsShouldBlockInternationalNumbersBelowSendLimit() {
+            for (int i = 0; i < TEST_SEND_LIMIT - 1; i++) {
+                extensionWithFlagDisabled.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+            }
+
+            boolean canSendSms = extensionWithFlagDisabled.canSendSms(INTERNATIONAL_MOBILE_NUMBER);
+
+            assertFalse(canSendSms);
+        }
+
+        @Test
+        void canSendSmsShouldBlockInternationalNumbersAtSendLimit() {
+            for (int i = 0; i < TEST_SEND_LIMIT; i++) {
+                extensionWithFlagDisabled.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+            }
+
+            boolean canSendSms = extensionWithFlagDisabled.canSendSms(INTERNATIONAL_MOBILE_NUMBER);
+
+            assertFalse(canSendSms);
+        }
+
+        @Test
+        void canSendSmsShouldBlockInternationalNumbersAboveSendLimit() {
+            for (int i = 0; i < TEST_SEND_LIMIT + 1; i++) {
+                extensionWithFlagDisabled.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+            }
+
+            boolean canSendSms = extensionWithFlagDisabled.canSendSms(INTERNATIONAL_MOBILE_NUMBER);
+
+            assertFalse(canSendSms);
+        }
+
+        @Test
+        void canSendSmsShouldAllowDomesticNumbers() {
+            boolean canSendSms = extensionWithFlagDisabled.canSendSms(UK_MOBILE_NUMBER);
+
+            assertTrue(canSendSms);
+        }
+
+        @Test
+        void canSendSmsShouldAllowDomesticNumbersAboveSendLimit() {
+            for (int i = 0; i < TEST_SEND_LIMIT + 1; i++) {
+                extensionWithFlagDisabled.recordSmsSent(UK_MOBILE_NUMBER);
+            }
+
+            boolean canSendSms = extensionWithFlagDisabled.canSendSms(UK_MOBILE_NUMBER);
+
+            assertTrue(canSendSms);
+        }
+
+        @Test
+        void recordSmsSentShouldStillRecordInternationalNumbers() {
+            String formattedPhoneNumber =
+                    PhoneNumberHelper.formatPhoneNumber(INTERNATIONAL_MOBILE_NUMBER);
+
+            extensionWithFlagDisabled.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+
+            assertTrue(extensionWithFlagDisabled.hasRecordForPhoneNumber(formattedPhoneNumber));
+        }
     }
 
     private static Stream<Arguments> phoneNumberVariations() {
