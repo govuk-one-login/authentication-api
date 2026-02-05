@@ -45,6 +45,12 @@ Resources:
               !Ref Environment,
               internalApiNewInternationalSmsEnabled,
             ]
+          INTERNAL_API_EXISTING_INTERNATIONAL_SMS_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              internalApiExistingInternationalSmsEnabled,
+            ]
           LOCKOUT_COUNT_TTL:
             !FindInMap [
               EnvironmentConfiguration,
