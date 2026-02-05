@@ -456,7 +456,9 @@ class StartHandlerTest {
                         new AuthSessionItem()
                                 .withSessionId(SESSION_ID)
                                 .withClientId(CLIENT_ID)
-                                .withInternalCommonSubjectId(TEST_SUBJECT_ID));
+                                .withInternalCommonSubjectId(TEST_SUBJECT_ID)
+                                .withHasVerifiedPassword(false)
+                                .withHasVerifiedMfa(false));
     }
 
     private ClientStartInfo getClientStartInfo() {
@@ -624,7 +626,9 @@ class StartHandlerTest {
                         new AuthSessionItem()
                                 .withSessionId(SESSION_ID)
                                 .withClientId(CLIENT_ID)
-                                .withInternalCommonSubjectId(null));
+                                .withInternalCommonSubjectId(null)
+                                .withHasVerifiedPassword(false)
+                                .withHasVerifiedMfa(false));
 
         when(authenticationAttemptsService.getCountsByJourney(any(), any()))
                 .thenReturn(Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES)); // Blocked but no subject ID

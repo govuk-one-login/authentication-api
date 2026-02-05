@@ -144,6 +144,8 @@ class AuthSessionServiceTest {
         assertThat(
                 authSession.getResetPasswordState(), is(AuthSessionItem.ResetPasswordState.NONE));
         assertThat(authSession.getResetMfaState(), is(AuthSessionItem.ResetMfaState.NONE));
+        assertThat(authSession.getHasVerifiedPassword(), is(false));
+        assertThat(authSession.getHasVerifiedMfa(), is(false));
     }
 
     @Test
