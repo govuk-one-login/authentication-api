@@ -991,6 +991,31 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("mfaJourneyTypes")
+    void shouldReturn400WhenExistingInternationalNumberAndFeatureFlagDisabled(
+            JourneyType journeyType) {
+        usingValidSession();
+
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(defaultInternationalSmsMethod)));
+        when(internationalSmsSendLimitService.canSendSms(INTERNATIONAL_PHONE_NUMBER))
+                .thenReturn(false);
+
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"isResendCodeRequest\": false, \"journeyType\": \"%s\"}",
+                        EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(BLOCKED_FOR_SENDING_MFA_OTPS));
+        verify(sqsClient, never()).send(any());
+        verify(codeStorageService, never()).saveOtpCode(any(), any(), anyLong(), any());
+    }
+
+    @ParameterizedTest
+    @MethodSource("mfaJourneyTypes")
     void shouldReturn204ForDomesticNumberRegardlessOfLimit(JourneyType journeyType)
             throws Json.JsonException {
         usingValidSession();
