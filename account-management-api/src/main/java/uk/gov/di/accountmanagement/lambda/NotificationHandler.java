@@ -273,6 +273,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             return;
         }
 
+        var reference = notifyRequest.getClientSessionId();
+
         sendNotification(
                 notifyRequest,
                 personalisation,
@@ -281,7 +283,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     try {
                         notificationService.sendText(
                                 destination, per, NotificationType.valueOf(type));
-                        internationalSmsSendLimitService.recordSmsSent(destination);
+                        internationalSmsSendLimitService.recordSmsSent(destination, reference);
                         LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
                         cloudwatchMetricsService.emitMetricForNotification(
                                 notifyRequest.getNotificationType(),
