@@ -425,6 +425,45 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(response, hasStatus(204));
             assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
         }
+
+        @Test
+        void shouldReturn400WhenExistingInternationalNumberAndFeatureFlagDisabled() {
+            var configWithExistingIntSmsDisabled =
+                    new IntegrationTestConfigurationService(
+                            notificationsQueue,
+                            tokenSigner,
+                            docAppPrivateKeyJwtSigner,
+                            configurationParameters) {
+                        @Override
+                        public String getTxmaAuditQueueUrl() {
+                            return txmaAuditQueue.getQueueUrl();
+                        }
+
+                        @Override
+                        public boolean isInternalApiExistingInternationalSmsEnabled() {
+                            return false;
+                        }
+
+                        @Override
+                        public int getInternationalSmsNumberSendLimit() {
+                            return INTERNATIONAL_SMS_SEND_LIMIT;
+                        }
+                    };
+
+            handler = new MfaHandler(configWithExistingIntSmsDisabled, redisConnectionService);
+            userStore.addVerifiedPhoneNumber(USER_EMAIL, INTERNATIONAL_PHONE_NUMBER);
+
+            var response =
+                    makeRequest(
+                            Optional.of(new MfaRequest(USER_EMAIL, false)),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    response,
+                    hasJsonBody(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
+        }
     }
 
     private static void assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
