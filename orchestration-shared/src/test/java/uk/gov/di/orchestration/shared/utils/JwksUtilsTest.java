@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class JwksUtilsTest {
     private static final JWK TEST_KEY_1 = mock(JWK.class);
     private static final JWK TEST_KEY_2 = mock(JWK.class);
@@ -25,6 +26,7 @@ class JwksUtilsTest {
         when(TEST_KEY_2.getAlgorithm()).thenReturn(JWEAlgorithm.RSA_OAEP_256);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldCacheFirstKeyIfMultipleKeysArePresent() {
         var jwksKeys = List.of(TEST_KEY_1, TEST_KEY_2);
@@ -32,6 +34,7 @@ class JwksUtilsTest {
         assertEquals(TEST_KEY_1, validKey);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldIgnoreFirstKeyIfKeyHasDifferentUse() {
         when(TEST_KEY_1.getKeyUse()).thenReturn(KeyUse.SIGNATURE);
@@ -40,6 +43,7 @@ class JwksUtilsTest {
         assertEquals(TEST_KEY_2, validKey);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldIgnoreFirstKeyIfKeyHasDifferentAlg() {
         when(TEST_KEY_1.getAlgorithm()).thenReturn(JWEAlgorithm.ECDH_1PU);
@@ -49,6 +53,7 @@ class JwksUtilsTest {
         assertEquals(TEST_KEY_2, validKey);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetEncryptionKeyByKeyTypeIfKeyAlgIsNotPresent() {
         when(TEST_KEY_1.getAlgorithm()).thenReturn(null);
