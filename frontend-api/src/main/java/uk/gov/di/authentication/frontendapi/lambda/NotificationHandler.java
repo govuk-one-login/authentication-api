@@ -194,7 +194,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                         personalisation,
                         request.getNotificationType(),
                         reference);
-                internationalSmsSendLimitService.recordSmsSent(request.getDestination());
+                internationalSmsSendLimitService.recordSmsSent(request.getDestination(), reference);
             }
 
             if (isTestDestination) {
