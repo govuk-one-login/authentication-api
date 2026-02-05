@@ -1230,6 +1230,26 @@ class LoginHandlerTest {
         verifyAuthSessionIsSaved();
     }
 
+    @Test
+    void shouldCallCorrectPasswordReceivedWhenLoginIsSuccessful() {
+        // Arrange
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSession();
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+        verify(userActionsManager)
+                .correctPasswordReceived(any(), argThat(pc -> pc.authSessionItem() != null));
+    }
+
     private static Stream<Arguments> validMfaMethods() {
         return Stream.of(Arguments.of(AUTH_APP), Arguments.of(SMS));
     }
