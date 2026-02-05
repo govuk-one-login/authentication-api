@@ -14,6 +14,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -59,6 +60,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -419,17 +421,26 @@ class ResetPasswordHandlerTest {
         @Test
         void shouldCallUserActionsManagerPasswordResetOnSuccessfulRequest()
                 throws Json.JsonException {
+            // Arrange
             when(authenticationService.getUserProfileByEmail(EMAIL))
                     .thenReturn(generateUserProfile(false));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
+            // Act
             var result = handler.handleRequest(event, context);
 
+            // Assert
             assertThat(result, hasStatus(204));
             verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-            verify(userActionsManager).passwordReset(any(), any());
+            verify(userActionsManager)
+                    .passwordReset(
+                            eq(JourneyType.PASSWORD_RESET),
+                            argThat(
+                                    pc ->
+                                            pc.emailAddress() != null
+                                                    && pc.authSessionItem() != null));
             verify(sqsClient)
                     .send(
                             argThat(
