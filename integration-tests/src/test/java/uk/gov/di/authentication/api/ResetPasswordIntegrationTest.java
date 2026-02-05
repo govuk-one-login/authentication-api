@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -349,6 +350,52 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
 
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    @Test
+    void
+            shouldNotSendSmsToInternationalNumberWhenExistingInternationalSmsFeatureFlagBlocksExistingUser() {
+        var sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var configWithFeatureFlagDisabled =
+                new ResetPasswordTestConfigurationService() {
+                    @Override
+                    public boolean isInternalApiExistingInternationalSmsEnabled() {
+                        return false;
+                    }
+                };
+
+        var handlerWithFeatureFlagDisabled =
+                new ResetPasswordHandler(configWithFeatureFlagDisabled, redisConnectionService);
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(constructFrontendHeaders(sessionId));
+        event.setBody(RESET_PASSWORD_REQUEST);
+        event.setRequestContext(
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withRequestId(IdGenerator.generate()));
+
+        var result = handlerWithFeatureFlagDisabled.handleRequest(event, context);
+
+        // Handler returns success despite being unable to send SMS to international number.
+        assertThat(result, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        // Email sent but SMS blocked by feature flag.
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        // Audit event emitted still as the underlying password reset operation succeeded (only the
+        // SMS confirmation send failed).
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL));
