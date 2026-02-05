@@ -1097,6 +1097,37 @@ class SendNotificationHandlerTest {
                 verifyNoInteractions(emailSqsClient);
             }
 
+            @ParameterizedTest
+            @EnumSource(
+                    value = JourneyType.class,
+                    names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+            void shouldReturn400WhenExistingInternationalNumberAndFeatureFlagDisabled(
+                    JourneyType journeyType) {
+                when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(false);
+                usingValidSession();
+
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL,
+                                VERIFY_PHONE_NUMBER,
+                                INTERNATIONAL_MOBILE_NUMBER,
+                                journeyType);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertTrue(
+                        result.getBody()
+                                .contains(
+                                        String.valueOf(
+                                                ErrorResponse
+                                                        .INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS
+                                                        .getCode())));
+                verifyNoInteractions(emailSqsClient);
+            }
+
             @Test
             void shouldReturn400IfRequestIsMissingEmail() {
                 usingValidSession();
