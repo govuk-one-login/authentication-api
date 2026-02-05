@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id "jacoco"
 }
 
 group = 'uk.gov.di.authentication.accountdata'
@@ -51,4 +52,11 @@ test {
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+    dependsOn "test"
 }
