@@ -35,6 +35,7 @@ class InternationalSmsSendLimitServiceTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getInternationalSmsNumberSendLimit()).thenReturn(TEST_SEND_LIMIT);
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(true);
         service = new InternationalSmsSendLimitService(dynamoDbClient, table, configurationService);
     }
 
@@ -126,6 +127,18 @@ class InternationalSmsSendLimitServiceTest {
     }
 
     @ParameterizedTest
+    @MethodSource("domesticPhoneNumberVariations")
+    void recordSmsSentShouldIgnoreDomesticNumbersWhenExistingInternationalSmsFeatureFlagDisabled(
+            String domesticPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(false);
+
+        service.recordSmsSent(domesticPhoneNumber, TEST_REFERENCE);
+
+        verify(table, never()).putItem(any(InternationalSmsSendCount.class));
+        verify(table, never()).updateItem(any(InternationalSmsSendCount.class));
+    }
+
+    @ParameterizedTest
     @MethodSource("phoneNumberVariations")
     void canSendSmsShouldUseFormattedPhoneNumber(
             String rawPhoneNumber, String formattedPhoneNumber) {
@@ -156,6 +169,118 @@ class InternationalSmsSendLimitServiceTest {
         service.canSendSms(domesticPhoneNumber);
 
         verify(table, never()).getItem(any(Key.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberVariations")
+    void canSendSmsShouldBlockInternationalNumbersWhenExistingInternationalSmsFeatureFlagDisabled(
+            String rawPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(false);
+        withNoItem();
+
+        boolean canSendSms = service.canSendSms(rawPhoneNumber);
+
+        assertFalse(canSendSms);
+        verify(table, never()).getItem(any(Key.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberVariations")
+    void
+            canSendSmsShouldBlockInternationalNumbersAtLimitWhenExistingInternationalSmsFeatureFlagDisabled(
+                    String rawPhoneNumber, String formattedPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(false);
+        withExistingCount(TEST_SEND_LIMIT, formattedPhoneNumber);
+
+        boolean canSendSms = service.canSendSms(rawPhoneNumber);
+
+        assertFalse(canSendSms);
+        verify(table, never()).getItem(any(Key.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberVariations")
+    void
+            canSendSmsShouldBlockInternationalNumbersAboveLimitWhenExistingInternationalSmsFeatureFlagDisabled(
+                    String rawPhoneNumber, String formattedPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(false);
+        withExistingCount(TEST_SEND_LIMIT + 1, formattedPhoneNumber);
+
+        boolean canSendSms = service.canSendSms(rawPhoneNumber);
+
+        assertFalse(canSendSms);
+        verify(table, never()).getItem(any(Key.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberVariations")
+    void
+            canSendSmsShouldAllowInternationalSmsWhenBelowSendLimitAndExistingInternationalSmsFeatureFlagEnabled(
+                    String rawPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(true);
+        withNoItem();
+
+        boolean canSendSms = service.canSendSms(rawPhoneNumber);
+
+        assertTrue(canSendSms);
+    }
+
+    @ParameterizedTest
+    @MethodSource("domesticPhoneNumberVariations")
+    void canSendSmsShouldAllowDomesticNumbersWhenExistingInternationalSmsFeatureFlagDisabled(
+            String domesticPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(false);
+        String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(domesticPhoneNumber);
+        withExistingCount(TEST_SEND_LIMIT + 1, formattedPhoneNumber);
+
+        boolean canSendSms = service.canSendSms(domesticPhoneNumber);
+
+        assertTrue(canSendSms);
+    }
+
+    @ParameterizedTest
+    @MethodSource("domesticPhoneNumberVariations")
+    void canSendSmsShouldAllowDomesticNumbersWhenExistingInternationalSmsFeatureFlagEnabled(
+            String domesticPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(true);
+        String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(domesticPhoneNumber);
+        withExistingCount(TEST_SEND_LIMIT + 1, formattedPhoneNumber);
+
+        boolean canSendSms = service.canSendSms(domesticPhoneNumber);
+
+        assertTrue(canSendSms);
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberVariations")
+    void recordSmsSentShouldRecordWhenExistingInternationalSmsFeatureFlagEnabled(
+            String rawPhoneNumber, String formattedPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(true);
+        withNoItem();
+        ArgumentCaptor<InternationalSmsSendCount> captor =
+                ArgumentCaptor.forClass(InternationalSmsSendCount.class);
+
+        service.recordSmsSent(rawPhoneNumber, TEST_REFERENCE);
+
+        verify(table).putItem(captor.capture());
+        assertEquals(formattedPhoneNumber, captor.getValue().getPhoneNumber());
+        assertEquals(1, captor.getValue().getSentCount());
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberVariations")
+    void recordSmsSentShouldStillRecordWhenExistingInternationalSmsFeatureFlagDisabled(
+            String rawPhoneNumber, String formattedPhoneNumber) {
+        when(configurationService.isInternalApiExistingInternationalSmsEnabled()).thenReturn(false);
+        withNoItem();
+        ArgumentCaptor<InternationalSmsSendCount> captor =
+                ArgumentCaptor.forClass(InternationalSmsSendCount.class);
+
+        service.recordSmsSent(rawPhoneNumber, TEST_REFERENCE);
+
+        verify(table).putItem(captor.capture());
+        assertEquals(formattedPhoneNumber, captor.getValue().getPhoneNumber());
+        assertEquals(1, captor.getValue().getSentCount());
     }
 
     private static Stream<Arguments> phoneNumberVariations() {
