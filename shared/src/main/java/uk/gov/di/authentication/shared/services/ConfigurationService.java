@@ -861,4 +861,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public URI getAMCJourneyOutcomeURI() {
         return URI.create(System.getenv().getOrDefault("AMC_JOURNEY_OUTCOME_URI", ""));
     }
+
+    public boolean isEnhancedAuthCodeProtectionEnabled() {
+        return System.getenv()
+                .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
+                .equals("true");
+    }
 }
