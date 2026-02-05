@@ -207,4 +207,64 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(204));
     }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void shouldReturn400WhenExistingInternationalNumberAndFeatureFlagDisabled(
+            JourneyType journeyType) throws Json.JsonException {
+        var configWithExistingIntSmsDisabled =
+                new IntegrationTestConfigurationService(
+                        notificationsQueue,
+                        tokenSigner,
+                        docAppPrivateKeyJwtSigner,
+                        configurationParameters) {
+                    @Override
+                    public String getTxmaAuditQueueUrl() {
+                        return txmaAuditQueue.getQueueUrl();
+                    }
+
+                    @Override
+                    public boolean isInternalApiNewInternationalSmsEnabled() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isInternalApiExistingInternationalSmsEnabled() {
+                        return false;
+                    }
+
+                    @Override
+                    public int getInternationalSmsNumberSendLimit() {
+                        return INTERNATIONAL_SMS_SEND_LIMIT;
+                    }
+                };
+
+        handler =
+                new SendNotificationHandler(
+                        configWithExistingIntSmsDisabled, redisConnectionService);
+
+        var requestBody =
+                Map.of(
+                        "email",
+                        USER_EMAIL,
+                        "notificationType",
+                        NotificationType.VERIFY_PHONE_NUMBER,
+                        "phoneNumber",
+                        INTERNATIONAL_PHONE_NUMBER,
+                        "journeyType",
+                        journeyType);
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody), constructFrontendHeaders(SESSION_ID), Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(
+                response,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS)));
+    }
 }
