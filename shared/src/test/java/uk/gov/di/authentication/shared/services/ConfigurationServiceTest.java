@@ -693,6 +693,11 @@ class ConfigurationServiceTest {
                 result, configurationService.commaSeparatedListContains(searchTerm, searchString));
     }
 
+    @Test
+    void isInternalApiExistingInternationalSmsEnabledShouldDefaultToTrue() {
+        assertTrue(configurationService.isInternalApiExistingInternationalSmsEnabled());
+    }
+
     private GetParameterRequest parameterRequest(String name) {
         return GetParameterRequest.builder().withDecryption(true).name(name).build();
     }
