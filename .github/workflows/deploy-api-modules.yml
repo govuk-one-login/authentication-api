@@ -18,6 +18,7 @@ on:
       - main
     paths-ignore:
       - "ci/cloudformation/auth/**"
+      - "ci/cloudformation/account-data/**"
       - "ci/openAPI/**"
       - "scripts/dev-samconfig.toml"
       - "sam-deploy-authdevs.sh"

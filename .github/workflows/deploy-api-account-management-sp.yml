@@ -7,6 +7,7 @@ on:
     paths-ignore:
       - "ci/cloudformation/auth/**"
       - "ci/cloudformation/stubs/**"
+      - "ci/cloudformation/account-data/**"
       - "template.yaml"
       - "ci/openAPI/**"
       - "docs/**"

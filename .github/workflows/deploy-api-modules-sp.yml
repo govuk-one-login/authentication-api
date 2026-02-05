@@ -6,6 +6,7 @@ on:
       - main
     paths-ignore:
       - "ci/cloudformation/account-management/**"
+      - "ci/cloudformation/account-data/**"
       - "ci/cloudformation/stubs/**"
       - "template.yaml"
       - "ci/openAPI/**"
