@@ -45,6 +45,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
+    private static final String TEST_REFERENCE = "test-reference";
     private static final String RESET_PASSWORD_REQUEST =
             format(
                     """
@@ -362,7 +363,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         for (int i = 0; i < 10; i++) {
-            internationalSmsSendLimit.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+            internationalSmsSendLimit.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER, TEST_REFERENCE);
         }
 
         var response =

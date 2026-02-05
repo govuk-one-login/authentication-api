@@ -78,6 +78,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     private final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
     private static final String SECTOR_IDENTIFIER_HOST = "test.com";
+    private static final String TEST_REFERENCE = "test-reference";
     protected final Json objectMapper =
             new SerializationService(
                     Map.of(MfaMethodResponse.class, new MfaMethodResponseAdapter()));
@@ -326,7 +327,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     email, INTERNATIONAL_MOBILE_NUMBER, true, true);
 
             for (int i = 0; i < 10; i++) {
-                internationalSmsSendLimit.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+                internationalSmsSendLimit.recordSmsSent(
+                        INTERNATIONAL_MOBILE_NUMBER, TEST_REFERENCE);
             }
 
             var response =
