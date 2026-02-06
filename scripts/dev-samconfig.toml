@@ -43,7 +43,7 @@ parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambd
 image_repositories = []
 signing_profiles = "SmsQuotaMonitorFunction=\"SigningProfile_bdzyxbYzrSD8\" NotifyCallbackFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountInterventionsFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountRecoveryFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthTokenFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthUserInfoFunction=\"SigningProfile_bdzyxbYzrSD8\" CheckEmailFraudBlockFunction=\"SigningProfile_bdzyxbYzrSD8\" CheckReAuthUserFunction=\"SigningProfile_bdzyxbYzrSD8\" EmailNotificationQueueFunction=\"SigningProfile_bdzyxbYzrSD8\" IDReverificationStateFunction=\"SigningProfile_bdzyxbYzrSD8\" LoginFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaResetAuthorizeFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaResetJarJwkFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaResetStorageTokenJwkFunction=\"SigningProfile_bdzyxbYzrSD8\" OrchAuthCodeFunction=\"SigningProfile_bdzyxbYzrSD8\" ResetPasswordFunction=\"SigningProfile_bdzyxbYzrSD8\" ResetPasswordRequestFunction=\"SigningProfile_bdzyxbYzrSD8\" ReverificationResultFunction=\"SigningProfile_bdzyxbYzrSD8\" SecretString-JAVA_LAYER}}-cd3ae82ef4=\"SigningProfile_bdzyxbYzrSD8\" SendNotificationFunction=\"SigningProfile_bdzyxbYzrSD8\" SignUpFunction=\"SigningProfile_bdzyxbYzrSD8\" StartFunction=\"SigningProfile_bdzyxbYzrSD8\" TicfCriFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdateProfileFunction=\"SigningProfile_bdzyxbYzrSD8\" UserExistsFunction=\"SigningProfile_bdzyxbYzrSD8\" VerifyCodeFunction=\"SigningProfile_bdzyxbYzrSD8\" VerifyMfaCodeFunction=\"SigningProfile_bdzyxbYzrSD8\" ProcessingIdentityFunction=\"SigningProfile_bdzyxbYzrSD8\""
 
-[authdevam.deploy.parameters]
+[devam.deploy.parameters]
 stack_name = "am-api"
 resolve_s3 = false
 s3_bucket = "dev-account-management-pi-githubartifactsourcebuck-kwivt2sedndw"
@@ -130,3 +130,47 @@ capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev3\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev3-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-0a6d8a2e8df1\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
 signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountInterventionsApiStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""
+
+[devad.deploy.parameters]
+stack_name = "dev-account-data-api"
+resolve_s3 = false
+s3_bucket = "dev-account-data-api-pipe-githubartifactsourcebuck-6woatl1qi4wc"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/dev-account-data-api-pipeline-AppProgrammaticPermissionsBoundary-064ee293d33d\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "PasskeysCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysDeleteFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysRetrieveFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysUpdateFunction=\"SigningProfile_bdzyxbYzrSD8\""
+
+[authdev1ad.deploy.parameters]
+stack_name = "authdev1-act-data-api"
+resolve_s3 = false
+s3_bucket = "authdev1-account-data-api-githubartifactsourcebuck-bbpqsqopgpcu"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev1\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev1-account-data-api-pipeline-AppProgrammaticPermissionsBoundary-0ab99e320a09\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "PasskeysCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysDeleteFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysRetrieveFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysUpdateFunction=\"SigningProfile_bdzyxbYzrSD8\""
+
+[authdev2ad.deploy.parameters]
+stack_name = "authdev2-act-data-api"
+resolve_s3 = false
+s3_bucket = "authdev2-account-data-api-githubartifactsourcebuck-t6zozyodqxba"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev2\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev2-account-data-api-pipeline-AppProgrammaticPermissionsBoundary-06551618b6d9\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "PasskeysCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysDeleteFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysRetrieveFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysUpdateFunction=\"SigningProfile_bdzyxbYzrSD8\""
+
+[authdev3ad.deploy.parameters]
+stack_name = "authdev3-act-data-api"
+resolve_s3 = false
+s3_bucket = "authdev3-account-data-api-githubartifactsourcebuck-jvewjs7xbhub"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev3\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev3-account-data-api-pipeline-AppProgrammaticPermissionsBoundary-06b1cc0de465\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "PasskeysCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysDeleteFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysRetrieveFunction=\"SigningProfile_bdzyxbYzrSD8\" PasskeysUpdateFunction=\"SigningProfile_bdzyxbYzrSD8\""

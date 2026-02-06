@@ -10,6 +10,7 @@ Metadata:
         - W1028
         - W8003
         - E1011
+        - W8001
 
 Description: >
   SAM template for deploying account-data-api
@@ -57,17 +58,6 @@ Parameters:
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
-  IsProduction:
-    Fn::Equals:
-      - !Ref Environment
-      - production
-
-  IsNotProduction:
-    Fn::Not:
-      - Fn::Equals:
-          - !Ref Environment
-          - production
-
   UseSubEnvironment:
     Fn::And:
       - Fn::Equals:
@@ -111,29 +101,37 @@ Mappings:
     dev:
       cloudwatchLogRetentionInDays: 1
       IsSplunkEnabled: "No"
-      dynatraceSecretArn: ""
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "No"
     build:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
-      dynatraceSecretArn: ""
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "Yes"
     staging:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
-      dynatraceSecretArn: ""
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "Yes"
     integration:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
-      dynatraceSecretArn: ""
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "Yes"
     production:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
-      dynatraceSecretArn: ""
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       UseAlarmActions: "Yes"
   LambdaConfiguration:
+    passkeys-create:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+    passkeys-retrieve:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+    passkeys-update:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+    passkeys-delete:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:

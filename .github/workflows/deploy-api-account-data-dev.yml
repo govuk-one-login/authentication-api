@@ -1,4 +1,4 @@
-name: "SP - DEV: Build and deploy Account Data API to Dev"
+name: "DEV: Build and deploy Account Data API to Dev"
 run-name: "DEV: Build and deploy Account Data API to ${{ inputs.environment }}"
 on:
   workflow_dispatch:

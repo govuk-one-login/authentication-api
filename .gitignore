@@ -40,6 +40,7 @@ node_modules
 auth-template.yaml
 stubs-template.yaml
 am-template.yaml
+ad-template.yaml
 
 # Amazon Q files
 .amazonq/

@@ -7,13 +7,6 @@ Resources:
         - ${Env}-account-data-passkeys-create-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          passkeysCreateMemorySize,
-          DefaultValue: 1536,
-        ]
       CodeUri: ./account-data-api/build/distributions/account-data-api.zip
       Handler: uk.gov.di.authentication.accountdata.lambda.PasskeysCreateHandler::handleRequest
       Environment:
