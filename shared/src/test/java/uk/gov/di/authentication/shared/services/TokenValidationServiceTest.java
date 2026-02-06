@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.MalformedURLException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -37,9 +36,10 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 class TokenValidationServiceTest {
 
     private final JwksService jwksService = mock(JwksService.class);
+    private final RemoteJwksService accessTokenJwksService = mock(RemoteJwksService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final TokenValidationService tokenValidationService =
-            new TokenValidationService(jwksService, configurationService);
+            new TokenValidationService(jwksService, accessTokenJwksService, configurationService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final List<String> REFRESH_SCOPES = List.of("openid", "email", "offline_access");
@@ -54,10 +54,11 @@ class TokenValidationServiceTest {
             new CaptureLoggingExtension(TokenValidationService.class);
 
     @BeforeEach
-    void setUp() throws JOSEException, MalformedURLException {
+    void setUp() throws JOSEException {
         ecJWK = generateECKeyPair();
         signer = new ECDSASigner(ecJWK);
-        when(jwksService.getPublicTokenJwkWithOpaqueId(any())).thenReturn(ecJWK.toPublicJWK());
+        when(accessTokenJwksService.retrieveJwkFromURLWithKeyId(any()))
+                .thenReturn(ecJWK.toPublicJWK());
         when(configurationService.getEnvironment()).thenReturn("dev");
     }
 
@@ -135,13 +136,12 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateRsaSignedAccessToken()
-            throws JOSEException, MalformedURLException {
+    void shouldSuccessfullyValidateRsaSignedAccessToken() throws JOSEException {
         var rsaKey = new RSAKeyGenerator(2048).generate();
         var rsaSigner = new RSASSASigner(rsaKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId(any())).thenReturn(rsaKey);
+        when(accessTokenJwksService.retrieveJwkFromURLWithKeyId(any())).thenReturn(rsaKey);
 
         SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(
