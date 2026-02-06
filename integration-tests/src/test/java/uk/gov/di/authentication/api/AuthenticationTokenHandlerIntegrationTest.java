@@ -3,6 +3,7 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.TokenResponse;
@@ -16,15 +17,20 @@ import com.nimbusds.oauth2.sdk.util.URLUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.external.lambda.TokenHandler;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccessTokenStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
+import uk.gov.di.authentication.sharedtest.extensions.JwksExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,6 +69,8 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     protected static final AccessTokenStoreExtension accessTokenStoreExtension =
             new AccessTokenStoreExtension(180);
 
+    @RegisterExtension protected static final JwksExtension authJwksExtension = new JwksExtension();
+
     @BeforeEach
     void setup() throws JOSEException {
         var configurationService =
@@ -83,12 +91,19 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                 TEST_JOURNEY_ID);
 
         txmaAuditQueue.clear();
+        authJwksExtension.init(new JWKSet(EC_KEY_PAIR.toPublicJWK()));
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
     void
-            shouldGenerateASuccessfulTokenResponseWhenPresentedWithAValidAuthCodeAndSetCodeStoreFlagToUsed()
-                    throws ParseException, JOSEException {
+            shouldGenerateASuccessfulTokenResponseWhenPresentedWithAValidAuthCodeAndSetCodeStoreFlagToUsed(
+                    boolean useAuthJwks) throws ParseException, JOSEException {
+        var configurationService =
+                new AuthenticationTokenHandlerIntegrationTest.TestConfigurationService(
+                        notificationsQueue, tokenSigner, docAppPrivateKeyJwtSigner, useAuthJwks);
+        handler = new TokenHandler(configurationService);
+
         Map<String, List<String>> baseParams =
                 baseTokenRequestParamsWithoutClientAssertion(VALID_AUTH_CODE);
         Map<String, List<String>> privateKeyJWT = privateKeyJWTParams(EC_KEY_PAIR);
@@ -184,7 +199,11 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
                 new PrivateKeyJWT(
-                        claimsSet, JWSAlgorithm.ES256, ecKeyPair.toPrivateKey(), null, null);
+                        claimsSet,
+                        JWSAlgorithm.ES256,
+                        ecKeyPair.toPrivateKey(),
+                        ecKeyPair.getKeyID(),
+                        null);
         return privateKeyJWT.toParameters();
     }
 
@@ -200,15 +219,26 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     }
 
     private static class TestConfigurationService extends IntegrationTestConfigurationService {
+        private final boolean useAuthJwks;
+
         public TestConfigurationService(
                 SqsQueueExtension notificationQueue,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension docAppPrivateKeyJwtSigner) {
+            this(notificationQueue, tokenSigningKey, docAppPrivateKeyJwtSigner, false);
+        }
+
+        public TestConfigurationService(
+                SqsQueueExtension notificationQueue,
+                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension docAppPrivateKeyJwtSigner,
+                boolean useAuthJwks) {
             super(
                     notificationQueue,
                     tokenSigningKey,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
+            this.useAuthJwks = useAuthJwks;
         }
 
         @Override
@@ -232,8 +262,22 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         }
 
         @Override
+        public URL getAuthJwksUrl() {
+            try {
+                return authJwksExtension.getJwksUrl();
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
         public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
-            return Collections.singletonList(EC_PUBLIC_KEY);
+            return useAuthJwks ? List.of() : List.of(EC_PUBLIC_KEY);
+        }
+
+        @Override
+        public boolean isUseAuthJwksEnabled() {
+            return useAuthJwks;
         }
     }
 }

@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.external.validators;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.KeySourceException;
+import com.nimbusds.jose.jwk.AsymmetricJWK;
 import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -13,8 +15,12 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 import uk.gov.di.authentication.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
+import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,10 +31,13 @@ public class TokenRequestValidator {
     private static final Logger LOG = LogManager.getLogger(TokenRequestValidator.class);
     private final String redirectUri;
     private final String clientId;
+    private final RemoteJwksService authJwksService;
 
-    public TokenRequestValidator(String redirectUri, String clientId) {
+    public TokenRequestValidator(
+            String redirectUri, String clientId, RemoteJwksService authJwksService) {
         this.redirectUri = redirectUri;
         this.clientId = clientId;
+        this.authJwksService = authJwksService;
     }
 
     public Optional<ErrorObject> validatePlaintextParams(Map<String, String> requestParameters) {
@@ -74,12 +83,25 @@ public class TokenRequestValidator {
     public void validatePrivateKeyJwtClientAuth(
             String requestBody, Set<Audience> expectedAudience, List<String> publicKeys)
             throws TokenAuthInvalidException {
+        validatePrivateKeyJwtClientAuth(requestBody, expectedAudience, publicKeys, false);
+    }
+
+    public void validatePrivateKeyJwtClientAuth(
+            String requestBody,
+            Set<Audience> expectedAudience,
+            List<String> publicKeys,
+            boolean useJwks)
+            throws TokenAuthInvalidException {
         try {
+            var allKeys = new ArrayList<>(publicKeys);
             PrivateKeyJWT privateKeyJWT = PrivateKeyJWT.parse(requestBody);
+            if (useJwks) {
+                fetchKeyFromJwks(privateKeyJWT, publicKeys.isEmpty()).ifPresent(allKeys::add);
+            }
 
             ClientAuthenticationVerifier<?> signatureVerifier =
                     new ClientAuthenticationVerifier<>(
-                            new PrivateKeyJwtAuthPublicKeySelector(publicKeys, KeyType.EC),
+                            new PrivateKeyJwtAuthPublicKeySelector(allKeys, KeyType.EC),
                             expectedAudience);
             signatureVerifier.verify(privateKeyJWT, null, null);
         } catch (ParseException e) {
@@ -100,6 +122,27 @@ public class TokenRequestValidator {
                             "Invalid signature in private_key_jwt"),
                     ClientAuthenticationMethod.PRIVATE_KEY_JWT,
                     "tbc");
+        }
+    }
+
+    private Optional<String> fetchKeyFromJwks(PrivateKeyJWT privateKeyJWT, boolean noOtherKeys)
+            throws JOSEException {
+        var keyId = privateKeyJWT.getClientAssertion().getHeader().getKeyID();
+        try {
+            var jwk = authJwksService.retrieveJwkFromURLWithKeyId(keyId);
+            X509EncodedKeySpec x509EncodedKeySpec =
+                    new X509EncodedKeySpec(((AsymmetricJWK) jwk).toPublicKey().getEncoded());
+
+            byte[] x509EncodedPublicKey = x509EncodedKeySpec.getEncoded();
+            var validPublicKeyAsX509String =
+                    Base64.getEncoder().encodeToString(x509EncodedPublicKey);
+            return Optional.of(validPublicKeyAsX509String);
+        } catch (KeySourceException e) {
+            LOG.warn("No key found with ID {} on JWKS endpoint", keyId);
+            if (noOtherKeys) {
+                throw e;
+            }
+            return Optional.empty();
         }
     }
 }

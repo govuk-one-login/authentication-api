@@ -3,6 +3,7 @@ package uk.gov.di.authentication.external.validators;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -19,6 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 import uk.gov.di.authentication.sharedtest.helper.JwtHelper;
 
 import java.security.spec.X509EncodedKeySpec;
@@ -35,12 +37,17 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TokenRequestValidatorTest {
     private static final String VALID_REDIRECT_URI = "https://redirect-uri.co.uk";
     private static final String VALID_CLIENT_ID = "client-id";
+    private static final RemoteJwksService authJwksService = mock(RemoteJwksService.class);
     private final TokenRequestValidator validator =
-            new TokenRequestValidator(VALID_REDIRECT_URI, VALID_CLIENT_ID);
+            new TokenRequestValidator(VALID_REDIRECT_URI, VALID_CLIENT_ID, authJwksService);
 
     @Nested
     class ValidatePlaintextParamsTests {
@@ -178,6 +185,9 @@ class TokenRequestValidatorTest {
         private static String validRequestBodyInvalidSignature;
         private static String validRequestBodyRsaSignature;
         private static String incompleteRequestBodyValidSignature;
+        private static final String EC_KEY_ID = "ec-key";
+        private static final String ALTERNATIVE_EC_KEY_ID = "alternative-ec-key";
+        private static final String RSA_KEY_ID = "rsa-key";
 
         @BeforeAll
         static void init() throws JOSEException, ParseException {
@@ -190,7 +200,7 @@ class TokenRequestValidatorTest {
                             "jti",
                             0L);
 
-            ECKey validKeyPair = new ECKeyGenerator(Curve.P_256).generate();
+            ECKey validKeyPair = new ECKeyGenerator(Curve.P_256).keyID(EC_KEY_ID).generate();
             X509EncodedKeySpec x509EncodedKeySpec =
                     new X509EncodedKeySpec(validKeyPair.toPublicKey().getEncoded());
             byte[] x509EncodedPublicKey = x509EncodedKeySpec.getEncoded();
@@ -206,7 +216,8 @@ class TokenRequestValidatorTest {
                             + "&client_assertion="
                             + clientAssertionValidKeySignature;
 
-            ECKey alternateEcKeyPair = new ECKeyGenerator(Curve.P_256).generate();
+            ECKey alternateEcKeyPair =
+                    new ECKeyGenerator(Curve.P_256).keyID(ALTERNATIVE_EC_KEY_ID).generate();
             String clientAssertionInvalidEcKeySignature =
                     JwtHelper.jsonToSignedJwt(validClientAssertionPayload, alternateEcKeyPair);
             X509EncodedKeySpec alternatex509EncodedKeySpec =
@@ -218,7 +229,7 @@ class TokenRequestValidatorTest {
             validRequestBodyInvalidSignature =
                     getValidRequestBodyWithClientAssertion(clientAssertionInvalidEcKeySignature);
 
-            RSAKey rsaKeyPair = new RSAKeyGenerator(2048).generate();
+            RSAKey rsaKeyPair = new RSAKeyGenerator(2048).keyID(RSA_KEY_ID).generate();
             X509EncodedKeySpec x509EncodedKeySpecRsa =
                     new X509EncodedKeySpec(rsaKeyPair.toPublicKey().getEncoded());
             byte[] x509EncodedPublicKeyRsa = x509EncodedKeySpecRsa.getEncoded();
@@ -226,9 +237,18 @@ class TokenRequestValidatorTest {
             JWSSigner rsaSigner = new RSASSASigner(rsaKeyPair.toRSAPrivateKey());
             String clientAssertionRsaKeySignature =
                     JwtHelper.jsonToSignedJwt(
-                            validClientAssertionPayload, rsaSigner, JWSAlgorithm.PS256);
+                            validClientAssertionPayload,
+                            rsaSigner,
+                            JWSAlgorithm.PS256,
+                            rsaKeyPair.getKeyID());
             validRequestBodyRsaSignature =
                     getValidRequestBodyWithClientAssertion(clientAssertionRsaKeySignature);
+            when(authJwksService.retrieveJwkFromURLWithKeyId(EC_KEY_ID))
+                    .thenReturn(validKeyPair.toPublicJWK());
+            when(authJwksService.retrieveJwkFromURLWithKeyId(ALTERNATIVE_EC_KEY_ID))
+                    .thenReturn(alternateEcKeyPair.toPublicJWK());
+            when(authJwksService.retrieveJwkFromURLWithKeyId(RSA_KEY_ID))
+                    .thenReturn(rsaKeyPair.toPublicJWK());
         }
 
         static Stream<Arguments> validationTestData() {
@@ -237,22 +257,32 @@ class TokenRequestValidatorTest {
                             "string-not-jwt",
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid private_key_jwt",
-                            validPublicKeyAsX509String),
+                            validPublicKeyAsX509String,
+                            false),
                     arguments(
                             incompleteRequestBodyValidSignature,
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid private_key_jwt",
-                            validPublicKeyAsX509String),
+                            validPublicKeyAsX509String,
+                            false),
                     arguments(
                             validRequestBodyRsaSignature,
                             OAuth2Error.INVALID_CLIENT_CODE,
                             "Client authentication failed",
-                            rsaPublicKeyAsX509String),
+                            rsaPublicKeyAsX509String,
+                            false),
                     arguments(
                             validRequestBodyInvalidSignature,
                             OAuth2Error.INVALID_CLIENT_CODE,
                             "Client authentication failed",
-                            validPublicKeyAsX509String));
+                            validPublicKeyAsX509String,
+                            false),
+                    arguments(
+                            validRequestBodyInvalidSignature,
+                            OAuth2Error.INVALID_CLIENT_CODE,
+                            "Invalid signature in private_key_jwt",
+                            null,
+                            true));
         }
 
         @ParameterizedTest
@@ -261,7 +291,14 @@ class TokenRequestValidatorTest {
                 String requestBody,
                 String expectedErrorCode,
                 String expectedErrorDescription,
-                String clientRegistryPublicKey) {
+                String orchStubPublicKey,
+                boolean useAuthStub)
+                throws KeySourceException {
+            if (useAuthStub) {
+                doThrow(new KeySourceException("No key found"))
+                        .when(authJwksService)
+                        .retrieveJwkFromURLWithKeyId(anyString());
+            }
             TokenAuthInvalidException exception =
                     assertThrows(
                             TokenAuthInvalidException.class,
@@ -269,7 +306,10 @@ class TokenRequestValidatorTest {
                                     validator.validatePrivateKeyJwtClientAuth(
                                             requestBody,
                                             EXPECTED_AUDIENCE,
-                                            Collections.singletonList(clientRegistryPublicKey)));
+                                            orchStubPublicKey == null
+                                                    ? List.of()
+                                                    : Collections.singletonList(orchStubPublicKey),
+                                            useAuthStub));
 
             assertEquals(expectedErrorCode, exception.getErrorObject().getCode());
             assertEquals(expectedErrorDescription, exception.getErrorObject().getDescription());
@@ -283,7 +323,8 @@ class TokenRequestValidatorTest {
                             validator.validatePrivateKeyJwtClientAuth(
                                     validRequestBodyValidSignature,
                                     EXPECTED_AUDIENCE,
-                                    Collections.singletonList(validPublicKeyAsX509String)));
+                                    Collections.singletonList(validPublicKeyAsX509String),
+                                    false));
         }
 
         @Test
@@ -294,9 +335,36 @@ class TokenRequestValidatorTest {
                             validator.validatePrivateKeyJwtClientAuth(
                                     validRequestBodyValidSignature,
                                     EXPECTED_AUDIENCE,
-                                    List.of(
-                                            validPublicKeyAsX509String,
-                                            alternateEcKeyAsX509String)));
+                                    List.of(validPublicKeyAsX509String, alternateEcKeyAsX509String),
+                                    false));
+        }
+
+        @Test
+        void
+                shouldNotThrowAnyExceptionsIfValidPublicKeyIsUsedToSignValidClientAssertionAsPartOfValidRequestBodyWhenUsingJwks() {
+            assertDoesNotThrow(
+                    () ->
+                            validator.validatePrivateKeyJwtClientAuth(
+                                    validRequestBodyValidSignature,
+                                    EXPECTED_AUDIENCE,
+                                    List.of(alternateEcKeyAsX509String),
+                                    true));
+        }
+
+        @Test
+        void
+                shouldNotThrowAnyExceptionsIfValidSignatureUsedWhenNoKeyFoundOnJwksEndpointButStubKeyPresent()
+                        throws Exception {
+            doThrow(new KeySourceException("No key found"))
+                    .when(authJwksService)
+                    .retrieveJwkFromURLWithKeyId(anyString());
+            assertDoesNotThrow(
+                    () ->
+                            validator.validatePrivateKeyJwtClientAuth(
+                                    validRequestBodyValidSignature,
+                                    EXPECTED_AUDIENCE,
+                                    List.of(alternateEcKeyAsX509String),
+                                    true));
         }
     }
 

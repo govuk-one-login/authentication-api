@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 import uk.gov.di.authentication.shared.services.SystemService;
 
 import java.net.URI;
@@ -85,7 +86,10 @@ public class TokenHandler
                 configurationService.getAuthenticationAuthCallbackURI().toString();
         String orchestratorClientId = configurationService.getOrchestrationClientId();
         this.tokenRequestValidator =
-                new TokenRequestValidator(orchestratorCallbackRedirectUri, orchestratorClientId);
+                new TokenRequestValidator(
+                        orchestratorCallbackRedirectUri,
+                        orchestratorClientId,
+                        RemoteJwksService.fromUrl(configurationService.getAuthJwksUrl()));
         this.auditService = new AuditService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
     }
@@ -133,10 +137,14 @@ public class TokenHandler
                     Set.of(
                             new Audience(authExternalApiTokenEndpoint),
                             new Audience(orchAuthExternalApiTokenEndpoint));
-            var validPublicKeys =
+            var validKeys =
                     configurationService.getOrchestrationToAuthenticationSigningPublicKeys();
+
             tokenRequestValidator.validatePrivateKeyJwtClientAuth(
-                    input.getBody(), expectedAudience, validPublicKeys);
+                    input.getBody(),
+                    expectedAudience,
+                    validKeys,
+                    configurationService.isUseAuthJwksEnabled());
 
             String suppliedAuthCode = requestBody.get("code");
 

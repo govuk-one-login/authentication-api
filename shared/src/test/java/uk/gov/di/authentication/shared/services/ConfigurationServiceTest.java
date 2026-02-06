@@ -293,36 +293,21 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getOrchestrationToAuthenticationSigningPublicKeysShouldReturnSingleValue() {
-        var expectedKey = "expectedKey";
-        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY")).thenReturn(expectedKey);
+    void shouldGetStubKeyOnlyWhenUseAuthJwksIsEnabled() {
+        when(systemService.getOrDefault("USE_AUTH_JWKS", "false")).thenReturn("true");
+        var hardcodedKey = "expectedKey";
+        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY"))
+                .thenReturn(hardcodedKey);
+        var stubKey = "expectedKey2";
         when(systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", ""))
-                .thenReturn("");
+                .thenReturn(stubKey);
 
         ConfigurationService configurationServiceWithMockedSystemService =
                 new ConfigurationService();
         configurationServiceWithMockedSystemService.setSystemService(systemService);
 
         assertEquals(
-                Collections.singletonList(expectedKey),
-                configurationServiceWithMockedSystemService
-                        .getOrchestrationToAuthenticationSigningPublicKeys());
-    }
-
-    @Test
-    void getOrchestrationToAuthenticationSigningPublicKeysShouldReturnTwoValues() {
-        var expectedKey = "expectedKey";
-        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY")).thenReturn(expectedKey);
-        var secondExpectedKey = "expectedKey2";
-        when(systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", ""))
-                .thenReturn(secondExpectedKey);
-
-        ConfigurationService configurationServiceWithMockedSystemService =
-                new ConfigurationService();
-        configurationServiceWithMockedSystemService.setSystemService(systemService);
-
-        assertEquals(
-                List.of(secondExpectedKey, expectedKey),
+                List.of(stubKey),
                 configurationServiceWithMockedSystemService
                         .getOrchestrationToAuthenticationSigningPublicKeys());
     }
