@@ -294,7 +294,10 @@ class DocAppAuthorisationServiceTest {
         when(configurationService.isUseNewDocAppSigningKey()).thenReturn(useNewSigningKey);
         when(configurationService.getDocAppTokenSigningKeyAlias()).thenReturn(KEY_ALIAS);
         when(configurationService.getNextDocAppTokenSigningKeyAlias()).thenReturn(NEXT_KEY_ALIAS);
-        setupSigning(useNewSigningKey ? NEXT_KEY_ALIAS : KEY_ALIAS);
+
+        String keyAlias = useNewSigningKey ? NEXT_KEY_ALIAS : KEY_ALIAS;
+        String keyId = useNewSigningKey ? "new-key-id-123" : "old-key-id-456";
+        setupSigning(keyAlias, keyId);
 
         var state = new State();
         var pairwise = new Subject("pairwise-identifier");
@@ -306,18 +309,9 @@ class DocAppAuthorisationServiceTest {
                         state, pairwise.getValue(), clientRegistry, "client-session-id");
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
-        if (useNewSigningKey) {
-            assertThat(
-                    signedJWTResponse.getHeader().getKeyID(),
-                    equalTo(hashSha256String(NEXT_KEY_ALIAS)));
-            verify(kmsConnectionService)
-                    .sign(argThat(signRequest -> NEXT_KEY_ALIAS.equals(signRequest.keyId())));
-        } else {
-            assertThat(
-                    signedJWTResponse.getHeader().getKeyID(), equalTo(hashSha256String(KEY_ALIAS)));
-            verify(kmsConnectionService)
-                    .sign(argThat(signRequest -> KEY_ALIAS.equals(signRequest.keyId())));
-        }
+        assertThat(signedJWTResponse.getHeader().getKeyID(), equalTo(hashSha256String(keyId)));
+        verify(kmsConnectionService)
+                .sign(argThat(signRequest -> keyAlias.equals(signRequest.keyId())));
     }
 
     @Nested
@@ -375,14 +369,14 @@ class DocAppAuthorisationServiceTest {
     }
 
     private void setupSigning() throws JOSEException {
-        setupSigning("789789789789789");
+        setupSigning(KEY_ALIAS, "789789789789789");
     }
 
-    private void setupSigning(String keyAlias) throws JOSEException {
+    private void setupSigning(String keyAlias, String keyId) throws JOSEException {
         when(configurationService.getDocAppTokenSigningKeyAlias()).thenReturn(keyAlias);
         when(kmsConnectionService.getPublicKey(
                         GetPublicKeyRequest.builder().keyId(keyAlias).build()))
-                .thenReturn(GetPublicKeyResponse.builder().keyId(keyAlias).build());
+                .thenReturn(GetPublicKeyResponse.builder().keyId(keyId).build());
 
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
@@ -400,7 +394,7 @@ class DocAppAuthorisationServiceTest {
                 SignResponse.builder()
                         .signature(SdkBytes.fromByteArray(signatureToDER))
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .keyId(KEY_ALIAS)
+                        .keyId(KEY_ID)
                         .build();
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
     }
