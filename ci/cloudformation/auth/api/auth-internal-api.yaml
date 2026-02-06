@@ -61,6 +61,15 @@ Resources:
         Type: PRIVATE
         VpcEndpointIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+          - !If
+            - AddEvcsApiVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                EvcsApiVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
       CacheClusterEnabled: false
       MethodSettings:
         - CachingEnabled: false
