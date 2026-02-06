@@ -2716,6 +2716,7 @@ Resources:
           - Effect: Allow
             Action: sts:AssumeRole
             Principal:
+              # Build account hardcoded as ECS task running in build account assumes codepipeline-readonly role
               AWS: !Sub "arn:aws:iam::058264536367:role/${Environment}-deploy-pipeline-visualiser-ecs-task"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AWSCodePipeline_ReadOnlyAccess

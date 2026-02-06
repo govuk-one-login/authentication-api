@@ -158,7 +158,7 @@ resource "aws_iam_role_policy_attachment" "cross_account_attach" {
 # New IAM role for cross account access to pipeline-visualiser ECS task
 resource "aws_iam_role" "codepipeline_readonly" {
   name        = "codepipeline-readonly"
-  description = "A role to be assumed by for ECS task role to read code pipeline status"
+  description = "A role to be assumed by ECS task role to read CodePipeline status"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -166,7 +166,7 @@ resource "aws_iam_role" "codepipeline_readonly" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          # new Build account hardcode as ECS task running in build assume codepipeline-readonly role
+          # Build account hardcoded as ECS task running in build account assumes codepipeline-readonly role
           AWS = "arn:aws:iam::058264536367:role/${var.environment}-deploy-pipeline-visualiser-ecs-task"
         }
       },
