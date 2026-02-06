@@ -67,6 +67,16 @@ Conditions:
             ]
           - ""
 
+  AddEvcsApiVpcEndpointId:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              EvcsApiVpcEndpointId,
+            ]
+          - ""
+
   EnableProvisionedConcurrency:
     Fn::And:
       - !Condition NotSubEnvironment
@@ -369,6 +379,7 @@ Mappings:
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
+      EvcsApiVpcEndpointId: vpce-078a9d6aa4e30ef6d
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
@@ -422,6 +433,7 @@ Mappings:
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
+      EvcsApiVpcEndpointId: vpce-0db9a336254d281b6
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
@@ -475,6 +487,7 @@ Mappings:
       lambdaMinConcurrency: 3
       lockoutCountTtl: 900
       lockoutDuration: 7200
+      EvcsApiVpcEndpointId: vpce-0cf3501e9b45089f0
       orchApiVpcEndpointId: vpce-0704b783d794cea52
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0KGEYIJxophMmqbI/eaJnAJYewaxN+vg+fXthdHMTKrQWPTFu8tUwCbo7f8CS90UsIeSHSDdaSPvXvIoa+j8eA==
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
@@ -528,6 +541,7 @@ Mappings:
       lambdaMinConcurrency: 3
       lockoutCountTtl: 900
       lockoutDuration: 7200
+      EvcsApiVpcEndpointId: vpce-02321f5ecdd491213
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIh7xuVSWAZ8aW3ak20Ile5B9DfbP/87qEnLLTBZ/8lYCoKVdjMkS/IroHkPcS0laDQa/w0TAPDIqGtsHLI1Rw==
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
