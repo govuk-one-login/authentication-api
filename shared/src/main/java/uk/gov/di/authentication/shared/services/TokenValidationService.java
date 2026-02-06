@@ -14,18 +14,22 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
-import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.List;
 
 public class TokenValidationService {
 
     private final JwksService jwksService;
+    private final RemoteJwksService accessTokenJwksService;
     private final ConfigurationService configuration;
     private static final Logger LOG = LogManager.getLogger(TokenValidationService.class);
 
-    public TokenValidationService(JwksService jwksService, ConfigurationService configuration) {
+    public TokenValidationService(
+            JwksService jwksService,
+            RemoteJwksService accessTokenJwksService,
+            ConfigurationService configuration) {
         this.jwksService = jwksService;
+        this.accessTokenJwksService = accessTokenJwksService;
         this.configuration = configuration;
     }
 
@@ -67,9 +71,8 @@ public class TokenValidationService {
                     && configuration.isRsaSigningAvailable()) {
                 return jwt.verify(
                         new RSASSAVerifier(
-                                jwksService
-                                        .getPublicTokenRsaJwkWithOpaqueId(
-                                                jwt.getHeader().getKeyID())
+                                accessTokenJwksService
+                                        .retrieveJwkFromURLWithKeyId(jwt.getHeader().getKeyID())
                                         .toRSAKey()));
             } else {
                 if (configuration.isTestSigningKeyEnabled()) {
@@ -82,15 +85,13 @@ public class TokenValidationService {
                 }
                 return jwt.verify(
                         new ECDSAVerifier(
-                                jwksService
-                                        .getPublicTokenJwkWithOpaqueId(jwt.getHeader().getKeyID())
+                                accessTokenJwksService
+                                        .retrieveJwkFromURLWithKeyId(jwt.getHeader().getKeyID())
                                         .toECKey()));
             }
         } catch (JOSEException | java.text.ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
         }
     }
 
