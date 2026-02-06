@@ -15,6 +15,13 @@ paths:
         schema:
           type: string
     get:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysRetrieveFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
       tags:
         - Passkey
       summary: Retrieve all passkeys for a user
@@ -43,6 +50,13 @@ paths:
                     enum:
                       - "User not found"
     post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysCreateFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
       tags:
         - Passkey
       summary: Create a passkey for a user
@@ -118,6 +132,13 @@ paths:
         schema:
           type: string
     patch:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysUpdateFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
       tags:
         - Passkey
       summary: Update a passkey
@@ -154,6 +175,13 @@ paths:
                       - "User not found"
                       - "Passkey not found"
     delete:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysDeleteFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
       tags:
         - Passkey
       summary: Delete a passkey

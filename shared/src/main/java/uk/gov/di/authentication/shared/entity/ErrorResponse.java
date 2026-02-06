@@ -118,6 +118,8 @@ public enum ErrorResponse {
     INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS(
             1092, "User is indefinitely blocked from sending SMS to international numbers"),
     UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error"),
+    // Account_Data
+    UNEXPECTED_ACCOUNT_DATA_API_ERROR(1092, "Account Data API encountered an unexpected error"),
     // Passkeys
     PASSKEY_ASSERTION_INVALID_PKC(1100, "Invalid passkey PKC object"),
     PASSKEY_ASSERTION_FAILED(1101, "Passkey assertion failed"),

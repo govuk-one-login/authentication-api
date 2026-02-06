@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AccountDataApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${Env}-di-account-data-api
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlwaysDeploy: true
+      AccessLogSetting:
+        DestinationArn: !GetAtt AccountDataApiAccessLogGroup.Arn
+        Format:
+          Fn::ToJsonString:
+            requestId: $context.requestId
+            ip: $context.identity.sourceIp
+            userAgent: $context.identity.userAgent
+            requestTime: $context.requestTime
+            httpMethod: $context.httpMethod
+            resourcePath: $context.resourcePath
+            status: $context.status
+            protocol: $context.protocol
+            responseLength: $context.responseLength
+            integrationStatus: $context.integration.integrationStatus
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
+      EndpointConfiguration:
+        Type: PRIVATE
+        VpcEndpointIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: Allow
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource:
+                - "execute-api:/*"
+            - Effect: Deny
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource:
+                - "execute-api:/*"
+              Condition:
+                StringNotEquals:
+                  aws:SourceVpce:
+                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: "./ci/openAPI/AccountDataApi.yaml"
+      OpenApiVersion: 3.0.1
+      MethodSettings:
+        - CachingEnabled: false
+          DataTraceEnabled: false
+          HttpMethod: "*"
+          ResourcePath: "/*"
+          LoggingLevel: INFO
+          MetricsEnabled: true
+      TracingEnabled: true
+
+  AccountDataApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - "${Env}-account-data-api-access-logs"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountDataApiAccessLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-data/api/account-data-api.yaml
+
+  AccountDataApiExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${AccountDataApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountDataApiExecutionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-data/api/account-data-api.yaml
+
+Outputs:
+  AccountDataApiId:
+    Value: !Ref AccountDataApi
+    Export:
+      Name: !Sub "${AWS::StackName}-AccountDataApiId"
+
+  AccountDataApiRootResourceId:
+    Value: !GetAtt AccountDataApi.RootResourceId
+    Export:
+      Name: !Sub "${AWS::StackName}-AccountDataApiRootResourceId"
