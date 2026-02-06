@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.dynamodb;
 
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClientExtension;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -26,5 +27,14 @@ public class DynamoClientHelper {
             ConfigurationService configurationService) {
         var dynamoDbClient = createDynamoClient(configurationService);
         return DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDbClient).build();
+    }
+
+    public static DynamoDbEnhancedClient createDynamoEnhancedClient(
+            ConfigurationService configurationService, DynamoDbEnhancedClientExtension extension) {
+        var dynamoDbClient = createDynamoClient(configurationService);
+        return DynamoDbEnhancedClient.builder()
+                .dynamoDbClient(dynamoDbClient)
+                .extensions(extension)
+                .build();
     }
 }

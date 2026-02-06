@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.dynamodb.SelfServiceClientRegistryExtension;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -56,7 +57,11 @@ public class UpdateClientConfigHandler
     }
 
     public UpdateClientConfigHandler(ConfigurationService configurationService) {
-        this.clientService = new DynamoClientService(configurationService);
+        this.clientService =
+                new DynamoClientService(
+                        configurationService,
+                        // HACK! See commit message
+                        new SelfServiceClientRegistryExtension());
         this.validationService = new ClientConfigValidationService();
         this.auditService = new AuditService(configurationService);
     }

@@ -2,6 +2,7 @@ package uk.gov.di.authentication.api;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -25,8 +26,10 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -110,5 +113,51 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(clientResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
+    }
+
+    @Test
+    void shouldAlwaysRegisterClientWithEmptyLOCs()
+            throws Json.JsonException, NoSuchFieldException, IllegalAccessException {
+        var clientRequest =
+                new ClientRegistrationRequest(
+                        "The test client",
+                        singletonList("http://localhost:1000/redirect"),
+                        singletonList("test-client@test.com"),
+                        PublicKeySource.STATIC.getValue(),
+                        VALID_PUBLIC_CERT,
+                        null,
+                        singletonList("openid"),
+                        List.of(
+                                "http://localhost/post-redirect-logout",
+                                "http://localhost/post-redirect-logout-v2"),
+                        "http://back-channel.com",
+                        OPTIONAL.toString(),
+                        "https://test.com",
+                        "public",
+                        false,
+                        emptyList(),
+                        ClientType.WEB.getValue(),
+                        JWSAlgorithm.ES256.getName(),
+                        List.of(NONE.getValue()),
+                        Channel.WEB.getValue(),
+                        false,
+                        false,
+                        "http://landing-page.com");
+
+        var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
+        var clientResponse =
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+
+        Optional<ClientRegistry> client = clientStore.getClient(clientResponse.getClientId());
+        assertThat(response, hasStatus(200));
+        assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+        assertTrue(client.isPresent());
+
+        var clientLocField = client.get().getClass().getDeclaredField("clientLoCs");
+
+        // We need to set the clientLoCs field accessible at runtime to be able to inspect it
+        clientLocField.setAccessible(true);
+
+        assertEquals(emptyList(), clientLocField.get(client.get()));
     }
 }

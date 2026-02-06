@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClientExtension;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -21,6 +22,19 @@ public class DynamoClientService implements ClientService {
 
     private static final String CLIENT_REGISTRY_TABLE = "client-registry";
     private final DynamoDbTable<ClientRegistry> dynamoClientRegistryTable;
+
+    public DynamoClientService(
+            ConfigurationService configurationService, DynamoDbEnhancedClientExtension extension) {
+        var tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+
+        // This is for processing identity handler
+        if (configurationService.getOrchDynamoArnPrefix().isPresent()) {
+            tableName = configurationService.getOrchDynamoArnPrefix().get() + CLIENT_REGISTRY_TABLE;
+        }
+        var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService, extension);
+        this.dynamoClientRegistryTable =
+                dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
+    }
 
     public DynamoClientService(ConfigurationService configurationService) {
         var tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
