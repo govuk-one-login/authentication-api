@@ -2,7 +2,7 @@
   "name": "scripts",
   "version": "0.0.1",
   "dependencies": {
-    "@aws-sdk/client-kms": "3.721.0",
+    "@aws-sdk/client-kms": "3.981.0",
     "asn1.js": "5.4.1",
     "uuid": "11.0.4"
   },
