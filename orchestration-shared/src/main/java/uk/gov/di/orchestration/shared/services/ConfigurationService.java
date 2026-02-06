@@ -53,6 +53,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().containsKey(envVar) && Boolean.parseBoolean(System.getenv(envVar));
     }
 
+    private boolean getFlagOrTrue(String envVar) {
+        return !System.getenv().containsKey(envVar) || Boolean.parseBoolean(System.getenv(envVar));
+    }
+
     private URI getURIOrDefault(String envVar, String defaultUri) {
         return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
     }
@@ -398,6 +402,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isNewSpotRequestQueueWritingEnabled() {
         return getFlagOrFalse("NEW_SPOT_REQUEST_QUEUE_WRITING");
+    }
+
+    public boolean isOldSpotRequestQueueWritingEnabled() {
+        return getFlagOrTrue("OLD_SPOT_REQUEST_QUEUE_WRITING");
     }
 
     public String getStorageTokenSigningKeyAlias() {
