@@ -145,6 +145,11 @@ Conditions:
       !Condition ProvisionNewDocAppSigningKey,
       !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
     ]
+  UseNewDocAppSigningKey:
+    !And [
+      !Condition ProvisionNewDocAppSigningKey,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3391,7 +3396,6 @@ Resources:
             - PublishNextDocAppSigningKey
             - !Ref OrchDocAppSigningKmsKeyAlias
             - !Ref AWS::NoValue
-
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
@@ -3837,6 +3841,14 @@ Resources:
               !Ref Environment,
               docAppSigningKeyArn,
             ]
+          NEXT_DOC_APP_SIGNING_KEY_ALIAS: !If
+            - PublishNextDocAppSigningKey
+            - !Ref OrchDocAppSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          USE_NEXT_DOC_APP_SIGNING_KEY: !If
+            - UseNewDocAppSigningKey
+            - true
+            - false
           DOMAIN_NAME:
             !FindInMap [
               EnvironmentConfiguration,

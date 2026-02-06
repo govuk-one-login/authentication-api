@@ -176,6 +176,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("PUBLISH_NEXT_DOC_APP_SIGNING_KEY");
     }
 
+    public boolean isUseNewDocAppSigningKey() {
+        return getFlagOrFalse("USE_NEW_DOC_APP_SIGNING_KEY");
+    }
+
     public String getDocAppCriV2DataEndpoint() {
         return System.getenv("DOC_APP_CRI_DATA_V2_ENDPOINT");
     }
