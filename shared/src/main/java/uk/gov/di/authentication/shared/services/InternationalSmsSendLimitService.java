@@ -43,14 +43,14 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
         return !hasReachedSendLimit(sentCount);
     }
 
-    public void recordSmsSent(String phoneNumber) {
+    public void recordSmsSent(String phoneNumber, String reference) {
         String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
 
         if (PhoneNumberHelper.isDomesticPhoneNumber(formattedPhoneNumber)) {
             return;
         }
 
-        incrementSentCount(formattedPhoneNumber);
+        incrementSentCount(formattedPhoneNumber, reference);
     }
 
     private boolean hasReachedSendLimit(int sentCount) {
@@ -69,7 +69,7 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
         return hasReached;
     }
 
-    private void incrementSentCount(String formattedPhoneNumber) {
+    private void incrementSentCount(String formattedPhoneNumber, String reference) {
         Optional<InternationalSmsSendCount> existingRecord = get(formattedPhoneNumber);
 
         int newSentCount;
@@ -85,7 +85,10 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
                             .withSentCount(newSentCount));
         }
 
-        LOG.info("International SMS sent count incremented to {} for phone number.", newSentCount);
+        LOG.info(
+                "International SMS sent count incremented to {} for phone number. Reference: {}",
+                newSentCount,
+                reference);
     }
 
     private int getSentCount(String formattedPhoneNumber) {

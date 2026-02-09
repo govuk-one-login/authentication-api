@@ -34,6 +34,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
     private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
     private static final int INTERNATIONAL_SMS_SEND_LIMIT = 3;
+    private static final String TEST_REFERENCE = "test-reference";
     private String SESSION_ID;
 
     @RegisterExtension
@@ -138,7 +139,8 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
 
         for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
-            internationalSmsSendCountStore.recordSmsSent(INTERNATIONAL_PHONE_NUMBER);
+            internationalSmsSendCountStore.recordSmsSent(
+                    INTERNATIONAL_PHONE_NUMBER, TEST_REFERENCE);
         }
 
         var requestBody =

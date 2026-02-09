@@ -39,6 +39,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
     private static final String USER_PASSWORD = "Password123!";
     private static final int INTERNATIONAL_SMS_SEND_LIMIT = 3;
+    private static final String TEST_REFERENCE = "test-reference";
     private String SESSION_ID;
 
     @RegisterExtension
@@ -380,7 +381,8 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.addVerifiedPhoneNumber(USER_EMAIL, INTERNATIONAL_PHONE_NUMBER);
 
             for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
-                internationalSmsSendCountStore.recordSmsSent(INTERNATIONAL_PHONE_NUMBER);
+                internationalSmsSendCountStore.recordSmsSent(
+                        INTERNATIONAL_PHONE_NUMBER, TEST_REFERENCE);
             }
 
             var response =
