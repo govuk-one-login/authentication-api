@@ -1,0 +1,97 @@
+Resources:
+  BulkUserEmailAudienceLoaderLambda:
+    Type: AWS::Serverless::Function
+    Condition: BulkEmailSendingEnabled
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderHandler::handleRequest
+      Role: !GetAtt BulkUserEmailAudienceLoaderLambdaRole.Arn
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref BulkUserEmailAudienceLoaderLogGroup
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailMaxAudienceLoadUserCount
+          BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailMaxAudienceLoadUserBatchSize
+          BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailIncludedTermsAndConditions
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap
+              - EnvironmentConfiguration
+              - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              - bulkEmailAudienceLoaderScheduleExpression
+            Description: Triggers bulk user email audience loader Lambda on schedule
+            Enabled: !If
+              - BulkEmailSendingEnabled
+              - true
+              - false
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-bulk-user-email-audience-loader-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkUserEmailAudienceLoaderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: BulkEmailSendingEnabled
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-bulk-user-email-audience-loader-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  BulkUserEmailAudienceLoaderLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: BulkEmailSendingEnabledAndSplunkEnabled
+    Properties:
+      LogGroupName: !Ref BulkUserEmailAudienceLoaderLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  BulkUserEmailAudienceLoaderErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: BulkEmailSendingEnabledAndUseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when bulk user email audience loader Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BulkUserEmailAudienceLoaderLambda
+      TreatMissingData: notBreaching

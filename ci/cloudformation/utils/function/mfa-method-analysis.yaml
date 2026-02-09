@@ -1,0 +1,72 @@
+Resources:
+  MfaMethodAnalysisLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.MfaMethodAnalysisHandler::handleRequest
+      Role: !GetAtt MfaMethodAnalysisLambdaRole.Arn
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref MfaMethodAnalysisLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-AWSServicesEndpointSecurityGroupId"
+        SubnetIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-mfa-method-analysis-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  MfaMethodAnalysisLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-mfa-method-analysis-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  MfaMethodAnalysisLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref MfaMethodAnalysisLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  MfaMethodAnalysisErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when MFA method analysis Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref MfaMethodAnalysisLambda
+      TreatMissingData: notBreaching

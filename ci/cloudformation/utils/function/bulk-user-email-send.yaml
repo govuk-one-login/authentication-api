@@ -1,0 +1,113 @@
+Resources:
+  BulkUserEmailSendLambda:
+    Type: AWS::Serverless::Function
+    Condition: BulkEmailSendingEnabled
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.BulkUserEmailSendHandler::handleRequest
+      Role: !GetAtt BulkUserEmailSendLambdaRole.Arn
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref BulkUserEmailSendLogGroup
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          NOTIFY_URL: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - notifyUrl
+          NOTIFY_TEMPLATE_MAP: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - notifyTemplateMap
+          BULK_USER_EMAIL_BATCH_QUERY_LIMIT: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailBatchQueryLimit
+          BULK_USER_EMAIL_MAX_BATCH_COUNT: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailMaxBatchCount
+          BULK_USER_EMAIL_BATCH_PAUSE_DURATION: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailBatchPauseDuration
+          BULK_USER_EMAIL_SEND_MODE: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailSendMode
+          BULK_USER_EMAIL_EMAIL_SENDING_ENABLED: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailSendingEnabled
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap
+              - EnvironmentConfiguration
+              - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              - bulkEmailSendScheduleExpression
+            Description: Triggers bulk user email send Lambda on schedule
+            Enabled: !If
+              - BulkEmailSendingEnabled
+              - true
+              - false
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-bulk-user-email-send-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkUserEmailSendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: BulkEmailSendingEnabled
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-bulk-user-email-send-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  BulkUserEmailSendLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: BulkEmailSendingEnabledAndSplunkEnabled
+    Properties:
+      LogGroupName: !Ref BulkUserEmailSendLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  BulkUserEmailSendErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: BulkEmailSendingEnabledAndUseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when bulk user email send Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BulkUserEmailSendLambda
+      TreatMissingData: notBreaching
