@@ -1,4 +1,4 @@
-name: "SP - Build and deploy API Account Data"
+name: "Build and deploy API Account Data"
 
 on:
   push:
