@@ -224,6 +224,7 @@ Mappings:
       amcAudience: https://api.manage.authdev1.dev.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev1.dev.account.gov.uk/amc-callback
+      EvcsApiVpcEndpointId: ""
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -262,6 +263,7 @@ Mappings:
       amcAudience: https://api.manage.authdev2.dev.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev2.dev.account.gov.uk/amc-callback
+      EvcsApiVpcEndpointId: ""
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ce9680d3-953a-4b6a-9098-a0380d0afc70
@@ -304,6 +306,7 @@ Mappings:
       amcAudience: https://api.manage.authdev3.dev.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev3.dev.account.gov.uk/amc-callback
+      EvcsApiVpcEndpointId: ""
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -331,6 +334,7 @@ Mappings:
       EnforceLambdaDeploymentOrder: "Yes"
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
+      EvcsApiVpcEndpointId: ""
       orchApiVpcEndpointId: vpce-0028f62dad635589a
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
