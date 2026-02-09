@@ -1,0 +1,19 @@
+# S3 Buckets for Utils Stack
+#
+# NOTE: S3 bucket creation is currently DISABLED to use existing Terraform-managed buckets
+# The buckets already exist from Terraform and will be imported/migrated later:
+#   - ${Environment}-bulk-test-user-bucket (from Terraform)
+#   - ${Environment}-common-passwords-bucket (from Terraform)
+#   - ${Environment}-utils-lambda-source-* (from Terraform, with random suffix)
+#
+# Lambda functions will reference these existing buckets by constructing the ARNs
+# When ready to migrate, uncomment the resources below and use CloudFormation import
+
+Resources:
+  # Placeholder resource to keep the template valid
+  # CloudFormation requires at least one resource in a template
+  DummyWaitConditionHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+# Outputs removed - buckets are managed by Terraform
+# Lambda functions will reference buckets using constructed ARNs based on naming convention

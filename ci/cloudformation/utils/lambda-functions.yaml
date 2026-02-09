@@ -1,0 +1,939 @@
+# Lambda Functions for Utils Stack
+# This file defines all 8 utility Lambda functions
+# Each function inherits common configuration from Globals in parent.yaml:
+# - Runtime: java17
+# - MemorySize: 4096
+# - Timeout: 900
+# - CodeSigningConfigArn (when enabled)
+# - PermissionsBoundary (when provided)
+# - ENVIRONMENT variable
+
+Resources:
+  # ============================================================================
+  # 1. Account Metrics Lambda
+  # ============================================================================
+  # Purpose: Publishes account metrics to CloudWatch on an hourly schedule
+  # VPC: Required (uses authentication VPC)
+  # Schedule: rate(1 hour)
+  # Permissions: DynamoDB (DescribeTable on user-profile), KMS (user-profile encryption key)
+
+  AccountMetricsLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-account-metrics-publish-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.AccountMetricPublishHandler::handleRequest
+      Role: !GetAtt AccountMetricsLambdaRole.Arn
+      AutoPublishAlias: live
+      # Runtime, MemorySize, Timeout, CodeSigningConfigArn, PermissionsBoundary inherited from Globals
+      LoggingConfig:
+        LogGroup: !Ref AccountMetricsLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-AWSServicesEndpointSecurityGroupId"
+        SubnetIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
+      # ENVIRONMENT variable inherited from Globals
+      Events:
+        HourlySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 hour)
+            Description: Triggers account metrics Lambda hourly
+            Enabled: true
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-account-metrics-publish-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # CloudWatch Log Group for Account Metrics Lambda
+  AccountMetricsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-account-metrics-publish-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  # Splunk Subscription Filter for Account Metrics Lambda (conditional)
+  AccountMetricsLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref AccountMetricsLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  # CloudWatch Alarm for Account Metrics Lambda Errors
+  AccountMetricsErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-account-metrics-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when account metrics Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref AccountMetricsLambda
+      TreatMissingData: notBreaching
+
+  # ============================================================================
+  # 2. Bulk Test User Create Lambda (Conditional)
+  # ============================================================================
+  # Purpose: Creates bulk test users from CSV files uploaded to S3
+  # VPC: Not required
+  # Trigger: S3 ObjectCreated events on bulk-test-user bucket
+  # Permissions: DynamoDB (PutItem, UpdateItem on user-profile and user-credentials),
+  #              S3 (GetObject, ListBucket on bulk-test-user bucket),
+  #              KMS (Decrypt, Encrypt on relevant encryption keys)
+  # Conditional: Only created when AllowBulkTestUsers condition is true (non-production environments)
+
+  BulkTestUserCreateLambda:
+    Type: AWS::Serverless::Function
+    Condition: AllowBulkTestUsers
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.BulkTestUserCreateHandler::handleRequest
+      Role: !GetAtt BulkTestUserCreateLambdaRole.Arn
+      AutoPublishAlias: live
+      # Runtime, MemorySize, Timeout, CodeSigningConfigArn, PermissionsBoundary inherited from Globals
+      LoggingConfig:
+        LogGroup: !Ref BulkTestUserCreateLogGroup
+      # ENVIRONMENT variable inherited from Globals
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-bulk-test-user-create-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # CloudWatch Log Group for Bulk Test User Create Lambda
+  BulkTestUserCreateLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: AllowBulkTestUsers
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-bulk-test-user-create-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  # Splunk Subscription Filter for Bulk Test User Create Lambda (conditional)
+  BulkTestUserCreateLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: AllowBulkTestUsers
+    Properties:
+      LogGroupName: !Ref BulkTestUserCreateLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  # CloudWatch Alarm for Bulk Test User Create Lambda Errors
+  BulkTestUserCreateErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: AllowBulkTestUsers
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when bulk test user create Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BulkTestUserCreateLambda
+      TreatMissingData: notBreaching
+
+  # ============================================================================
+  # 3. Bulk Test User Delete Lambda (Conditional)
+  # ============================================================================
+  # Purpose: Deletes bulk test users
+  # VPC: Not required
+  # Trigger: Manual invocation
+  # Permissions: DynamoDB (DeleteItem on user-profile and user-credentials),
+  #              KMS (Decrypt on relevant encryption keys)
+  # Conditional: Only created when AllowBulkTestUsers condition is true (non-production environments)
+
+  BulkTestUserDeleteLambda:
+    Type: AWS::Serverless::Function
+    Condition: AllowBulkTestUsers
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-bulk-test-user-delete-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.BulkTestUserDeleteHandler::handleRequest
+      Role: !GetAtt BulkTestUserDeleteLambdaRole.Arn
+      AutoPublishAlias: live
+      # Runtime, MemorySize, Timeout, CodeSigningConfigArn, PermissionsBoundary inherited from Globals
+      LoggingConfig:
+        LogGroup: !Ref BulkTestUserDeleteLogGroup
+      # ENVIRONMENT variable inherited from Globals
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-bulk-test-user-delete-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # CloudWatch Log Group for Bulk Test User Delete Lambda
+  BulkTestUserDeleteLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: AllowBulkTestUsers
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-bulk-test-user-delete-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  # Splunk Subscription Filter for Bulk Test User Delete Lambda (conditional)
+  BulkTestUserDeleteLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: AllowBulkTestUsers
+    Properties:
+      LogGroupName: !Ref BulkTestUserDeleteLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  # CloudWatch Alarm for Bulk Test User Delete Lambda Errors
+  BulkTestUserDeleteErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: AllowBulkTestUsers
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-bulk-test-user-delete-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when bulk test user delete Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BulkTestUserDeleteLambda
+      TreatMissingData: notBreaching
+
+  # ============================================================================
+  # 4. Bulk User Email Audience Loader Lambda
+  # ============================================================================
+  # Purpose: Loads email audiences for bulk email campaigns
+  # VPC: Not required
+  # Schedule: Configurable cron expression (conditional on BulkEmailSendingEnabled)
+  # Permissions: DynamoDB (Query, Scan, PutItem, UpdateItem on user-profile and bulk-email tables),
+  #              KMS (Decrypt, Encrypt on relevant encryption keys)
+
+  BulkUserEmailAudienceLoaderLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderHandler::handleRequest
+      Role: !GetAtt BulkUserEmailAudienceLoaderLambdaRole.Arn
+      AutoPublishAlias: live
+      # Runtime, MemorySize, Timeout, CodeSigningConfigArn, PermissionsBoundary inherited from Globals
+      LoggingConfig:
+        LogGroup: !Ref BulkUserEmailAudienceLoaderLogGroup
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailMaxAudienceLoadUserCount
+          BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailMaxAudienceLoadUserBatchSize
+          BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailIncludedTermsAndConditions
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap
+              - EnvironmentConfiguration
+              - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              - bulkEmailAudienceLoaderScheduleExpression
+            Description: Triggers bulk user email audience loader Lambda on schedule
+            Enabled: !If
+              - BulkEmailSendingEnabled
+              - true
+              - false
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-bulk-user-email-audience-loader-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # CloudWatch Log Group for Bulk User Email Audience Loader Lambda
+  BulkUserEmailAudienceLoaderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-bulk-user-email-audience-loader-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  # Splunk Subscription Filter for Bulk User Email Audience Loader Lambda (conditional)
+  BulkUserEmailAudienceLoaderLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref BulkUserEmailAudienceLoaderLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  # CloudWatch Alarm for Bulk User Email Audience Loader Lambda Errors
+  BulkUserEmailAudienceLoaderErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when bulk user email audience loader Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BulkUserEmailAudienceLoaderLambda
+      TreatMissingData: notBreaching
+
+  # ============================================================================
+  # 5. Bulk User Email Send Lambda
+  # ============================================================================
+  # Purpose: Sends bulk emails to loaded audiences via GOV.UK Notify
+  # VPC: Not required
+  # Schedule: Configurable cron expression (conditional on BulkEmailSendingEnabled)
+  # Permissions: DynamoDB (Query, Scan, UpdateItem on bulk-email tables),
+  #              KMS (Decrypt on relevant encryption keys),
+  #              Secrets Manager (GetSecretValue for Notify API key)
+
+  BulkUserEmailSendLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.BulkUserEmailSendHandler::handleRequest
+      Role: !GetAtt BulkUserEmailSendLambdaRole.Arn
+      AutoPublishAlias: live
+      # Runtime, MemorySize, Timeout, CodeSigningConfigArn, PermissionsBoundary inherited from Globals
+      LoggingConfig:
+        LogGroup: !Ref BulkUserEmailSendLogGroup
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          NOTIFY_URL: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - notifyUrl
+          NOTIFY_TEMPLATE_MAP: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - notifyTemplateMap
+          BULK_USER_EMAIL_BATCH_QUERY_LIMIT: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailBatchQueryLimit
+          BULK_USER_EMAIL_MAX_BATCH_COUNT: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailMaxBatchCount
+          BULK_USER_EMAIL_BATCH_PAUSE_DURATION: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailBatchPauseDuration
+          BULK_USER_EMAIL_SEND_MODE: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailSendMode
+          BULK_USER_EMAIL_EMAIL_SENDING_ENABLED: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailSendingEnabled
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: !FindInMap
+              - EnvironmentConfiguration
+              - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              - bulkEmailSendScheduleExpression
+            Description: Triggers bulk user email send Lambda on schedule
+            Enabled: !If
+              - BulkEmailSendingEnabled
+              - true
+              - false
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-bulk-user-email-send-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # CloudWatch Log Group for Bulk User Email Send Lambda
+  BulkUserEmailSendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-bulk-user-email-send-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  # Splunk Subscription Filter for Bulk User Email Send Lambda (conditional)
+  BulkUserEmailSendLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref BulkUserEmailSendLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  # CloudWatch Alarm for Bulk User Email Send Lambda Errors
+  BulkUserEmailSendErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when bulk user email send Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BulkUserEmailSendLambda
+      TreatMissingData: notBreaching
+
+  # ============================================================================
+  # 6. Common Passwords Update Lambda
+  # ============================================================================
+  # Purpose: Updates the common passwords DynamoDB table from S3 uploads
+  # VPC: Required (uses authentication VPC)
+  # Trigger: S3 ObjectCreated events on common-passwords bucket (configured in task 4.2)
+  # Permissions: DynamoDB (PutItem, BatchWriteItem, Scan on common-passwords table),
+  #              S3 (GetObject, ListBucket on common-passwords bucket),
+  #              KMS (Decrypt, Encrypt on relevant encryption keys)
+
+  CommonPasswordsUpdateLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-common-passwords-update-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.S3ToDynamoDbHandler::handleRequest
+      Role: !GetAtt CommonPasswordsUpdateLambdaRole.Arn
+      AutoPublishAlias: live
+      # Runtime, MemorySize, Timeout, CodeSigningConfigArn, PermissionsBoundary inherited from Globals
+      LoggingConfig:
+        LogGroup: !Ref CommonPasswordsUpdateLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-AWSServicesEndpointSecurityGroupId"
+        SubnetIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
+      # ENVIRONMENT variable inherited from Globals
+      # S3 trigger will be configured in task 4.2 when CommonPasswordsBucket is created
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-common-passwords-update-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # CloudWatch Log Group for Common Passwords Update Lambda
+  CommonPasswordsUpdateLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-common-passwords-update-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  # Splunk Subscription Filter for Common Passwords Update Lambda (conditional)
+  CommonPasswordsUpdateLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref CommonPasswordsUpdateLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  # CloudWatch Alarm for Common Passwords Update Lambda Errors
+  CommonPasswordsUpdateErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-common-passwords-update-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when common passwords update Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref CommonPasswordsUpdateLambda
+      TreatMissingData: notBreaching
+
+  # ============================================================================
+  # 7. Email Check Results Writer Lambda
+  # ============================================================================
+  # Purpose: Writes email validation results from SQS to DynamoDB
+  # VPC: Not required
+  # Trigger: SQS messages from email-check-results queue (configured via EventSourceMapping)
+  # Permissions: DynamoDB (PutItem on email-check-results table),
+  #              SQS (ReceiveMessage, DeleteMessage, GetQueueAttributes, ChangeMessageVisibility),
+  #              KMS (Decrypt on SQS and DynamoDB encryption keys)
+  # Provisioned Concurrency: Enabled in production environments
+
+  EmailCheckResultsWriterLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.EmailCheckResultsWriterHandler::handleRequest
+      Role: !GetAtt EmailCheckResultsWriterLambdaRole.Arn
+      # Runtime, MemorySize, Timeout, CodeSigningConfigArn, PermissionsBoundary inherited from Globals
+      LoggingConfig:
+        LogGroup: !Ref EmailCheckResultsWriterLogGroup
+      # ENVIRONMENT variable inherited from Globals
+      # Note: SQS event source mapping is created as a separate resource below for more control
+      AutoPublishAlias: live
+      ProvisionedConcurrencyConfig: !If
+        - EnableEmailCheckResultsProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - emailCheckResultsWriterProvisionedConcurrency
+        - !Ref AWS::NoValue
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-email-check-results-writer-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # SQS Event Source Mapping for Email Check Results Writer Lambda
+  # Created as a separate resource (not using SAM Events) for more control over configuration
+  # NOTE: This EventSourceMapping is commented out because the email-check-results-queue
+  # is managed by Terraform and doesn't exist yet in CloudFormation.
+  # The queue and event source mapping should be managed by Terraform.
+  # EmailCheckResultsEventSourceMapping:
+  #   Type: AWS::Lambda::EventSourceMapping
+  #   Properties:
+  #     EventSourceArn: !Sub
+  #       - "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${EnvironmentName}-email-check-results-queue"
+  #       - EnvironmentName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+  #     FunctionName: !Ref EmailCheckResultsWriterLambda
+  #     BatchSize: 10
+  #     MaximumBatchingWindowInSeconds: 5
+  #     Enabled: true
+
+  # CloudWatch Log Group for Email Check Results Writer Lambda
+  EmailCheckResultsWriterLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-email-check-results-writer-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  # Splunk Subscription Filter for Email Check Results Writer Lambda (conditional)
+  EmailCheckResultsWriterLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref EmailCheckResultsWriterLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  # CloudWatch Alarm for Email Check Results Writer Lambda Errors
+  EmailCheckResultsWriterErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when email check results writer Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref EmailCheckResultsWriterLambda
+      TreatMissingData: notBreaching
+
+  # ============================================================================
+  # 8. MFA Method Analysis Lambda
+  # ============================================================================
+  # Purpose: Analyzes MFA method usage patterns
+  # VPC: Required (uses authentication VPC)
+  # Trigger: Manual invocation (no automatic triggers)
+  # Permissions: DynamoDB (Query, Scan on user-profile table),
+  #              KMS (Decrypt on user-profile encryption key)
+
+  MfaMethodAnalysisLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.MfaMethodAnalysisHandler::handleRequest
+      Role: !GetAtt MfaMethodAnalysisLambdaRole.Arn
+      AutoPublishAlias: live
+      # Runtime, MemorySize, Timeout, CodeSigningConfigArn, PermissionsBoundary inherited from Globals
+      LoggingConfig:
+        LogGroup: !Ref MfaMethodAnalysisLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-AWSServicesEndpointSecurityGroupId"
+        SubnetIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
+      # ENVIRONMENT variable inherited from Globals
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-mfa-method-analysis-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # CloudWatch Log Group for MFA Method Analysis Lambda
+  MfaMethodAnalysisLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-mfa-method-analysis-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  # Splunk Subscription Filter for MFA Method Analysis Lambda (conditional)
+  MfaMethodAnalysisLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref MfaMethodAnalysisLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  # CloudWatch Alarm for MFA Method Analysis Lambda Errors
+  MfaMethodAnalysisErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when MFA method analysis Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref MfaMethodAnalysisLambda
+      TreatMissingData: notBreaching
+
+Outputs:
+  # Account Metrics Lambda Outputs
+  AccountMetricsLambdaArn:
+    Description: ARN of the Account Metrics Lambda function
+    Value: !GetAtt AccountMetricsLambda.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-account-metrics-lambda-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  AccountMetricsLambdaName:
+    Description: Name of the Account Metrics Lambda function
+    Value: !Ref AccountMetricsLambda
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-account-metrics-lambda-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # Bulk Test User Create Lambda Outputs
+  BulkTestUserCreateLambdaArn:
+    Condition: AllowBulkTestUsers
+    Description: ARN of the Bulk Test User Create Lambda function
+    Value: !GetAtt BulkTestUserCreateLambda.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkTestUserCreateLambdaName:
+    Condition: AllowBulkTestUsers
+    Description: Name of the Bulk Test User Create Lambda function
+    Value: !Ref BulkTestUserCreateLambda
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # Bulk Test User Delete Lambda Outputs
+  BulkTestUserDeleteLambdaArn:
+    Condition: AllowBulkTestUsers
+    Description: ARN of the Bulk Test User Delete Lambda function
+    Value: !GetAtt BulkTestUserDeleteLambda.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-test-user-delete-lambda-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkTestUserDeleteLambdaName:
+    Condition: AllowBulkTestUsers
+    Description: Name of the Bulk Test User Delete Lambda function
+    Value: !Ref BulkTestUserDeleteLambda
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-test-user-delete-lambda-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # Bulk User Email Audience Loader Lambda Outputs
+  BulkUserEmailAudienceLoaderLambdaArn:
+    Description: ARN of the Bulk User Email Audience Loader Lambda function
+    Value: !GetAtt BulkUserEmailAudienceLoaderLambda.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkUserEmailAudienceLoaderLambdaName:
+    Description: Name of the Bulk User Email Audience Loader Lambda function
+    Value: !Ref BulkUserEmailAudienceLoaderLambda
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # Bulk User Email Send Lambda Outputs
+  BulkUserEmailSendLambdaArn:
+    Description: ARN of the Bulk User Email Send Lambda function
+    Value: !GetAtt BulkUserEmailSendLambda.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkUserEmailSendLambdaName:
+    Description: Name of the Bulk User Email Send Lambda function
+    Value: !Ref BulkUserEmailSendLambda
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # Common Passwords Update Lambda Outputs
+  CommonPasswordsUpdateLambdaArn:
+    Description: ARN of the Common Passwords Update Lambda function
+    Value: !GetAtt CommonPasswordsUpdateLambda.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-common-passwords-update-lambda-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  CommonPasswordsUpdateLambdaName:
+    Description: Name of the Common Passwords Update Lambda function
+    Value: !Ref CommonPasswordsUpdateLambda
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-common-passwords-update-lambda-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # Email Check Results Writer Lambda Outputs
+  EmailCheckResultsWriterLambdaArn:
+    Description: ARN of the Email Check Results Writer Lambda function
+    Value: !GetAtt EmailCheckResultsWriterLambda.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  EmailCheckResultsWriterLambdaName:
+    Description: Name of the Email Check Results Writer Lambda function
+    Value: !Ref EmailCheckResultsWriterLambda
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # MFA Method Analysis Lambda Outputs
+  MfaMethodAnalysisLambdaArn:
+    Description: ARN of the MFA Method Analysis Lambda function
+    Value: !GetAtt MfaMethodAnalysisLambda.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  MfaMethodAnalysisLambdaName:
+    Description: Name of the MFA Method Analysis Lambda function
+    Value: !Ref MfaMethodAnalysisLambda
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
