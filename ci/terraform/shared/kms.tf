@@ -910,3 +910,17 @@ resource "aws_kms_alias" "authentication_encryption_key_alias" {
   name          = "alias/${var.environment}-authentication-encryption-key-alias"
   target_key_id = aws_kms_key.authentication_encryption_key.key_id
 }
+
+resource "aws_kms_key" "authenticator_table_encryption_key" {
+  description              = "KMS encryption key for authenticator table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "authenticator_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-authenticator-table-encryption-key"
+  target_key_id = aws_kms_key.authenticator_table_encryption_key.key_id
+}
