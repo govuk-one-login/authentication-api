@@ -7,6 +7,9 @@ system:
 
 ownership:
   team: "authentication"
+  contacts:
+    - type: "slack"
+      ref: "#di-authentication"
 
 provides:
   - capability: "authentication-internal-api"
