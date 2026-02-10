@@ -8894,7 +8894,8 @@ Resources:
       AlarmDescription: !Sub "Auth journey completion rate has dropped below 50% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-auth-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
       Threshold: 50
       Metrics:
         - Id: e1
@@ -8916,7 +8917,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthenticationCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -8935,7 +8936,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
 
   IdentityJourneyCompletionRateAlarm:
@@ -8948,7 +8949,8 @@ Resources:
       AlarmDescription: !Sub "Identity journey completion rate has dropped below 25% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-identity-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
       Threshold: 25
       Metrics:
         - Id: e1
@@ -8970,7 +8972,7 @@ Resources:
                   Value: !Sub "${Environment}-IpvCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -8987,7 +8989,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthCodeFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m3
           ReturnData: false
@@ -9006,7 +9008,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
 
   DocAppJourneyCompletionRateAlarm:
@@ -9019,7 +9021,8 @@ Resources:
       AlarmDescription: !Sub "Doc app journey completion rate has dropped below 15% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-docapp-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
       Threshold: 15
       Metrics:
         - Id: e1
@@ -9041,7 +9044,7 @@ Resources:
                   Value: !Sub "${Environment}-DocAppCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -9060,7 +9063,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
   #endregion
 
