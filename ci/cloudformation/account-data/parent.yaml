@@ -94,35 +94,48 @@ Mappings:
   EnvironmentConfiguration:
     authdev1:
       cloudwatchLogRetentionInDays: 1
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d41a1b95-0291-4477-93f7-f1428ceef646
     authdev2:
       cloudwatchLogRetentionInDays: 1
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/88707a9b-53c9-4ad6-ab54-b03b1bf21321
     authdev3:
       cloudwatchLogRetentionInDays: 1
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3a47bbdd-4144-4d1a-959f-56b928fcfe3c
     dev:
       cloudwatchLogRetentionInDays: 1
       IsSplunkEnabled: "No"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "No"
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c6a2fb5e-c92b-4129-bc0c-d75b2b72bae8
+      dataStoreAccountId: 653994557586
     build:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "Yes"
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3c2113fe-9f53-4bed-a46f-c53f02f6c117
+      dataStoreAccountId: 761723964695
     staging:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "Yes"
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed6c6a2d-866f-4e2e-9ebd-c499ce9513c6
+      dataStoreAccountId: 758531536632
     integration:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "Yes"
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/743b2818-03fd-4414-bfaf-6aa8a4bb4e45
+      dataStoreAccountId: 761723964695
     production:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       UseAlarmActions: "Yes"
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/b380ea74-d240-4500-b02b-f5c3d414e34e
+      dataStoreAccountId: 172348255554
   LambdaConfiguration:
     passkeys-create:
       RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
@@ -307,6 +320,141 @@ Resources:
         - "alias/${Env}-auth-account-data-api-main-kms-alias"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TargetKeyId: !Ref MainKmsKey
+
+  DynamoAuthenticatorTableReadWriteDeletePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - "IAM policy for managing read, write and delete permissions to the ${Env}-authenticator table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: !Sub
+        - /${Env}/ad/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authenticatorTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authenticatorTableEncryptionKey,
+                  ]
+          - Sid: AllowReadWriteDelete
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  DynamoAuthenticatorTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the Dynamo Authenticator table"
+      Path: !Sub
+        - /${Env}/ad/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authenticatorTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authenticatorTableEncryptionKey,
+                  ]
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
 
   # ----------------
   # Managed policies
