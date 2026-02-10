@@ -1,0 +1,30 @@
+flowchart LR
+
+    %% Systems
+    authentication_internal_api["Authentication Internal API"]
+    notify["Notify"]
+    ticf_cri["Ticf Cri"]
+    account_interventions["Account Interventions"]
+    dynamodb["Dynamodb"]
+    elasticache["Elasticache"]
+    sqs["Sqs"]
+    kms["Kms"]
+    api_gateway["Api Gateway"]
+    lambda["Lambda"]
+    vpc["Vpc"]
+    cloudwatch["Cloudwatch"]
+
+    %% Dependencies
+    authentication_internal_api --> notify
+    authentication_internal_api --> ticf_cri
+    authentication_internal_api --> account_interventions
+    authentication_internal_api --> dynamodb
+    authentication_internal_api --> elasticache
+    authentication_internal_api --> sqs
+    authentication_internal_api --> kms
+    authentication_internal_api --> api_gateway
+    authentication_internal_api --> lambda
+    authentication_internal_api --> vpc
+    authentication_internal_api --> cloudwatch
+
+    %% Styling
