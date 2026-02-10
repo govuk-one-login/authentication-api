@@ -8894,12 +8894,13 @@ Resources:
       AlarmDescription: !Sub "Auth journey completion rate has dropped below 50% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-auth-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
       Threshold: 50
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: "IF(m2 >= 350, m1/m2*100)"
+          Expression: "IF(m2 >= 160, m1/m2*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -8916,7 +8917,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthenticationCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -8935,7 +8936,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
 
   IdentityJourneyCompletionRateAlarm:
@@ -8945,15 +8946,16 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref OrchProdSlackEvents
-      AlarmDescription: !Sub "Identity journey completion rate has dropped below 25% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmDescription: !Sub "Identity journey completion rate has dropped below 30% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-identity-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
-      Threshold: 25
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: 30
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: "IF(m3 >= 150, (m1+m2)/m3*100)"
+          Expression: "IF(m3 >= 30, (m1+m2)/m3*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -8970,7 +8972,7 @@ Resources:
                   Value: !Sub "${Environment}-IpvCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -8987,7 +8989,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthCodeFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m3
           ReturnData: false
@@ -9006,7 +9008,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
 
   DocAppJourneyCompletionRateAlarm:
@@ -9019,12 +9021,13 @@ Resources:
       AlarmDescription: !Sub "Doc app journey completion rate has dropped below 15% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-docapp-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
       Threshold: 15
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: "IF(m2 >= 50, m1/m2*100)"
+          Expression: "IF(m2 >= 20, m1/m2*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -9041,7 +9044,7 @@ Resources:
                   Value: !Sub "${Environment}-DocAppCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -9060,7 +9063,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
   #endregion
 
