@@ -9027,7 +9027,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: "IF(m2 >= 50, m1/m2*100)"
+          Expression: "IF(m2 >= 20, m1/m2*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
