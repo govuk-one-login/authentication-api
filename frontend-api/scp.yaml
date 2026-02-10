@@ -1,0 +1,23 @@
+scp: "0.1.0"
+
+system:
+  urn: "urn:scp:govuk-one-login:authentication-internal-api"
+  name: "Authentication Internal API"
+  description: "Internal authentication API for GOV.UK One Login handling user authentication for the authentication-frontend"
+
+ownership:
+  team: "authentication"
+
+provides:
+  - capability: "authentication-internal-api"
+    type: "rest"
+    contract:
+      type: "openapi"
+      ref: "./ci/openAPI/AuthInternalApi.yaml"
+
+depends:
+  - system: "urn:scp:govuk:notify"
+    type: "rest"
+    criticality: "required"
+    failure_mode: "degrade"
+    description: "Sends SMS and email notifications to users"
