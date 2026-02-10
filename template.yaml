@@ -8946,7 +8946,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref OrchProdSlackEvents
-      AlarmDescription: !Sub "Identity journey completion rate has dropped below 25% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmDescription: !Sub "Identity journey completion ratte has dropped below 25% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-identity-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 5
