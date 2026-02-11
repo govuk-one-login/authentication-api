@@ -8897,6 +8897,7 @@ Resources:
       EvaluationPeriods: 5
       DatapointsToAlarm: 5
       Threshold: 50
+      TreatMissingData: notBreaching
       Metrics:
         - Id: e1
           ReturnData: true
@@ -8952,6 +8953,7 @@ Resources:
       EvaluationPeriods: 5
       DatapointsToAlarm: 5
       Threshold: 30
+      TreatMissingData: notBreaching
       Metrics:
         - Id: e1
           ReturnData: true
@@ -9024,6 +9026,7 @@ Resources:
       EvaluationPeriods: 5
       DatapointsToAlarm: 5
       Threshold: 15
+      TreatMissingData: notBreaching
       Metrics:
         - Id: e1
           ReturnData: true
