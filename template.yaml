@@ -170,6 +170,11 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  PublishNextAuthSigningKey:
+    !And [
+      !Condition ProvisionNewAuthSigningKey,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3690,6 +3695,14 @@ Resources:
               !Ref Environment,
               orchToAuthKeyArn,
             ]
+          PUBLISH_NEXT_AUTH_SIGNING_KEY: !If
+            - PublishNextAuthSigningKey
+            - true
+            - false
+          NEXT_AUTH_SIGNING_KEY_ALIAS: !If
+            - PublishNextAuthSigningKey
+            - !Ref OrchAuthSigningKmsKeyAlias
+            - !Ref AWS::NoValue
       Policies:
         - !Ref OrchToAuthSigningKmsAccessPolicy
       Tags:
@@ -6697,6 +6710,16 @@ Resources:
                   !Ref Environment,
                   orchToAuthKeyArn,
                 ]
+          - Fn::If:
+              - ProvisionNewAuthSigningKey
+              - Sid: AllowNewAuthSigningKey
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchAuthSigningKmsKey.Arn
+              - !Ref AWS::NoValue
 
   BackChannelLogoutQueueWritePolicy:
     Type: AWS::IAM::ManagedPolicy
