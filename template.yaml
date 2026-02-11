@@ -134,6 +134,14 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  OldSpotRequestQueueWriting:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
   ProvisionNewDocAppSigningKey:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -5016,6 +5024,10 @@ Resources:
                   ]
           NEW_SPOT_REQUEST_QUEUE_WRITING: !If
             - NewSpotRequestQueueWriting
+            - true
+            - false
+          OLD_SPOT_REQUEST_QUEUE_WRITING: !If
+            - OldSpotRequestQueueWriting
             - true
             - false
           SPOT_QUEUE_URL: !If
