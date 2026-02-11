@@ -158,7 +158,12 @@ Conditions:
         !Equals [staging, !Ref Environment],
       ],
     ]
-
+  PublishOldDocAppSigningKey:
+    !Or [
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
 Mappings:
   EnvironmentConfiguration:
     dev:
@@ -3404,6 +3409,10 @@ Resources:
             - PublishNextDocAppSigningKey
             - !Ref OrchDocAppSigningKmsKeyAlias
             - !Ref AWS::NoValue
+          PUBLISH_OLD_DOC_APP_SIGNING_KEY: !If
+            - PublishOldDocAppSigningKey
+            - true
+            - false
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
