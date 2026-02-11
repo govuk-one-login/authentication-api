@@ -2722,6 +2722,30 @@ Resources:
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
 
+  # New IAM role for cross account access to pipeline-visualiser ECS task
+  CodePipelineReadOnlyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: codepipeline-readonly
+      Description: A role to be assumed by for ECS task role to read code pipeline status
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              # Build account hardcoded as ECS task running in build account assumes codepipeline-readonly role
+              AWS: !Sub "arn:aws:iam::058264536367:role/${Environment}-deploy-pipeline-visualiser-ecs-task"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodePipeline_ReadOnlyAccess
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-codepipeline-readonly"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/parent.yaml
+
 Outputs:
   TestClientEmailAllowListSecretEncryptionKeyArn:
     Condition: ProvisionTestClientSecret
