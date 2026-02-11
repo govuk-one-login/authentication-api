@@ -23,14 +23,17 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId
 public class AuthJwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
+    private final ConfigurationService configurationService;
     private final JwksService jwksService;
     private static final Logger LOG = LogManager.getLogger(AuthJwksHandler.class);
 
-    public AuthJwksHandler(JwksService jwksService) {
+    public AuthJwksHandler(ConfigurationService configurationService, JwksService jwksService) {
+        this.configurationService = configurationService;
         this.jwksService = jwksService;
     }
 
     public AuthJwksHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.jwksService =
                 new JwksService(
                         configurationService, new KmsConnectionService(configurationService));
@@ -55,6 +58,9 @@ public class AuthJwksHandler
             List<JWK> signingKeys = new ArrayList<>();
 
             signingKeys.add(jwksService.getPublicAuthSigningJwkWithOpaqueId());
+            if (configurationService.isPublishNextOrchToAuthSigningKey()) {
+                signingKeys.add(jwksService.getNextPublicAuthSigningJwkWithOpaqueId());
+            }
 
             JWKSet jwkSet = new JWKSet(signingKeys);
 

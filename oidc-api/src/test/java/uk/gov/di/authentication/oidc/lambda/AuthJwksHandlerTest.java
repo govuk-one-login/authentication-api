@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 
 import java.util.List;
@@ -22,6 +23,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 
 class AuthJwksHandlerTest {
     private final Context context = mock(Context.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final JwksService jwksService = mock(JwksService.class);
     private AuthJwksHandler handler;
     private ECKey authSigningKey;
@@ -30,7 +32,7 @@ class AuthJwksHandlerTest {
     void setUp() throws Exception {
         authSigningKey =
                 new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-        handler = new AuthJwksHandler(jwksService);
+        handler = new AuthJwksHandler(configurationService, jwksService);
 
         when(jwksService.getPublicAuthSigningJwkWithOpaqueId()).thenReturn(authSigningKey);
     }
