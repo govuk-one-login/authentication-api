@@ -20,6 +20,7 @@ provides:
 
 depends:
   - system: "urn:scp:govuk:notify"
+    capability: "send-notifications"
     type: "rest"
     criticality: "required"
     failure_mode: "queue-buffer"
