@@ -60,6 +60,23 @@ class AuthJwksHandlerTest {
     }
 
     @Test
+    void shouldPublishNewKeyIfFeatureFlagEnabled() throws Exception {
+        var newAuthSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        when(jwksService.getNextPublicAuthSigningJwkWithOpaqueId())
+                .thenReturn(newAuthSigningKey.toPublicJWK());
+        when(configurationService.isPublishNextOrchToAuthSigningKey()).thenReturn(true);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet = new JWKSet(List.of(authSigningKey, newAuthSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+    }
+
+    @Test
     void shouldSetACacheHeaderOfOneDayOnSuccess() {
         var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
 
