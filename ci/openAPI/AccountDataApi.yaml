@@ -49,6 +49,8 @@ paths:
                     type: string
                     enum:
                       - "User not found"
+                  code:
+                    type: number
     post:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
@@ -81,6 +83,8 @@ paths:
                     enum:
                       - "Invalid request body"
                       - "Missing required fields"
+                  code:
+                    type: number
         "404":
           description: User not found
           content:
@@ -92,6 +96,8 @@ paths:
                     type: string
                     enum:
                       - "User not found"
+                  code:
+                    type: number
         "409":
           description: Passkey already exists
           content:
@@ -103,6 +109,8 @@ paths:
                     type: string
                     enum:
                       - "Passkey already exists"
+                  code:
+                    type: number
         "422":
           description: Unprocessable entity - invalid field values
           content:
@@ -116,6 +124,8 @@ paths:
                       - "Invalid credential format"
                       - "Invalid AAGUID format"
                       - "Invalid attestation signature"
+                  code:
+                    type: number
 
   /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
     parameters:
@@ -162,6 +172,8 @@ paths:
                     type: string
                     enum:
                       - "Cannot modify disallowed fields"
+                  code:
+                    type: number
         "404":
           description: User not found
           content:
@@ -174,6 +186,8 @@ paths:
                     enum:
                       - "User not found"
                       - "Passkey not found"
+                  code:
+                    type: number
     delete:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
@@ -201,6 +215,8 @@ paths:
                     enum:
                       - "User not found"
                       - "Passkey not found"
+                  code:
+                    type: number
 
 components:
   schemas:
