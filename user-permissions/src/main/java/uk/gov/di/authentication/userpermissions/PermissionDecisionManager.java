@@ -13,15 +13,19 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.IndefinitelyLockedOutData;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermittedData;
+import uk.gov.di.authentication.userpermissions.entity.ReauthLockedOutData;
+import uk.gov.di.authentication.userpermissions.entity.TemporarilyLockedOutData;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -57,8 +61,11 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
-    public Result<DecisionError, Decision> canReceiveEmailAddress(
-            JourneyType journeyType, PermissionContext permissionContext) {
+    public <R> Result<DecisionError, R> canReceiveEmailAddress(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            Function<PermittedData, R> onPermitted,
+            Function<ReauthLockedOutData, R> onReauthLockedOut) {
         if (journeyType == null || permissionContext == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
@@ -72,15 +79,20 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return this.checkForAnyReauthLockout(
                     permissionContext.internalSubjectIds(),
                     permissionContext.rpPairwiseId(),
-                    CountType.ENTER_EMAIL);
+                    CountType.ENTER_EMAIL,
+                    onPermitted,
+                    onReauthLockedOut);
         }
 
-        return Result.success(new Decision.Permitted(0));
+        return Result.success(onPermitted.apply(new PermittedData(0)));
     }
 
     @Override
-    public Result<DecisionError, Decision> canSendEmailOtpNotification(
-            JourneyType journeyType, PermissionContext permissionContext) {
+    public <R> Result<DecisionError, R> canSendEmailOtpNotification(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            Function<PermittedData, R> onPermitted,
+            Function<TemporarilyLockedOutData, R> onTemporarilyLockedOut) {
         if (journeyType == JourneyType.PASSWORD_RESET) {
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
@@ -93,8 +105,14 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     .isBlockedForEmail(
                             permissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
                 return Result.success(
-                        createTemporarilyLockedOut(
-                                ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST, 0, false));
+                        onTemporarilyLockedOut.apply(
+                                new TemporarilyLockedOutData(
+                                        ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
+                                        0,
+                                        Instant.now()
+                                                .plusSeconds(
+                                                        configurationService.getLockoutDuration()),
+                                        false)));
             }
 
             // Check if count will reach limit after increment
@@ -102,21 +120,28 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 boolean isFirstTime =
                         (codeRequestCount == configurationService.getCodeMaxRetries() - 1);
                 return Result.success(
-                        createTemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
-                                codeRequestCount,
-                                isFirstTime));
+                        onTemporarilyLockedOut.apply(
+                                new TemporarilyLockedOutData(
+                                        ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                        codeRequestCount,
+                                        Instant.now()
+                                                .plusSeconds(
+                                                        configurationService.getLockoutDuration()),
+                                        isFirstTime)));
             }
 
-            return Result.success(new Decision.Permitted(codeRequestCount));
+            return Result.success(onPermitted.apply(new PermittedData(codeRequestCount)));
         }
 
-        return Result.success(new Decision.Permitted(0));
+        return Result.success(onPermitted.apply(new PermittedData(0)));
     }
 
     @Override
-    public Result<DecisionError, Decision> canVerifyEmailOtp(
-            JourneyType journeyType, PermissionContext permissionContext) {
+    public <R> Result<DecisionError, R> canVerifyEmailOtp(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            Function<PermittedData, R> onPermitted,
+            Function<TemporarilyLockedOutData, R> onTemporarilyLockedOut) {
         if (journeyType == JourneyType.PASSWORD_RESET) {
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
@@ -127,19 +152,28 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     .isBlockedForEmail(
                             permissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
                 return Result.success(
-                        createTemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
-                                0,
-                                false));
+                        onTemporarilyLockedOut.apply(
+                                new TemporarilyLockedOutData(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                                        0,
+                                        Instant.now()
+                                                .plusSeconds(
+                                                        configurationService.getLockoutDuration()),
+                                        false)));
             }
         }
 
-        return Result.success(new Decision.Permitted(0));
+        return Result.success(onPermitted.apply(new PermittedData(0)));
     }
 
     @Override
-    public Result<DecisionError, Decision> canReceivePassword(
-            JourneyType journeyType, PermissionContext permissionContext) {
+    public <R> Result<DecisionError, R> canReceivePassword(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            Function<PermittedData, R> onPermitted,
+            Function<TemporarilyLockedOutData, R> onTemporarilyLockedOut,
+            Function<ReauthLockedOutData, R> onReauthLockedOut) {
 
         if (journeyType == null || permissionContext == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
@@ -154,20 +188,27 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return this.checkForAnyReauthLockout(
                     permissionContext.internalSubjectIds(),
                     permissionContext.rpPairwiseId(),
-                    CountType.ENTER_PASSWORD);
+                    CountType.ENTER_PASSWORD,
+                    onPermitted,
+                    onReauthLockedOut);
         }
 
         if (permissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
-        return checkForPasswordResetLockout(permissionContext.emailAddress());
+        return checkForPasswordResetLockout(
+                permissionContext.emailAddress(), onPermitted, onTemporarilyLockedOut);
     }
 
     @Override
     @SuppressWarnings("java:S2789")
-    public Result<DecisionError, Decision> canSendSmsOtpNotification(
-            JourneyType journeyType, PermissionContext permissionContext) {
+    public <R> Result<DecisionError, R> canSendSmsOtpNotification(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            Function<PermittedData, R> onPermitted,
+            Function<TemporarilyLockedOutData, R> onTemporarilyLockedOut,
+            Function<IndefinitelyLockedOutData, R> onIndefinitelyLockedOut) {
         Optional<String> phoneNumberMaybe = permissionContext.e164FormattedPhoneNumber();
         if (permissionContext.emailAddress() == null || phoneNumberMaybe == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
@@ -179,9 +220,12 @@ public class PermissionDecisionManager implements PermissionDecisions {
                         getInternationalSmsSendLimitService().canSendSms(phoneNumberMaybe.get());
                 if (!canSendSms) {
                     return Result.success(
-                            new Decision.IndefinitelyLockedOut(
-                                    ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
-                                    configurationService.getInternationalSmsNumberSendLimit()));
+                            onIndefinitelyLockedOut.apply(
+                                    new IndefinitelyLockedOutData(
+                                            ForbiddenReason
+                                                    .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                            configurationService
+                                                    .getInternationalSmsNumberSendLimit())));
                 }
             } catch (RuntimeException e) {
                 LOG.error("Could not retrieve international SMS send limit details.", e);
@@ -192,7 +236,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
         if (journeyType.equals(JourneyType.PASSWORD_RESET)) {
             // We exit early here as there is no suppoerted CodeRequestType for PASSWORD_RESET
             // Which means we do not yet have a counter for that
-            return Result.success(new Decision.Permitted(0));
+            return Result.success(onPermitted.apply(new PermittedData(0)));
         }
 
         try {
@@ -222,14 +266,15 @@ public class PermissionDecisionManager implements PermissionDecisions {
             if (ttl > 0) {
                 LOG.info("User is blocked from requesting any OTP codes");
                 return Result.success(
-                        new Decision.TemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
-                                configurationService.getCodeMaxRetries(),
-                                Instant.ofEpochSecond(ttl),
-                                false));
+                        onTemporarilyLockedOut.apply(
+                                new TemporarilyLockedOutData(
+                                        ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                        configurationService.getCodeMaxRetries(),
+                                        Instant.ofEpochSecond(ttl),
+                                        false)));
             }
 
-            return Result.success(new Decision.Permitted(0));
+            return Result.success(onPermitted.apply(new PermittedData(0)));
         } catch (RuntimeException e) {
             LOG.error("Could not retrieve MFA code request block details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
@@ -237,8 +282,11 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
-    public Result<DecisionError, Decision> canVerifyMfaOtp(
-            JourneyType journeyType, PermissionContext permissionContext) {
+    public <R> Result<DecisionError, R> canVerifyMfaOtp(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            Function<PermittedData, R> onPermitted,
+            Function<TemporarilyLockedOutData, R> onTemporarilyLockedOut) {
         if (permissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
@@ -269,14 +317,15 @@ public class PermissionDecisionManager implements PermissionDecisions {
             if (ttl > 0) {
                 LOG.info("User is blocked from entering any OTP codes");
                 return Result.success(
-                        new Decision.TemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
-                                configurationService.getCodeMaxRetries(),
-                                Instant.ofEpochSecond(ttl),
-                                false));
+                        onTemporarilyLockedOut.apply(
+                                new TemporarilyLockedOutData(
+                                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                        configurationService.getCodeMaxRetries(),
+                                        Instant.ofEpochSecond(ttl),
+                                        false)));
             }
 
-            return Result.success(new Decision.Permitted(0));
+            return Result.success(onPermitted.apply(new PermittedData(0)));
         } catch (RuntimeException e) {
             LOG.error("Could not retrieve MFA code block details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
@@ -284,17 +333,24 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
-    public Result<DecisionError, Decision> canStartJourney(
-            JourneyType journeyType, PermissionContext permissionContext) {
+    public <R> Result<DecisionError, R> canStartJourney(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            Function<PermittedData, R> onPermitted,
+            Function<ReauthLockedOutData, R> onReauthLockedOut) {
         if (journeyType == JourneyType.REAUTHENTICATION) {
             if (permissionContext.rpPairwiseId() == null) {
                 return Result.failure(DecisionError.INVALID_USER_CONTEXT);
             }
 
             return this.checkForAnyReauthLockout(
-                    permissionContext.internalSubjectIds(), permissionContext.rpPairwiseId(), null);
+                    permissionContext.internalSubjectIds(),
+                    permissionContext.rpPairwiseId(),
+                    null,
+                    onPermitted,
+                    onReauthLockedOut);
         }
-        return Result.success(new Decision.Permitted(0));
+        return Result.success(onPermitted.apply(new PermittedData(0)));
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {
@@ -321,8 +377,12 @@ public class PermissionDecisionManager implements PermissionDecisions {
         return internationalSmsSendLimitService;
     }
 
-    private Result<DecisionError, Decision> checkForAnyReauthLockout(
-            List<String> internalSubjectIds, String rpPairwiseId, CountType primaryCountCheck) {
+    private <R> Result<DecisionError, R> checkForAnyReauthLockout(
+            List<String> internalSubjectIds,
+            String rpPairwiseId,
+            CountType primaryCountCheck,
+            Function<PermittedData, R> onPermitted,
+            Function<ReauthLockedOutData, R> onReauthLockedOut) {
         List<String> identifiers = new ArrayList<>();
         if (internalSubjectIds != null) {
             identifiers.addAll(internalSubjectIds);
@@ -343,20 +403,25 @@ public class PermissionDecisionManager implements PermissionDecisions {
             ForbiddenReason reason = mapCountTypeToForbiddenReason(exceededType);
 
             return Result.success(
-                    new Decision.ReauthLockedOut(
-                            reason,
-                            reauthCounts.getOrDefault(exceededType, 0),
-                            Instant.now().plusSeconds(configurationService.getLockoutDuration()),
-                            false,
-                            reauthCounts,
-                            exceedingCounts));
+                    onReauthLockedOut.apply(
+                            new ReauthLockedOutData(
+                                    reason,
+                                    reauthCounts.getOrDefault(exceededType, 0),
+                                    Instant.now()
+                                            .plusSeconds(configurationService.getLockoutDuration()),
+                                    false,
+                                    reauthCounts,
+                                    exceedingCounts)));
         }
 
         int count = primaryCountCheck != null ? reauthCounts.getOrDefault(primaryCountCheck, 0) : 0;
-        return Result.success(new Decision.Permitted(count));
+        return Result.success(onPermitted.apply(new PermittedData(count)));
     }
 
-    private Result<DecisionError, Decision> checkForPasswordResetLockout(String emailAddress) {
+    private <R> Result<DecisionError, R> checkForPasswordResetLockout(
+            String emailAddress,
+            Function<PermittedData, R> onPermitted,
+            Function<TemporarilyLockedOutData, R> onTemporarilyLockedOut) {
         try {
             // Check for password blocks
             boolean isPasswordBlocked =
@@ -373,13 +438,18 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
             if (isPasswordBlocked) {
                 return Result.success(
-                        createTemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                attemptCount,
-                                false));
+                        onTemporarilyLockedOut.apply(
+                                new TemporarilyLockedOutData(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        attemptCount,
+                                        Instant.now()
+                                                .plusSeconds(
+                                                        configurationService.getLockoutDuration()),
+                                        false)));
             }
 
-            return Result.success(new Decision.Permitted(attemptCount));
+            return Result.success(onPermitted.apply(new PermittedData(attemptCount)));
         } catch (RuntimeException e) {
             LOG.error("Could not retrieve password reset lock details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
@@ -394,14 +464,5 @@ public class PermissionDecisionManager implements PermissionDecisions {
             case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
                     .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
         };
-    }
-
-    private Decision.TemporarilyLockedOut createTemporarilyLockedOut(
-            ForbiddenReason reason, int attemptCount, boolean isFirstTime) {
-        return new Decision.TemporarilyLockedOut(
-                reason,
-                attemptCount,
-                Instant.now().plusSeconds(configurationService.getLockoutDuration()),
-                isFirstTime);
     }
 }

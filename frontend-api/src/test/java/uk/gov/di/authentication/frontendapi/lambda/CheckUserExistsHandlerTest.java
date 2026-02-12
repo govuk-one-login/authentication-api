@@ -39,9 +39,10 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
+import uk.gov.di.authentication.userpermissions.entity.PermittedData;
+import uk.gov.di.authentication.userpermissions.entity.TemporarilyLockedOutData;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +50,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -145,10 +147,18 @@ class CheckUserExistsHandlerTest {
         reset(permissionDecisionManager);
 
         // Setup default PermissionDecisionManager behavior after reset
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
     }
 
     @Nested
@@ -288,25 +298,34 @@ class CheckUserExistsHandlerTest {
         void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
             var lockoutExpiry = java.time.Instant.now().plusSeconds(15);
             var signInLockout =
-                    new Decision.TemporarilyLockedOut(
+                    new TemporarilyLockedOutData(
                             uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
                                     .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                             5,
                             lockoutExpiry,
                             false);
             var passwordResetLockout =
-                    new Decision.TemporarilyLockedOut(
+                    new TemporarilyLockedOutData(
                             uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
                                     .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                             5,
                             lockoutExpiry,
                             false);
 
-            when(permissionDecisionManager.canVerifyMfaOtp(eq(JourneyType.SIGN_IN), any()))
-                    .thenReturn(Result.success(signInLockout));
             when(permissionDecisionManager.canVerifyMfaOtp(
-                            eq(JourneyType.PASSWORD_RESET_MFA), any()))
-                    .thenReturn(Result.success(passwordResetLockout));
+                            eq(JourneyType.SIGN_IN), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(2, Function.class)
+                                                    .apply(signInLockout)));
+            when(permissionDecisionManager.canVerifyMfaOtp(
+                            eq(JourneyType.PASSWORD_RESET_MFA), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(2, Function.class)
+                                                    .apply(passwordResetLockout)));
 
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
@@ -358,14 +377,18 @@ class CheckUserExistsHandlerTest {
         @Test
         void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
             var lockedOutDecision =
-                    new Decision.TemporarilyLockedOut(
+                    new TemporarilyLockedOutData(
                             uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
                                     .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                             5,
                             java.time.Instant.now().plusSeconds(3600),
                             false);
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(lockedOutDecision));
+            when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(2, Function.class)
+                                                    .apply(lockedOutDecision)));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
@@ -529,7 +552,7 @@ class CheckUserExistsHandlerTest {
                 DecisionError decisionError,
                 int expectedStatusCode,
                 ErrorResponse expectedErrorResponse) {
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
+            when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
                     .thenReturn(Result.failure(decisionError));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
@@ -552,7 +575,8 @@ class CheckUserExistsHandlerTest {
             setupUserProfileAndClient(Optional.of(generateUserProfile()));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
-            when(permissionDecisionManager.canVerifyMfaOtp(eq(JourneyType.SIGN_IN), any()))
+            when(permissionDecisionManager.canVerifyMfaOtp(
+                            eq(JourneyType.SIGN_IN), any(), any(), any()))
                     .thenReturn(Result.failure(decisionError));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);

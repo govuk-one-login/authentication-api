@@ -53,16 +53,19 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.IndefinitelyLockedOutData;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermittedData;
+import uk.gov.di.authentication.userpermissions.entity.TemporarilyLockedOutData;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -211,12 +214,24 @@ class LoginHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
         handler =
                 new LoginHandler(
                         configurationService,
@@ -777,16 +792,23 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
 
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
-                .thenReturn(
-                        Result.success(
-                                new Decision.TemporarilyLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        maxRetriesAllowed,
-                                        Instant.now().plusSeconds(900),
-                                        true)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(maxRetriesAllowed - 1))))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new TemporarilyLockedOutData(
+                                                                ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                maxRetriesAllowed,
+                                                                Instant.now().plusSeconds(900),
+                                                                true))));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -818,16 +840,23 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
-                .thenReturn(
-                        Result.success(
-                                new Decision.TemporarilyLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        maxRetriesAllowed,
-                                        Instant.now().plusSeconds(900),
-                                        false)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(maxRetriesAllowed - 1))))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new TemporarilyLockedOutData(
+                                                                ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                maxRetriesAllowed,
+                                                                Instant.now().plusSeconds(900),
+                                                                false))));
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -862,16 +891,23 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(
-                        Result.success(
-                                new Decision.TemporarilyLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        MAX_ALLOWED_PASSWORD_RETRIES,
-                                        Instant.now()
-                                                .plus(15, java.time.temporal.ChronoUnit.MINUTES),
-                                        false)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new TemporarilyLockedOutData(
+                                                                ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                MAX_ALLOWED_PASSWORD_RETRIES,
+                                                                Instant.now()
+                                                                        .plus(
+                                                                                15,
+                                                                                java.time.temporal
+                                                                                        .ChronoUnit
+                                                                                        .MINUTES),
+                                                                false))));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -902,7 +938,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
                 .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
@@ -952,9 +988,13 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)))
-                .thenReturn(Result.success(new Decision.Permitted(1)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))))
+                .thenReturn(Result.success(new PermittedData(1)));
 
         usingValidAuthSession();
 
@@ -985,8 +1025,12 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(SMS, false);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(isReauthEnabled);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
 
         usingValidAuthSession();
 
@@ -1243,18 +1287,27 @@ class LoginHandlerTest {
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
-        verify(permissionDecisionManager).canSendSmsOtpNotification(any(), any());
-        verify(permissionDecisionManager).canVerifyMfaOtp(any(), any());
+        verify(permissionDecisionManager)
+                .canSendSmsOtpNotification(any(), any(), any(), any(), any());
+        verify(permissionDecisionManager).canVerifyMfaOtp(any(), any(), any(), any());
     }
 
     @ParameterizedTest
@@ -1271,8 +1324,9 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(permissionDecisionManager, never()).canSendSmsOtpNotification(any(), any());
-        verify(permissionDecisionManager, never()).canVerifyMfaOtp(any(), any());
+        verify(permissionDecisionManager, never())
+                .canSendSmsOtpNotification(any(), any(), any(), any(), any());
+        verify(permissionDecisionManager, never()).canVerifyMfaOtp(any(), any(), any(), any());
     }
 
     private static Stream<Arguments> validMfaMethodsWithExpectedBlock() {
@@ -1314,19 +1368,37 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
         if (expectedError == ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS) {
-            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.TemporarilyLockedOut(null, 0, null, false)));
-            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(0)));
+            when(permissionDecisionManager.canSendSmsOtpNotification(
+                            any(), any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(3, Function.class)
+                                                    .apply(
+                                                            new TemporarilyLockedOutData(
+                                                                    null, 0, null, false))));
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(2, Function.class)
+                                                    .apply(new PermittedData(0))));
         } else {
-            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(0)));
-            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.TemporarilyLockedOut(null, 0, null, false)));
+            when(permissionDecisionManager.canSendSmsOtpNotification(
+                            any(), any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(2, Function.class)
+                                                    .apply(new PermittedData(0))));
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(3, Function.class)
+                                                    .apply(
+                                                            new TemporarilyLockedOutData(
+                                                                    null, 0, null, false))));
         }
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -1344,14 +1416,22 @@ class LoginHandlerTest {
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                .thenReturn(
-                        Result.success(
-                                new Decision.IndefinitelyLockedOut(
-                                        ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
-                                        10)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(4, Function.class)
+                                                .apply(
+                                                        new IndefinitelyLockedOutData(
+                                                                ForbiddenReason
+                                                                        .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                                                10))));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -1361,7 +1441,8 @@ class LoginHandlerTest {
 
         var permissionContextCaptor = ArgumentCaptor.forClass(PermissionContext.class);
         verify(permissionDecisionManager)
-                .canSendSmsOtpNotification(any(), permissionContextCaptor.capture());
+                .canSendSmsOtpNotification(
+                        any(), permissionContextCaptor.capture(), any(), any(), any());
         assertEquals(
                 Optional.of(CommonTestVariables.UK_MOBILE_NUMBER),
                 permissionContextCaptor.getValue().e164FormattedPhoneNumber());

@@ -38,13 +38,15 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.PermittedData;
+import uk.gov.di.authentication.userpermissions.entity.TemporarilyLockedOutData;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -155,8 +157,12 @@ class LoginHandlerReauthenticationRedisTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
         handler =
                 new LoginHandler(
                         configurationService,
@@ -182,16 +188,23 @@ class LoginHandlerReauthenticationRedisTest {
                 .thenReturn(Optional.of(userProfile));
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
 
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
-                .thenReturn(
-                        Result.success(
-                                new Decision.TemporarilyLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        maxRetriesAllowed,
-                                        Instant.now().plusSeconds(900),
-                                        false)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(maxRetriesAllowed - 1))))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new TemporarilyLockedOutData(
+                                                                ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                maxRetriesAllowed,
+                                                                Instant.now().plusSeconds(900),
+                                                                false))));
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 

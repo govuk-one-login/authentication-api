@@ -42,14 +42,16 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.IndefinitelyLockedOutData;
+import uk.gov.di.authentication.userpermissions.entity.PermittedData;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -151,8 +153,12 @@ class ResetPasswordHandlerTest {
                 .validate("password");
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
         usingValidSession();
         handler =
                 new ResetPasswordHandler(
@@ -247,13 +253,17 @@ class ResetPasswordHandlerTest {
                     .thenReturn(generateUserCredentials());
             when(authenticationService.getUserProfileByEmail(EMAIL))
                     .thenReturn(generateUserProfile(true));
-            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.IndefinitelyLockedOut(
-                                            ForbiddenReason
-                                                    .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
-                                            10)));
+            when(permissionDecisionManager.canSendSmsOtpNotification(
+                            any(), any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(4, Function.class)
+                                                    .apply(
+                                                            new IndefinitelyLockedOutData(
+                                                                    ForbiddenReason
+                                                                            .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                                                    10))));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);

@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
@@ -35,9 +36,9 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.TemporarilyLockedOutData;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -325,16 +326,20 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         var canSendResult =
                 permissionDecisionManager.canSendEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, permissionContext);
+                        JourneyType.PASSWORD_RESET,
+                        permissionContext,
+                        permitted -> (Result<APIGatewayProxyResponseEvent, Void>) null,
+                        lockedOut -> handleTemporarilyLockedOut(lockedOut, permissionContext));
 
-        if (canSendResult.isSuccess()) {
-            var decision = canSendResult.getSuccess();
-            if (decision instanceof Decision.TemporarilyLockedOut lockedOut) {
-                var result = handleTemporarilyLockedOut(lockedOut, permissionContext);
-                if (result.isFailure()) {
-                    return result;
-                }
-            }
+        if (canSendResult.isFailure()) {
+            return Result.failure(
+                    DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                            canSendResult.getFailure()));
+        }
+
+        var lockoutResult = canSendResult.getSuccess();
+        if (lockoutResult != null && lockoutResult.isFailure()) {
+            return lockoutResult;
         }
 
         var userIsAlreadyLockedOutOfPasswordReset =
@@ -349,7 +354,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> handleTemporarilyLockedOut(
-            Decision.TemporarilyLockedOut lockedOut, PermissionContext permissionContext) {
+            TemporarilyLockedOutData lockedOut, PermissionContext permissionContext) {
         if (lockedOut.forbiddenReason()
                 == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
             userActionsManager.sentEmailOtpNotification(
@@ -375,34 +380,52 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         .build();
 
         var canSendResult =
-                permissionDecisionManager.canSendEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, permissionContext);
+                permissionDecisionManager.<Optional<ErrorResponse>>canSendEmailOtpNotification(
+                        JourneyType.PASSWORD_RESET,
+                        permissionContext,
+                        permitted -> Optional.empty(),
+                        lockedOut -> {
+                            if (lockedOut.forbiddenReason()
+                                    == ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST) {
+                                LOG.info(
+                                        "Code is blocked for email as user has requested too many OTPs");
+                                return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+                            } else if (lockedOut.forbiddenReason()
+                                    == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
+                                return lockedOut.isFirstTimeLimit()
+                                        ? Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS)
+                                        : Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+                            }
+                            return Optional.empty();
+                        });
 
-        if (canSendResult.isSuccess()
-                && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
+        if (canSendResult.isFailure()) {
+            LOG.error("Decision error: {}", canSendResult.getFailure());
+            return Optional.empty();
+        }
 
-            if (lockedOut.forbiddenReason() == ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST) {
-                LOG.info("Code is blocked for email as user has requested too many OTPs");
-                return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
-            } else if (lockedOut.forbiddenReason()
-                    == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
-                return lockedOut.isFirstTimeLimit()
-                        ? Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS)
-                        : Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
-            }
+        if (canSendResult.getSuccess().isPresent()) {
+            return canSendResult.getSuccess();
         }
 
         var canVerifyResult =
-                permissionDecisionManager.canVerifyEmailOtp(
-                        JourneyType.PASSWORD_RESET, permissionContext);
+                permissionDecisionManager.<Optional<ErrorResponse>>canVerifyEmailOtp(
+                        JourneyType.PASSWORD_RESET,
+                        permissionContext,
+                        permitted -> Optional.empty(),
+                        lockedOut -> {
+                            LOG.info(
+                                    "Code is blocked for email as user has entered too many invalid OTPs");
+                            return Optional.of(
+                                    ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
+                        });
 
-        if (canVerifyResult.isSuccess()
-                && canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-            LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
+        if (canVerifyResult.isFailure()) {
+            LOG.error("Decision error: {}", canVerifyResult.getFailure());
+            return Optional.empty();
         }
 
-        return Optional.empty();
+        return canVerifyResult.getSuccess();
     }
 
     private String serialiseNotifyRequest(Object request) {

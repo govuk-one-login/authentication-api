@@ -245,37 +245,41 @@ public class StartHandler
                         buildPermissionContext(authSession, startRequest, userContext);
                 var permissionResult =
                         permissionDecisionManager.canStartJourney(
-                                JourneyType.REAUTHENTICATION, permissionContext);
+                                JourneyType.REAUTHENTICATION,
+                                permissionContext,
+                                permitted -> false,
+                                lockedOut -> {
+                                    if (maybeInternalSubject.isPresent()) {
+                                        var reauthCountTypesToCounts = lockedOut.detailedCounts();
+                                        var blockedCountTypes = lockedOut.blockedCountTypes();
+                                        ReauthFailureReasons failureReason =
+                                                getReauthFailureReasonFromCountTypes(
+                                                        blockedCountTypes);
+                                        auditService.submitAuditEvent(
+                                                FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                                                auditContext,
+                                                ReauthMetadataBuilder.builder(
+                                                                startRequest
+                                                                        .rpPairwiseIdForReauth())
+                                                        .withAllIncorrectAttemptCounts(
+                                                                reauthCountTypesToCounts)
+                                                        .withFailureReason(failureReason)
+                                                        .build());
+                                        cloudwatchMetricsService.incrementCounter(
+                                                CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                                                Map.of(
+                                                        ENVIRONMENT.getValue(),
+                                                        configurationService.getEnvironment(),
+                                                        FAILURE_REASON.getValue(),
+                                                        failureReason == null
+                                                                ? "unknown"
+                                                                : failureReason.getValue()));
+                                    }
+                                    return true;
+                                });
 
-                if (permissionResult.isSuccess()
-                        && permissionResult.getSuccess()
-                                instanceof
-                                uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .ReauthLockedOut
-                                lockedOut) {
-                    isBlockedForReauth = true;
-                    if (maybeInternalSubject.isPresent()) {
-                        var reauthCountTypesToCounts = lockedOut.detailedCounts();
-                        var blockedCountTypes = lockedOut.blockedCountTypes();
-                        ReauthFailureReasons failureReason =
-                                getReauthFailureReasonFromCountTypes(blockedCountTypes);
-                        auditService.submitAuditEvent(
-                                FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                                auditContext,
-                                ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
-                                        .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
-                                        .withFailureReason(failureReason)
-                                        .build());
-                        cloudwatchMetricsService.incrementCounter(
-                                CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                                Map.of(
-                                        ENVIRONMENT.getValue(),
-                                        configurationService.getEnvironment(),
-                                        FAILURE_REASON.getValue(),
-                                        failureReason == null
-                                                ? "unknown"
-                                                : failureReason.getValue()));
-                    }
+                if (permissionResult.isSuccess()) {
+                    isBlockedForReauth = permissionResult.getSuccess();
                 }
             }
 

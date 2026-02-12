@@ -46,13 +46,15 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.PermittedData;
+import uk.gov.di.authentication.userpermissions.entity.ReauthLockedOutData;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -177,8 +179,12 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
 
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
 
         handler =
                 new LoginHandler(
@@ -210,18 +216,31 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
 
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.ReauthLockedOut(
-                                            ForbiddenReason
-                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                            MAX_ALLOWED_RETRIES,
-                                            Instant.now().plusSeconds(900),
-                                            false,
-                                            Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1),
-                                            java.util.List.of(ENTER_PASSWORD))));
+            when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(2, Function.class)
+                                                    .apply(
+                                                            new PermittedData(
+                                                                    MAX_ALLOWED_RETRIES - 1))))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(4, Function.class)
+                                                    .apply(
+                                                            new ReauthLockedOutData(
+                                                                    ForbiddenReason
+                                                                            .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                    MAX_ALLOWED_RETRIES,
+                                                                    Instant.now().plusSeconds(900),
+                                                                    false,
+                                                                    Map.of(
+                                                                            ENTER_PASSWORD,
+                                                                            MAX_ALLOWED_RETRIES
+                                                                                    - 1),
+                                                                    java.util.List.of(
+                                                                            ENTER_PASSWORD)))));
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -330,19 +349,26 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                 .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
                     };
 
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.ReauthLockedOut(
-                                            forbiddenReason,
-                                            MAX_ALLOWED_RETRIES,
-                                            Instant.now().plusSeconds(900),
-                                            false,
-                                            Map.of(
-                                                    ENTER_EMAIL, expectedEmailAttemptCount,
-                                                    ENTER_PASSWORD, expectedPasswordAttemptCount,
-                                                    ENTER_MFA_CODE, expectedOtpAttemptCount),
-                                            java.util.List.of(countType))));
+            when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(4, Function.class)
+                                                    .apply(
+                                                            new ReauthLockedOutData(
+                                                                    forbiddenReason,
+                                                                    MAX_ALLOWED_RETRIES,
+                                                                    Instant.now().plusSeconds(900),
+                                                                    false,
+                                                                    Map.of(
+                                                                            ENTER_EMAIL,
+                                                                                    expectedEmailAttemptCount,
+                                                                            ENTER_PASSWORD,
+                                                                                    expectedPasswordAttemptCount,
+                                                                            ENTER_MFA_CODE,
+                                                                                    expectedOtpAttemptCount),
+                                                                    java.util.List.of(
+                                                                            countType)))));
 
             setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
 
@@ -417,16 +443,20 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             ENTER_PASSWORD, expectedPasswordAttemptCount,
                             ENTER_MFA_CODE, expectedOtpAttemptCount);
 
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.ReauthLockedOut(
-                                            forbiddenReason,
-                                            0,
-                                            Instant.now().plusSeconds(900),
-                                            false,
-                                            detailedCounts,
-                                            java.util.List.of(countType))));
+            when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(4, Function.class)
+                                                    .apply(
+                                                            new ReauthLockedOutData(
+                                                                    forbiddenReason,
+                                                                    0,
+                                                                    Instant.now().plusSeconds(900),
+                                                                    false,
+                                                                    detailedCounts,
+                                                                    java.util.List.of(
+                                                                            countType)))));
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -475,18 +505,28 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
             var detailedCounts = Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
 
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.ReauthLockedOut(
-                                            ForbiddenReason
-                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                            MAX_ALLOWED_RETRIES,
-                                            Instant.now().plusSeconds(900),
-                                            false,
-                                            detailedCounts,
-                                            java.util.List.of(ENTER_PASSWORD))));
+            when(permissionDecisionManager.canReceivePassword(any(), any(), any(), any(), any()))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(2, Function.class)
+                                                    .apply(
+                                                            new PermittedData(
+                                                                    MAX_ALLOWED_RETRIES - 1))))
+                    .thenAnswer(
+                            inv ->
+                                    Result.success(
+                                            inv.getArgument(4, Function.class)
+                                                    .apply(
+                                                            new ReauthLockedOutData(
+                                                                    ForbiddenReason
+                                                                            .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                    MAX_ALLOWED_RETRIES,
+                                                                    Instant.now().plusSeconds(900),
+                                                                    false,
+                                                                    detailedCounts,
+                                                                    java.util.List.of(
+                                                                            ENTER_PASSWORD)))));
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 

@@ -27,9 +27,10 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.PermittedData;
+import uk.gov.di.authentication.userpermissions.entity.ReauthLockedOutData;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.Instant;
@@ -38,6 +39,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -150,8 +152,12 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
 
         when(userActionsManager.incorrectEmailAddressReceived(any(), any()))
                 .thenReturn(Result.success(null));
@@ -224,17 +230,24 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
-        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
-                .thenReturn(
-                        Result.success(
-                                new Decision.ReauthLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        MAX_RETRIES,
-                                        null,
-                                        false,
-                                        Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES),
-                                        List.of(CountType.ENTER_PASSWORD))));
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new ReauthLockedOutData(
+                                                                ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                MAX_RETRIES,
+                                                                null,
+                                                                false,
+                                                                Map.of(
+                                                                        CountType.ENTER_PASSWORD,
+                                                                        MAX_RETRIES),
+                                                                List.of(
+                                                                        CountType
+                                                                                .ENTER_PASSWORD)))));
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -249,16 +262,24 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
-        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
-                .thenReturn(
-                        Result.success(
-                                new Decision.ReauthLockedOut(
-                                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
-                                        MAX_RETRIES,
-                                        null,
-                                        false,
-                                        Map.of(CountType.ENTER_MFA_CODE, MAX_RETRIES),
-                                        List.of(CountType.ENTER_MFA_CODE))));
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new ReauthLockedOutData(
+                                                                ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                                                MAX_RETRIES,
+                                                                null,
+                                                                false,
+                                                                Map.of(
+                                                                        CountType.ENTER_MFA_CODE,
+                                                                        MAX_RETRIES),
+                                                                List.of(
+                                                                        CountType
+                                                                                .ENTER_MFA_CODE)))));
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -273,7 +294,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn500WhenPermissionDecisionManagerReturnsError() {
-        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any(), any(), any()))
                 .thenReturn(
                         Result.failure(
                                 uk.gov.di.authentication.userpermissions.entity.DecisionError
@@ -372,8 +393,12 @@ class CheckReAuthUserHandlerTest {
     }
 
     private void setupExistingEnterEmailAttemptsCountForIdentifier(int count) {
-        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(count)));
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(count))));
     }
 
     @Test
@@ -409,11 +434,15 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenIncorrectEmailTriggersLockout() {
-        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(MAX_RETRIES - 1)))
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(MAX_RETRIES - 1))))
                 .thenReturn(
                         Result.success(
-                                new Decision.ReauthLockedOut(
+                                new ReauthLockedOutData(
                                         ForbiddenReason
                                                 .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT,
                                         MAX_RETRIES,
@@ -531,25 +560,37 @@ class CheckReAuthUserHandlerTest {
 
                 for (var setup : mockCountsByJourneySetups) {
                     when(permissionDecisionManager.canReceiveEmailAddress(
-                                    JourneyType.REAUTHENTICATION,
-                                    PermissionContext.builder()
-                                            .withInternalSubjectIds(setup.subjectIds)
-                                            .withRpPairwiseId(setup.rpPairwiseId)
-                                            .build()))
-                            .thenReturn(
-                                    Result.success(
-                                            setup.count >= MAX_RETRIES
-                                                    ? new Decision.ReauthLockedOut(
-                                                            ForbiddenReason
-                                                                    .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT,
-                                                            setup.count,
-                                                            Instant.now(),
-                                                            false,
-                                                            Map.of(
-                                                                    CountType.ENTER_EMAIL,
-                                                                    setup.count),
-                                                            List.of(CountType.ENTER_EMAIL))
-                                                    : new Decision.Permitted(setup.count)));
+                                    eq(JourneyType.REAUTHENTICATION),
+                                    eq(
+                                            PermissionContext.builder()
+                                                    .withInternalSubjectIds(setup.subjectIds)
+                                                    .withRpPairwiseId(setup.rpPairwiseId)
+                                                    .build()),
+                                    any(),
+                                    any()))
+                            .thenAnswer(
+                                    inv ->
+                                            Result.success(
+                                                    setup.count >= MAX_RETRIES
+                                                            ? inv.getArgument(3, Function.class)
+                                                                    .apply(
+                                                                            new ReauthLockedOutData(
+                                                                                    ForbiddenReason
+                                                                                            .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT,
+                                                                                    setup.count,
+                                                                                    Instant.now(),
+                                                                                    false,
+                                                                                    Map.of(
+                                                                                            CountType
+                                                                                                    .ENTER_EMAIL,
+                                                                                            setup.count),
+                                                                                    List.of(
+                                                                                            CountType
+                                                                                                    .ENTER_EMAIL)))
+                                                            : inv.getArgument(2, Function.class)
+                                                                    .apply(
+                                                                            new PermittedData(
+                                                                                    setup.count))));
                 }
             }
         }

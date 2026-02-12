@@ -36,12 +36,15 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.PermittedData;
+import uk.gov.di.authentication.userpermissions.entity.ReauthLockedOutData;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -127,11 +130,12 @@ class StartHandlerTest {
         when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
-        when(permissionDecisionManager.canStartJourney(any(), any()))
-                .thenReturn(
-                        uk.gov.di.authentication.shared.entity.Result.success(
-                                new uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .Permitted(0)));
+        when(permissionDecisionManager.canStartJourney(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                uk.gov.di.authentication.shared.entity.Result.success(
+                                        inv.getArgument(2, Function.class)
+                                                .apply(new PermittedData(0))));
         handler =
                 new StartHandler(
                         auditService,
@@ -399,19 +403,25 @@ class StartHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
-        when(permissionDecisionManager.canStartJourney(any(), any()))
-                .thenReturn(
-                        uk.gov.di.authentication.shared.entity.Result.success(
-                                new uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .ReauthLockedOut(
-                                        uk.gov.di.authentication.userpermissions.entity
-                                                .ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        0,
-                                        java.time.Instant.now().plusSeconds(900),
-                                        false,
-                                        Map.of(countType, MAX_ALLOWED_RETRIES),
-                                        java.util.List.of(countType))));
+        when(permissionDecisionManager.canStartJourney(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                uk.gov.di.authentication.shared.entity.Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new ReauthLockedOutData(
+                                                                uk.gov.di.authentication
+                                                                        .userpermissions.entity
+                                                                        .ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                0,
+                                                                java.time.Instant.now()
+                                                                        .plusSeconds(900),
+                                                                false,
+                                                                Map.of(
+                                                                        countType,
+                                                                        MAX_ALLOWED_RETRIES),
+                                                                java.util.List.of(countType)))));
 
         var isAuthenticated = true;
         useValidSession();
@@ -628,19 +638,25 @@ class StartHandlerTest {
 
         when(authenticationAttemptsService.getCountsByJourney(any(), any()))
                 .thenReturn(Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES)); // Blocked but no subject ID
-        when(permissionDecisionManager.canStartJourney(any(), any()))
-                .thenReturn(
-                        uk.gov.di.authentication.shared.entity.Result.success(
-                                new uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .ReauthLockedOut(
-                                        uk.gov.di.authentication.userpermissions.entity
-                                                .ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        0,
-                                        java.time.Instant.now().plusSeconds(900),
-                                        false,
-                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES),
-                                        java.util.List.of(ENTER_EMAIL))));
+        when(permissionDecisionManager.canStartJourney(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                uk.gov.di.authentication.shared.entity.Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new ReauthLockedOutData(
+                                                                uk.gov.di.authentication
+                                                                        .userpermissions.entity
+                                                                        .ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                0,
+                                                                java.time.Instant.now()
+                                                                        .plusSeconds(900),
+                                                                false,
+                                                                Map.of(
+                                                                        ENTER_EMAIL,
+                                                                        MAX_ALLOWED_RETRIES),
+                                                                java.util.List.of(ENTER_EMAIL)))));
 
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
@@ -801,19 +817,25 @@ class StartHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES));
-        when(permissionDecisionManager.canStartJourney(any(), any()))
-                .thenReturn(
-                        uk.gov.di.authentication.shared.entity.Result.success(
-                                new uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .ReauthLockedOut(
-                                        uk.gov.di.authentication.userpermissions.entity
-                                                .ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        0,
-                                        java.time.Instant.now().plusSeconds(900),
-                                        false,
-                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES),
-                                        java.util.List.of(ENTER_EMAIL))));
+        when(permissionDecisionManager.canStartJourney(any(), any(), any(), any()))
+                .thenAnswer(
+                        inv ->
+                                uk.gov.di.authentication.shared.entity.Result.success(
+                                        inv.getArgument(3, Function.class)
+                                                .apply(
+                                                        new ReauthLockedOutData(
+                                                                uk.gov.di.authentication
+                                                                        .userpermissions.entity
+                                                                        .ForbiddenReason
+                                                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                                                0,
+                                                                java.time.Instant.now()
+                                                                        .plusSeconds(900),
+                                                                false,
+                                                                Map.of(
+                                                                        ENTER_EMAIL,
+                                                                        MAX_ALLOWED_RETRIES),
+                                                                java.util.List.of(ENTER_EMAIL)))));
 
         useValidSession();
 

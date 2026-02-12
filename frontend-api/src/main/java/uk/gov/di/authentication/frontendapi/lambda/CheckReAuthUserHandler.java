@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
@@ -191,41 +190,50 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         var canReceiveEmailAddressResult =
                 permissionDecisionManager.canReceiveEmailAddress(
-                        JourneyType.REAUTHENTICATION, permissionContext);
+                        JourneyType.REAUTHENTICATION,
+                        permissionContext,
+                        permitted -> {
+                            auditService.submitAuditEvent(
+                                    AUTH_REAUTH_ACCOUNT_IDENTIFIED,
+                                    auditContext,
+                                    pairwiseIdMetadataPair,
+                                    pair(
+                                            "incorrect_email_attempt_count",
+                                            permitted.attemptCount()));
+
+                            return generateSuccessResponse();
+                        },
+                        reauthLockedOut -> {
+                            ReauthFailureReasons failureReason =
+                                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                                            reauthLockedOut.forbiddenReason());
+
+                            auditService.submitAuditEvent(
+                                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                                    auditContext,
+                                    ReauthMetadataBuilder.builder(request.rpPairwiseId())
+                                            .withAllIncorrectAttemptCounts(
+                                                    reauthLockedOut.detailedCounts())
+                                            .withFailureReason(failureReason)
+                                            .build());
+                            cloudwatchMetricsService.incrementCounter(
+                                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                                    Map.of(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment(),
+                                            FAILURE_REASON.getValue(),
+                                            failureReason == null
+                                                    ? "unknown"
+                                                    : failureReason.getValue()));
+
+                            LOG.warn("Account is unable to reauth due to too many failed attempts");
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                        });
         if (canReceiveEmailAddressResult.isFailure()) {
             DecisionError failure = canReceiveEmailAddressResult.getFailure();
             LOG.error("Failure to get canReceiveEmailAddress decision due to {}", failure);
             return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(failure);
-        }
-
-        Decision canReceiveEmailAddressDecision = canReceiveEmailAddressResult.getSuccess();
-
-        if (canReceiveEmailAddressDecision instanceof Decision.ReauthLockedOut reauthLockedOut) {
-            ReauthFailureReasons failureReason =
-                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
-                            reauthLockedOut.forbiddenReason());
-
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                    auditContext,
-                    ReauthMetadataBuilder.builder(request.rpPairwiseId())
-                            .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
-                            .withFailureReason(failureReason)
-                            .build());
-            cloudwatchMetricsService.incrementCounter(
-                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            FAILURE_REASON.getValue(),
-                            failureReason == null ? "unknown" : failureReason.getValue()));
-
-            LOG.warn("Account is unable to reauth due to too many failed attempts");
-            return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
-        } else if (!(canReceiveEmailAddressDecision instanceof Decision.Permitted)) {
-            return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         if (!isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId) {
@@ -240,15 +248,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     maybeUserProfileOfUserSuppliedEmail);
         }
 
-        auditService.submitAuditEvent(
-                AUTH_REAUTH_ACCOUNT_IDENTIFIED,
-                auditContext,
-                pairwiseIdMetadataPair,
-                pair(
-                        "incorrect_email_attempt_count",
-                        canReceiveEmailAddressDecision.attemptCount()));
-
-        return generateSuccessResponse();
+        return canReceiveEmailAddressResult.getSuccess();
     }
 
     private APIGatewayProxyResponseEvent generateSuccessResponse() {
@@ -284,64 +284,82 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         var canReceiveEmailAddressResult =
                 permissionDecisionManager.canReceiveEmailAddress(
-                        JourneyType.REAUTHENTICATION, permissionContext);
+                        JourneyType.REAUTHENTICATION,
+                        permissionContext,
+                        permitted -> {
+                            var pairBuilder =
+                                    ReauthMetadataBuilder.builder(rpPairwiseId)
+                                            .withIncorrectEmailCount(permitted.attemptCount())
+                                            .withRestrictedUserSuppliedEmailPair(userSuppliedEmail);
+
+                            userProfileOfSuppliedEmail.ifPresent(
+                                    userProfile ->
+                                            pairBuilder
+                                                    .withRestrictedUserIdForUserSuppliedEmailPair(
+                                                            userProfile.getSubjectID()));
+
+                            auditService.submitAuditEvent(
+                                    AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                                    auditContext,
+                                    pairBuilder.build());
+
+                            return generateApiGatewayProxyErrorResponse(404, USER_NOT_FOUND);
+                        },
+                        reauthLockedOut -> {
+                            var pairBuilder =
+                                    ReauthMetadataBuilder.builder(rpPairwiseId)
+                                            .withIncorrectEmailCount(reauthLockedOut.attemptCount())
+                                            .withRestrictedUserSuppliedEmailPair(userSuppliedEmail);
+
+                            userProfileOfSuppliedEmail.ifPresent(
+                                    userProfile ->
+                                            pairBuilder
+                                                    .withRestrictedUserIdForUserSuppliedEmailPair(
+                                                            userProfile.getSubjectID()));
+
+                            auditService.submitAuditEvent(
+                                    AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                                    auditContext,
+                                    pairBuilder.build());
+
+                            ReauthFailureReasons failureReason =
+                                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                                            reauthLockedOut.forbiddenReason());
+
+                            auditService.submitAuditEvent(
+                                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                                    auditContext,
+                                    ReauthMetadataBuilder.builder(rpPairwiseId)
+                                            .withAllIncorrectAttemptCounts(
+                                                    reauthLockedOut.detailedCounts())
+                                            .withFailureReason(failureReason)
+                                            .build());
+                            cloudwatchMetricsService.incrementCounter(
+                                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                                    Map.of(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment(),
+                                            FAILURE_REASON.getValue(),
+                                            failureReason.getValue()));
+
+                            auditService.submitAuditEvent(
+                                    AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
+                                    auditContext,
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                                            configurationService.getMaxEmailReAuthRetries()),
+                                    pairwiseIdMetadataPair);
+
+                            LOG.warn("Account is unable to reauth due to too many failed attempts");
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                        });
         if (canReceiveEmailAddressResult.isFailure()) {
             DecisionError failure = canReceiveEmailAddressResult.getFailure();
             LOG.error("Failure to get canReceiveEmailAddress decision due to {}", failure);
             return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(failure);
         }
 
-        Decision canReceiveEmailAddressDecision = canReceiveEmailAddressResult.getSuccess();
-
-        var pairBuilder =
-                ReauthMetadataBuilder.builder(rpPairwiseId)
-                        .withIncorrectEmailCount(canReceiveEmailAddressDecision.attemptCount())
-                        .withRestrictedUserSuppliedEmailPair(userSuppliedEmail);
-
-        userProfileOfSuppliedEmail.ifPresent(
-                userProfile ->
-                        pairBuilder.withRestrictedUserIdForUserSuppliedEmailPair(
-                                userProfile.getSubjectID()));
-
-        auditService.submitAuditEvent(
-                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED, auditContext, pairBuilder.build());
-
-        if (canReceiveEmailAddressDecision instanceof Decision.ReauthLockedOut reauthLockedOut) {
-            ReauthFailureReasons failureReason =
-                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
-                            reauthLockedOut.forbiddenReason());
-
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                    auditContext,
-                    ReauthMetadataBuilder.builder(rpPairwiseId)
-                            .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
-                            .withFailureReason(failureReason)
-                            .build());
-            cloudwatchMetricsService.incrementCounter(
-                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            FAILURE_REASON.getValue(),
-                            failureReason.getValue()));
-
-            auditService.submitAuditEvent(
-                    AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
-                    auditContext,
-                    pair(
-                            AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
-                            configurationService.getMaxEmailReAuthRetries()),
-                    pairwiseIdMetadataPair);
-
-            LOG.warn("Account is unable to reauth due to too many failed attempts");
-            return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
-        } else if (!(canReceiveEmailAddressDecision instanceof Decision.Permitted)) {
-            return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
-        }
-
-        return generateApiGatewayProxyErrorResponse(404, USER_NOT_FOUND);
+        return canReceiveEmailAddressResult.getSuccess();
     }
 }

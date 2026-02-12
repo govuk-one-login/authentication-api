@@ -8,7 +8,6 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.PermissionDecisions;
 import uk.gov.di.authentication.userpermissions.UserActions;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import static java.lang.String.format;
@@ -43,35 +42,44 @@ public class ExampleSmsVerificationHandler {
                         .withAuthSessionItem(new AuthSessionItem())
                         .build();
 
-        var checkResult = permissionDecisions.canVerifyMfaOtp(journeyType, permissionContext);
+        var checkResult =
+                permissionDecisions.canVerifyMfaOtp(
+                        journeyType,
+                        permissionContext,
+                        permitted -> {
+                            if (!submittedOtp.equals(EXPECTED_OTP)) {
+                                userActions.incorrectSmsOtpReceived(journeyType, permissionContext);
+                                return "400: Incorrect OTP received";
+                            }
+
+                            sendAuditEvent(
+                                    "OTP_VERIFIED",
+                                    AuditContext.emptyAuditContext()
+                                            .withMetadataItem(
+                                                    pair(
+                                                            "attempts",
+                                                            permitted.attemptCount() + 1)));
+
+                            userActions.correctSmsOtpReceived(journeyType, permissionContext);
+                            return "200: Success";
+                        },
+                        lockedOut -> {
+                            sendAuditEvent(
+                                    "LOCKED_OUT",
+                                    AuditContext.emptyAuditContext()
+                                            .withMetadataItem(
+                                                    pair("reason", lockedOut.forbiddenReason()))
+                                            .withMetadataItem(
+                                                    pair("until", lockedOut.lockedUntil())));
+                            return format(
+                                    "403: User is temporarily locked out due to %s until %s",
+                                    lockedOut.forbiddenReason(), lockedOut.lockedUntil());
+                        });
         if (checkResult.isFailure()) {
             return (format("500: %s", checkResult.getFailure().name()));
         }
 
-        var decision = checkResult.getSuccess();
-        if (decision instanceof Decision.TemporarilyLockedOut lockedOut) {
-            sendAuditEvent(
-                    "LOCKED_OUT",
-                    AuditContext.emptyAuditContext()
-                            .withMetadataItem(pair("reason", lockedOut.forbiddenReason()))
-                            .withMetadataItem(pair("until", lockedOut.lockedUntil())));
-            return (format(
-                    "403: User is temporarily locked out due to %s until %s",
-                    lockedOut.forbiddenReason(), lockedOut.lockedUntil()));
-        }
-
-        if (!submittedOtp.equals(EXPECTED_OTP)) {
-            userActions.incorrectSmsOtpReceived(journeyType, permissionContext);
-            return ("400: Incorrect OTP received");
-        }
-
-        sendAuditEvent(
-                "OTP_VERIFIED",
-                AuditContext.emptyAuditContext()
-                        .withMetadataItem(pair("attempts", decision.attemptCount() + 1)));
-
-        userActions.correctSmsOtpReceived(journeyType, permissionContext);
-        return ("200: Success");
+        return checkResult.getSuccess();
     }
 
     private void sendAuditEvent(String eventName, AuditContext auditContext) {

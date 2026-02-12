@@ -40,7 +40,6 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.Collections;
@@ -281,7 +280,18 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                         permissionContextBuilder
                                 .withE164FormattedPhoneNumber(
                                         formatPhoneNumber(userProfile.getPhoneNumber()))
-                                .build());
+                                .build(),
+                        permitted -> true,
+                        lockedOut -> {
+                            LOG.info(
+                                    "User is temporarily locked out from receiving SMS notifications");
+                            return false;
+                        },
+                        indefinitelyLockedOut -> {
+                            LOG.info(
+                                    "User is indefinitely locked out from receiving SMS notifications");
+                            return false;
+                        });
 
         if (canSendSmsOtpResult.isFailure()) {
             LOG.error(
@@ -290,13 +300,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             return false;
         }
 
-        var decision = canSendSmsOtpResult.getSuccess();
-        if (decision instanceof Decision.Permitted) {
-            return true;
-        } else {
-            LOG.info("User is {} from receiving SMS notifications", decision.getClass().getName());
-            return false;
-        }
+        return canSendSmsOtpResult.getSuccess();
     }
 
     private static boolean verifyPassword(String hashedPassword, String password) {

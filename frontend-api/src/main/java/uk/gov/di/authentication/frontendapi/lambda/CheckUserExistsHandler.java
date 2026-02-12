@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -29,7 +30,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
@@ -129,12 +129,32 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             : AuditService.UNKNOWN;
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
+            final String finalInternalCommonSubjectId = internalCommonSubjectId;
+            final AuditContext finalAuditContext = auditContext;
             PermissionContext permissionContext =
                     PermissionContext.builder().withEmailAddress(emailAddress).build();
 
             var decisionResult =
                     permissionDecisionManager.canReceivePassword(
-                            JourneyType.PASSWORD_RESET, permissionContext);
+                            JourneyType.PASSWORD_RESET,
+                            permissionContext,
+                            permitted -> null,
+                            lockedOut -> {
+                                LOG.info("User account is locked");
+                                authSessionService.updateSession(userContext.getAuthSession());
+
+                                auditService.submitAuditEvent(
+                                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                                        finalAuditContext.withSubjectId(
+                                                finalInternalCommonSubjectId),
+                                        pair(
+                                                "number_of_attempts_user_allowed_to_login",
+                                                configurationService.getMaxPasswordRetries()));
+
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+                            },
+                            reauthLockedOut -> null);
 
             if (decisionResult.isFailure()) {
                 LOG.info("No decision made: {}", decisionResult.getFailure());
@@ -142,20 +162,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         decisionResult.getFailure());
             }
 
-            if (decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-                LOG.info("User account is locked");
-                auditContext = auditContext.withSubjectId(internalCommonSubjectId);
-                authSessionService.updateSession(userContext.getAuthSession());
-
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContext,
-                        pair(
-                                "number_of_attempts_user_allowed_to_login",
-                                configurationService.getMaxPasswordRetries()));
-
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+            if (decisionResult.getSuccess() != null) {
+                return decisionResult.getSuccess();
             }
 
             AuditableEvent auditableEvent;
@@ -227,31 +235,41 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         var lockoutInformation = new ArrayList<LockoutInformation>();
 
         var signInResult =
-                permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, permissionContext);
+                permissionDecisionManager.canVerifyMfaOtp(
+                        JourneyType.SIGN_IN,
+                        permissionContext,
+                        permitted -> lockoutInformation,
+                        tempLockOut -> {
+                            long ttl = tempLockOut.lockedUntil().getEpochSecond();
+                            lockoutInformation.add(
+                                    new LockoutInformation(
+                                            "codeBlock",
+                                            MFAMethodType.AUTH_APP,
+                                            ttl,
+                                            JourneyType.SIGN_IN));
+                            return lockoutInformation;
+                        });
         if (signInResult.isFailure()) {
             return Result.failure(signInResult.getFailure());
-        }
-        if (signInResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
-            long ttl = tempLockOut.lockedUntil().getEpochSecond();
-            lockoutInformation.add(
-                    new LockoutInformation(
-                            "codeBlock", MFAMethodType.AUTH_APP, ttl, JourneyType.SIGN_IN));
         }
 
         var passwordResetResult =
                 permissionDecisionManager.canVerifyMfaOtp(
-                        JourneyType.PASSWORD_RESET_MFA, permissionContext);
+                        JourneyType.PASSWORD_RESET_MFA,
+                        permissionContext,
+                        permitted -> lockoutInformation,
+                        tempLockOut -> {
+                            long ttl = tempLockOut.lockedUntil().getEpochSecond();
+                            lockoutInformation.add(
+                                    new LockoutInformation(
+                                            "codeBlock",
+                                            MFAMethodType.AUTH_APP,
+                                            ttl,
+                                            JourneyType.PASSWORD_RESET_MFA));
+                            return lockoutInformation;
+                        });
         if (passwordResetResult.isFailure()) {
             return Result.failure(passwordResetResult.getFailure());
-        }
-        if (passwordResetResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
-            long ttl = tempLockOut.lockedUntil().getEpochSecond();
-            lockoutInformation.add(
-                    new LockoutInformation(
-                            "codeBlock",
-                            MFAMethodType.AUTH_APP,
-                            ttl,
-                            JourneyType.PASSWORD_RESET_MFA));
         }
 
         return Result.success(lockoutInformation);
