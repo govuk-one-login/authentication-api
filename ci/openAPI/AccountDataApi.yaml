@@ -43,12 +43,12 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "User not found"
+                $ref: "#/components/schemas/Error"
+              examples:
+                user_not_found:
+                  value:
+                    code: 4040
+                    message: "User not found"
     post:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
@@ -74,48 +74,57 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "Invalid request body"
-                      - "Missing required fields"
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 4000
+                    message: "Invalid request body"
+                missing_required_fields:
+                  value:
+                    code: 4001
+                    message: "Missing required fields"
         "404":
           description: User not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "User not found"
+                $ref: "#/components/schemas/Error"
+              examples:
+                user_not_found:
+                  value:
+                    code: 4040
+                    message: "User not found"
         "409":
           description: Passkey already exists
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "Passkey already exists"
+                $ref: "#/components/schemas/Error"
+              examples:
+                passkey_already_exists:
+                  value:
+                    code: 4090
+                    message: "Passkey already exists"
         "422":
           description: Unprocessable entity - invalid field values
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "Invalid credential format"
-                      - "Invalid AAGUID format"
-                      - "Invalid attestation signature"
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_credential_format:
+                  value:
+                    code: 4220
+                    message: "Invalid credential format"
+                invalid_aaguid_format:
+                  value:
+                    code: 4221
+                    message: "Invalid AAGUID format"
+                invalid_attestation_signature:
+                  value:
+                    code: 4222
+                    message: "Invalid attestation signature"
 
   /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
     parameters:
@@ -152,28 +161,31 @@ paths:
         "204":
           description: Passkey updated successfully
         "400":
-          description: Invalid request - attempting to modify disallowed fields
+          description: Bad request - malformed request body
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "Cannot modify disallowed fields"
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 4000
+                    message: "Invalid request body"
         "404":
           description: User not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "User not found"
-                      - "Passkey not found"
+                $ref: "#/components/schemas/Error"
+              examples:
+                user_not_found:
+                  value:
+                    code: 4040
+                    message: "User not found"
+                passkey_not_found:
+                  value:
+                    code: 4041
+                    message: "Passkey not found"
     delete:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
@@ -194,13 +206,16 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "User not found"
-                      - "Passkey not found"
+                $ref: "#/components/schemas/Error"
+              examples:
+                user_not_found:
+                  value:
+                    code: 4040
+                    message: "User not found"
+                passkey_not_found:
+                  value:
+                    code: 4041
+                    message: "Passkey not found"
 
 components:
   schemas:
@@ -271,3 +286,18 @@ components:
               type: string
               format: date-time
               description: The timestamp for when the passkey was last used
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: Error code
+          example: 1001
+        message:
+          type: string
+          description: Error message
+          example: User not found
+      required:
+        - code
+        - message
