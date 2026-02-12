@@ -761,14 +761,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isAccountManagementInternationalSmsEnabled() {
         return System.getenv()
-                .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", "true")
-                .equals("true");
+                .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isInternalApiNewInternationalSmsEnabled() {
         return System.getenv()
-                .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", "true")
-                .equals("true");
+                .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isTestSigningKeyEnabled() {
