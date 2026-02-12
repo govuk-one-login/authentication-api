@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.accountdata.entity;
+package uk.gov.di.authentication.accountdata.entity.passkey;
 
 public enum PasskeysCreateFailureReason {
     PARSING_PASSKEY_CREATE_REQUEST_ERROR("parsing_passkey_create_request_error");

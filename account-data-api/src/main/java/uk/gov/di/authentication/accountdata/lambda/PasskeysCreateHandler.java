@@ -7,8 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.accountdata.entity.PasskeysCreateFailureReason;
-import uk.gov.di.authentication.accountdata.entity.PasskeysCreateRequest;
+import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
