@@ -137,7 +137,7 @@ public class AMCAuthorizationService {
                                                     "redirect_uri",
                                                     configurationService.getAMCRedirectURI())
                                             .claim("scope", scopeValues)
-                                            .claim("state", new State())
+                                            .claim("state", new State().getValue())
                                             .jwtID(UUID.randomUUID().toString())
                                             .issueTime(issueTime)
                                             .notBeforeTime(issueTime)
