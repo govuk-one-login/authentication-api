@@ -2,16 +2,21 @@ package uk.gov.di.authentication.shared.services;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 
+import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
@@ -45,6 +50,22 @@ public class BaseDynamoService<T> {
         dynamoTable.putItem(item);
     }
 
+    public boolean putIfUnique(T item, String key) {
+        try {
+            dynamoTable.putItem(
+                    builder ->
+                            builder.item(item)
+                                    .conditionExpression(
+                                            Expression.builder()
+                                                    .expression("attribute_not_exists(#key)")
+                                                    .putExpressionName("#key", key)
+                                                    .build()));
+            return true;
+        } catch (ConditionalCheckFailedException e) {
+            return false;
+        }
+    }
+
     public Optional<T> get(String partition) {
 
         return Optional.ofNullable(
@@ -59,6 +80,21 @@ public class BaseDynamoService<T> {
 
     public Optional<T> get(GetItemEnhancedRequest getItemEnhancedRequest) {
         return Optional.ofNullable(dynamoTable.getItem(getItemEnhancedRequest));
+    }
+
+    public List<T> getAllByPrefix(String partition, String sortKeyPrefix) {
+        QueryConditional queryConditional =
+                QueryConditional.sortBeginsWith(
+                        Key.builder().partitionValue(partition).sortValue(sortKeyPrefix).build());
+        return dynamoTable
+                .query(
+                        QueryEnhancedRequest.builder()
+                                .consistentRead(true)
+                                .queryConditional(queryConditional)
+                                .build())
+                .items()
+                .stream()
+                .toList();
     }
 
     public void delete(String partition) {
