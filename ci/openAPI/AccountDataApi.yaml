@@ -207,40 +207,67 @@ components:
     PasskeyAuthenticatorCreate:
       type: object
       required:
-        - credential
         - id
+        - credential
         - aaguid
-        - attestationSignature
+        - isAttested
+        - signCount
+        - transports
+        - isBackUpEligible
+        - isBackedUp
+        - isResidentKey
       properties:
-        credential:
-          type: string
-          description: Public key credential
         id:
           type: string
-          description: Passkey ID
+          description: Credential ID
+        credential:
+          type: string
+          description: Public key in COSE format
         aaguid:
           type: string
-          description: Authenticator AAGUID
-        attestationSignature:
-          type: string
-          description: Authenticator attestation signature
+          description: Authenticator Attestation GUID (AAGUID)
+        isAttested:
+          type: boolean
+          description: Has attestation been provided and verified
+        signCount:
+          type: integer
+          description: Sign counter provided with passkey (usually attestable ones only)
+        transports:
+          type: array
+          items:
+            type: string
+          description: Transport mechanisms supported (e.g. ble, usb, internal, nfc)
+        isBackUpEligible:
+          type: boolean
+          description: Is the passkey eligible for cloud-sync
+        isBackedUp:
+          type: boolean
+          description: Is the passkey currently synced
+        isResidentKey:
+          type: boolean
+          description: Is the passkey a resident key (stored on the device)
 
     PasskeyAuthenticatorUpdate:
       type: object
       properties:
+        signCount:
+          type: integer
+          description: Updated sign counter
         lastUsedAt:
           type: string
           format: date-time
+          description: The timestamp for when the passkey was last used
 
     PasskeyAuthenticatorRead:
       allOf:
         - $ref: "#/components/schemas/PasskeyAuthenticatorCreate"
-        - $ref: "#/components/schemas/PasskeyAuthenticatorUpdate"
         - type: object
           properties:
-            type:
-              type: string
-              example: "passkey"
             createdAt:
               type: string
               format: date-time
+              description: The timestamp the passkey was created
+            lastUsedAt:
+              type: string
+              format: date-time
+              description: The timestamp for when the passkey was last used
