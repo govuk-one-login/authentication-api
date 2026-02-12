@@ -11,6 +11,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -177,7 +178,6 @@ class TokenRequestValidatorTest {
         private static String validRequestBodyValidSignature;
         private static String validRequestBodyInvalidSignature;
         private static String validRequestBodyRsaSignature;
-        private static String incompleteRequestBodyValidSignature;
 
         @BeforeAll
         static void init() throws JOSEException, ParseException {
@@ -199,12 +199,6 @@ class TokenRequestValidatorTest {
                     JwtHelper.jsonToSignedJwt(validClientAssertionPayload, validKeyPair);
             validRequestBodyValidSignature =
                     getValidRequestBodyWithClientAssertion(clientAssertionValidKeySignature);
-            incompleteRequestBodyValidSignature =
-                    "code=vC-WxcXDLoOHaJN0YvPB0IwG2LiT1ekSVRSccwubwlI"
-                            + "&grant_type=authorization_code"
-                            + "&redirect_uri=https://redirect.uri.com/redirect"
-                            + "&client_assertion="
-                            + clientAssertionValidKeySignature;
 
             ECKey alternateEcKeyPair = new ECKeyGenerator(Curve.P_256).generate();
             String clientAssertionInvalidEcKeySignature =
@@ -234,16 +228,6 @@ class TokenRequestValidatorTest {
         static Stream<Arguments> validationTestData() {
             return Stream.of(
                     arguments(
-                            "string-not-jwt",
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Invalid private_key_jwt",
-                            validPublicKeyAsX509String),
-                    arguments(
-                            incompleteRequestBodyValidSignature,
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Invalid private_key_jwt",
-                            validPublicKeyAsX509String),
-                    arguments(
                             validRequestBodyRsaSignature,
                             OAuth2Error.INVALID_CLIENT_CODE,
                             "Client authentication failed",
@@ -261,15 +245,15 @@ class TokenRequestValidatorTest {
                 String requestBody,
                 String expectedErrorCode,
                 String expectedErrorDescription,
-                String clientRegistryPublicKey) {
+                String orchStubPublicKey) {
             TokenAuthInvalidException exception =
                     assertThrows(
                             TokenAuthInvalidException.class,
                             () ->
                                     validator.validatePrivateKeyJwtClientAuth(
-                                            requestBody,
+                                            PrivateKeyJWT.parse(requestBody),
                                             EXPECTED_AUDIENCE,
-                                            Collections.singletonList(clientRegistryPublicKey)));
+                                            List.of(orchStubPublicKey)));
 
             assertEquals(expectedErrorCode, exception.getErrorObject().getCode());
             assertEquals(expectedErrorDescription, exception.getErrorObject().getDescription());
@@ -281,7 +265,7 @@ class TokenRequestValidatorTest {
             assertDoesNotThrow(
                     () ->
                             validator.validatePrivateKeyJwtClientAuth(
-                                    validRequestBodyValidSignature,
+                                    PrivateKeyJWT.parse(validRequestBodyValidSignature),
                                     EXPECTED_AUDIENCE,
                                     Collections.singletonList(validPublicKeyAsX509String)));
         }
@@ -292,7 +276,7 @@ class TokenRequestValidatorTest {
             assertDoesNotThrow(
                     () ->
                             validator.validatePrivateKeyJwtClientAuth(
-                                    validRequestBodyValidSignature,
+                                    PrivateKeyJWT.parse(validRequestBodyValidSignature),
                                     EXPECTED_AUDIENCE,
                                     List.of(
                                             validPublicKeyAsX509String,

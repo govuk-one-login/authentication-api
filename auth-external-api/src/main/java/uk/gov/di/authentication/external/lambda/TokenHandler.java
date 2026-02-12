@@ -7,6 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -135,8 +138,10 @@ public class TokenHandler
                             new Audience(orchAuthExternalApiTokenEndpoint));
             var validPublicKeys =
                     configurationService.getOrchestrationToAuthenticationSigningPublicKeys();
+            var privateKeyJwt = extractPrivateKeyJwt(input.getBody());
+
             tokenRequestValidator.validatePrivateKeyJwtClientAuth(
-                    input.getBody(), expectedAudience, validPublicKeys);
+                    privateKeyJwt, expectedAudience, validPublicKeys);
 
             String suppliedAuthCode = requestBody.get("code");
 
@@ -214,6 +219,19 @@ public class TokenHandler
                     tokenUtilityService.generateTokenErrorResponse(e.getOAuth2Error());
             return generateApiGatewayProxyResponse(
                     tokenErrorResponse.getStatusCode(), tokenErrorResponse.getContent());
+        }
+    }
+
+    private PrivateKeyJWT extractPrivateKeyJwt(String requestBody)
+            throws TokenAuthInvalidException {
+        try {
+            return PrivateKeyJWT.parse(requestBody);
+        } catch (ParseException e) {
+            LOG.warn("Unable to parse private_key_jwt", e);
+            throw new TokenAuthInvalidException(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid private_key_jwt"),
+                    ClientAuthenticationMethod.PRIVATE_KEY_JWT,
+                    "tbc");
         }
     }
 
