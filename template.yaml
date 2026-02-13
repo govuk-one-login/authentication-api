@@ -5420,7 +5420,7 @@ Resources:
                 - arn:aws:iam::${SpotAccountNumber}:root
                 - SpotAccountNumber: !Sub "{{resolve:ssm:${Environment}-spot-account-number}}"
             Action:
-              - sqs:SendMessage
+              - sqs:ReceiveMessage
               - sqs:ChangeMessageVisibility
               - sqs:DeleteMessage
               - sqs:GetQueueAttributes
