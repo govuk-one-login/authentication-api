@@ -368,6 +368,74 @@ jobs:
         run: npm test
         working-directory: ./orchestration-alerting
 
+  run-account-data-api-integration-tests:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - check-changed-files
+    services:
+      localstack:
+        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
+        env:
+          SERVICES: "sqs, sns, kms, ssm, s3, secretsmanager"
+          DEFAULT_REGION: eu-west-2
+          GATEWAY_LISTEN: 0.0.0.0:45678
+          LOCALSTACK_HOST: localhost:45678
+          TEST_AWS_ACCOUNT_ID: 123456789012
+          KMS_PROVIDER: local-kms
+        options: >-
+          --add-host "notify.internal:host-gateway"
+          --add-host "subscriber.internal:host-gateway"
+        ports:
+          - 45678:45678
+      dynamodb:
+        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
+        options: >-
+          --health-cmd "curl http://localhost:8000"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8000:8000
+    steps:
+      - name: Check out repository code
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 #v5.0.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+      - name: Set up Gradle
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: true
+      - name: Restore Build Cache
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            .gradle/
+            */build/
+            !*/build/reports
+            !*/build/jacoco
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
+      - name: Run Account Data Api Integration Tests
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        run: |
+          ./gradlew :account-data-api-integration-tests:test :account-data-api-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+      - name: Upload Account Management Integration Test Reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
+        with:
+          name: account-data-api-integration-test-reports
+          path: account-data-api-integration-tests/build/reports/tests/test/
+          retention-days: 5
+
   run-sonar-analysis:
     runs-on: ubuntu-latest
     needs:
