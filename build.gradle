@@ -2,9 +2,7 @@ import com.github.spotbugs.snom.Confidence
 import com.github.spotbugs.snom.Effort
 buildscript {
     repositories {
-        maven {
-            url = 'https://gds.jfrog.io/artifactory/di-allowed-repos'
-        }
+        mavenCentral()
     }
     dependencies {
         constraints {
@@ -105,6 +103,7 @@ subprojects {
 
     configurations.all {
         exclude group: 'org.apache.tika', module: 'tika-parser-pdf-module'
+        exclude group: 'org.apache.commons', module: 'commons-io'
     }
 
     // Check dependencies using:
@@ -164,6 +163,10 @@ subprojects {
 
                     add(conf.name, 'org.apache.commons:commons-lang3:[3.18.0,)') {
                         because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+                    }
+
+                    add(conf.name, 'commons-io:commons-io:[2.21.0,)') {
+                        because 'CVE-2021-29425 is fixed in commons-io:commons-io:2.21.0 and higher'
                     }
 
                     // Other constraints
