@@ -37,7 +37,9 @@ class JwksHandlerTest {
     }
 
     @Test
-    void shouldReturnTwoJwksWhenRsaSigningIsDisabled() throws JOSEException {
+    void shouldReturnTwoJwksWhenPublishOldKeyIsEnabledAndRsaSigningIsDisabled()
+            throws JOSEException {
+        when(configurationService.isPublishOldDocAppSigningKeyEnabled()).thenReturn(true);
         var tokenSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
@@ -53,7 +55,9 @@ class JwksHandlerTest {
     }
 
     @Test
-    void shouldReturnThreeJwksWhenRsaSigningIsEnabled() throws JOSEException {
+    void shouldReturnThreeJwksWhenPublishOldKeyIsEnabledAndRsaSigningIsEnabled()
+            throws JOSEException {
+        when(configurationService.isPublishOldDocAppSigningKeyEnabled()).thenReturn(true);
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
         var tokenSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
@@ -75,6 +79,7 @@ class JwksHandlerTest {
 
     @Test
     void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
+        when(configurationService.isPublishOldDocAppSigningKeyEnabled()).thenReturn(true);
         var opaqueSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
@@ -112,8 +117,10 @@ class JwksHandlerTest {
     }
 
     @Test
-    void shouldPublishNewExternalKeysAlongsideOldWhenNewKeyPublishingIsEnabled()
-            throws JOSEException {
+    void
+            shouldPublishNewExternalKeysAlongsideOldWhenNewKeyPublishingIsEnabledAndOldKeyPublishIsEnabled()
+                    throws JOSEException {
+        when(configurationService.isPublishOldDocAppSigningKeyEnabled()).thenReturn(true);
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
         when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
 
@@ -153,18 +160,15 @@ class JwksHandlerTest {
         when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
 
         var tokenSigningKey = generateECKey();
-        var docAppSigningKey = generateECKey();
         var newTokenSigningKey = generateECKey();
 
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
-        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
         when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newTokenSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
 
-        var expectedJWKSet =
-                new JWKSet(List.of(tokenSigningKey, docAppSigningKey, newTokenSigningKey));
+        var expectedJWKSet = new JWKSet(List.of(tokenSigningKey, newTokenSigningKey));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));
@@ -175,19 +179,16 @@ class JwksHandlerTest {
         when(configurationService.isPublishNextDocAppSigningKeyEnabled()).thenReturn(true);
 
         var tokenSigningKey = generateECKey();
-        var docAppSigningKey = generateECKey();
         var nextDocAppSigningKey = generateECKey();
 
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
-        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
         when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId())
                 .thenReturn(nextDocAppSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
 
-        var expectedJWKSet =
-                new JWKSet(List.of(tokenSigningKey, docAppSigningKey, nextDocAppSigningKey));
+        var expectedJWKSet = new JWKSet(List.of(tokenSigningKey, nextDocAppSigningKey));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));

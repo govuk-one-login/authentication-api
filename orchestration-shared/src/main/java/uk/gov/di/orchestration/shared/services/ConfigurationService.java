@@ -53,6 +53,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().containsKey(envVar) && Boolean.parseBoolean(System.getenv(envVar));
     }
 
+    private boolean getFlagOrTrue(String envVar) {
+        return !System.getenv().containsKey(envVar) || Boolean.parseBoolean(System.getenv(envVar));
+    }
+
     private URI getURIOrDefault(String envVar, String defaultUri) {
         return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
     }
@@ -174,6 +178,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isPublishNextDocAppSigningKeyEnabled() {
         return getFlagOrFalse("PUBLISH_NEXT_DOC_APP_SIGNING_KEY");
+    }
+
+    public boolean isPublishOldDocAppSigningKeyEnabled() {
+        return getFlagOrTrue("PUBLISH_OLD_DOC_APP_SIGNING_KEY");
     }
 
     public boolean isUseNewDocAppSigningKey() {
