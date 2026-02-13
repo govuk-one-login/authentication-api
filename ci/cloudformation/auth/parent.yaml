@@ -209,6 +209,7 @@ Mappings:
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
+      internalApiExistingInternationalSmsEnabled: true
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -248,6 +249,7 @@ Mappings:
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
+      internalApiExistingInternationalSmsEnabled: true
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -287,6 +289,7 @@ Mappings:
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
+      internalApiExistingInternationalSmsEnabled: true
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -327,6 +330,7 @@ Mappings:
       frontendApiFMSTagValue: "authfrontenddev"
       frontendBaseUrl: https://signin.dev.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
+      internalApiExistingInternationalSmsEnabled: true
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
@@ -377,6 +381,7 @@ Mappings:
       frontendApiFMSTagValue: "authfrontendbuild"
       frontendBaseUrl: https://signin.build.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
+      internalApiExistingInternationalSmsEnabled: true
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -430,6 +435,7 @@ Mappings:
       frontendApiFMSTagValue: "authfrontendstaging"
       frontendBaseUrl: https://signin.staging.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
+      internalApiExistingInternationalSmsEnabled: true
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -484,6 +490,7 @@ Mappings:
       frontendApiFMSTagValue: "authfrontendint"
       frontendBaseUrl: https://signin.integration.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
+      internalApiExistingInternationalSmsEnabled: true
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
@@ -538,6 +545,7 @@ Mappings:
       frontendApiFMSTagValue: "authfrontendprod"
       frontendBaseUrl: https://signin.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
+      internalApiExistingInternationalSmsEnabled: true
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
