@@ -134,6 +134,14 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  OldSpotRequestQueueWriting:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
   ProvisionNewDocAppSigningKey:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -143,6 +151,35 @@ Conditions:
   PublishNextDocAppSigningKey:
     !And [
       !Condition ProvisionNewDocAppSigningKey,
+      !Or [
+        !Equals [dev, !Ref Environment],
+        !Equals [build, !Ref Environment],
+        !Equals [staging, !Ref Environment],
+      ],
+    ]
+  UseNewDocAppSigningKey:
+    !And [
+      !Condition ProvisionNewDocAppSigningKey,
+      !Or [
+        !Equals [dev, !Ref Environment],
+        !Equals [build, !Ref Environment],
+        !Equals [staging, !Ref Environment],
+      ],
+    ]
+  PublishOldDocAppSigningKey:
+    !Or [
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
+  ProvisionNewAuthSigningKey:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
+  PublishNextAuthSigningKey:
+    !And [
+      !Condition ProvisionNewAuthSigningKey,
       !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
     ]
 
@@ -3391,7 +3428,10 @@ Resources:
             - PublishNextDocAppSigningKey
             - !Ref OrchDocAppSigningKmsKeyAlias
             - !Ref AWS::NoValue
-
+          PUBLISH_OLD_DOC_APP_SIGNING_KEY: !If
+            - PublishOldDocAppSigningKey
+            - true
+            - false
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
@@ -3662,6 +3702,14 @@ Resources:
               !Ref Environment,
               orchToAuthKeyArn,
             ]
+          PUBLISH_NEXT_AUTH_SIGNING_KEY: !If
+            - PublishNextAuthSigningKey
+            - true
+            - false
+          NEXT_AUTH_SIGNING_KEY_ALIAS: !If
+            - PublishNextAuthSigningKey
+            - !Ref OrchAuthSigningKmsKeyAlias
+            - !Ref AWS::NoValue
       Policies:
         - !Ref OrchToAuthSigningKmsAccessPolicy
       Tags:
@@ -3837,6 +3885,14 @@ Resources:
               !Ref Environment,
               docAppSigningKeyArn,
             ]
+          NEXT_DOC_APP_SIGNING_KEY_ALIAS: !If
+            - PublishNextDocAppSigningKey
+            - !Ref OrchDocAppSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          USE_NEXT_DOC_APP_SIGNING_KEY: !If
+            - UseNewDocAppSigningKey
+            - true
+            - false
           DOMAIN_NAME:
             !FindInMap [
               EnvironmentConfiguration,
@@ -4989,6 +5045,10 @@ Resources:
             - NewSpotRequestQueueWriting
             - true
             - false
+          OLD_SPOT_REQUEST_QUEUE_WRITING: !If
+            - OldSpotRequestQueueWriting
+            - true
+            - false
           SPOT_QUEUE_URL: !If
             - IpvExists
             - !Sub
@@ -5360,7 +5420,7 @@ Resources:
                 - arn:aws:iam::${SpotAccountNumber}:root
                 - SpotAccountNumber: !Sub "{{resolve:ssm:${Environment}-spot-account-number}}"
             Action:
-              - sqs:SendMessage
+              - sqs:ReceiveMessage
               - sqs:ChangeMessageVisibility
               - sqs:DeleteMessage
               - sqs:GetQueueAttributes
@@ -6661,6 +6721,16 @@ Resources:
                   !Ref Environment,
                   orchToAuthKeyArn,
                 ]
+          - Fn::If:
+              - ProvisionNewAuthSigningKey
+              - Sid: AllowNewAuthSigningKey
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchAuthSigningKmsKey.Arn
+              - !Ref AWS::NoValue
 
   BackChannelLogoutQueueWritePolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -7985,6 +8055,35 @@ Resources:
 
   #endregion
 
+  #region Auth signing key pair
+
+  OrchAuthSigningKmsKey:
+    Condition: ProvisionNewAuthSigningKey
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS signing key for authentication to Auth
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  OrchAuthSigningKmsKeyAlias:
+    Condition: ProvisionNewAuthSigningKey
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-auth-kms-key-alias"
+      TargetKeyId: !Ref OrchAuthSigningKmsKey
+
+  #endregion
+
   #region External Token signing keys
   OrchExternalTokenEcSigningKmsKey:
     Condition: ProvisionNewExternalTokenSigningKeys
@@ -8878,12 +8977,14 @@ Resources:
       AlarmDescription: !Sub "Auth journey completion rate has dropped below 50% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-auth-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
       Threshold: 50
+      TreatMissingData: notBreaching
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: "IF(m2 >= 350, m1/m2*100)"
+          Expression: "IF(m2 >= 160, m1/m2*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -8900,7 +9001,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthenticationCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -8919,7 +9020,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
 
   IdentityJourneyCompletionRateAlarm:
@@ -8929,15 +9030,17 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref OrchProdSlackEvents
-      AlarmDescription: !Sub "Identity journey completion rate has dropped below 25% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmDescription: !Sub "Identity journey completion rate has dropped below 30% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-identity-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
-      Threshold: 25
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: 30
+      TreatMissingData: notBreaching
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: "IF(m3 >= 150, (m1+m2)/m3*100)"
+          Expression: "IF(m3 >= 30, (m1+m2)/m3*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -8954,7 +9057,7 @@ Resources:
                   Value: !Sub "${Environment}-IpvCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -8971,7 +9074,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthCodeFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m3
           ReturnData: false
@@ -8990,7 +9093,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
 
   DocAppJourneyCompletionRateAlarm:
@@ -9003,12 +9106,14 @@ Resources:
       AlarmDescription: !Sub "Doc app journey completion rate has dropped below 15% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-docapp-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
-      EvaluationPeriods: 1
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
       Threshold: 15
+      TreatMissingData: notBreaching
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: "IF(m2 >= 50, m1/m2*100)"
+          Expression: "IF(m2 >= 20, m1/m2*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -9025,7 +9130,7 @@ Resources:
                   Value: !Sub "${Environment}-DocAppCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
         - Id: m2
           ReturnData: false
@@ -9044,7 +9149,7 @@ Resources:
                   Value: !Sub "${Environment}-AuthorisationFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
-            Period: 300
+            Period: 60
             Stat: Sum
   #endregion
 

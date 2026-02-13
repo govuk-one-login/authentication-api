@@ -56,8 +56,8 @@ public class InternationalSmsSendCountExtension extends DynamoExtension
         return internationalSmsSendLimitService.canSendSms(phoneNumber);
     }
 
-    public void recordSmsSent(String phoneNumber) {
-        internationalSmsSendLimitService.recordSmsSent(phoneNumber);
+    public void recordSmsSent(String phoneNumber, String reference) {
+        internationalSmsSendLimitService.recordSmsSent(phoneNumber, reference);
     }
 
     public boolean hasRecordForPhoneNumber(String phoneNumber) {

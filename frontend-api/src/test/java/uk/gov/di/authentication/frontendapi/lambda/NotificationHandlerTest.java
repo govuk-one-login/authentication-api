@@ -530,7 +530,8 @@ public class NotificationHandlerTest {
                         any(Map.class),
                         eq(MFA_SMS),
                         eq(EXPECTED_REFERENCE));
-        verify(internationalSmsSendLimitService).recordSmsSent(INTERNATIONAL_MOBILE_NUMBER);
+        verify(internationalSmsSendLimitService)
+                .recordSmsSent(INTERNATIONAL_MOBILE_NUMBER, EXPECTED_REFERENCE);
     }
 
     @Test
@@ -544,7 +545,7 @@ public class NotificationHandlerTest {
 
         verify(internationalSmsSendLimitService).canSendSms(INTERNATIONAL_MOBILE_NUMBER);
         verifyNoInteractions(notificationService);
-        verify(internationalSmsSendLimitService, never()).recordSmsSent(anyString());
+        verify(internationalSmsSendLimitService, never()).recordSmsSent(anyString(), anyString());
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("International SMS send limit reached")));

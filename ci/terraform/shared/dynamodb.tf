@@ -755,6 +755,49 @@ resource "aws_dynamodb_table" "international_sms_send_count" {
   )
 }
 
+resource "aws_dynamodb_table" "authenticator_table" {
+  name         = "${var.environment}-authenticator"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  hash_key  = "PublicSubjectID"
+  range_key = "SK"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
+  attribute {
+    name = "PublicSubjectID"
+    type = "S"
+  }
+
+  attribute {
+    name = "SK"
+    type = "S"
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.authenticator_table_encryption_key.arn
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = (
+    var.environment == "integration" || var.environment == "production" ?
+    {
+      "BackupFrequency" = "Bihourly"
+    } : {}
+  )
+}
+
 ## DynamoDB Resource Policies
 ## These policies are used to allow cross-account access to the DynamoDB tables
 
@@ -805,6 +848,11 @@ resource "aws_dynamodb_resource_policy" "id_reverification_state" {
 
 resource "aws_dynamodb_resource_policy" "international_sms_request_count" {
   resource_arn = aws_dynamodb_table.international_sms_send_count.arn
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
+}
+
+resource "aws_dynamodb_resource_policy" "authenticator_table" {
+  resource_arn = aws_dynamodb_table.authenticator_table.arn
   policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 

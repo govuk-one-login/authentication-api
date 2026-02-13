@@ -704,8 +704,8 @@ class NotificationHandlerTest {
                         VERIFY_PHONE_NUMBER,
                         "123456",
                         SupportedLanguage.EN,
-                        false,
-                        null);
+                        "session-id",
+                        "client-session-id");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -717,7 +717,9 @@ class NotificationHandlerTest {
                 .sendText(
                         eq(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER), any(Map.class), any());
         verify(internationalSmsSendLimitService)
-                .recordSmsSent(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER);
+                .recordSmsSent(
+                        eq(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER),
+                        eq("client-session-id"));
     }
 
     @Test
@@ -740,7 +742,7 @@ class NotificationHandlerTest {
         verify(internationalSmsSendLimitService)
                 .canSendSms(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER);
         verifyNoInteractions(notificationService);
-        verify(internationalSmsSendLimitService, never()).recordSmsSent(anyString());
+        verify(internationalSmsSendLimitService, never()).recordSmsSent(anyString(), anyString());
         assertThat(
                 logging.events(),
                 hasItem(

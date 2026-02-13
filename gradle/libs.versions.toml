@@ -16,7 +16,7 @@ apacheCommonsPool = "org.apache.commons:commons-pool2:2.12.1"
 apacheCommonsValidator = "commons-validator:commons-validator:1.10.1"
 apacheHttpClient = "org.apache.httpcomponents:httpclient:4.5.14"
 apacheHttpComponents = "org.apache.httpcomponents.core5:httpcore5:5.3.6"
-approvalTests = "com.approvaltests:approvaltests:25.9.0"
+approvalTests = "com.approvaltests:approvaltests:26.1.0"
 awaitility = "org.awaitility:awaitility:4.3.0"
 awsCloudwatchEmf = "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
 awsCloudwatch = { module = "software.amazon.awssdk:cloudwatch", version.ref = "awsSdk" }
@@ -50,7 +50,7 @@ jupiterApi = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "ju
 jupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 jupiterParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
 lettuceCore = "io.lettuce:lettuce-core:6.8.1.RELEASE"
-libphonenumber = "com.googlecode.libphonenumber:libphonenumber:9.0.22"
+libphonenumber = "com.googlecode.libphonenumber:libphonenumber:9.0.23"
 log4jJsonTemplate = "org.apache.logging.log4j:log4j-layout-template-json:2.17.1"
 mockitoCore = "org.mockito:mockito-core:5.21.0"
 nimbusJwt = "com.nimbusds:nimbus-jose-jwt:10.4.2"

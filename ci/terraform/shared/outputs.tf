@@ -244,3 +244,7 @@ output "test_client_allow_list_secret_access_policy_arn" {
 output "international_sms_send_count_encryption_key_arn" {
   value = aws_kms_key.international_sms_send_count_encryption_key.arn
 }
+
+output "authenticator_table_encryption_key_arn" {
+  value = aws_kms_key.authenticator_table_encryption_key.arn
+}

@@ -130,3 +130,25 @@ data "aws_iam_policy_document" "email_check_results_encryption_key_kms_policy_do
     ]
   }
 }
+
+resource "aws_iam_policy" "authenticator_table_encryption_key_kms_policy" {
+  name        = "${var.environment}-authenticator-table-encryption-key-kms-policy"
+  path        = "/"
+  description = "IAM policy for managing KMS encryption of the authenticator table"
+
+  policy = data.aws_iam_policy_document.authenticator_table_encryption_key_policy_document.json
+}
+
+data "aws_iam_policy_document" "authenticator_table_encryption_key_policy_document" {
+  statement {
+    sid    = "AllowAccessToAuthenticatorTableKmsEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:*",
+    ]
+    resources = [
+      aws_kms_key.authenticator_table_encryption_key.arn
+    ]
+  }
+}

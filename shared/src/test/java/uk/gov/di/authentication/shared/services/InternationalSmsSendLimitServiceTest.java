@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 class InternationalSmsSendLimitServiceTest {
 
     private static final int TEST_SEND_LIMIT = 3;
+    private static final String TEST_REFERENCE = "test-reference";
     private final DynamoDbTable<InternationalSmsSendCount> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -55,7 +56,7 @@ class InternationalSmsSendLimitServiceTest {
         ArgumentCaptor<InternationalSmsSendCount> captor =
                 ArgumentCaptor.forClass(InternationalSmsSendCount.class);
 
-        service.recordSmsSent(rawPhoneNumber);
+        service.recordSmsSent(rawPhoneNumber, TEST_REFERENCE);
 
         verify(table).putItem(captor.capture());
         assertEquals(formattedPhoneNumber, captor.getValue().getPhoneNumber());
@@ -70,7 +71,7 @@ class InternationalSmsSendLimitServiceTest {
         ArgumentCaptor<InternationalSmsSendCount> captor =
                 ArgumentCaptor.forClass(InternationalSmsSendCount.class);
 
-        service.recordSmsSent(rawPhoneNumber);
+        service.recordSmsSent(rawPhoneNumber, TEST_REFERENCE);
 
         verify(table).updateItem(captor.capture());
         assertEquals(formattedPhoneNumber, captor.getValue().getPhoneNumber());
@@ -118,7 +119,7 @@ class InternationalSmsSendLimitServiceTest {
     @ParameterizedTest
     @MethodSource("domesticPhoneNumberVariations")
     void recordSmsSentShouldIgnoreDomesticNumbers(String domesticPhoneNumber) {
-        service.recordSmsSent(domesticPhoneNumber);
+        service.recordSmsSent(domesticPhoneNumber, TEST_REFERENCE);
 
         verify(table, never()).putItem(any(InternationalSmsSendCount.class));
         verify(table, never()).updateItem(any(InternationalSmsSendCount.class));

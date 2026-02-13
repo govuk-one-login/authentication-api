@@ -49,6 +49,14 @@ test {
     environment "TRACING_ENABLED", "false"
 }
 
+task buildZip(type: Zip) {
+    from compileJava
+    from processResources
+    into("lib") {
+        from configurations.runtimeClasspath
+    }
+}
+
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17

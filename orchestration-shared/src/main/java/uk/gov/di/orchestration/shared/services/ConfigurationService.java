@@ -53,6 +53,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().containsKey(envVar) && Boolean.parseBoolean(System.getenv(envVar));
     }
 
+    private boolean getFlagOrTrue(String envVar) {
+        return Optional.ofNullable(System.getenv(envVar))
+                .map(s -> Boolean.parseBoolean(s))
+                .orElse(true);
+    }
+
     private URI getURIOrDefault(String envVar, String defaultUri) {
         return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
     }
@@ -176,6 +182,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("PUBLISH_NEXT_DOC_APP_SIGNING_KEY");
     }
 
+    public boolean isPublishOldDocAppSigningKeyEnabled() {
+        return getFlagOrTrue("PUBLISH_OLD_DOC_APP_SIGNING_KEY");
+    }
+
+    public boolean isUseNewDocAppSigningKey() {
+        return getFlagOrFalse("USE_NEW_DOC_APP_SIGNING_KEY");
+    }
+
     public String getDocAppCriV2DataEndpoint() {
         return System.getenv("DOC_APP_CRI_DATA_V2_ENDPOINT");
     }
@@ -226,6 +240,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
         return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
+    public boolean isPublishNextOrchToAuthSigningKey() {
+        return getFlagOrFalse("PUBLISH_NEXT_AUTH_SIGNING_KEY");
+    }
+
+    public String getNextAuthSigningKeyAlias() {
+        return System.getenv("NEXT_AUTH_SIGNING_KEY_ALIAS");
     }
 
     public String getOrchestrationToAuthenticationEncryptionPublicKey() {
@@ -398,6 +420,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isNewSpotRequestQueueWritingEnabled() {
         return getFlagOrFalse("NEW_SPOT_REQUEST_QUEUE_WRITING");
+    }
+
+    public boolean isOldSpotRequestQueueWritingEnabled() {
+        return getFlagOrTrue("OLD_SPOT_REQUEST_QUEUE_WRITING");
     }
 
     public String getStorageTokenSigningKeyAlias() {
