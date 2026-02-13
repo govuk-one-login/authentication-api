@@ -661,6 +661,16 @@ class ConfigurationServiceTest {
                 () -> configurationService.getInternationalSmsNumberSendLimit());
     }
 
+    @Test
+    void isAccountManagementInternationalSmsEnabledShouldDefaultToFalse() {
+        assertFalse(configurationService.isAccountManagementInternationalSmsEnabled());
+    }
+
+    @Test
+    void isInternalApiNewInternationalSmsEnabledShouldDefaultToFalse() {
+        assertFalse(configurationService.isInternalApiNewInternationalSmsEnabled());
+    }
+
     private static Stream<Arguments> commaSeparatedStringContains() {
         return Stream.of(
                 Arguments.of("1234", null, false),

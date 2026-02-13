@@ -82,7 +82,7 @@ Resources:
           ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED:
             !FindInMap [
               EnvironmentConfiguration,
-              !Ref Environment,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               accountManagementInternationalSmsEnabled,
             ]
           TEST_CLIENTS_ENABLED:
