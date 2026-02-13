@@ -19,12 +19,16 @@ import java.util.List;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.HIGH_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.LOW_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
 
@@ -101,6 +105,46 @@ class DynamoClientServiceTest extends BaseDynamoServiceTest<ClientRegistry> {
         assertThat(updatedClient.getClientType(), equalTo(ClientType.APP.getValue()));
         assertFalse(updatedClient.isIdentityVerificationSupported());
         assertThat(updatedClient.getClaims(), equalTo(List.of("new-claim")));
+    }
+
+    @Test
+    void updatingClientLocsForAP1ClientShouldNotBePersisted() {
+        var oldClient =
+                generatePopulatedClientRegistry()
+                        .withClientLoCs(List.of(NONE.getValue(), LOW_LEVEL.getValue()));
+        when(table.getItem((Key) any())).thenReturn(oldClient);
+        when(dynamoDbEnhancedClient.table(any(), eq(TableSchema.fromBean(ClientRegistry.class))))
+                .thenReturn(table);
+        dynamoClientService =
+                spy(new DynamoClientService(configurationService, dynamoDbEnhancedClient));
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        updateRequest.setClientLoCs(List.of(NONE.getValue()));
+
+        var updatedClient =
+                dynamoClientService.updateSSEClient(CLIENT_ID.toString(), updateRequest);
+
+        assertEquals(oldClient, updatedClient);
+    }
+
+    @Test
+    void updatingClientLocsForAP3ClientShouldNotBePersisted() {
+        var oldClient =
+                generatePopulatedClientRegistry()
+                        .withClientLoCs(List.of(NONE.getValue(), HIGH_LEVEL.getValue()));
+        when(table.getItem((Key) any())).thenReturn(oldClient);
+        when(dynamoDbEnhancedClient.table(any(), eq(TableSchema.fromBean(ClientRegistry.class))))
+                .thenReturn(table);
+        dynamoClientService =
+                spy(new DynamoClientService(configurationService, dynamoDbEnhancedClient));
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        updateRequest.setClientLoCs(List.of(NONE.getValue()));
+
+        var updatedClient =
+                dynamoClientService.updateSSEClient(CLIENT_ID.toString(), updateRequest);
+
+        assertEquals(oldClient, updatedClient);
     }
 
     @Test
