@@ -1,0 +1,966 @@
+# IAM Roles for Utils Lambda Functions
+# This file defines the execution roles for all 8 utility Lambda functions
+# Each role includes:
+# - AssumeRolePolicyDocument allowing lambda.amazonaws.com to assume the role
+# - PermissionsBoundary when provided via parameter
+# - AWSLambdaVPCAccessExecutionRole managed policy for VPC-enabled functions
+
+Resources:
+  # ============================================================================
+  # DynamoDB Access Policies
+  # ============================================================================
+
+  # Policy for user_profile table read access (DescribeTable, GetItem, Query)
+  UserProfileReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: UserProfileReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:Query
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-profile"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref AccountMetricsLambdaRole
+        - !Ref MfaMethodAnalysisLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+
+  # Policy for user_profile table write access (PutItem, UpdateItem)
+  UserProfileWriteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserProfileWriteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-profile"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+
+  # Policy for user_credentials table write access (PutItem, UpdateItem)
+  UserCredentialsWriteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserCredentialsWriteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-credentials"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+
+  # Policy for user_profile table delete access (DeleteItem)
+  UserProfileDeleteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserProfileDeleteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-profile"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # Policy for user_credentials table delete access (DeleteItem)
+  UserCredentialsDeleteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserCredentialsDeleteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-credentials"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # Policy for common_passwords table full access (PutItem, BatchWriteItem, Scan)
+  CommonPasswordsFullAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CommonPasswordsFullAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-common-passwords"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref CommonPasswordsUpdateLambdaRole
+
+  # Policy for bulk_email tables access (Query, Scan, PutItem, UpdateItem)
+  BulkEmailTablesAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: BulkEmailTablesAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-bulk-email-*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+        - !Ref BulkUserEmailSendLambdaRole
+
+  # Policy for email_check_results table write access (PutItem)
+  EmailCheckResultsWriteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EmailCheckResultsWriteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-email-check-results"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref EmailCheckResultsWriterLambdaRole
+
+  # ============================================================================
+  # S3 Access Policies
+  # ============================================================================
+
+  # Policy for bulk_test_user bucket read access (GetObject, ListBucket)
+  BulkTestUserBucketReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: BulkTestUserBucketReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-bulk-test-user-bucket"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-bulk-test-user-bucket/*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+
+  # Policy for common_passwords bucket read access (GetObject, ListBucket)
+  CommonPasswordsBucketReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CommonPasswordsBucketReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-common-passwords-bucket"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-common-passwords-bucket/*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref CommonPasswordsUpdateLambdaRole
+
+  # Policy for source_code bucket read access (GetObject)
+  # Note: This policy is attached to all Lambda roles. Conditional roles
+  # (BulkTestUserCreateLambdaRole, BulkTestUserDeleteLambdaRole) are handled
+  # separately below to avoid CloudFormation evaluation issues.
+  SourceCodeBucketReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SourceCodeBucketReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-lambda-source-bucket/*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref AccountMetricsLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+        - !Ref BulkUserEmailSendLambdaRole
+        - !Ref CommonPasswordsUpdateLambdaRole
+        - !Ref EmailCheckResultsWriterLambdaRole
+        - !Ref MfaMethodAnalysisLambdaRole
+
+  # Policy for source_code bucket read access for conditional bulk test user roles
+  SourceCodeBucketReadAccessPolicyForBulkTestUsers:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: SourceCodeBucketReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-lambda-source-bucket/*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # ============================================================================
+  # SQS Access Policies
+  # ============================================================================
+
+  # Policy for email_check_results SQS queue access
+  # Grants permissions to receive, delete, and manage messages from the queue
+  EmailCheckResultsSqsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EmailCheckResultsSqsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ChangeMessageVisibility
+            Resource:
+              - !Sub
+                - "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${EnvironmentName}-email-check-results-queue"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref EmailCheckResultsWriterLambdaRole
+
+  # ============================================================================
+  # Secrets Manager Access Policies
+  # ============================================================================
+
+  # Policy for Secrets Manager access to retrieve Notify API key
+  # Grants permissions to retrieve the GOV.UK Notify API key secret
+  SecretsManagerNotifyAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SecretsManagerNotifyAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Sub
+                - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvironmentName}/notify/api-key-*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkUserEmailSendLambdaRole
+
+  # ============================================================================
+  # KMS Access Policies
+  # ============================================================================
+
+  # Policy for user_profile table KMS encryption key access
+  UserProfileTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: UserProfileTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - userProfileTableEncryptionKey
+      Roles:
+        - !Ref AccountMetricsLambdaRole
+        - !Ref MfaMethodAnalysisLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+
+  # Policy for user_profile table KMS encryption key access for bulk test user create
+  UserProfileTableKmsAccessPolicyForBulkTestUsers:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserProfileTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - userProfileTableEncryptionKey
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # Policy for user_credentials table KMS encryption key access
+  UserCredentialsTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserCredentialsTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - userCredentialsTableEncryptionKey
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # Policy for common_passwords table KMS encryption key access
+  CommonPasswordsTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CommonPasswordsTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - commonPasswordsTableEncryptionKey
+      Roles:
+        - !Ref CommonPasswordsUpdateLambdaRole
+
+  # Policy for email_check_results table KMS encryption key access
+  EmailCheckResultsTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EmailCheckResultsTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - emailCheckResultTableEncryptionKey
+      Roles:
+        - !Ref EmailCheckResultsWriterLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+        - !Ref BulkUserEmailSendLambdaRole
+
+  # Policy for SQS queue KMS encryption key access
+  SqsQueueKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SqsQueueKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - sqsEncryptionKey
+      Roles:
+        - !Ref EmailCheckResultsWriterLambdaRole
+
+  # Policy for S3 bucket KMS encryption key access for bulk test users
+  S3BucketKmsAccessPolicyForBulkTestUsers:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: S3BucketKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - s3EncryptionKey
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+
+  # Policy for S3 bucket KMS encryption key access for common passwords
+  S3BucketKmsAccessPolicyForCommonPasswords:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: S3BucketKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - s3EncryptionKey
+      Roles:
+        - !Ref CommonPasswordsUpdateLambdaRole
+
+  # Policy for CloudWatch Logs KMS encryption key access
+  # This policy is attached to all Lambda roles for CloudWatch log encryption
+  CloudWatchLogsKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CloudWatchLogsKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - cloudwatchEncryptionKey
+      Roles:
+        - !Ref AccountMetricsLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+        - !Ref BulkUserEmailSendLambdaRole
+        - !Ref CommonPasswordsUpdateLambdaRole
+        - !Ref EmailCheckResultsWriterLambdaRole
+        - !Ref MfaMethodAnalysisLambdaRole
+
+  # Policy for CloudWatch Logs KMS encryption key access for conditional bulk test user roles
+  CloudWatchLogsKmsAccessPolicyForBulkTestUsers:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: CloudWatchLogsKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - cloudwatchEncryptionKey
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # ============================================================================
+  # Lambda Execution Roles
+  # ============================================================================
+
+  # 1. Account Metrics Lambda Role (VPC-enabled)
+  AccountMetricsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-account-metrics-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-account-metrics-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 2. Bulk Test User Create Lambda Role (Conditional, non-VPC)
+  BulkTestUserCreateLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: AllowBulkTestUsers
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-bulk-test-user-create-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 3. Bulk Test User Delete Lambda Role (Conditional, non-VPC)
+  BulkTestUserDeleteLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: AllowBulkTestUsers
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-bulk-test-user-delete-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-bulk-test-user-delete-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 4. Bulk User Email Audience Loader Lambda Role (non-VPC)
+  BulkUserEmailAudienceLoaderLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 5. Bulk User Email Send Lambda Role (non-VPC)
+  BulkUserEmailSendLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-bulk-user-email-send-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 6. Common Passwords Update Lambda Role (VPC-enabled)
+  CommonPasswordsUpdateLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-common-passwords-update-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-common-passwords-update-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 7. Email Check Results Writer Lambda Role (non-VPC)
+  EmailCheckResultsWriterLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-email-check-results-writer-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 8. MFA Method Analysis Lambda Role (VPC-enabled)
+  MfaMethodAnalysisLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-mfa-method-analysis-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+Outputs:
+  # Role ARN Outputs for reference by Lambda functions
+  AccountMetricsLambdaRoleArn:
+    Description: ARN of the Account Metrics Lambda execution role
+    Value: !GetAtt AccountMetricsLambdaRole.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-account-metrics-lambda-role-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkTestUserCreateLambdaRoleArn:
+    Condition: AllowBulkTestUsers
+    Description: ARN of the Bulk Test User Create Lambda execution role
+    Value: !GetAtt BulkTestUserCreateLambdaRole.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda-role-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkTestUserDeleteLambdaRoleArn:
+    Condition: AllowBulkTestUsers
+    Description: ARN of the Bulk Test User Delete Lambda execution role
+    Value: !GetAtt BulkTestUserDeleteLambdaRole.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-test-user-delete-lambda-role-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkUserEmailAudienceLoaderLambdaRoleArn:
+    Description: ARN of the Bulk User Email Audience Loader Lambda execution role
+    Value: !GetAtt BulkUserEmailAudienceLoaderLambdaRole.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-role-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkUserEmailSendLambdaRoleArn:
+    Description: ARN of the Bulk User Email Send Lambda execution role
+    Value: !GetAtt BulkUserEmailSendLambdaRole.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda-role-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  CommonPasswordsUpdateLambdaRoleArn:
+    Description: ARN of the Common Passwords Update Lambda execution role
+    Value: !GetAtt CommonPasswordsUpdateLambdaRole.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-common-passwords-update-lambda-role-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  EmailCheckResultsWriterLambdaRoleArn:
+    Description: ARN of the Email Check Results Writer Lambda execution role
+    Value: !GetAtt EmailCheckResultsWriterLambdaRole.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda-role-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  MfaMethodAnalysisLambdaRoleArn:
+    Description: ARN of the MFA Method Analysis Lambda execution role
+    Value: !GetAtt MfaMethodAnalysisLambdaRole.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda-role-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
