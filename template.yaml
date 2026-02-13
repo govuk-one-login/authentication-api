@@ -9153,6 +9153,74 @@ Resources:
             Stat: Sum
   #endregion
 
+  #region spot request queue alarms
+  SpotRequestQueueSecondLineAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref SecondLineSlackEvents
+      AlarmName: !Sub ${Environment}-spot-request-queue-alarm
+      AlarmDescription: !Sub "Age of the oldest message on ${Environment}-sqs-spot-request queue exceeds 10 seconds.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt SpotRequestQueue.QueueName
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Period: 60
+      Statistic: Maximum
+      Threshold: 10
+      EvaluationPeriods: 1
+
+  SpotRequestQueuePagerDutyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref PagerDutyEvents
+      AlarmName: !Sub ${Environment}-P1-spot-request-queue-alarm
+      AlarmDescription: !Sub "Age of the oldest message on ${Environment}-spot-request-queue exceeds 60 seconds.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt SpotRequestQueue.QueueName
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Period: 60
+      Statistic: Maximum
+      Threshold: 60
+      EvaluationPeriods: 1
+
+  SpotRequestQueueDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref SecondLineSlackEvents
+      AlarmName: !Sub ${Environment}-spot-request-dlq-queue-alarm
+      AlarmDescription: !Sub "10 or more messages have appeared on the ${Environment}-spot-request-dlq-queue ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/DYDMBgE"
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt SpotRequestDeadLetterQueue.QueueName
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Period: 60
+      Statistic: Average
+      Threshold: 10
+      EvaluationPeriods: 1
+  #endregion
+
 Outputs:
   SlackEventsArn:
     Description: "ARN of the SlackEvents SNS topic"
