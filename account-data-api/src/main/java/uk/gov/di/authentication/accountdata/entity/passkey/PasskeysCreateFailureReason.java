@@ -1,7 +1,9 @@
 package uk.gov.di.authentication.accountdata.entity.passkey;
 
 public enum PasskeysCreateFailureReason {
-    PARSING_PASSKEY_CREATE_REQUEST_ERROR("parsing_passkey_create_request_error");
+    PARSING_PASSKEY_CREATE_REQUEST_ERROR("parsing_passkey_create_request_error"),
+    REQUEST_MISSING_PARAMS("request_missing_params"),
+    FAILED_TO_SAVE_PASSKEY("failed_to_save_passkey");
 
     private final String value;
 
