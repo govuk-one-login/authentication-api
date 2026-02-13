@@ -16,6 +16,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.HIGH_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.LOW_LEVEL;
 
 public class DynamoClientService implements ClientService {
 
@@ -136,8 +138,6 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getJarValidationRequired())
                 .ifPresent(clientRegistry::withJarValidationRequired);
         Optional.ofNullable(updateRequest.getClaims()).ifPresent(clientRegistry::withClaims);
-        Optional.ofNullable(updateRequest.getClientLoCs())
-                .ifPresent(clientRegistry::withClientLoCs);
         Optional.ofNullable(updateRequest.getBackChannelLogoutUri())
                 .ifPresent(clientRegistry::withBackChannelLogoutUri);
         Optional.ofNullable(updateRequest.getIdTokenSigningAlgorithm())
@@ -151,6 +151,18 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withPKCEEnforced);
         Optional.ofNullable(updateRequest.getLandingPageUrl())
                 .ifPresent(clientRegistry::withLandingPageUrl);
+
+        if (updateRequest.getClientLoCs() != null
+                // Do not update if a client is configured with
+                // P1 or P3 as these have been manually configured
+                && clientRegistry.getClientLoCs().stream()
+                        .noneMatch(
+                                loc ->
+                                        LOW_LEVEL.getValue().equals(loc)
+                                                || HIGH_LEVEL.getValue().equals(loc))) {
+            clientRegistry.withClientLoCs(updateRequest.getClientLoCs());
+        }
+
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }
