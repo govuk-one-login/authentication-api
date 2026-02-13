@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 
 import java.util.List;
@@ -22,6 +23,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 
 class AuthJwksHandlerTest {
     private final Context context = mock(Context.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final JwksService jwksService = mock(JwksService.class);
     private AuthJwksHandler handler;
     private ECKey authSigningKey;
@@ -30,7 +32,7 @@ class AuthJwksHandlerTest {
     void setUp() throws Exception {
         authSigningKey =
                 new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-        handler = new AuthJwksHandler(jwksService);
+        handler = new AuthJwksHandler(configurationService, jwksService);
 
         when(jwksService.getPublicAuthSigningJwkWithOpaqueId()).thenReturn(authSigningKey);
     }
@@ -55,6 +57,23 @@ class AuthJwksHandlerTest {
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasBody("Error providing AuthJwks data"));
+    }
+
+    @Test
+    void shouldPublishNewKeyIfFeatureFlagEnabled() throws Exception {
+        var newAuthSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        when(jwksService.getNextPublicAuthSigningJwkWithOpaqueId())
+                .thenReturn(newAuthSigningKey.toPublicJWK());
+        when(configurationService.isPublishNextOrchToAuthSigningKey()).thenReturn(true);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet = new JWKSet(List.of(authSigningKey, newAuthSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
     }
 
     @Test
