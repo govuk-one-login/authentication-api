@@ -43,6 +43,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -465,7 +466,7 @@ class AMCAuthorizationServiceTest {
                         assertEquals(
                                 List.of(AMCScope.ACCOUNT_DELETE.getValue()),
                                 compositeClaims.getClaim("scope")),
-                () -> assertDoesNotThrow(() -> compositeClaims.getClaim("state")),
+                () -> assertInstanceOf(String.class, compositeClaims.getClaim("state")),
                 () -> assertEquals(INTERNAL_PAIRWISE_ID, compositeClaims.getSubject()),
                 () -> assertEquals(EMAIL, compositeClaims.getClaim("email")),
                 () -> assertEquals(JOURNEY_ID, compositeClaims.getClaim("govuk_signin_journey_id")),
