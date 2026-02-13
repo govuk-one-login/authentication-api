@@ -416,6 +416,8 @@ Resources:
 
   MainKmsKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: Key used to encrypt Orchestration
       EnableKeyRotation: true
@@ -445,6 +447,8 @@ Resources:
 
   OrchSessionTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Orch session DynamoDB table
       EnableKeyRotation: true
@@ -498,6 +502,8 @@ Resources:
 
   OrchSessionTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Orch-Session
       AttributeDefinitions:
@@ -611,6 +617,8 @@ Resources:
 
   AuthUserInfoTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for AuthUserInfo DynamoDB table
       EnableKeyRotation: true
@@ -640,6 +648,8 @@ Resources:
 
   AuthUserInfoTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Auth-User-Info
       AttributeDefinitions:
@@ -691,6 +701,8 @@ Resources:
   #region ClientSession DynamoDB Table
   ClientSessionTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for ClientSession DynamoDB table
       EnableKeyRotation: true
@@ -743,6 +755,8 @@ Resources:
 
   ClientSessionTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Client-Session
       AttributeDefinitions:
@@ -821,6 +835,8 @@ Resources:
   #region ClientRegistry DynamoDB Table
   ClientRegistryTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Orchestration Client Registry DynamoDB table
       EnableKeyRotation: true
@@ -873,6 +889,8 @@ Resources:
 
   ClientRegistryTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-client-registry
       AttributeDefinitions:
@@ -1000,6 +1018,8 @@ Resources:
   #region OrchIdentityCredentials DynamoDB Table
   OrchIdentityCredentialsTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for OrchIdentityCredentials DynamoDB table
       EnableKeyRotation: true
@@ -1052,6 +1072,8 @@ Resources:
 
   OrchIdentityCredentialsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Orch-Identity-Credentials
       AttributeDefinitions:
@@ -1163,6 +1185,8 @@ Resources:
 
   RpPublicKeyTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for RP public key DynamoDB table
       EnableKeyRotation: true
@@ -1192,6 +1216,8 @@ Resources:
 
   RpPublicKeyCacheTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     # checkov:skip=CKV_AWS_28: It would be harmful to restore old keys from a backup of this data, and keys will be fetched if not present anyway.
     Properties:
       TableName: !Sub ${Environment}-RpPublicKeyCache
@@ -1226,6 +1252,8 @@ Resources:
 
   StateStorageTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Orchestration State storage DynamoDB table
       EnableKeyRotation: true
@@ -1255,6 +1283,8 @@ Resources:
 
   StateStorageTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-State-Storage
       AttributeDefinitions:
@@ -1284,6 +1314,8 @@ Resources:
 
   DocAppCredentialTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Doc App Credential DynamoDB table
       EnableKeyRotation: true
@@ -1313,6 +1345,8 @@ Resources:
 
   DocAppCredentialTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Orch-Doc-App-Credential
       AttributeDefinitions:
@@ -1362,6 +1396,8 @@ Resources:
 
   JwksCacheTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Jwks Cache DynamoDB table
       EnableKeyRotation: true
@@ -1391,6 +1427,8 @@ Resources:
 
   JwksCacheTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Jwks-Cache
       AttributeDefinitions:
@@ -2883,6 +2921,8 @@ Resources:
   GlobalLogoutTestQueueEncryptionKey:
     Condition: IsDevOrBuild
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for global logout test queue and dlq
       PendingWindowInDays: 30
@@ -5644,6 +5684,8 @@ Resources:
 
   BackChannelLogoutQueueEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for back channel logout queue and dlq
       PendingWindowInDays: 30
@@ -6912,6 +6954,8 @@ Resources:
   SlackEventsKey:
     Condition: IsNotProduction
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: Key used to encrypt Slack events topic
       EnableKeyRotation: true
@@ -7324,6 +7368,8 @@ Resources:
 
   OrchAuthCodeTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for OrchAuthCode DynamoDB table
       EnableKeyRotation: true
@@ -7419,6 +7465,8 @@ Resources:
 
   ClientRateLimitTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Client Rate Limit DynamoDB table
       EnableKeyRotation: true
@@ -7959,6 +8007,8 @@ Resources:
 
   OrchIPVTokenSigningKmsKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS signing key for authentication to the IPV token endpoint
       PendingWindowInDays: 30
