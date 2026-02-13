@@ -4,7 +4,6 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
@@ -72,22 +71,14 @@ public class TokenRequestValidator {
     }
 
     public void validatePrivateKeyJwtClientAuth(
-            String requestBody, Set<Audience> expectedAudience, List<String> publicKeys)
+            PrivateKeyJWT privateKeyJWT, Set<Audience> expectedAudience, List<String> publicKeys)
             throws TokenAuthInvalidException {
         try {
-            PrivateKeyJWT privateKeyJWT = PrivateKeyJWT.parse(requestBody);
-
             ClientAuthenticationVerifier<?> signatureVerifier =
                     new ClientAuthenticationVerifier<>(
                             new PrivateKeyJwtAuthPublicKeySelector(publicKeys, KeyType.EC),
                             expectedAudience);
             signatureVerifier.verify(privateKeyJWT, null, null);
-        } catch (ParseException e) {
-            LOG.warn("Unable to parse private_key_jwt", e);
-            throw new TokenAuthInvalidException(
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid private_key_jwt"),
-                    ClientAuthenticationMethod.PRIVATE_KEY_JWT,
-                    "tbc");
         } catch (InvalidClientException e) {
             LOG.warn("Invalid client in private_key_jwt", e);
             throw new TokenAuthInvalidException(
