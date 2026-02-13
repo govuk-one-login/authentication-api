@@ -229,7 +229,7 @@ Resources:
               - s3:ListBucket
             Resource:
               - !Sub
-                - "arn:aws:s3:::${EnvironmentName}-bulk-test-user-bucket"
+                - "arn:aws:s3:::${EnvironmentName}-utils-bulk-test-user-bucket"
                 - EnvironmentName:
                     !If [
                       UseSubEnvironment,
@@ -237,7 +237,7 @@ Resources:
                       !Ref Environment,
                     ]
               - !Sub
-                - "arn:aws:s3:::${EnvironmentName}-bulk-test-user-bucket/*"
+                - "arn:aws:s3:::${EnvironmentName}-utils-bulk-test-user-bucket/*"
                 - EnvironmentName:
                     !If [
                       UseSubEnvironment,
@@ -261,7 +261,7 @@ Resources:
               - s3:ListBucket
             Resource:
               - !Sub
-                - "arn:aws:s3:::${EnvironmentName}-common-passwords-bucket"
+                - "arn:aws:s3:::${EnvironmentName}-utils-common-passwords-bucket"
                 - EnvironmentName:
                     !If [
                       UseSubEnvironment,
@@ -269,7 +269,7 @@ Resources:
                       !Ref Environment,
                     ]
               - !Sub
-                - "arn:aws:s3:::${EnvironmentName}-common-passwords-bucket/*"
+                - "arn:aws:s3:::${EnvironmentName}-utils-common-passwords-bucket/*"
                 - EnvironmentName:
                     !If [
                       UseSubEnvironment,
@@ -295,7 +295,7 @@ Resources:
               - s3:GetObject
             Resource:
               - !Sub
-                - "arn:aws:s3:::${EnvironmentName}-source-code-bucket/*"
+                - "arn:aws:s3:::${EnvironmentName}-utils-lambda-source-bucket/*"
                 - EnvironmentName:
                     !If [
                       UseSubEnvironment,
@@ -324,7 +324,7 @@ Resources:
               - s3:GetObject
             Resource:
               - !Sub
-                - "arn:aws:s3:::${EnvironmentName}-source-code-bucket/*"
+                - "arn:aws:s3:::${EnvironmentName}-utils-lambda-source-bucket/*"
                 - EnvironmentName:
                     !If [
                       UseSubEnvironment,

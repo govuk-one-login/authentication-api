@@ -24,7 +24,7 @@ signing_profiles = "SmsQuotaMonitorFunction=\"SigningProfile_bdzyxbYzrSD8\" Noti
 [devutils.deploy.parameters]
 stack_name = "dev-utils"
 resolve_s3 = false
-s3_bucket = "dev-utils-pipeline-GitHubActionsValidateRole-ANUAE1ThtdaD"
+s3_bucket = "dev-utils-pipeline-githubartifactsourcebucket-fvobqhv2lncp"
 region = "eu-west-2"
 confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
