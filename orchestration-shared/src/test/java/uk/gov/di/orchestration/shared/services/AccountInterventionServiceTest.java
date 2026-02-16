@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED;
 
+// QualityGateUnitTest
 class AccountInterventionServiceTest {
     private final ConfigurationService config = mock(ConfigurationService.class);
     private final HttpClient httpClient = mock(HttpClient.class);
@@ -100,6 +101,7 @@ class AccountInterventionServiceTest {
         when(config.getAccountInterventionServiceCallTimeout()).thenReturn(3000L);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldConstructWellFormedRequestToAccountInterventionService()
             throws IOException, InterruptedException {
@@ -123,6 +125,7 @@ class AccountInterventionServiceTest {
                 BASE_AIS_URL + "/v1/ais/" + internalPairwiseSubjectId, requestUri.uri().toString());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnAccountIntervention() throws IOException, InterruptedException {
 
@@ -154,6 +157,7 @@ class AccountInterventionServiceTest {
                                 "reproveIdentity", "true"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnAccountInterventionWhenOptionalFieldsAreNotPresentInResponse()
             throws IOException, InterruptedException {
@@ -187,6 +191,7 @@ class AccountInterventionServiceTest {
                                 "reproveIdentity", "true"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnAccountStatusAllClearWhenDisabled() {
 
@@ -206,6 +211,7 @@ class AccountInterventionServiceTest {
         assertFalse(intervention.getResetPassword());
     }
 
+    // QualityGateRegressionTest
     @Test
     void
             shouldNotThrowAccountInterventionExceptionWhenExceptionThrownByHttpClientAndAbortFlagIsOff()
@@ -225,6 +231,7 @@ class AccountInterventionServiceTest {
                 () -> accountInterventionService.getAccountIntervention(internalPairwiseSubjectId));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowAccountInterventionExceptionWhenExceptionThrownByHttpClientAndAbortFlagIsOn()
             throws IOException, InterruptedException {
@@ -249,6 +256,7 @@ class AccountInterventionServiceTest {
                         "AISException", Map.of("Environment", ENVIRONMENT, "AbortOnError", "true"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSendAuditEventWhenServiceCallAndActionEnabled()
             throws IOException, InterruptedException {
@@ -291,6 +299,7 @@ class AccountInterventionServiceTest {
         assertMatchingAuditContext(expectedAuditContext, auditContextCaptor.getValue());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotSendAuditEventWhenServiceEnabledAndActionDisabled()
             throws IOException, InterruptedException {
@@ -310,6 +319,7 @@ class AccountInterventionServiceTest {
         verifyNoInteractions(auditService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowExceptionWhenNullAuditContextSuppliedAndActionEnabledAndAbortEnabled()
             throws IOException, InterruptedException {

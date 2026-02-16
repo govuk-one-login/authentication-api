@@ -8,8 +8,10 @@ import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsMapContaining.hasEntry;
 
+// QualityGateUnitTest
 class ApiGatewayResponseHelperTest {
 
+    // QualityGateRegressionTest
     @Test
     void ShouldAddDefaultSecurityHeadersForErrorResponses() {
         APIGatewayProxyResponseEvent result =
@@ -30,6 +32,7 @@ class ApiGatewayResponseHelperTest {
         assertThat(result.getHeaders(), hasEntry("X-Frame-Options", "DENY"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void ShouldAddDefaultSecurityHeadersForSuccessResponses() {
         APIGatewayProxyResponseEvent result =
@@ -49,6 +52,7 @@ class ApiGatewayResponseHelperTest {
         assertThat(result.getHeaders(), hasEntry("X-Frame-Options", "DENY"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAddDefaultSecurityHeadersForAllResponses() {
         APIGatewayProxyResponseEvent result =

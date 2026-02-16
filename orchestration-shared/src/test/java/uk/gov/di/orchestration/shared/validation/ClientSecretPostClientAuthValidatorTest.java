@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class ClientSecretPostClientAuthValidatorTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -41,6 +42,7 @@ class ClientSecretPostClientAuthValidatorTest {
                 new ClientSecretPostClientAuthValidator(dynamoClientService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidateClientSecretPostAndReturnClientRegistry()
             throws TokenAuthInvalidException {
@@ -62,6 +64,7 @@ class ClientSecretPostClientAuthValidatorTest {
                 clientRegistryOutput.getClientID(), equalTo(expectedClientRegistry.getClientID()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfClientIsNotFoundInClientRegistry() {
         var clientSecretPost = new ClientSecretPost(CLIENT_ID, CLIENT_SECRET);
@@ -80,6 +83,7 @@ class ClientSecretPostClientAuthValidatorTest {
         assertThat(tokenAuthInvalidException.getErrorObject(), equalTo(OAuth2Error.INVALID_CLIENT));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfClientRegistryDoesNotSupportClientSecretPost() {
         var expectedClientRegistry =
@@ -108,6 +112,7 @@ class ClientSecretPostClientAuthValidatorTest {
                                 "Client is not registered to use client_secret_post")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfNoClientSecretIsRegisteredWhenValidatingClientSecretPost() {
         var expectedClientRegistry =
@@ -135,6 +140,7 @@ class ClientSecretPostClientAuthValidatorTest {
                                 OAuth2Error.INVALID_CLIENT_CODE, "No client secret registered")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfClientSecretIsInvalidWhenValidatingClientSecretPost() {
         var expectedClientRegistry =
@@ -161,6 +167,7 @@ class ClientSecretPostClientAuthValidatorTest {
                 equalTo(new ErrorObject(OAuth2Error.INVALID_CLIENT_CODE, "Invalid client secret")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenUnableToParseClientSecretPost() {
         var tokenAuthInvalidException =

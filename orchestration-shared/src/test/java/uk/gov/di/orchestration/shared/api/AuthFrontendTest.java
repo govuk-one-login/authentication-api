@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.baseUri;
 import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.queryParameters;
 
+// QualityGateUnitTest
 class AuthFrontendTest {
 
     private static final URI AUTH_FRONTEND_BASE_URI = URI.create("https://auth.frontend/");
@@ -37,6 +38,7 @@ class AuthFrontendTest {
         authFrontend = new AuthFrontend(configurationService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void baseURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/");
@@ -44,6 +46,7 @@ class AuthFrontendTest {
         assertThat(actualUri, equalTo(expectedUri));
     }
 
+    // QualityGateRegressionTest
     @Test
     void privacyNoticeURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/privacy-notice");
@@ -51,6 +54,7 @@ class AuthFrontendTest {
         assertThat(actualUri, equalTo(expectedUri));
     }
 
+    // QualityGateRegressionTest
     @Test
     void termsOfServiceURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/terms-and-conditions");
@@ -58,6 +62,7 @@ class AuthFrontendTest {
         assertThat(actualUri, equalTo(expectedUri));
     }
 
+    // QualityGateRegressionTest
     @Test
     void ipvCallbackURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/ipv-callback");
@@ -65,6 +70,7 @@ class AuthFrontendTest {
         assertThat(actualUri, equalTo(expectedUri));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("authorizeURICases")
     void authorizeURIReturnsCorrectUri(
@@ -96,6 +102,7 @@ class AuthFrontendTest {
                                 "result", "sign-in")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void defaultLogoutURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/signed-out");
@@ -103,6 +110,7 @@ class AuthFrontendTest {
         assertThat(actualUri, equalTo(expectedUri));
     }
 
+    // QualityGateRegressionTest
     @Test
     void errorLogoutURIReturnsCorrectUri() {
         var error = new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
@@ -119,6 +127,7 @@ class AuthFrontendTest {
         }
     }
 
+    // QualityGateRegressionTest
     @Test
     void accountSuspendedURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/unavailable-temporary");
@@ -126,6 +135,7 @@ class AuthFrontendTest {
         assertThat(actualUri, equalTo(expectedUri));
     }
 
+    // QualityGateRegressionTest
     @Test
     void errorURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/error");
@@ -133,6 +143,7 @@ class AuthFrontendTest {
         assertThat(actualUri, equalTo(expectedUri));
     }
 
+    // QualityGateRegressionTest
     @Test
     void errorIpvCallbackURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/ipv-callback-session-expiry-error");

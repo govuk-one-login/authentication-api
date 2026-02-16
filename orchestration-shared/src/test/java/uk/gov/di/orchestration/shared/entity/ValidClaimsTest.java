@@ -11,6 +11,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// QualityGateUnitTest
 class ValidClaimsTest {
 
     static Stream<String> supportedClaims() {
@@ -30,23 +31,27 @@ class ValidClaimsTest {
                 "https://vocab.account.gov.uk/v1/socialSecurityRecord");
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
         MatcherAssert.assertThat(ValidClaims.getAllValidClaims().size(), equalTo(6));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("supportedClaims")
     void shouldReturnNamesOfSupportedClaims(String supportedClaim) {
         assertTrue(ValidClaims.getAllValidClaims().contains(supportedClaim));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("supportedClaims")
     void shouldReturnTrueForSupportedClaims(String claimName) {
         assertTrue(ValidClaims.isValidClaim(claimName));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("unsupportedClaims")
     void shouldReturnFalseForUnsupportedClaims(String claimName) {
