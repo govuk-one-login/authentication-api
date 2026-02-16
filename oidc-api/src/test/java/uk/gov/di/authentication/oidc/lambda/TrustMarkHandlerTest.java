@@ -46,8 +46,6 @@ class TrustMarkHandlerTest {
                                 CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
                         List.of(
                                 LevelOfConfidence.NONE.getValue(),
-                                LevelOfConfidence.HMRC200.getValue(),
-                                LevelOfConfidence.HMRC250.getValue(),
                                 LevelOfConfidence.LOW_LEVEL.getValue(),
                                 LevelOfConfidence.MEDIUM_LEVEL.getValue(),
                                 LevelOfConfidence.HIGH_LEVEL.getValue()));

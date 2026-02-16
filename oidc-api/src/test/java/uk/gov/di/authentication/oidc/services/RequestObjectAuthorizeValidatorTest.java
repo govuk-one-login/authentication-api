@@ -135,9 +135,7 @@ class RequestObjectAuthorizeValidatorTest {
         void shouldReturnErrorWhenVtrIsPresentAndVtrIsNotPermittedForClient()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             var jwtClaimsSet =
-                    getDefaultJWTClaimsSetBuilder()
-                            .claim("vtr", jsonArrayOf("Cl.Cm.PCL250"))
-                            .build();
+                    getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.P3")).build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
             var requestObjectError = validator.validate(authRequest);
 

@@ -75,9 +75,7 @@ class RequestObjectToAuthRequestHelperTest {
         var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
-                getClaimsSetBuilder(scope)
-                        .claim("vtr", List.of("P2.Cl.Cm", "PCL250.Cl.Cm"))
-                        .build();
+                getClaimsSetBuilder(scope).claim("vtr", List.of("P2.Cl.Cm", "P1.Cl.Cm")).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest =
                 new AuthenticationRequest.Builder(
@@ -105,7 +103,7 @@ class RequestObjectToAuthRequestHelperTest {
         assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
         assertThat(
                 transformedAuthRequest.getCustomParameter("vtr"),
-                equalTo(List.of("[\"P2.Cl.Cm\",\"PCL250.Cl.Cm\"]")));
+                equalTo(List.of("[\"P2.Cl.Cm\",\"P1.Cl.Cm\"]")));
     }
 
     @Test
