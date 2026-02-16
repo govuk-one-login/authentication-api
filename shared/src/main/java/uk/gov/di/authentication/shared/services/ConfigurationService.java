@@ -849,4 +849,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             throw new RuntimeException(e);
         }
     }
+
+    public URI getAMCTokenEndpointURI() {
+        return URI.create(System.getenv().getOrDefault("AMC_TOKEN_URI", ""));
+    }
 }

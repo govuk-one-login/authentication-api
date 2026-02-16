@@ -5,10 +5,17 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.TokenRequest;
+import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
@@ -22,6 +29,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.net.URI;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
@@ -30,12 +38,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static java.util.Collections.singletonList;
+
 public class AMCAuthorizationService {
     private final ConfigurationService configurationService;
     private final NowHelper.NowClock nowClock;
     private final JwtService jwtService;
     private static final Logger LOG = LogManager.getLogger(AMCAuthorizationService.class);
 
+    // TODO: Rename this if work is not moved out
     public AMCAuthorizationService(
             ConfigurationService configurationService,
             NowHelper.NowClock nowClock,
@@ -199,5 +210,35 @@ public class AMCAuthorizationService {
                             LOG.info("AMC authorization URL created");
                             return authorizationUrl;
                         });
+    }
+
+    public Result<AMCAuthorizeFailureReason, TokenRequest> buildTokenRequest(String authCode) {
+        var clientAssertionJwt = buildClientAssertionJwt();
+        var keyId = configurationService.getAuthToAMCPrivateSigningKeyAlias();
+        var signedJWTResult = signJWT(clientAssertionJwt.toJWTClaimsSet(), keyId);
+        return signedJWTResult.map(
+                signedJWT ->
+                        new TokenRequest(
+                                configurationService.getAMCTokenEndpointURI(),
+                                new PrivateKeyJWT(signedJWT),
+                                new AuthorizationCodeGrant(
+                                        new AuthorizationCode(authCode),
+                                        URI.create(configurationService.getAMCRedirectURI()))));
+    }
+
+    private JWTAuthenticationClaimsSet buildClientAssertionJwt() {
+        LOG.info("Building AMC authorization JWT");
+
+        Date now = nowClock.now();
+        Date expiryDate =
+                nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
+
+        return new JWTAuthenticationClaimsSet(
+                new ClientID(configurationService.getAMCClientId()),
+                singletonList(new Audience(configurationService.getAuthToAMCAudience())),
+                expiryDate,
+                now,
+                now,
+                new JWTID());
     }
 }
