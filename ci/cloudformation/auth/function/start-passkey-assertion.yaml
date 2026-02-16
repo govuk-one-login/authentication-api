@@ -31,6 +31,7 @@ Resources:
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency

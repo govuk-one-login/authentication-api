@@ -78,6 +78,7 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoIdReverificationStateReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref IPVReverificationRequestSigningKeyPolicy
         - !Ref RedisParametersAccessPolicy
       SnapStart:

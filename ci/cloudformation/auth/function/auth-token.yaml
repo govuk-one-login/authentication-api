@@ -95,6 +95,7 @@ Resources:
         - !Ref DynamoAuthCodeStoreAccessPolicy
         - !Ref DynamoAccessTokenStoreAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref AuthExternalApiTxMAAuditQueueAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions

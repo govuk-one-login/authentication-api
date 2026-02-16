@@ -37,6 +37,7 @@ Resources:
         - !Ref DynamoAccessTokenStoreAccessPolicy
         - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref AuthExternalApiTxMAAuditQueueAccessPolicy
       SnapStart:
