@@ -328,6 +328,26 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void shouldNotAddHardcodedPublicKeyIfUseAuthJwksIsEnabled() {
+        when(systemService.getOrDefault("USE_AUTH_JWKS", "false")).thenReturn("true");
+        var hardcodedKey = "expectedKey";
+        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY"))
+                .thenReturn(hardcodedKey);
+        var stubKey = "expectedKey2";
+        when(systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", ""))
+                .thenReturn(stubKey);
+
+        ConfigurationService configurationServiceWithMockedSystemService =
+                new ConfigurationService();
+        configurationServiceWithMockedSystemService.setSystemService(systemService);
+
+        assertEquals(
+                List.of(stubKey),
+                configurationServiceWithMockedSystemService
+                        .getOrchestrationToAuthenticationSigningPublicKeys());
+    }
+
+    @Test
     void getOrchestrationClientIdShouldDefault() {
         assertEquals("UNKNOWN", configurationService.getOrchestrationClientId());
     }

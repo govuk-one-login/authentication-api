@@ -3,8 +3,6 @@ package uk.gov.di.authentication.shared.services;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.SecurityContext;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
@@ -25,9 +23,8 @@ class JwksServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
     private final JwksService jwksService =
-            new JwksService(configurationService, kmsConnectionService, jwkSource);
+            new JwksService(configurationService, kmsConnectionService);
 
     @Test
     void shouldRetrievePublicMfaResetStorageTokenSigningKeyFromKmsAndParseToJwk() {

@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.Date;
@@ -48,8 +49,8 @@ public class AuthoriseAccessTokenHandler
                 new TokenValidationService(
                         new JwksService(
                                 configurationService,
-                                new KmsConnectionService(configurationService),
-                                true),
+                                new KmsConnectionService(configurationService)),
+                        new RemoteJwksService(configurationService.getAccessTokenJwksUrl()),
                         configurationService);
     }
 
