@@ -3891,7 +3891,7 @@ Resources:
             - PublishNextDocAppSigningKey
             - !Ref OrchDocAppSigningKmsKeyAlias
             - !Ref AWS::NoValue
-          USE_NEXT_DOC_APP_SIGNING_KEY: !If
+          USE_NEW_DOC_APP_SIGNING_KEY: !If
             - UseNewDocAppSigningKey
             - true
             - false
