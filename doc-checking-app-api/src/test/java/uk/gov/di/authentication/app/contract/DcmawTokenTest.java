@@ -182,7 +182,7 @@ public class DcmawTokenTest {
                                 + CLIENT_ID.getValue())
                 .matchHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 .willRespondWith()
-                .status(400)
+                .status(401)
                 .toPact();
     }
 
@@ -217,7 +217,7 @@ public class DcmawTokenTest {
         TokenResponse response = docAppCriService.sendTokenRequest(tokenRequest);
 
         assertThat(response.indicatesSuccess(), equalTo(false));
-        assertThat(response.toHTTPResponse().getStatusCode(), equalTo(400));
+        assertThat(response.toHTTPResponse().getStatusCode(), equalTo(401));
     }
 
     private SignResponse mockKmsReturn() {
