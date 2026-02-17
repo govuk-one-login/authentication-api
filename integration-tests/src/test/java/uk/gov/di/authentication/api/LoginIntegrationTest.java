@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -336,6 +337,64 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
                             validHeadersWithSessionId(sessionId),
                             Map.of());
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    response,
+                    hasBody(
+                            objectMapper.writeValueAsString(
+                                    ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS)));
+        }
+
+        @Test
+        void shouldReturn400WhenExistingInternationalSmsFeatureFlagBlocksExistingUser()
+                throws Json.JsonException {
+            var email = "joe.bloggs+intl-ff@digital.cabinet-office.gov.uk";
+            var password = "password-1";
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, MEDIUM_LEVEL);
+            authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+
+            userStore.signUp(email, password);
+            userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
+            userStore.setPhoneNumberAndVerificationStatus(
+                    email, INTERNATIONAL_MOBILE_NUMBER, true, true);
+
+            var configWithFeatureFlagDisabled =
+                    new IntegrationTestConfigurationService(
+                            notificationsQueue,
+                            tokenSigner,
+                            docAppPrivateKeyJwtSigner,
+                            configurationParameters) {
+                        @Override
+                        public String getTxmaAuditQueueUrl() {
+                            return txmaAuditQueue.getQueueUrl();
+                        }
+
+                        @Override
+                        public boolean isInternalApiExistingInternationalSmsEnabled() {
+                            return false;
+                        }
+                    };
+
+            var handlerWithFeatureFlagDisabled =
+                    new LoginHandler(configWithFeatureFlagDisabled, redisConnectionService);
+
+            var event = new APIGatewayProxyRequestEvent();
+            event.setHeaders(validHeadersWithSessionId(sessionId));
+            event.setBody(
+                    objectMapper.writeValueAsString(
+                            new LoginRequest(email, password, JourneyType.SIGN_IN)));
+            event.setRequestContext(
+                    new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                            .withRequestId(IdGenerator.generate()));
+
+            var response = handlerWithFeatureFlagDisabled.handleRequest(event, context);
 
             assertThat(response, hasStatus(400));
             assertThat(

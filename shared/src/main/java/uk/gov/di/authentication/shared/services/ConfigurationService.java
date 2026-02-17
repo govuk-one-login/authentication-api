@@ -780,6 +780,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean isInternalApiExistingInternationalSmsEnabled() {
+        return System.getenv()
+                .getOrDefault("INTERNAL_API_EXISTING_INTERNATIONAL_SMS_ENABLED", "true")
+                .equals("true");
+    }
+
     public boolean isTestSigningKeyEnabled() {
         return System.getenv()
                 .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
