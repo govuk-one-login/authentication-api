@@ -308,15 +308,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
-        var hardcodedOrchKey = getOrchestrationToAuthenticationSigningPublicKey();
         var orchStubKey = getOrchestrationStubToAuthenticationSigningPublicKey();
         var keyList = new ArrayList<String>();
         orchStubKey.ifPresent(keyList::add);
         return keyList;
-    }
-
-    private String getOrchestrationToAuthenticationSigningPublicKey() {
-        return systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
     }
 
     public Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
