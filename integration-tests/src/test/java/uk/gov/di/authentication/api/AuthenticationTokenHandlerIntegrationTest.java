@@ -115,35 +115,25 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                 TEST_JOURNEY_ID);
 
         txmaAuditQueue.clear();
+        authJwksExtension.init(new JWKSet(EC_KEY_PAIR.toPublicJWK()));
     }
 
     private static Stream<Arguments> signatureVerificationMethods() {
         return Stream.of(
-                arguments(named("Using JWKS endpoint", true), named("signing with stub key", true)),
-                arguments(
-                        named("Using JWKS endpoint", true), named("signing with JWKS key", false)),
-                arguments(
-                        named("Using hardcoded key", false), named("signing with stub key", true)),
-                arguments(
-                        named("Using hardcoded key", false),
-                        named("signing with hardcoded key", false)));
+                arguments(named("signing with stub key", true)),
+                arguments(named("signing with JWKS key", false)));
     }
 
     @ParameterizedTest
     @MethodSource("signatureVerificationMethods")
     void
             shouldGenerateASuccessfulTokenResponseWhenPresentedWithAValidAuthCodeAndSetCodeStoreFlagToUsed(
-                    boolean useAuthJwks, boolean signWithOrchStubKey)
-                    throws ParseException, JOSEException {
-        if (useAuthJwks) {
-            authJwksExtension.init(new JWKSet(EC_KEY_PAIR.toPublicJWK()));
-        }
+                    boolean signWithOrchStubKey) throws ParseException, JOSEException {
         var configurationService =
                 new AuthenticationTokenHandlerIntegrationTest.TestConfigurationService(
                         notificationsQueue,
                         tokenSigner,
                         docAppPrivateKeyJwtSigner,
-                        useAuthJwks,
                         signWithOrchStubKey ? Optional.of(STUB_PUBLIC_KEY) : Optional.empty());
         handler = new TokenHandler(configurationService);
 
@@ -195,7 +185,6 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         notificationsQueue,
                         tokenSigner,
                         docAppPrivateKeyJwtSigner,
-                        true,
                         Optional.of(STUB_PUBLIC_KEY));
         handler = new TokenHandler(configurationService);
 
@@ -313,7 +302,6 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     }
 
     private static class TestConfigurationService extends IntegrationTestConfigurationService {
-        private final boolean useAuthJwks;
         private final Optional<String> orchStubPublicSigningKeyOpt;
 
         public TestConfigurationService(
@@ -324,7 +312,6 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                     notificationQueue,
                     tokenSigningKey,
                     docAppPrivateKeyJwtSigner,
-                    false,
                     Optional.of(STUB_PUBLIC_KEY));
         }
 
@@ -332,14 +319,12 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                 SqsQueueExtension notificationQueue,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
-                boolean useAuthJwks,
                 Optional<String> orchStubPublicSigningKeyOpt) {
             super(
                     notificationQueue,
                     tokenSigningKey,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
-            this.useAuthJwks = useAuthJwks;
             this.orchStubPublicSigningKeyOpt = orchStubPublicSigningKeyOpt;
         }
 
@@ -376,20 +361,12 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
             List<String> keys = new ArrayList<>();
             orchStubPublicSigningKeyOpt.ifPresent(keys::add);
-            if (!useAuthJwks) {
-                keys.add(EC_PUBLIC_KEY);
-            }
             return keys;
         }
 
         @Override
         public Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
             return orchStubPublicSigningKeyOpt;
-        }
-
-        @Override
-        public boolean isUseAuthJwksEnabled() {
-            return useAuthJwks;
         }
     }
 }

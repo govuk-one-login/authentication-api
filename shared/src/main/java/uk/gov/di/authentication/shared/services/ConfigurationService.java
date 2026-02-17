@@ -312,9 +312,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         var orchStubKey = getOrchestrationStubToAuthenticationSigningPublicKey();
         var keyList = new ArrayList<String>();
         orchStubKey.ifPresent(keyList::add);
-        if (!isUseAuthJwksEnabled()) {
-            keyList.add(hardcodedOrchKey);
-        }
         return keyList;
     }
 
@@ -526,11 +523,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             LOG.error("Invalid JWKS URL: {}", e.getMessage());
             throw new RuntimeException(e);
         }
-    }
-
-    public boolean isUseAuthJwksEnabled() {
-        return FEATURE_SWITCH_ON.equals(
-                systemService.getOrDefault("USE_AUTH_JWKS", FEATURE_SWITCH_OFF));
     }
 
     public String getTokenSigningKeyRsaAlias() {

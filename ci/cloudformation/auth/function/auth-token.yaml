@@ -82,10 +82,6 @@ Resources:
                     OrchApiBaseUrl,
                     DefaultValue: "",
                   ]
-          USE_AUTH_JWKS: !If
-            - UseAuthJwks
-            - true
-            - false
       LoggingConfig:
         LogGroup: !Ref AuthTokenFunctionLogGroup
       Policies:
