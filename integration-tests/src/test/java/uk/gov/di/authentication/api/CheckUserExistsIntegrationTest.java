@@ -12,8 +12,11 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -49,6 +52,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String TEST_EMAIL_2 = "joe.bloggs+2@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password-1";
     private static final String TEST_PHONE_NUMBER = "+44987654321";
+    private static final String TEST_INTERNATIONAL_PHONE_NUMBER = "+33612345678";
     private static final String TEST_CREDENTIAL = "credential";
 
     @BeforeEach
@@ -90,6 +94,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             } else {
                 assertNull(checkUserExistsResponse.phoneNumberLastThree());
             }
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
 
             assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
         }
@@ -150,6 +155,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(MFAMethodType.NONE));
             assertFalse(checkUserExistsResponse.doesUserExist());
             assertNull(checkUserExistsResponse.phoneNumberLastThree());
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
 
             assertExpectedAuditEvents(AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL);
         }
@@ -248,7 +254,314 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
     }
 
+    @Nested
+    @DisplayName("Forced MFA reset after MFA check")
+    class ForcedMFAResetAfterMFACheck {
+
+        @Test
+        @DisplayName(
+                "Response needsForcedMFAResetAfterMFACheck is false for non-migrated user with domestic number when feature flag disabled")
+        void shouldReturnFalseForNonMigratedUserWithDomesticNumberWhenFeatureFlagDisabled()
+                throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            new IntegrationTestConfigurationService(
+                                    notificationsQueue,
+                                    tokenSigner,
+                                    docAppPrivateKeyJwtSigner,
+                                    configurationParameters) {
+                                @Override
+                                public String getTxmaAuditQueueUrl() {
+                                    return txmaAuditQueue.getQueueUrl();
+                                }
+
+                                @Override
+                                public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                                    return false;
+                                }
+                            });
+
+            var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.SMS);
+            var clientSessionId = IdGenerator.generate();
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
+
+        @Test
+        @DisplayName(
+                "Response needsForcedMFAResetAfterMFACheck is false for non-migrated user with domestic number when feature flag enabled")
+        void shouldReturnFalseForNonMigratedUserWithDomesticNumberWhenFeatureFlagEnabled()
+                throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            new IntegrationTestConfigurationService(
+                                    notificationsQueue,
+                                    tokenSigner,
+                                    docAppPrivateKeyJwtSigner,
+                                    configurationParameters) {
+                                @Override
+                                public String getTxmaAuditQueueUrl() {
+                                    return txmaAuditQueue.getQueueUrl();
+                                }
+
+                                @Override
+                                public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                                    return true;
+                                }
+                            });
+
+            var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.SMS);
+            var clientSessionId = IdGenerator.generate();
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
+
+        @Test
+        @DisplayName(
+                "Response needsForcedMFAResetAfterMFACheck is false for migrated user with domestic number when feature flag enabled")
+        void shouldReturnFalseForMigratedUserWithDomesticNumberWhenFeatureFlagEnabled()
+                throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            new IntegrationTestConfigurationService(
+                                    notificationsQueue,
+                                    tokenSigner,
+                                    docAppPrivateKeyJwtSigner,
+                                    configurationParameters) {
+                                @Override
+                                public String getTxmaAuditQueueUrl() {
+                                    return txmaAuditQueue.getQueueUrl();
+                                }
+
+                                @Override
+                                public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                                    return true;
+                                }
+                            });
+
+            var sessionId =
+                    setupMigratedUserAndSession(TEST_EMAIL_1, MFAMethodType.SMS, TEST_PHONE_NUMBER);
+            var clientSessionId = IdGenerator.generate();
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
+
+        @Test
+        @DisplayName(
+                "Response needsForcedMFAResetAfterMFACheck is false for non-migrated user with international number when feature flag disabled")
+        void shouldReturnFalseForNonMigratedUserWithInternationalNumberWhenFeatureFlagDisabled()
+                throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            new IntegrationTestConfigurationService(
+                                    notificationsQueue,
+                                    tokenSigner,
+                                    docAppPrivateKeyJwtSigner,
+                                    configurationParameters) {
+                                @Override
+                                public String getTxmaAuditQueueUrl() {
+                                    return txmaAuditQueue.getQueueUrl();
+                                }
+
+                                @Override
+                                public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                                    return false;
+                                }
+                            });
+
+            var sessionId =
+                    setupUserAndSessionWithPhoneNumber(
+                            TEST_EMAIL_1, MFAMethodType.SMS, TEST_INTERNATIONAL_PHONE_NUMBER);
+            var clientSessionId = IdGenerator.generate();
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
+
+        @Test
+        @DisplayName(
+                "Response needsForcedMFAResetAfterMFACheck is true for non-migrated user with international number when feature flag enabled")
+        void shouldReturnTrueForNonMigratedUserWithInternationalNumberWhenFeatureFlagEnabled()
+                throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            new IntegrationTestConfigurationService(
+                                    notificationsQueue,
+                                    tokenSigner,
+                                    docAppPrivateKeyJwtSigner,
+                                    configurationParameters) {
+                                @Override
+                                public String getTxmaAuditQueueUrl() {
+                                    return txmaAuditQueue.getQueueUrl();
+                                }
+
+                                @Override
+                                public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                                    return true;
+                                }
+                            });
+
+            var sessionId =
+                    setupUserAndSessionWithPhoneNumber(
+                            TEST_EMAIL_1, MFAMethodType.SMS, TEST_INTERNATIONAL_PHONE_NUMBER);
+            var clientSessionId = IdGenerator.generate();
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertTrue(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
+
+        @Test
+        @DisplayName(
+                "Response needsForcedMFAResetAfterMFACheck is true for migrated user with international number when feature flag enabled")
+        void shouldReturnTrueForMigratedUserWithInternationalNumberWhenFeatureFlagEnabled()
+                throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            new IntegrationTestConfigurationService(
+                                    notificationsQueue,
+                                    tokenSigner,
+                                    docAppPrivateKeyJwtSigner,
+                                    configurationParameters) {
+                                @Override
+                                public String getTxmaAuditQueueUrl() {
+                                    return txmaAuditQueue.getQueueUrl();
+                                }
+
+                                @Override
+                                public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                                    return true;
+                                }
+                            });
+
+            var sessionId =
+                    setupMigratedUserAndSession(
+                            TEST_EMAIL_1, MFAMethodType.SMS, TEST_INTERNATIONAL_PHONE_NUMBER);
+            var clientSessionId = IdGenerator.generate();
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertTrue(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
+
+        @Test
+        @DisplayName(
+                "Response needsForcedMFAResetAfterMFACheck is false when MFA is not required for requested credential strength")
+        void shouldReturnFalseWhenMfaNotRequired() throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            new IntegrationTestConfigurationService(
+                                    notificationsQueue,
+                                    tokenSigner,
+                                    docAppPrivateKeyJwtSigner,
+                                    configurationParameters) {
+                                @Override
+                                public String getTxmaAuditQueueUrl() {
+                                    return txmaAuditQueue.getQueueUrl();
+                                }
+
+                                @Override
+                                public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                                    return true;
+                                }
+                            });
+
+            var sessionId =
+                    setupUserAndSessionWithPhoneNumber(
+                            TEST_EMAIL_1, MFAMethodType.SMS, TEST_INTERNATIONAL_PHONE_NUMBER);
+            authSessionStore.addRequestedCredentialStrengthToSession(
+                    sessionId, CredentialTrustLevel.LOW_LEVEL);
+            var clientSessionId = IdGenerator.generate();
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
+    }
+
     private String setupUserAndSession(String emailAddress, MFAMethodType mfaMethodType) {
+        return setupUserAndSessionWithPhoneNumber(emailAddress, mfaMethodType, TEST_PHONE_NUMBER);
+    }
+
+    private String setupUserAndSessionWithPhoneNumber(
+            String emailAddress, MFAMethodType mfaMethodType, String phoneNumber) {
         var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
@@ -258,13 +571,31 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         if (MFAMethodType.SMS == mfaMethodType) {
             userStore.addMfaMethod(emailAddress, mfaMethodType, false, true, TEST_CREDENTIAL);
-            userStore.addVerifiedPhoneNumber(emailAddress, TEST_PHONE_NUMBER);
+            userStore.addVerifiedPhoneNumber(emailAddress, phoneNumber);
         } else {
             userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, TEST_CREDENTIAL);
         }
 
         setupClient(sessionId);
 
+        return sessionId;
+    }
+
+    private String setupMigratedUserAndSession(
+            String emailAddress, MFAMethodType mfaMethodType, String phoneNumber) {
+        var sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
+
+        userStore.signUp(emailAddress, TEST_PASSWORD);
+        userStore.addSalt(emailAddress);
+        userStore.addMfaMethodSupportingMultiple(
+                emailAddress,
+                MFAMethod.smsMfaMethod(
+                        true, true, phoneNumber, PriorityIdentifier.DEFAULT, "mfa-id"));
+        userStore.setMfaMethodsMigrated(emailAddress, true);
+
+        setupClient(sessionId);
         return sessionId;
     }
 

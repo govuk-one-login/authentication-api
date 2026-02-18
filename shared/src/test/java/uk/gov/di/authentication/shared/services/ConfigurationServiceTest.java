@@ -681,6 +681,11 @@ class ConfigurationServiceTest {
                 () -> configurationService.getInternationalSmsNumberSendLimit());
     }
 
+    @Test
+    void isForcedMFAResetAfterMFACheckEnabledShouldDefaultFalse() {
+        assertFalse(configurationService.isForcedMFAResetAfterMFACheckEnabled());
+    }
+
     private static Stream<Arguments> commaSeparatedStringContains() {
         return Stream.of(
                 Arguments.of("1234", null, false),

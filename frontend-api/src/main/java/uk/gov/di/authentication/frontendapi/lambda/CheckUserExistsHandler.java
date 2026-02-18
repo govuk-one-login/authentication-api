@@ -16,6 +16,9 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -27,6 +30,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -35,12 +39,15 @@ import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.hasInternationalPhoneNumber;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.mfaRequired;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -52,13 +59,15 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
     private final AuditService auditService;
     private final PermissionDecisionManager permissionDecisionManager;
+    private final MFAMethodsService mfaMethodsService;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
             AuthSessionService authSessionService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            PermissionDecisionManager permissionDecisionManager) {
+            PermissionDecisionManager permissionDecisionManager,
+            MFAMethodsService mfaMethodsService) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
@@ -66,6 +75,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSessionService);
         this.auditService = auditService;
         this.permissionDecisionManager = permissionDecisionManager;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public CheckUserExistsHandler() {
@@ -76,6 +86,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     @Override
@@ -162,6 +173,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = UserMfaDetail.noMfa();
             var hasActivePasskey = false;
+            var needsForcedMFAResetAfterMFACheck = false;
 
             AuthSessionItem authSession = userContext.getAuthSession();
 
@@ -185,6 +197,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 userCredentials,
                                 userProfile.get());
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
+
+                needsForcedMFAResetAfterMFACheck =
+                        configurationService.isForcedMFAResetAfterMFACheckEnabled()
+                                && requiresMfaResetForInternationalNumber(
+                                        authSession, userCredentials, userProfile.get());
             } else {
                 authSession.setInternalCommonSubjectId(null);
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
@@ -209,7 +226,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.mfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation,
-                            hasActivePasskey);
+                            hasActivePasskey,
+                            needsForcedMFAResetAfterMFACheck);
 
             authSessionService.updateSession(authSession);
 
@@ -220,6 +238,30 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
+    }
+
+    private boolean requiresMfaResetForInternationalNumber(
+            AuthSessionItem authSession, UserCredentials userCredentials, UserProfile userProfile) {
+        if (!mfaRequired(authSession.getRequestedCredentialStrength())) {
+            LOG.info(
+                    "MFA is not required for journey, skipping international number check for forced MFA reset.");
+            return false;
+        }
+
+        var mfaMethodsResult = mfaMethodsService.getMfaMethods(userProfile, userCredentials, true);
+        List<MFAMethod> mfaMethods =
+                mfaMethodsResult.isSuccess()
+                        ? mfaMethodsResult.getSuccess()
+                        : Collections.emptyList();
+
+        boolean hasInternationalNumber = hasInternationalPhoneNumber(mfaMethods);
+
+        LOG.info(
+                "User {} international phone number, {} required",
+                hasInternationalNumber ? "has" : "has no",
+                hasInternationalNumber ? "MFA reset" : "no MFA reset");
+
+        return hasInternationalNumber;
     }
 
     private Result<DecisionError, List<LockoutInformation>> determineLockoutInformation(
