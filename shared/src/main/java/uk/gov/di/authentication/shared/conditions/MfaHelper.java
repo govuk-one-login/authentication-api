@@ -8,7 +8,9 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -97,5 +99,15 @@ public class MfaHelper {
 
             return new UserMfaDetail(isMfaRequired, false, MFAMethodType.NONE, null);
         }
+    }
+
+    public static boolean hasInternationalPhoneNumber(List<MFAMethod> mfaMethods) {
+        return mfaMethods.stream()
+                .filter(m -> MFAMethodType.SMS.getValue().equals(m.getMfaMethodType()))
+                .anyMatch(
+                        m ->
+                                m.getDestination() != null
+                                        && !PhoneNumberHelper.isDomesticPhoneNumber(
+                                                m.getDestination()));
     }
 }
