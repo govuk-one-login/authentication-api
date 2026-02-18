@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
@@ -37,6 +38,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -59,7 +61,6 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -91,6 +92,7 @@ class CheckUserExistsHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String CLIENT_ID = "test-client-id";
@@ -141,7 +143,8 @@ class CheckUserExistsHandlerTest {
                         authSessionService,
                         authenticationService,
                         auditService,
-                        permissionDecisionManager);
+                        permissionDecisionManager,
+                        mfaMethodsService);
         reset(authenticationService);
         reset(permissionDecisionManager);
 
@@ -344,7 +347,7 @@ class CheckUserExistsHandlerTest {
         }
 
         @Test
-        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseWhenDisabled()
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForNonMigratedUserWhenFlagDisabled()
                 throws Json.JsonException {
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
@@ -359,8 +362,195 @@ class CheckUserExistsHandlerTest {
         }
 
         @Test
-        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsTrueWhenEnabled()
+        void
+                shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForNonMigratedUserWithDomesticNumber()
+                        throws Json.JsonException {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(
+                                            MFAMethod.smsMfaMethod(
+                                                    true,
+                                                    true,
+                                                    CommonTestVariables.UK_MOBILE_NUMBER,
+                                                    PriorityIdentifier.DEFAULT,
+                                                    "sms-id"))));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForMigratedUserWithDomesticNumber()
                 throws Json.JsonException {
+            var migratedUserProfile = generateUserProfile().withMfaMethodsMigrated(true);
+            setupUserProfileAndClient(Optional.of(migratedUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            var domesticSms =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            CommonTestVariables.UK_MOBILE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            "sms-id");
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(domesticSms)));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(Result.success(List.of(domesticSms)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {false, true})
+        void
+                shouldReturnNeedsForcedMFAResetAfterMFACheckMatchingFlagForNonMigratedUserWithInternationalNumber(
+                        boolean featureFlagEnabled) throws Json.JsonException {
+            var phoneNumber = CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
+            var internationalUserProfile = generateUserProfile().withPhoneNumber(phoneNumber);
+            setupUserProfileAndClient(Optional.of(internationalUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled())
+                    .thenReturn(featureFlagEnabled);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(
+                                            MFAMethod.smsMfaMethod(
+                                                    true,
+                                                    true,
+                                                    phoneNumber,
+                                                    PriorityIdentifier.DEFAULT,
+                                                    "sms-id"))));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(
+                    featureFlagEnabled, checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {false, true})
+        void
+                shouldReturnNeedsForcedMFAResetAfterMFACheckMatchingFlagForMigratedUserWithInternationalNumber(
+                        boolean featureFlagEnabled) throws Json.JsonException {
+            var migratedUserProfile = generateUserProfile().withMfaMethodsMigrated(true);
+            setupUserProfileAndClient(Optional.of(migratedUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled())
+                    .thenReturn(featureFlagEnabled);
+
+            var internationalSms =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            "sms-id");
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(internationalSms)));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(Result.success(List.of(internationalSms)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(
+                    featureFlagEnabled, checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForNonMigratedUserWithAuthApp()
+                throws Json.JsonException {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+            MFAMethod authAppMethod = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(authAppMethod)));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(
+                                            MFAMethod.authAppMfaMethod(
+                                                    "some-credential",
+                                                    true,
+                                                    true,
+                                                    PriorityIdentifier.DEFAULT,
+                                                    "auth-app-id"))));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForMigratedUserWithAuthApp()
+                throws Json.JsonException {
+            var migratedUserProfile = generateUserProfile().withMfaMethodsMigrated(true);
+            setupUserProfileAndClient(Optional.of(migratedUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            var authAppMethod =
+                    MFAMethod.authAppMfaMethod(
+                            "some-credential",
+                            true,
+                            true,
+                            PriorityIdentifier.DEFAULT,
+                            "auth-app-id");
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(authAppMethod)));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(Result.success(List.of(authAppMethod)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseWhenMfaNotRequired()
+                throws Json.JsonException {
+            var lowTrustAuthSession =
+                    new AuthSessionItem()
+                            .withSessionId(SESSION_ID)
+                            .withRequestedCredentialStrength(CredentialTrustLevel.LOW_LEVEL)
+                            .withClientId(CLIENT_ID)
+                            .withRpSectorIdentifierHost(SECTOR_HOST);
+            when(authSessionService.getSessionFromRequestHeaders(any()))
+                    .thenReturn(Optional.of(lowTrustAuthSession));
+            var internationalUserProfile =
+                    generateUserProfile()
+                            .withPhoneNumber(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER);
+            setupUserProfileAndClient(Optional.of(internationalUserProfile));
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
@@ -370,7 +560,21 @@ class CheckUserExistsHandlerTest {
             assertThat(result, hasStatus(200));
             var checkUserExistsResponse =
                     objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-            assertTrue(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseWhenUserDoesNotExist()
+                throws Json.JsonException {
+            setupUserProfileAndClient(Optional.empty());
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
         }
 
         @Test
