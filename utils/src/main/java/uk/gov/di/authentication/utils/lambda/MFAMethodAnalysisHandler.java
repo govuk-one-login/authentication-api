@@ -187,9 +187,7 @@ public class MFAMethodAnalysisHandler
             for (Map<String, AttributeValue> item : response.items()) {
                 String phoneNumber = item.get("PhoneNumber").s();
                 String destinationType =
-                        PhoneNumberHelper.maybeGetCountry(phoneNumber)
-                                .map(country -> "44".equals(country) ? "DOMESTIC" : "INTERNATIONAL")
-                                .orElse("UNKNOWN");
+                        PhoneNumberHelper.maybeGetCountry(phoneNumber).orElse("UNKNOWN");
                 destinationCounts.merge(destinationType, 1L, Long::sum);
             }
 

@@ -215,9 +215,10 @@ class MFAMethodAnalysisHandlerTest {
 
         assertEquals(6, result.countOfPhoneNumberUsersAssessed());
         assertEquals(6, result.countOfUsersWithVerifiedPhoneNumber());
-        assertEquals(3L, result.phoneDestinationCounts().get("DOMESTIC"));
+        assertEquals(3L, result.phoneDestinationCounts().get("44"));
         assertEquals(1L, result.phoneDestinationCounts().get("UNKNOWN"));
-        assertEquals(2L, result.phoneDestinationCounts().get("INTERNATIONAL"));
+        assertEquals(1L, result.phoneDestinationCounts().get("33"));
+        assertEquals(1L, result.phoneDestinationCounts().get("1"));
     }
 
     @Test
