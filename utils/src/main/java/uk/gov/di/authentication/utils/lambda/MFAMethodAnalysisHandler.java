@@ -66,11 +66,28 @@ public class MFAMethodAnalysisHandler
         int parallelism = request.parallelism();
         int totalSegments = request.totalSegments();
 
+        boolean fetchPhoneStats =
+                request.fetchPhoneNumberStats() != null && request.fetchPhoneNumberStats();
+        boolean fetchCredentialsStats =
+                request.fetchUserCredentialsStats() != null && request.fetchUserCredentialsStats();
+
+        LOG.info(
+                "MFA analysis request: parallelism={}, totalSegments={}, fetchPhoneNumberStats={}, fetchUserCredentialsStats={}",
+                parallelism,
+                totalSegments,
+                fetchPhoneStats,
+                fetchCredentialsStats);
+
         List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(parallelism);
         try {
-            fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks, totalSegments);
-            fetchUserCredentialsAndProfileStatistics(forkJoinPool, parallelTasks, totalSegments);
+            if (fetchPhoneStats) {
+                fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks, totalSegments);
+            }
+            if (fetchCredentialsStats) {
+                fetchUserCredentialsAndProfileStatistics(
+                        forkJoinPool, parallelTasks, totalSegments);
+            }
             Pool.gracefulPoolShutdown(forkJoinPool);
 
             MFAMethodAnalysis combinedResults = combineTaskResults(parallelTasks);
