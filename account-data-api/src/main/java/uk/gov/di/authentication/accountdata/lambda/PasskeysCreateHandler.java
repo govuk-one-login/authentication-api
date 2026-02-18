@@ -8,11 +8,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateFailureReason;
-import uk.gov.di.authentication.accountdata.services.PasskeyService;
+import uk.gov.di.authentication.accountdata.services.PasskeysCreateService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -23,22 +22,21 @@ public class PasskeysCreateHandler
 
     private static final Logger LOG = LogManager.getLogger(PasskeysCreateHandler.class);
     private final ConfigurationService configurationService;
-    private final PasskeyService passkeyService;
+    private final PasskeysCreateService passkeysCreateService;
 
     public PasskeysCreateHandler() {
         this(ConfigurationService.getInstance());
     }
 
     public PasskeysCreateHandler(
-            ConfigurationService configurationService, PasskeyService passkeyService) {
+            ConfigurationService configurationService, PasskeysCreateService passkeyService) {
         this.configurationService = configurationService;
-        this.passkeyService = passkeyService;
+        this.passkeysCreateService = passkeyService;
     }
 
     public PasskeysCreateHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.passkeyService =
-                new PasskeyService(SerializationService.getInstance(), configurationService);
+        this.passkeysCreateService = new PasskeysCreateService(configurationService);
     }
 
     @Override
@@ -55,12 +53,24 @@ public class PasskeysCreateHandler
 
         LOG.info("PasskeysCreateHandler called");
 
-        Result<PasskeysCreateFailureReason, Void> result = passkeyService.createPasskey(input);
+        Result<PasskeysCreateFailureReason, Void> result =
+                passkeysCreateService.createPasskey(input);
 
         return result.fold(
                 failure ->
-                        generateApiGatewayProxyErrorResponse(
-                                500, ErrorResponse.UNEXPECTED_ACCOUNT_DATA_API_ERROR),
+                        switch (failure) {
+                            case PARSING_PASSKEY_CREATE_REQUEST_ERROR,
+                                    FAILED_TO_SAVE_PASSKEY -> generateApiGatewayProxyErrorResponse(
+                                    500, ErrorResponse.UNEXPECTED_ACCOUNT_DATA_API_ERROR);
+                            case REQUEST_MISSING_PARAMS -> generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.REQUEST_MISSING_PARAMS);
+                            case PASSKEY_EXISTS -> generateApiGatewayProxyErrorResponse(
+                                    409, ErrorResponse.PASSKEY_ALREADY_EXISTS);
+                            case INVALID_AAGUID -> generateApiGatewayProxyErrorResponse(
+                                    422, ErrorResponse.INVALID_AAGUID);
+                            case INVALID_CREDENTIAL -> generateApiGatewayProxyErrorResponse(
+                                    422, ErrorResponse.INVALID_CREDENTIAL);
+                        },
                 passkeyCreateResult -> generateApiGatewayProxyResponse(201, ""));
     }
 }
