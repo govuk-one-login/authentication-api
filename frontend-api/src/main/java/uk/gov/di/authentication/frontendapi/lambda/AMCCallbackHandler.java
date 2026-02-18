@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
 import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
@@ -78,7 +79,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         return requestResult
                 .map(tokenRequest -> sendTokenRequest(tokenRequest))
                 .fold(
-                        failure -> generateApiGatewayProxyResponse(500, "todo"),
+                        AMCFailureAntiCorruption::toApiGatewayProxyErrorResponse,
                         tokenResponse -> generateApiGatewayProxyResponse(200, "very cool"));
     }
 

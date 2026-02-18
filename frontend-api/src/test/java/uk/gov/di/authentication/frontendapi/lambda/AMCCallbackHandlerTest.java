@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -77,6 +78,30 @@ class AMCCallbackHandlerTest {
 
         assertEquals(200, result.getStatusCode());
         assertEquals("very cool", result.getBody());
+    }
+
+    @Test
+    void shouldReturn400WhenTokenResponseUnsuccessful() {
+        AMCCallbackHandler handler =
+                new AMCCallbackHandler(
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        AMC_SERVICE);
+
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE))
+                .thenReturn(Result.failure(JwtFailureReason.JWT_ENCODING_ERROR));
+
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(400, result.getStatusCode());
     }
 
     private void setupTokenHttpResponse(
