@@ -148,10 +148,7 @@ public class TokenHandler
             var validPublicKeys =
                     configurationService.getOrchestrationToAuthenticationSigningPublicKeys();
             var privateKeyJwt = extractPrivateKeyJwt(input.getBody());
-
-            if (configurationService.isUseAuthJwksEnabled()) {
-                getKeyFromJwks(privateKeyJwt).ifPresent(validPublicKeys::add);
-            }
+            getKeyFromJwks(privateKeyJwt).ifPresent(validPublicKeys::add);
 
             tokenRequestValidator.validatePrivateKeyJwtClientAuth(
                     privateKeyJwt, expectedAudience, validPublicKeys);

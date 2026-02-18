@@ -139,7 +139,6 @@ class TokenHandlerTest {
         when(configurationService.getOrchestrationBackendURI())
                 .thenReturn(URI.create("https://orch-test-backend.com"));
         when(configurationService.getInternalSectorUri()).thenReturn("https://test-backend.com");
-        when(configurationService.isUseAuthJwksEnabled()).thenReturn(false);
 
         accessTokenService = mock(AccessTokenService.class);
         tokenRequestValidator = mock(TokenRequestValidator.class);
@@ -155,6 +154,8 @@ class TokenHandlerTest {
                         dynamoService,
                         authJwksService);
         ecKeyPair = new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        when(authJwksService.retrieveJwkFromURLWithKeyId(ecKeyPair.getKeyID()))
+                .thenReturn(ecKeyPair.toPublicJWK());
     }
 
     @Test
@@ -211,10 +212,9 @@ class TokenHandlerTest {
 
     @Test
     void shouldReturn400WithErrorMessageWhenNoKeysFoundOnJwksEndpoint() throws JOSEException {
-        when(configurationService.isUseAuthJwksEnabled()).thenReturn(true);
         doThrow(new KeySourceException("No keys found"))
                 .when(authJwksService)
-                .retrieveJwkFromURLWithKeyId(any());
+                .retrieveJwkFromURLWithKeyId(ecKeyPair.getKeyID());
 
         APIGatewayProxyRequestEvent request =
                 new APIGatewayProxyRequestEvent().withBody(privateKeyJWTBody());
@@ -325,7 +325,11 @@ class TokenHandlerTest {
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
                 new PrivateKeyJWT(
-                        claimsSet, JWSAlgorithm.ES256, ecKeyPair.toPrivateKey(), null, null);
+                        claimsSet,
+                        JWSAlgorithm.ES256,
+                        ecKeyPair.toPrivateKey(),
+                        ecKeyPair.getKeyID(),
+                        null);
         return privateKeyJWT.toParameters();
     }
 
