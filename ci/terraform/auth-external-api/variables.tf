@@ -103,6 +103,12 @@ variable "orch_client_id" {
   description = "The client ID used by the orchestrator in two situations: 1) when passing an authorize request to the authentication frontend - see OIDC module 2) when calling the authentication token endpoint - in this second case there is no real client registry or defined scopes, but it is a part of OAuth2 formalities."
 }
 
+variable "orch_to_auth_public_signing_key" {
+  default     = ""
+  type        = string
+  description = "A hardcoded value for the public key corresponding to the KMS created in the OIDC module. It is used to validate the signature of a client_assertion JWT (orch<->auth token endpoint)"
+}
+
 variable "orch_stub_to_auth_public_signing_key" {
   default     = ""
   type        = string
