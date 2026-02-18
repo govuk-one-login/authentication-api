@@ -224,6 +224,8 @@ Mappings:
       amcAudience: https://api.manage.authdev1.dev.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev1.dev.account.gov.uk/amc-callback
+      amcTokenUri: https://amcstub.signin.authdev1.dev.account.gov.uk/token
+      amcClientId: auth_amc
       EvcsApiVpcEndpointId: ""
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
@@ -263,6 +265,8 @@ Mappings:
       amcAudience: https://api.manage.authdev2.dev.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev2.dev.account.gov.uk/amc-callback
+      amcTokenUri: https://amcstub.signin.authdev2.dev.account.gov.uk/token
+      amcClientId: auth_amc
       EvcsApiVpcEndpointId: ""
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
@@ -306,6 +310,8 @@ Mappings:
       amcAudience: https://api.manage.authdev3.dev.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev3.dev.account.gov.uk/amc-callback
+      amcTokenUri: https://amcstub.signin.authdev3.dev.account.gov.uk/token
+      amcClientId: auth_amc
       EvcsApiVpcEndpointId: ""
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
@@ -354,6 +360,8 @@ Mappings:
       OrchApiBaseUrl: https://oidc.dev.account.gov.uk
       amcAudience: https://api.manage.dev.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.dev.account.gov.uk/authorize
+      amcTokenUri: https://amcstub.signin.dev.account.gov.uk/token
+      amcClientId: auth_amc
       amcRedirectUri: https://signin.dev.account.gov.uk/amc-callback
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
@@ -408,6 +416,8 @@ Mappings:
       amcAudience: https://api.manage.build.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.build.account.gov.uk/authorize
       amcRedirectUri: https://signin.build.account.gov.uk/amc-callback
+      amcTokenUri: https://amcstub.signin.build.account.gov.uk/token
+      amcClientId: auth_amc
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
@@ -462,6 +472,8 @@ Mappings:
       amcAudience: https://api.manage.staging.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.staging.account.gov.uk/authorize
       amcRedirectUri: https://signin.staging.account.gov.uk/amc-callback
+      amcTokenUri: https://api.manage.staging.account.gov.uk/token
+      amcClientId: bb8ba862f42b4e5eb97cc0950f6419ca
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
@@ -516,6 +528,8 @@ Mappings:
       amcAudience: https://api.manage.integration.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.integration.account.gov.uk/authorize
       amcRedirectUri: https://signin.integration.account.gov.uk/amc-callback
+      amcTokenUri: https://api.manage.integration.account.gov.uk/token
+      amcClientId: 0b649817932e4632861f1ab3fccb650d
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/075774c2-b836-452f-9684-dcd742146f81
@@ -570,6 +584,8 @@ Mappings:
       amcAudience: https://api.manage.account.gov.uk
       amcAuthorizeUri: https://amcstub.signin.account.gov.uk/authorize
       amcRedirectUri: https://signin.account.gov.uk/amc-callback
+      amcTokenUri: https://api.manage.account.gov.uk/token
+      amcClientId: be05e73e93e94626917b2bc0d7627cfa
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
