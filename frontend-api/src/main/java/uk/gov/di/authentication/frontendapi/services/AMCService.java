@@ -21,8 +21,8 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkException;
-import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -40,14 +40,13 @@ import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 
-public class AMCAuthorizationService {
+public class AMCService {
     private final ConfigurationService configurationService;
     private final NowHelper.NowClock nowClock;
     private final JwtService jwtService;
-    private static final Logger LOG = LogManager.getLogger(AMCAuthorizationService.class);
+    private static final Logger LOG = LogManager.getLogger(AMCService.class);
 
-    // TODO: Rename this if work is not moved out
-    public AMCAuthorizationService(
+    public AMCService(
             ConfigurationService configurationService,
             NowHelper.NowClock nowClock,
             JwtService jwtService) {
@@ -56,39 +55,38 @@ public class AMCAuthorizationService {
         this.jwtService = jwtService;
     }
 
-    private Result<AMCAuthorizeFailureReason, SignedJWT> signJWT(
-            JWTClaimsSet jwtClaims, String keyId) {
+    private Result<JwtFailureReason, SignedJWT> signJWT(JWTClaimsSet jwtClaims, String keyId) {
         try {
             return Result.success(jwtService.signJWT(jwtClaims, keyId));
         } catch (JwtServiceException e) {
             Throwable cause = e.getCause();
             if (cause instanceof SdkException) {
-                return Result.failure(AMCAuthorizeFailureReason.SIGNING_ERROR);
+                return Result.failure(JwtFailureReason.SIGNING_ERROR);
             } else if (cause instanceof ParseException) {
-                return Result.failure(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR);
+                return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
             } else if (cause instanceof JOSEException) {
-                return Result.failure(AMCAuthorizeFailureReason.TRANSCODING_ERROR);
+                return Result.failure(JwtFailureReason.TRANSCODING_ERROR);
             }
-            return Result.failure(AMCAuthorizeFailureReason.UNKNOWN_JWT_SIGNING_ERROR);
+            return Result.failure(JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR);
         }
     }
 
-    private Result<AMCAuthorizeFailureReason, EncryptedJWT> encryptJWT(
+    private Result<JwtFailureReason, EncryptedJWT> encryptJWT(
             SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) {
         try {
             return Result.success(jwtService.encryptJWT(signedJWT, publicEncryptionKey));
         } catch (JwtServiceException e) {
             Throwable cause = e.getCause();
             if (cause instanceof JOSEException) {
-                return Result.failure(AMCAuthorizeFailureReason.ENCRYPTION_ERROR);
+                return Result.failure(JwtFailureReason.ENCRYPTION_ERROR);
             } else if (cause instanceof ParseException) {
-                return Result.failure(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR);
+                return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
             }
-            return Result.failure(AMCAuthorizeFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR);
+            return Result.failure(JwtFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR);
         }
     }
 
-    private Result<AMCAuthorizeFailureReason, BearerAccessToken> createAccessToken(
+    private Result<JwtFailureReason, BearerAccessToken> createAccessToken(
             String internalPairwiseSubject, AMCScope[] scope, AuthSessionItem authSessionItem) {
         Date issueTime = nowClock.now();
         Date expiryDate =
@@ -122,7 +120,7 @@ public class AMCAuthorizationService {
                         });
     }
 
-    private Result<AMCAuthorizeFailureReason, EncryptedJWT> createCompositeJWT(
+    private Result<JwtFailureReason, EncryptedJWT> createCompositeJWT(
             String internalPairwiseSubject,
             AMCScope[] scope,
             AuthSessionItem authSessionItem,
@@ -176,14 +174,13 @@ public class AMCAuthorizationService {
                                                     return encryptJWT(signedJWT, publicKey);
                                                 } catch (JOSEException e) {
                                                     return Result.failure(
-                                                            AMCAuthorizeFailureReason
-                                                                    .JWT_ENCODING_ERROR);
+                                                            JwtFailureReason.JWT_ENCODING_ERROR);
                                                 }
                                             });
                         });
     }
 
-    public Result<AMCAuthorizeFailureReason, String> buildAuthorizationUrl(
+    public Result<JwtFailureReason, String> buildAuthorizationUrl(
             String internalPairwiseSubject,
             AMCScope[] scope,
             AuthSessionItem authSessionItem,
@@ -212,7 +209,7 @@ public class AMCAuthorizationService {
                         });
     }
 
-    public Result<AMCAuthorizeFailureReason, TokenRequest> buildTokenRequest(String authCode) {
+    public Result<JwtFailureReason, TokenRequest> buildTokenRequest(String authCode) {
         var clientAssertionJwt = buildClientAssertionJwt();
         var keyId = configurationService.getAuthToAMCPrivateSigningKeyAlias();
         var signedJWTResult = signJWT(clientAssertionJwt.toJWTClaimsSet(), keyId);

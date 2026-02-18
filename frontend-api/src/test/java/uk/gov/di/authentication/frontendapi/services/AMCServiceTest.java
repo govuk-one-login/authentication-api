@@ -27,8 +27,8 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.kms.model.KmsException;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
-import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -60,8 +60,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 
-class AMCAuthorizationServiceTest {
-    private AMCAuthorizationService amcAuthorizationService;
+class AMCServiceTest {
+    private AMCService amcService;
     private static final String INTERNAL_PAIRWISE_ID =
             "urn:fdc:gov.uk:2022:xH7hrtJCgdi2NEF7TXcOC6SMz8DohdoLo9hWqQMWPRk";
     private static final String AUTH_ISSUER_CLAIM = "https://signin.account.gov.uk/";
@@ -99,8 +99,7 @@ class AMCAuthorizationServiceTest {
     @BeforeEach
     void setup() {
         JwtService jwtService = new JwtService(kmsConnectionService);
-        amcAuthorizationService =
-                new AMCAuthorizationService(configurationService, nowClock, jwtService);
+        amcService = new AMCService(configurationService, nowClock, jwtService);
     }
 
     @Nested
@@ -120,8 +119,8 @@ class AMCAuthorizationServiceTest {
             mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-            Result<AMCAuthorizeFailureReason, String> result =
-                    amcAuthorizationService.buildAuthorizationUrl(
+            Result<JwtFailureReason, String> result =
+                    amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                             authSessionItem,
@@ -160,8 +159,8 @@ class AMCAuthorizationServiceTest {
             when(kmsConnectionService.sign(any(SignRequest.class)))
                     .thenThrow(SdkException.builder().message("KMS Unreachable").build());
 
-            Result<AMCAuthorizeFailureReason, String> result =
-                    amcAuthorizationService.buildAuthorizationUrl(
+            Result<JwtFailureReason, String> result =
+                    amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                             authSessionItem,
@@ -169,7 +168,7 @@ class AMCAuthorizationServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(AMCAuthorizeFailureReason.SIGNING_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
         }
 
         @Test
@@ -185,8 +184,8 @@ class AMCAuthorizationServiceTest {
                                     .signature(SdkBytes.fromByteArray(new byte[] {0x00, 0x01}))
                                     .build());
 
-            Result<AMCAuthorizeFailureReason, String> result =
-                    amcAuthorizationService.buildAuthorizationUrl(
+            Result<JwtFailureReason, String> result =
+                    amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                             authSessionItem,
@@ -194,7 +193,7 @@ class AMCAuthorizationServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(AMCAuthorizeFailureReason.TRANSCODING_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.TRANSCODING_ERROR, result.getFailure());
         }
 
         @Test
@@ -220,10 +219,10 @@ class AMCAuthorizationServiceTest {
                                     "Encryption failed",
                                     new com.nimbusds.jose.JOSEException("Encryption error")));
 
-            AMCAuthorizationService serviceWithMockJwt =
-                    new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+            AMCService serviceWithMockJwt =
+                    new AMCService(configurationService, nowClock, mockJwtService);
 
-            Result<AMCAuthorizeFailureReason, String> result =
+            Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -232,7 +231,7 @@ class AMCAuthorizationServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(AMCAuthorizeFailureReason.ENCRYPTION_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.ENCRYPTION_ERROR, result.getFailure());
         }
 
         @Test
@@ -256,10 +255,10 @@ class AMCAuthorizationServiceTest {
             when(mockJwtService.encryptJWT(any(), any()))
                     .thenThrow(new JwtServiceException("Unknown encryption error"));
 
-            AMCAuthorizationService serviceWithMockJwt =
-                    new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+            AMCService serviceWithMockJwt =
+                    new AMCService(configurationService, nowClock, mockJwtService);
 
-            Result<AMCAuthorizeFailureReason, String> result =
+            Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -268,8 +267,7 @@ class AMCAuthorizationServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(
-                    AMCAuthorizeFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR, result.getFailure());
         }
 
         @Test
@@ -295,10 +293,10 @@ class AMCAuthorizationServiceTest {
                             new JwtServiceException(
                                     "Parse error", new java.text.ParseException("Invalid", 0)));
 
-            AMCAuthorizationService serviceWithMockJwt =
-                    new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+            AMCService serviceWithMockJwt =
+                    new AMCService(configurationService, nowClock, mockJwtService);
 
-            Result<AMCAuthorizeFailureReason, String> result =
+            Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -307,7 +305,7 @@ class AMCAuthorizationServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
         }
 
         @Test
@@ -321,10 +319,10 @@ class AMCAuthorizationServiceTest {
             when(mockJwtService.signJWT(any(), any()))
                     .thenThrow(new JwtServiceException("Unknown error"));
 
-            AMCAuthorizationService serviceWithMockJwt =
-                    new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+            AMCService serviceWithMockJwt =
+                    new AMCService(configurationService, nowClock, mockJwtService);
 
-            Result<AMCAuthorizeFailureReason, String> result =
+            Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -333,7 +331,7 @@ class AMCAuthorizationServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(AMCAuthorizeFailureReason.UNKNOWN_JWT_SIGNING_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR, result.getFailure());
         }
 
         @Test
@@ -350,8 +348,8 @@ class AMCAuthorizationServiceTest {
             mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-            Result<AMCAuthorizeFailureReason, String> result =
-                    amcAuthorizationService.buildAuthorizationUrl(
+            Result<JwtFailureReason, String> result =
+                    amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
                             authSessionItem,
@@ -383,10 +381,10 @@ class AMCAuthorizationServiceTest {
                             new JwtServiceException(
                                     "Parse error", new java.text.ParseException("Invalid", 0)));
 
-            AMCAuthorizationService serviceWithMockJwt =
-                    new AMCAuthorizationService(configurationService, nowClock, mockJwtService);
+            AMCService serviceWithMockJwt =
+                    new AMCService(configurationService, nowClock, mockJwtService);
 
-            Result<AMCAuthorizeFailureReason, String> result =
+            Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -395,7 +393,7 @@ class AMCAuthorizationServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
         }
 
         @Test
@@ -412,8 +410,8 @@ class AMCAuthorizationServiceTest {
             mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-            Result<AMCAuthorizeFailureReason, String> result =
-                    amcAuthorizationService.buildAuthorizationUrl(
+            Result<JwtFailureReason, String> result =
+                    amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
                             new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                             authSessionItem,
@@ -421,7 +419,7 @@ class AMCAuthorizationServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(AMCAuthorizeFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
         }
 
         private void mockKmsSigningWithDifferentKeys(ECKey accessTokenKey, ECKey compositeJWTKey) {
@@ -560,7 +558,7 @@ class AMCAuthorizationServiceTest {
 
             mockKmsSigning(signingKeyPair);
 
-            TokenRequest result = amcAuthorizationService.buildTokenRequest(AUTH_CODE).getSuccess();
+            TokenRequest result = amcService.buildTokenRequest(AUTH_CODE).getSuccess();
 
             var authGrant = (AuthorizationCodeGrant) result.getAuthorizationGrant();
             assertEquals(AUTH_CODE, authGrant.getAuthorizationCode().toString());
@@ -597,11 +595,10 @@ class AMCAuthorizationServiceTest {
                             argThat(request -> request.keyId().equals(invalidKeyAlias))))
                     .thenThrow(KmsException.create("Unable to sign", new RuntimeException()));
 
-            Result<AMCAuthorizeFailureReason, TokenRequest> result =
-                    amcAuthorizationService.buildTokenRequest(AUTH_CODE);
+            Result<JwtFailureReason, TokenRequest> result = amcService.buildTokenRequest(AUTH_CODE);
 
             assertTrue(result.isFailure());
-            assertEquals(AMCAuthorizeFailureReason.SIGNING_ERROR, result.getFailure());
+            assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
         }
     }
 

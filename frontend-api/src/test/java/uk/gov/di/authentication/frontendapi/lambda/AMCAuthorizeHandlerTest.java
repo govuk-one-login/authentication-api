@@ -7,12 +7,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
-import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
-import uk.gov.di.authentication.frontendapi.services.AMCAuthorizationService;
+import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -46,8 +46,7 @@ class AMCAuthorizeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
-    private final AMCAuthorizationService amcAuthorizationService =
-            mock(AMCAuthorizationService.class);
+    private final AMCService amcService = mock(AMCService.class);
     private AMCAuthorizeHandler handler;
     private final Context context = mock(Context.class);
     private final AuthSessionItem authSession =
@@ -67,7 +66,7 @@ class AMCAuthorizeHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        amcAuthorizationService);
+                        amcService);
 
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
@@ -80,7 +79,7 @@ class AMCAuthorizeHandlerTest {
         String expectedUrl = "https://example.com/authorize";
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(amcAuthorizationService.buildAuthorizationUrl(
+        when(amcService.buildAuthorizationUrl(
                         eq(INTERNAL_COMMON_SUBJECT_ID),
                         eq(new AMCScope[] {AMCScope.ACCOUNT_DELETE}),
                         eq(authSession),
@@ -99,7 +98,7 @@ class AMCAuthorizeHandlerTest {
 
         assertEquals(200, result.getStatusCode());
         assertTrue(result.getBody().contains(expectedUrl));
-        verify(amcAuthorizationService)
+        verify(amcService)
                 .buildAuthorizationUrl(
                         INTERNAL_COMMON_SUBJECT_ID,
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
@@ -126,12 +125,11 @@ class AMCAuthorizeHandlerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(AMCAuthorizeFailureReason.class)
-    void shouldHandleAllFailureReasons(AMCAuthorizeFailureReason failureReason) {
+    @EnumSource(JwtFailureReason.class)
+    void shouldHandleAllFailureReasons(JwtFailureReason failureReason) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(amcAuthorizationService.buildAuthorizationUrl(
-                        anyString(), any(), any(), anyString(), anyString()))
+        when(amcService.buildAuthorizationUrl(anyString(), any(), any(), anyString(), anyString()))
                 .thenReturn(Result.failure(failureReason));
 
         var event =

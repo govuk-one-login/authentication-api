@@ -9,7 +9,7 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
-import uk.gov.di.authentication.frontendapi.services.AMCAuthorizationService;
+import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -33,8 +33,7 @@ class AMCCallbackHandlerTest {
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
     private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
-    private static final AMCAuthorizationService amcAuthorizationService =
-            mock(AMCAuthorizationService.class);
+    private static final AMCService AMC_SERVICE = mock(AMCService.class);
     private static final TokenRequest tokenRequest = mock(TokenRequest.class);
     private static final HTTPRequest httpRequest = mock(HTTPRequest.class);
 
@@ -61,10 +60,9 @@ class AMCCallbackHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        amcAuthorizationService);
+                        AMC_SERVICE);
 
-        when(amcAuthorizationService.buildTokenRequest(AUTH_CODE))
-                .thenReturn(Result.success(tokenRequest));
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
 

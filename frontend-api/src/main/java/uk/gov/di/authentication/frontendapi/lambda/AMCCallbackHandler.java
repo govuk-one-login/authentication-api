@@ -10,7 +10,7 @@ import com.nimbusds.oauth2.sdk.TokenResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
-import uk.gov.di.authentication.frontendapi.services.AMCAuthorizationService;
+import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -27,7 +27,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 
 public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private final AMCAuthorizationService amcAuthorizationService;
+    private final AMCService amcService;
 
     private static final Logger LOG = LogManager.getLogger(AMCCallbackHandler.class);
 
@@ -37,8 +37,8 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
 
     public AMCCallbackHandler(ConfigurationService configurationService) {
         super(AMCCallbackRequest.class, configurationService, true);
-        this.amcAuthorizationService =
-                new AMCAuthorizationService(
+        this.amcService =
+                new AMCService(
                         configurationService,
                         new NowHelper.NowClock(Clock.systemUTC()),
                         new JwtService(new KmsConnectionService(configurationService)));
@@ -48,13 +48,13 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
-            AMCAuthorizationService amcAuthorizationService) {
+            AMCService amcService) {
         super(
                 AMCCallbackRequest.class,
                 configurationService,
                 authenticationService,
                 authSessionService);
-        this.amcAuthorizationService = amcAuthorizationService;
+        this.amcService = amcService;
     }
 
     @SuppressWarnings("java:S1185")
@@ -73,7 +73,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
 
         LOG.info("Request received to AMCCallbackHandler");
 
-        var requestResult = amcAuthorizationService.buildTokenRequest(request.code());
+        var requestResult = amcService.buildTokenRequest(request.code());
 
         return requestResult
                 .map(tokenRequest -> sendTokenRequest(tokenRequest))
