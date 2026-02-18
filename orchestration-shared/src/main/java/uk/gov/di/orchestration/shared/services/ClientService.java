@@ -37,7 +37,8 @@ public interface ClientService {
             String channel,
             boolean maxAgeEnabled,
             boolean pkceEnforced,
-            String landingPageUrl);
+            String landingPageUrl,
+            Integer rateLimit);
 
     Optional<ClientRegistry> getClient(String clientId);
 
