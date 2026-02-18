@@ -162,6 +162,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = UserMfaDetail.noMfa();
             var hasActivePasskey = false;
+            var needsForcedMFAResetAfterMFACheck = false;
 
             AuthSessionItem authSession = userContext.getAuthSession();
 
@@ -185,6 +186,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 userCredentials,
                                 userProfile.get());
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
+
+                // TODO: Using userCredentials, get bool as to whether there is an international number on the account.
+                // TODO: Also need to support un-migrated accounts.
+                // TODO: Do not force for 1FA journeys.
+                needsForcedMFAResetAfterMFACheck =
+                        configurationService.isForcedMFAResetAfterMFACheckEnabled();
             } else {
                 authSession.setInternalCommonSubjectId(null);
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
@@ -201,8 +208,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             }
 
             var lockoutInformation = lockoutInformationResult.getSuccess();
-
-            var needsForcedMFAResetAfterMFACheck = false;
 
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(

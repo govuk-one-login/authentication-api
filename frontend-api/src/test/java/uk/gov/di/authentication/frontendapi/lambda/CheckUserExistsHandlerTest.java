@@ -59,6 +59,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -156,6 +157,7 @@ class CheckUserExistsHandlerTest {
         @BeforeEach
         void setup() {
             authSessionExists();
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
             var userProfile =
                     generateUserProfile().withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
             setupUserProfileAndClient(Optional.of(userProfile));
@@ -342,7 +344,9 @@ class CheckUserExistsHandlerTest {
         }
 
         @Test
-        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalse() throws Json.JsonException {
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseWhenDisabled()
+                throws Json.JsonException {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
 
@@ -352,6 +356,21 @@ class CheckUserExistsHandlerTest {
             var checkUserExistsResponse =
                     objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
             assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsTrueWhenEnabled()
+                throws Json.JsonException {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertTrue(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
         }
 
         @Test

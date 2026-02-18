@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
@@ -248,6 +249,54 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(checkUserExistsResponse.lockoutInformation().size(), equalTo(0));
 
         assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+    }
+
+    @Nested
+    @DisplayName("Forced MFA reset after MFA check feature flag")
+    class ForcedMFAResetAfterMFACheck {
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        @DisplayName("Response needsForcedMFAResetAfterMFACheck matches feature flag value")
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckMatchingFlag(boolean flagEnabled)
+                throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            new IntegrationTestConfigurationService(
+                                    notificationsQueue,
+                                    tokenSigner,
+                                    docAppPrivateKeyJwtSigner,
+                                    configurationParameters) {
+                                @Override
+                                public String getTxmaAuditQueueUrl() {
+                                    return txmaAuditQueue.getQueueUrl();
+                                }
+
+                                @Override
+                                public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                                    return flagEnabled;
+                                }
+                            });
+
+            var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.SMS);
+            var clientSessionId = IdGenerator.generate();
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertThat(
+                    checkUserExistsResponse.needsForcedMFAResetAfterMFACheck(),
+                    equalTo(flagEnabled));
+
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
     }
 
     private String setupUserAndSession(String emailAddress, MFAMethodType mfaMethodType) {
