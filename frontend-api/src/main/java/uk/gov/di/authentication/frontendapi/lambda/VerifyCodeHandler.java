@@ -501,10 +501,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
 
         if (notificationType.equals(MFA_SMS)) {
+            String countryCode =
+                    Optional.ofNullable(smsMfaMethod)
+                            .flatMap(
+                                    method ->
+                                            PhoneNumberHelper.maybeGetCountry(
+                                                    method.getDestination()))
+                            .orElse("unknown");
             LOG.info(
-                    "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
+                    "MFA code has been successfully verified for MFA type: {}. JourneyType: {}. CountryCode: {}",
                     MFAMethodType.SMS.getValue(),
-                    false);
+                    journeyType,
+                    countryCode);
             authSessionService.updateSession(
                     authSession
                             .withVerifiedMfaMethodType(MFAMethodType.SMS)
