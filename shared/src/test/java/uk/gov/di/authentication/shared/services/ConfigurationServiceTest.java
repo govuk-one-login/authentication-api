@@ -293,7 +293,9 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void shouldNotReturnOrchStubSigningKeyIfNotPresent() {
+    void getOrchestrationToAuthenticationSigningPublicKeysShouldReturnSingleValue() {
+        var expectedKey = "expectedKey";
+        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY")).thenReturn(expectedKey);
         when(systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", ""))
                 .thenReturn("");
 
@@ -302,14 +304,36 @@ class ConfigurationServiceTest {
         configurationServiceWithMockedSystemService.setSystemService(systemService);
 
         assertEquals(
-                List.of(),
+                Collections.singletonList(expectedKey),
                 configurationServiceWithMockedSystemService
                         .getOrchestrationToAuthenticationSigningPublicKeys());
     }
 
     @Test
-    void shouldReturnOrchStubSigningKeyIfPresent() {
-        var stubKey = "expectedKey";
+    void getOrchestrationToAuthenticationSigningPublicKeysShouldReturnTwoValues() {
+        var expectedKey = "expectedKey";
+        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY")).thenReturn(expectedKey);
+        var secondExpectedKey = "expectedKey2";
+        when(systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", ""))
+                .thenReturn(secondExpectedKey);
+
+        ConfigurationService configurationServiceWithMockedSystemService =
+                new ConfigurationService();
+        configurationServiceWithMockedSystemService.setSystemService(systemService);
+
+        assertEquals(
+                List.of(secondExpectedKey, expectedKey),
+                configurationServiceWithMockedSystemService
+                        .getOrchestrationToAuthenticationSigningPublicKeys());
+    }
+
+    @Test
+    void shouldNotAddHardcodedPublicKeyIfUseAuthJwksIsEnabled() {
+        when(systemService.getOrDefault("USE_AUTH_JWKS", "false")).thenReturn("true");
+        var hardcodedKey = "expectedKey";
+        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY"))
+                .thenReturn(hardcodedKey);
+        var stubKey = "expectedKey2";
         when(systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", ""))
                 .thenReturn(stubKey);
 

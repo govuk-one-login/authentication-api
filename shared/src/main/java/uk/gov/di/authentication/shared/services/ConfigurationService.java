@@ -19,6 +19,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -307,8 +308,18 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
+        var hardcodedOrchKey = getOrchestrationToAuthenticationSigningPublicKey();
         var orchStubKey = getOrchestrationStubToAuthenticationSigningPublicKey();
-        return orchStubKey.map(List::of).orElse(List.of());
+        var keyList = new ArrayList<String>();
+        orchStubKey.ifPresent(keyList::add);
+        if (!isUseAuthJwksEnabled()) {
+            keyList.add(hardcodedOrchKey);
+        }
+        return keyList;
+    }
+
+    private String getOrchestrationToAuthenticationSigningPublicKey() {
+        return systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
     }
 
     public Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
@@ -515,6 +526,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             LOG.error("Invalid JWKS URL: {}", e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+
+    public boolean isUseAuthJwksEnabled() {
+        return FEATURE_SWITCH_ON.equals(
+                systemService.getOrDefault("USE_AUTH_JWKS", FEATURE_SWITCH_OFF));
     }
 
     public String getTokenSigningKeyRsaAlias() {

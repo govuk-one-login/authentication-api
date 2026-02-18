@@ -45,6 +45,12 @@ Resources:
               Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ORCH_CLIENT_ID: "orchestrationAuth"
+          ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              orchToAuthSigningPublicKey,
+            ]
           ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY: !If
             - UseSubEnvironment
             - !FindInMap [
@@ -76,6 +82,10 @@ Resources:
                     OrchApiBaseUrl,
                     DefaultValue: "",
                   ]
+          USE_AUTH_JWKS: !If
+            - UseAuthJwks
+            - true
+            - false
       LoggingConfig:
         LogGroup: !Ref AuthTokenFunctionLogGroup
       Policies:
