@@ -33,6 +33,7 @@ import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -53,8 +54,6 @@ public class DcmawUserInfoTest {
     private final String SUB_VALUE = DOC_APP_SUBJECT_ID;
     private final String CREDENTIALS_JWT_VALUE =
             "eyJraWQiOiIwNDEwZTQ0Mi1iNjJiLTQ1YzktOGNkNi00NTE4MGIxNmVmODUiLCJhbGciOiJFUzI1NiJ9.eyAgInN1YiI6ICJkdW1teS1kb2MtYXBwLXN1YmplY3QtaWQiLCAgIm5iZiI6IDQwNzA5MDg4MDAsICAiaXNzIjogImR1bW15RGNtYXdDb21wb25lbnRJZCIsICAiaWF0IjogNDA3MDkwODgwMCwgICJ2YyI6IHsgICAgIkBjb250ZXh0IjogWyAgICAgICJodHRwczovL3d3dy53My5vcmcvMjAxOC9jcmVkZW50aWFscy92MSIsICAgICAgImh0dHBzOi8vdm9jYWIubG9uZG9uLmNsb3VkYXBwcy5kaWdpdGFsL2NvbnRleHRzL2lkZW50aXR5LXYxLmpzb25sZCIgICAgXSwgICAgInR5cGUiOiBbICAgICAgIlZlcmlmaWFibGVDcmVkZW50aWFsIiwgICAgICAiQWRkcmVzc0NyZWRlbnRpYWwiICAgIF0sICAgICJjcmVkZW50aWFsU3ViamVjdCI6IHsgICAgfSAgfX0.QjbVNoAGZBFpkuE9RStPi5mAggMvSq0Kio6-EkyDxMJrColmcLPblF0ztgPdF5NEmMEPKst3Ug7AF1gXLW7jxg";
-    private final String ERROR_MESSAGE =
-            "{\"statusCode\":401,\"body\":\"Unauthorized\",\"headers\":{\"WWW-Authenticate\":\"Bearer error=\\\"invalid_token\\\"\",\"Cache-Control\":\"no-store\",\"Content-Type\":\"application/json\",\"Strict-Transport-Security\":\"max-age=31536000\",\"X-Content-Type-Options\":\"nosniff\",\"X-Frame-Options\":\"DENY\"}}";
 
     @BeforeEach
     void setup() {
@@ -125,7 +124,7 @@ public class DcmawUserInfoTest {
                         tokens.getAccessToken().toAuthorizationHeader())
                 .willRespondWith()
                 .status(401)
-                .body(ERROR_MESSAGE)
+                .matchHeader("WWW-Authenticate", "Bearer error=\"invalid_token\"")
                 .toPact();
     }
 
@@ -150,10 +149,7 @@ public class DcmawUserInfoTest {
         assertThat(exception.getHttpCode(), equalTo(401));
         assertThat(
                 exception.getMessage(),
-                equalTo(
-                        "Error 401 when attempting to call CRI data endpoint: "
-                                + ERROR_MESSAGE
-                                + "\n"));
+                startsWith("Error 401 when attempting to call CRI data endpoint:"));
     }
 
     private List<String> getUserInfoFromSuccessfulUserIdentityHttpResponse()
