@@ -456,13 +456,20 @@ class VerifyMfaCodeHandlerTest {
                                                                     .SUCCEEDED)));
         }
 
+        private static Stream<Arguments> smsJourneyTypes() {
+            return Stream.of(
+                    Arguments.of(JourneyType.SIGN_IN, false, MFA_SMS.name()),
+                    Arguments.of(ACCOUNT_RECOVERY, true, VERIFY_PHONE_NUMBER.name()));
+        }
+
         @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulSMSCodeForAccountRecovery(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @MethodSource("smsJourneyTypes")
+        void shouldReturn204WhenSuccessfulSMSCode(
+                JourneyType journeyType, boolean isAccountRecovery, String notificationType)
+                throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(authAppCodeProcessor));
-            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
             authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
             when(mfaMethodsService.getMfaMethods(EMAIL))
                     .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
@@ -472,13 +479,13 @@ class VerifyMfaCodeHandlerTest {
                             new VerifyMfaCodeRequest(
                                     MFAMethodType.SMS,
                                     CODE,
-                                    JourneyType.ACCOUNT_RECOVERY,
+                                    journeyType,
                                     DEFAULT_SMS_METHOD.getDestination()));
 
             assertThat(result, hasStatus(204));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
             assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
-            verify(authAppCodeProcessor)
+            verify(phoneNumberCodeProcessor)
                     .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
             verify(codeStorageService, never())
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -487,11 +494,11 @@ class VerifyMfaCodeHandlerTest {
             assertAuditEventSubmittedWithMetadata(
                     FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                     pair("mfa-type", MFAMethodType.SMS.getValue()),
-                    pair("account-recovery", true),
-                    pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
+                    pair("account-recovery", isAccountRecovery),
+                    pair("journey-type", journeyType),
                     pair("MFACodeEntered", CODE),
                     pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
-                    pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, VERIFY_PHONE_NUMBER.name()));
+                    pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, notificationType));
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.EXISTING,
@@ -499,17 +506,16 @@ class VerifyMfaCodeHandlerTest {
                             CLIENT_NAME,
                             "P0",
                             false,
-                            JourneyType.ACCOUNT_RECOVERY,
+                            journeyType,
                             MFAMethodType.SMS,
                             PriorityIdentifier.DEFAULT);
-            verify(authSessionService, times(3))
-                    .updateSession(
-                            argThat(
-                                    state ->
-                                            state.getResetMfaState()
-                                                    .equals(
-                                                            AuthSessionItem.ResetMfaState
-                                                                    .SUCCEEDED)));
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "MFA code has been successfully verified for MFA type: SMS. JourneyType: "
+                                            + journeyType
+                                            + ". CountryCode: 44")));
         }
 
         private static Stream existingUserAuthAppJourneyTypes() {

@@ -706,6 +706,11 @@ class VerifyCodeHandlerTest {
                         JourneyType.SIGN_IN,
                         MFAMethodType.SMS,
                         PriorityIdentifier.DEFAULT);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "MFA code has been successfully verified for MFA type: SMS. JourneyType: SIGN_IN. CountryCode: 44")));
     }
 
     @Test
