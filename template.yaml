@@ -2143,6 +2143,14 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
+          USE_NEW_DOC_APP_SIGNING_KEY: !If
+            - UseNewDocAppSigningKey
+            - true
+            - false
+          NEXT_DOC_APP_SIGNING_KEY_ALIAS: !If
+            - PublishNextDocAppSigningKey
+            - !Ref OrchDocAppSigningKmsKeyAlias
+            - !Ref AWS::NoValue
       Policies:
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref OrchDocAppCredentialTableWriteAccessPolicy

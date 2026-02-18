@@ -192,7 +192,10 @@ public class DocAppCriService {
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {
         try {
             LOG.info("Generating PrivateKeyJWT");
-            var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
+            var docAppTokenSigningKeyAlias =
+                    configurationService.isUseNewDocAppSigningKey()
+                            ? configurationService.getNextDocAppTokenSigningKeyAlias()
+                            : configurationService.getDocAppTokenSigningKeyAlias();
             var signingKeyId =
                     kmsService
                             .getPublicKey(
