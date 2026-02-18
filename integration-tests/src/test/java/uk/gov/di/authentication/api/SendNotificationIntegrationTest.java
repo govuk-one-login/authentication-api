@@ -47,7 +47,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
-    private static final ConfigurationService TXMA_WITH_INT_SMS_LIMIT_CONFIG =
+    private static final ConfigurationService TXMA_WITH_INT_SMS_CONFIG =
             new IntegrationTestConfigurationService(
                     notificationsQueue,
                     tokenSigner,
@@ -56,6 +56,11 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 @Override
                 public String getTxmaAuditQueueUrl() {
                     return txmaAuditQueue.getQueueUrl();
+                }
+
+                @Override
+                public boolean isInternalApiNewInternationalSmsEnabled() {
+                    return true;
                 }
 
                 @Override
@@ -135,8 +140,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn400WhenInternationalNumberHasHitLimit() {
-        handler =
-                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
+        handler = new SendNotificationHandler(TXMA_WITH_INT_SMS_CONFIG, redisConnectionService);
 
         for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
             internationalSmsSendCountStore.recordSmsSent(
@@ -163,8 +167,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn204WhenInternationalNumberIsBelowLimit() {
-        handler =
-                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
+        handler = new SendNotificationHandler(TXMA_WITH_INT_SMS_CONFIG, redisConnectionService);
 
         var requestBody =
                 Map.of(
@@ -186,8 +189,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn204ForDomesticNumberRegardlessOfLimit() {
-        handler =
-                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
+        handler = new SendNotificationHandler(TXMA_WITH_INT_SMS_CONFIG, redisConnectionService);
         String domesticNumber = "+447712345432";
 
         var requestBody =
