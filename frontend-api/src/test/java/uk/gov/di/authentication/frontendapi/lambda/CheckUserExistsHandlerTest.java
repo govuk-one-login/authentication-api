@@ -181,7 +181,8 @@ class CheckUserExistsHandlerTest {
                     "mfaMethodType":"SMS",
                     "phoneNumberLastThree":"%s",
                     "lockoutInformation":[],
-                    "hasActivePasskey":false}
+                    "hasActivePasskey":false,
+                    "needsForcedMFAResetAfterMFACheck":false}
                     """,
                             EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
             assertEquals(
@@ -237,7 +238,8 @@ class CheckUserExistsHandlerTest {
                     "mfaMethodType":"%s",
                     "phoneNumberLastThree": %s,
                     "lockoutInformation":[],
-                    "hasActivePasskey":false}
+                    "hasActivePasskey":false,
+                    "needsForcedMFAResetAfterMFACheck":false}
                     """,
                             EMAIL_ADDRESS,
                             expectedMfaMethodType,
@@ -334,8 +336,22 @@ class CheckUserExistsHandlerTest {
                                             MFAMethodType.AUTH_APP,
                                             lockoutExpiry.getEpochSecond(),
                                             JourneyType.PASSWORD_RESET_MFA)),
+                            false,
                             false);
             assertThat(result, hasJsonBody(expectedResponse));
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalse() throws Json.JsonException {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
         }
 
         @Test

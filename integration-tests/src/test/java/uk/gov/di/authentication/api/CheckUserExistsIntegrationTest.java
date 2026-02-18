@@ -90,6 +90,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             } else {
                 assertNull(checkUserExistsResponse.phoneNumberLastThree());
             }
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
 
             assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
         }
@@ -150,6 +151,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(MFAMethodType.NONE));
             assertFalse(checkUserExistsResponse.doesUserExist());
             assertNull(checkUserExistsResponse.phoneNumberLastThree());
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
 
             assertExpectedAuditEvents(AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL);
         }

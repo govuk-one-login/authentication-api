@@ -202,6 +202,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var lockoutInformation = lockoutInformationResult.getSuccess();
 
+            var needsForcedMFAResetAfterMFACheck = false;
+
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
                             emailAddress,
@@ -209,7 +211,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.mfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation,
-                            hasActivePasskey);
+                            hasActivePasskey,
+                            needsForcedMFAResetAfterMFACheck);
 
             authSessionService.updateSession(authSession);
 
