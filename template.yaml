@@ -169,11 +169,7 @@ Conditions:
         !Equals [integration, !Ref Environment],
       ],
     ]
-  PublishOldDocAppSigningKey:
-    !Or [
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
+  PublishOldDocAppSigningKey: !Equals [production, !Ref Environment]
   ProvisionNewAuthSigningKey:
     !Or [
       !Equals [dev, !Ref Environment],
