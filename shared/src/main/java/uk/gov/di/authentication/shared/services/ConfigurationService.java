@@ -780,6 +780,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean isForcedMFAResetAfterMFACheckEnabled() {
+        return System.getenv()
+                .getOrDefault("FORCED_MFA_RESET_AFTER_MFA_CHECK_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
     public boolean isTestSigningKeyEnabled() {
         return System.getenv()
                 .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
