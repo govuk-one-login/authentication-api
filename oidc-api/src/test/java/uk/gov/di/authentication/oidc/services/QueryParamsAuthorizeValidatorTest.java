@@ -446,18 +446,17 @@ class QueryParamsAuthorizeValidatorTest {
                         List.of(
                                 LevelOfConfidence.NONE.getValue(),
                                 LevelOfConfidence.MEDIUM_LEVEL.getValue()),
-                        jsonArrayOf("Cl.PCL250.Cm")),
+                        jsonArrayOf("Cl.P3.Cm")),
                 Arguments.of(
                         List.of(
                                 LevelOfConfidence.NONE.getValue(),
                                 LevelOfConfidence.MEDIUM_LEVEL.getValue()),
-                        jsonArrayOf("PCL200.Cl.Cm", "Cl.P2.Cm")),
+                        jsonArrayOf("P3.Cl.Cm", "Cl.P2.Cm")),
                 Arguments.of(
                         List.of(
                                 LevelOfConfidence.NONE.getValue(),
-                                LevelOfConfidence.HMRC250.getValue(),
                                 LevelOfConfidence.MEDIUM_LEVEL.getValue()),
-                        jsonArrayOf("Cl.PCL250.Cm", "Cl.PCL200.Cm")));
+                        jsonArrayOf("Cl.P2.Cm", "Cl.P3.Cm")));
     }
 
     @ParameterizedTest

@@ -10,7 +10,7 @@
   "email_address": "test@test.com",
   "vtr": [
     "P2",
-    "PCL200"
+    "P1"
   ],
   "scope": "openid",
   "claims": {

@@ -1212,7 +1212,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         + "."
                         + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
         String vtrStr2 =
-                LevelOfConfidence.HMRC200.getValue()
+                LevelOfConfidence.LOW_LEVEL.getValue()
                         + "."
                         + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
 
@@ -1291,7 +1291,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
                 equalTo(CLIENT_SESSION_ID));
-        assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("P2", "PCL200")));
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("P2", "P1")));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("scope"), equalTo("openid"));
         assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(ES256));
     }

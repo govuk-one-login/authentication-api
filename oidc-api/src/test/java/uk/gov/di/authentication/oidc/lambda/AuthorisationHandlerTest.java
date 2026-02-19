@@ -1249,14 +1249,15 @@ class AuthorisationHandlerTest {
         void shouldGetVtrFromIdTokenIfNotPresentInAuthenticationRequestAndReauthRequested()
                 throws Exception {
             var vtrFromIdToken =
-                    VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HMRC200);
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL);
             var serialisedIdTokenHint =
                     TokenGeneratorHelper.generateIDToken(
                                     CLIENT_ID.getValue(),
                                     SUBJECT,
                                     "http://localhost-rp",
                                     EC_SIGNING_KEY,
-                                    "[PCL200.Cl.Cm]")
+                                    "[P2.Cl.Cm]")
                             .serialize();
             var jwtClaimsSet =
                     jwtClaimsSetBuilder(

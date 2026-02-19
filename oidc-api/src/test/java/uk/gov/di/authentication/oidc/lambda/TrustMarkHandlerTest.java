@@ -44,7 +44,11 @@ class TrustMarkHandlerTest {
                         List.of(
                                 CredentialTrustLevel.LOW_LEVEL.getValue(),
                                 CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
-                        LevelOfConfidence.getAllSupportedLevelOfConfidenceValues());
+                        List.of(
+                                LevelOfConfidence.NONE.getValue(),
+                                LevelOfConfidence.LOW_LEVEL.getValue(),
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                LevelOfConfidence.HIGH_LEVEL.getValue()));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

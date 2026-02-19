@@ -373,7 +373,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClientLoCs(
                             List.of(
                                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                    LevelOfConfidence.HMRC200.getValue()))
+                                    LevelOfConfidence.LOW_LEVEL.getValue()))
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .saveToDynamo();
@@ -1032,15 +1032,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Arguments.of(
                             jsonArrayOf("Cl.Cm.P2"), MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                     Arguments.of(
-                            jsonArrayOf("Cl.Cm.PCL200", "Cl.Cm.P2"),
+                            jsonArrayOf("Cl.Cm.P2", "Cl.Cm.P1"),
                             MEDIUM_LEVEL,
-                            LevelOfConfidence.HMRC200),
+                            LevelOfConfidence.LOW_LEVEL),
                     Arguments.of(
-                            jsonArrayOf("Cl.Cm.P2", "Cl.Cm.P3"),
-                            MEDIUM_LEVEL,
-                            LevelOfConfidence.MEDIUM_LEVEL),
-                    Arguments.of(
-                            jsonArrayOf("Cl.Cm.P3"), MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL),
+                            jsonArrayOf("Cl.Cm.P1"), MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
                     Arguments.of(null, MEDIUM_LEVEL, null));
         }
     }
@@ -1096,13 +1092,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
             assertThat(
                     authRequest.getCustomParameter("vtr"),
-                    equalTo(List.of("[\"P2.Cl.Cm\",\"PCL200.Cl.Cm\"]")));
+                    equalTo(List.of("[\"P2.Cl.Cm\",\"P1.Cl.Cm\"]")));
             assertThat(
                     orchClientSession.getVtrList(),
                     equalTo(
                             List.of(
                                     VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                    VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
+                                    VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL))));
 
             assertTxmaAuditEventsReceived(
                     txmaAuditQueue,
@@ -1163,7 +1159,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClientLoCs(
                             List.of(
                                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                    LevelOfConfidence.HMRC200.getValue()))
+                                    LevelOfConfidence.LOW_LEVEL.getValue()))
                     .withPublicKey(
                             Base64.getMimeEncoder()
                                     .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
@@ -1223,7 +1219,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClientLoCs(
                             List.of(
                                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                    LevelOfConfidence.HMRC200.getValue()))
+                                    LevelOfConfidence.LOW_LEVEL.getValue()))
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .withJarValidationRequired(true)
@@ -1259,7 +1255,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClientLoCs(
                             List.of(
                                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                    LevelOfConfidence.HMRC200.getValue()))
+                                    LevelOfConfidence.LOW_LEVEL.getValue()))
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .withJarValidationRequired(true)
@@ -1337,7 +1333,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClientLoCs(
                             List.of(
                                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                    LevelOfConfidence.HMRC200.getValue()))
+                                    LevelOfConfidence.LOW_LEVEL.getValue()))
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .withClaims(
@@ -1922,7 +1918,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClientLoCs(
                             List.of(
                                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                    LevelOfConfidence.HMRC200.getValue()))
+                                    LevelOfConfidence.LOW_LEVEL.getValue()))
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .withPkceEnforced(true)
@@ -2177,8 +2173,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 .withClientLoCs(
                         List.of(
                                 LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                LevelOfConfidence.HIGH_LEVEL.getValue(),
-                                LevelOfConfidence.HMRC200.getValue()))
+                                LevelOfConfidence.LOW_LEVEL.getValue()))
                 .withClaims(List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                 .withPublicKey(
                         Base64.getMimeEncoder()
@@ -2242,7 +2237,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 maxAge,
                 codeChallenge,
                 codeChallengeMethod,
-                jsonArrayOf("P2.Cl.Cm", "PCL200.Cl.Cm"),
+                jsonArrayOf("P2.Cl.Cm", "P1.Cl.Cm"),
                 Map.of(),
                 loginHint);
     }
