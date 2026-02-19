@@ -24,7 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MFAMethodAnalysisHandlerTest {
@@ -33,7 +36,7 @@ class MFAMethodAnalysisHandlerTest {
     private final DynamoDbClient client = mock(DynamoDbClient.class);
 
     private MFAMethodAnalysisRequest createRequest() {
-        return new MFAMethodAnalysisRequest(10, 5);
+        return new MFAMethodAnalysisRequest(10, 5, true, true);
     }
 
     @Test
@@ -212,9 +215,10 @@ class MFAMethodAnalysisHandlerTest {
 
         assertEquals(6, result.countOfPhoneNumberUsersAssessed());
         assertEquals(6, result.countOfUsersWithVerifiedPhoneNumber());
-        assertEquals(3L, result.phoneDestinationCounts().get("DOMESTIC"));
+        assertEquals(3L, result.phoneDestinationCounts().get("44"));
         assertEquals(1L, result.phoneDestinationCounts().get("UNKNOWN"));
-        assertEquals(2L, result.phoneDestinationCounts().get("INTERNATIONAL"));
+        assertEquals(1L, result.phoneDestinationCounts().get("33"));
+        assertEquals(1L, result.phoneDestinationCounts().get("1"));
     }
 
     @Test
@@ -764,5 +768,46 @@ class MFAMethodAnalysisHandlerTest {
 
         // Should have retrieved 2 items and counted 3 as missing (items 3-5 were unprocessed)
         assertEquals(3, result.missingUserProfileCount());
+    }
+
+    @Test
+    void shouldSkipPhoneNumberStatsWhenFlagIsFalse() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+
+        List<Map<String, AttributeValue>> credentialItems = new ArrayList<>();
+        mockCredentialsScan(credentialItems, 0);
+        mockProfileBatchGetItem(new ArrayList<>(), List.of());
+
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var request = new MFAMethodAnalysisRequest(10, 5, false, true);
+        handler.handleRequest(request, mock(Context.class));
+
+        verify(client, never())
+                .scan(argThat((ScanRequest r) -> "PhoneNumberIndex".equals(r.indexName())));
+    }
+
+    @Test
+    void shouldSkipUserCredentialsStatsWhenFlagIsFalse() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+
+        mockPhoneNumberIndexScan(0, 0);
+
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var request = new MFAMethodAnalysisRequest(10, 5, true, false);
+        handler.handleRequest(request, mock(Context.class));
+
+        verify(client, never()).batchGetItem(any(BatchGetItemRequest.class));
+    }
+
+    @Test
+    void shouldSkipBothFetchesWhenFlagsAreNull() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var request = new MFAMethodAnalysisRequest(10, 5, null, null);
+        handler.handleRequest(request, mock(Context.class));
+
+        verify(client, never()).scan(any(ScanRequest.class));
+        verify(client, never()).batchGetItem(any(BatchGetItemRequest.class));
     }
 }

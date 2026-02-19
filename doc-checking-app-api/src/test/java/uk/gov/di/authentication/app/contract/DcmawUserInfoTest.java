@@ -26,6 +26,7 @@ import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static au.com.dius.pact.consumer.dsl.LambdaDsl.newJsonBody;
@@ -54,6 +55,8 @@ public class DcmawUserInfoTest {
     private final String SUB_VALUE = DOC_APP_SUBJECT_ID;
     private final String CREDENTIALS_JWT_VALUE =
             "eyJraWQiOiIwNDEwZTQ0Mi1iNjJiLTQ1YzktOGNkNi00NTE4MGIxNmVmODUiLCJhbGciOiJFUzI1NiJ9.eyAgInN1YiI6ICJkdW1teS1kb2MtYXBwLXN1YmplY3QtaWQiLCAgIm5iZiI6IDQwNzA5MDg4MDAsICAiaXNzIjogImR1bW15RGNtYXdDb21wb25lbnRJZCIsICAiaWF0IjogNDA3MDkwODgwMCwgICJ2YyI6IHsgICAgIkBjb250ZXh0IjogWyAgICAgICJodHRwczovL3d3dy53My5vcmcvMjAxOC9jcmVkZW50aWFscy92MSIsICAgICAgImh0dHBzOi8vdm9jYWIubG9uZG9uLmNsb3VkYXBwcy5kaWdpdGFsL2NvbnRleHRzL2lkZW50aXR5LXYxLmpzb25sZCIgICAgXSwgICAgInR5cGUiOiBbICAgICAgIlZlcmlmaWFibGVDcmVkZW50aWFsIiwgICAgICAiQWRkcmVzc0NyZWRlbnRpYWwiICAgIF0sICAgICJjcmVkZW50aWFsU3ViamVjdCI6IHsgICAgfSAgfX0.QjbVNoAGZBFpkuE9RStPi5mAggMvSq0Kio6-EkyDxMJrColmcLPblF0ztgPdF5NEmMEPKst3Ug7AF1gXLW7jxg";
+    private final Map<String, String> WWW_AUTHENTICATE_INVALID_TOKEN =
+            Map.of("WWW-Authenticate", "Bearer error=\"invalid_token\"");
 
     @BeforeEach
     void setup() {
@@ -124,7 +127,7 @@ public class DcmawUserInfoTest {
                         tokens.getAccessToken().toAuthorizationHeader())
                 .willRespondWith()
                 .status(401)
-                .matchHeader("WWW-Authenticate", "Bearer error=\"invalid_token\"")
+                .headers(WWW_AUTHENTICATE_INVALID_TOKEN)
                 .toPact();
     }
 

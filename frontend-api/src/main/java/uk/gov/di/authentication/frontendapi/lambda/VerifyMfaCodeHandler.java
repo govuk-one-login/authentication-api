@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -347,6 +348,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                             : mfaMethod -> true)
                             .findFirst();
         }
+        final Optional<MFAMethod> finalActiveMfaMethod = activeMfaMethod;
 
         var errorResponseMaybe = mfaCodeProcessor.validateCode();
         if (errorResponseMaybe.isPresent()) {
@@ -408,7 +410,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 .orElseGet(
                         () ->
                                 handleSuccess(
-                                        codeRequest, codeRequest.getJourneyType(), authSession));
+                                        codeRequest,
+                                        codeRequest.getJourneyType(),
+                                        authSession,
+                                        finalActiveMfaMethod));
     }
 
     private void auditSuccess(
@@ -444,7 +449,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private APIGatewayProxyResponseEvent handleSuccess(
             VerifyMfaCodeRequest codeRequest,
             JourneyType journeyType,
-            AuthSessionItem authSession) {
+            AuthSessionItem authSession,
+            Optional<MFAMethod> activeMfaMethod) {
 
         var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
         MFAMethodType mfaMethodType = null;
@@ -471,10 +477,18 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 
+        String countryCode =
+                activeMfaMethod
+                        .filter(method -> codeRequest.getMfaMethodType().equals(MFAMethodType.SMS))
+                        .flatMap(
+                                method ->
+                                        PhoneNumberHelper.maybeGetCountry(method.getDestination()))
+                        .orElse("unknown");
         LOG.info(
-                "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
+                "MFA code has been successfully verified for MFA type: {}. JourneyType: {}. CountryCode: {}",
                 codeRequest.getMfaMethodType().getValue(),
-                journeyType);
+                journeyType,
+                countryCode);
 
         authSessionService.updateSession(
                 authSession

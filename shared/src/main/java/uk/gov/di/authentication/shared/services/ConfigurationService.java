@@ -308,18 +308,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
-        var hardcodedOrchKey = getOrchestrationToAuthenticationSigningPublicKey();
         var orchStubKey = getOrchestrationStubToAuthenticationSigningPublicKey();
         var keyList = new ArrayList<String>();
         orchStubKey.ifPresent(keyList::add);
-        if (!isUseAuthJwksEnabled()) {
-            keyList.add(hardcodedOrchKey);
-        }
         return keyList;
-    }
-
-    private String getOrchestrationToAuthenticationSigningPublicKey() {
-        return systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
     }
 
     public Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
@@ -526,11 +518,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             LOG.error("Invalid JWKS URL: {}", e.getMessage());
             throw new RuntimeException(e);
         }
-    }
-
-    public boolean isUseAuthJwksEnabled() {
-        return FEATURE_SWITCH_ON.equals(
-                systemService.getOrDefault("USE_AUTH_JWKS", FEATURE_SWITCH_OFF));
     }
 
     public String getTokenSigningKeyRsaAlias() {
@@ -778,6 +765,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", "true")
                 .equals("true");
+    }
+
+    public boolean isForcedMFAResetAfterMFACheckEnabled() {
+        return System.getenv()
+                .getOrDefault("FORCED_MFA_RESET_AFTER_MFA_CHECK_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isTestSigningKeyEnabled() {

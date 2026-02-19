@@ -20,6 +20,12 @@ Resources:
                   dataStoreAccountId,
                 ]
           HEADERS_CASE_INSENSITIVE: "false"
+          FORCED_MFA_RESET_AFTER_MFA_CHECK_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              forcedMFAResetAfterMFACheckEnabled,
+            ]
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If

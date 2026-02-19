@@ -184,22 +184,6 @@ Conditions:
       ],
     ]
 
-  UseAuthJwks:
-    !Or [
-      !And [
-        !Condition UseSubEnvironment,
-        !Or [
-          !Equals [!Ref SubEnvironment, "authdev1"],
-          !Equals [!Ref SubEnvironment, "authdev2"],
-          !Equals [!Ref SubEnvironment, "authdev3"],
-        ],
-      ],
-      !Equals [!Ref Environment, "dev"],
-      !Equals [!Ref Environment, "build"],
-      !Equals [!Ref Environment, "staging"],
-      !Equals [!Ref Environment, "integration"],
-    ]
-
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -218,7 +202,6 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a3297748-71d5-49d5-9e04-672ac9c470bd
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
       emailAcctCreationOtpCodeTtlDuration: 600
@@ -235,6 +218,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      forcedMFAResetAfterMFACheckEnabled: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev1.dev.account.gov.uk
       amcAudience: https://api.manage.authdev1.dev.account.gov.uk
@@ -257,7 +241,6 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1f27239b-10fe-42cb-9506-626d40880443
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       emailAcctCreationOtpCodeTtlDuration: 600
@@ -274,6 +257,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      forcedMFAResetAfterMFACheckEnabled: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev2.dev.account.gov.uk
       amcAudience: https://api.manage.authdev2.dev.account.gov.uk
@@ -296,7 +280,6 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7aad276-068b-4c6d-ab87-973cb70b92ad
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyu7XCXkDyxhHrmoOfLrl6tcd9e9VL1pzzWqVo1P546NLL2c1H2Qd7UNaa7oQX1/eNFDKaAZuJY3YUAPwNN4Ypg== #orch-signing-key-alias
       orchStubToAuthSigningPublicKey: "" # No orch Stub in Authdev3, Authdev3 uses RP Stubs
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6e26328c-9121-4247-a5a3-6ac3f28fca3f
       emailAcctCreationOtpCodeTtlDuration: 600
@@ -313,6 +296,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      forcedMFAResetAfterMFACheckEnabled: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/54458128-e8d6-4f3f-bb3f-2737f2717bbf
@@ -352,7 +336,6 @@ Mappings:
       lambdaMinConcurrency: 0
       EvcsApiVpcEndpointId: ""
       orchApiVpcEndpointId: vpce-0028f62dad635589a
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
       UseAlarmActions: "Yes"
@@ -366,6 +349,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      forcedMFAResetAfterMFACheckEnabled: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.dev.account.gov.uk
       amcAudience: https://api.manage.dev.account.gov.uk
@@ -401,7 +385,6 @@ Mappings:
       lambdaMinConcurrency: 0
       EvcsApiVpcEndpointId: vpce-078a9d6aa4e30ef6d
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
       UseAlarmActions: "Yes"
@@ -415,6 +398,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      forcedMFAResetAfterMFACheckEnabled: false
       OrchAccountID: 767397776536
       OrchApiBaseUrl: https://oidc.build.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979
@@ -455,7 +439,6 @@ Mappings:
       lambdaMaxConcurrency: 10
       EvcsApiVpcEndpointId: vpce-0db9a336254d281b6
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
       UseAlarmActions: "Yes"
@@ -469,6 +452,7 @@ Mappings:
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
+      forcedMFAResetAfterMFACheckEnabled: false
       OrchAccountID: 590183975515
       OrchApiBaseUrl: https://oidc.staging.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/156f87e0-001a-4ae8-a6c1-23f8f68b6e84
@@ -510,7 +494,6 @@ Mappings:
       EvcsApiVpcEndpointId: vpce-0cf3501e9b45089f0
       orchApiVpcEndpointId: vpce-0704b783d794cea52
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0KGEYIJxophMmqbI/eaJnAJYewaxN+vg+fXthdHMTKrQWPTFu8tUwCbo7f8CS90UsIeSHSDdaSPvXvIoa+j8eA==
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       reauthEnterEmailCountTtl: 3600
@@ -523,6 +506,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3fd823db-5980-4853-bd9b-ed674ea8719e
       useStronglyConsistentReads: false
+      forcedMFAResetAfterMFACheckEnabled: false
       OrchAccountID: 058264132019
       OrchApiBaseUrl: https://oidc.integration.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/1b5c001b-ed53-4a7b-bfbe-5d0f596110b5
@@ -564,7 +548,6 @@ Mappings:
       EvcsApiVpcEndpointId: vpce-02321f5ecdd491213
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIh7xuVSWAZ8aW3ak20Ile5B9DfbP/87qEnLLTBZ/8lYCoKVdjMkS/IroHkPcS0laDQa/w0TAPDIqGtsHLI1Rw==
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
       reauthEnterEmailCountTtl: 3600
@@ -577,6 +560,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6269785d-3811-487d-af5a-a732d318c6ca
       useStronglyConsistentReads: false
+      forcedMFAResetAfterMFACheckEnabled: false
       OrchAccountID: 533266965190
       OrchApiBaseUrl: https://oidc.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/7ad27a55-9d21-47f2-be03-b61f2c9a8ce6
