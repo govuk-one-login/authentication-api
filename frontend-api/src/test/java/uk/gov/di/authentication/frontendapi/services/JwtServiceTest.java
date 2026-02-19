@@ -73,11 +73,15 @@ class JwtServiceTest {
 
     @Test
     void CallsKmsToGenerateSignatureAndReturnsJWS() throws ParseException {
+        Base64URL encodedHeader =
+                new JWSHeader.Builder(TEST_ALGORITHM)
+                        .type(com.nimbusds.jose.JOSEObjectType.JWT)
+                        .build()
+                        .toBase64URL();
         Base64URL encodedClaims = TEST_CLAIMS.toPayload().toBase64URL();
         SdkBytes expectedMessage =
                 SdkBytes.fromByteArray(
-                        (TEST_EXPECTED_HEADER + "." + encodedClaims)
-                                .getBytes(StandardCharsets.UTF_8));
+                        (encodedHeader + "." + encodedClaims).getBytes(StandardCharsets.UTF_8));
         SignRequest expectedSignRequest =
                 SignRequest.builder()
                         .message(expectedMessage)
@@ -87,7 +91,7 @@ class JwtServiceTest {
                         .build();
         SignedJWT signedJWT = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
         verify(kmsConnectionService).sign(expectedSignRequest);
-        assertEquals(TEST_EXPECTED_HEADER, signedJWT.getHeader().toBase64URL());
+        assertEquals(encodedHeader, signedJWT.getHeader().toBase64URL());
         assertEquals(TEST_SIGNATURE.toString(), signedJWT.getSignature().toString());
         assertEquals(TEST_CLAIM_VALUE, signedJWT.getJWTClaimsSet().getClaim(TEST_CLAIM_NAME));
         assertEquals(encodedClaims, signedJWT.getPayload().toBase64URL());
