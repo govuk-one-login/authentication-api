@@ -8,10 +8,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.services.PasskeysCreateService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -23,6 +26,7 @@ public class PasskeysCreateHandler
     private static final Logger LOG = LogManager.getLogger(PasskeysCreateHandler.class);
     private final ConfigurationService configurationService;
     private final PasskeysCreateService passkeysCreateService;
+    private final Json objectMapper = SerializationService.getInstance();
 
     public PasskeysCreateHandler() {
         this(ConfigurationService.getInstance());
@@ -51,10 +55,22 @@ public class PasskeysCreateHandler
     public APIGatewayProxyResponseEvent passkeysCreateHandler(
             APIGatewayProxyRequestEvent input, Context context) {
 
-        LOG.info("PasskeysCreateHandler called");
+        PasskeysCreateRequest passkeysCreateRequest;
+        try {
+            passkeysCreateRequest =
+                    objectMapper.readValue(input.getBody(), PasskeysCreateRequest.class, true);
+        } catch (Json.JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+        }
+
+        var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+        if (publicSubjectId.isEmpty()) {
+            LOG.error("Request does not include public subject id");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+        }
 
         Result<PasskeysCreateFailureReason, Void> result =
-                passkeysCreateService.createPasskey(input);
+                passkeysCreateService.createPasskey(passkeysCreateRequest, publicSubjectId);
 
         return result.fold(
                 failure ->
@@ -62,8 +78,6 @@ public class PasskeysCreateHandler
                             case PARSING_PASSKEY_CREATE_REQUEST_ERROR,
                                     FAILED_TO_SAVE_PASSKEY -> generateApiGatewayProxyErrorResponse(
                                     500, ErrorResponse.UNEXPECTED_ACCOUNT_DATA_API_ERROR);
-                            case REQUEST_MISSING_PARAMS -> generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.REQUEST_MISSING_PARAMS);
                             case PASSKEY_EXISTS -> generateApiGatewayProxyErrorResponse(
                                     409, ErrorResponse.PASSKEY_ALREADY_EXISTS);
                             case INVALID_AAGUID -> generateApiGatewayProxyErrorResponse(
