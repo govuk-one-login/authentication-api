@@ -214,7 +214,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 3c2cb819-4dd1-4fbc-90f0-cbdc3ec24e50
-      authStubEnabled: false
+      authStubEnabled: true
       syncWaitForSpotTimeout: 20000
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -4928,14 +4928,17 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          AUTH_FRONTEND_BASE_URL: !Sub
-            - https://signin.${ServiceDomain}/
-            - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
-                ]
+          AUTH_FRONTEND_BASE_URL: !If
+            - UseAuthStub
+            - "https://authstub.oidc.authdev3.dev.account.gov.uk/"
+            - !Sub
+              - https://signin.${ServiceDomain}/
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
