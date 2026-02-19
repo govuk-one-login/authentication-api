@@ -5351,14 +5351,6 @@ Resources:
               AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: kms:*
             Resource: "*"
-          - Sid: AllowSpotQueueDecryption
-            Effect: Allow
-            Principal:
-              Service: sqs.amazonaws.com
-            Action:
-              - kms:GenerateDataKey
-              - kms:Decrypt
-            Resource: "*"
           - Sid: AllowSpotRequestQueueKms
             Effect: Allow
             Principal:
