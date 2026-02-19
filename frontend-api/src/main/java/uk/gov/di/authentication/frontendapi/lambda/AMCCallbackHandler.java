@@ -79,14 +79,18 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         var requestResult = amcService.buildTokenRequest(request.code());
 
         if (requestResult.isFailure()) {
-            return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(
-                    requestResult.getFailure());
+            var failure = requestResult.getFailure();
+            LOG.warn("Failure building token request {}", failure.getValue());
+            return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(failure);
         }
 
         return sendTokenRequest(requestResult.getSuccess())
                 .fold(
                         AMCFailureAntiCorruption::toApiGatewayProxyErrorResponse,
-                        tokenResponse -> generateApiGatewayProxyResponse(200, "very cool"));
+                        tokenResponse -> {
+                            LOG.info("AMC token response received");
+                            return generateApiGatewayProxyResponse(200, "very cool");
+                        });
     }
 
     private Result<TokenResponseError, TokenResponse> sendTokenRequest(TokenRequest tokenRequest) {
