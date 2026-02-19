@@ -131,17 +131,6 @@ Conditions:
             ]
           - 0
 
-  EnforceLambdaDeploymentOrder:
-    Fn::And:
-      - !Condition NotSubEnvironment
-      - Fn::Equals:
-          - !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              EnforceLambdaDeploymentOrder,
-            ]
-          - "Yes"
-
   IsNotProduction:
     Fn::Not:
       - Fn::Equals:
@@ -298,7 +287,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 7200
       AMApiFMSTagValue: accountmanagement
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
-      lockoutDuration: 900
+      lockoutDuration: 7200
       otpCodeTtlDuration: 900
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
@@ -306,12 +295,8 @@ Mappings:
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
-      termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
       accountManagementInternationalSmsEnabled: false
-      OrchAccountID: 816047645251
-      OrchApiBaseUrl: https://oidc.authdev1.dev.account.gov.uk
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     authdev2:
@@ -336,7 +321,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 7200
       AMApiFMSTagValue: accountmanagement
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
-      lockoutDuration: 900
+      lockoutDuration: 7200
       otpCodeTtlDuration: 900
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
@@ -344,12 +329,8 @@ Mappings:
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
-      termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
       accountManagementInternationalSmsEnabled: false
-      OrchAccountID: 816047645251
-      OrchApiBaseUrl: https://oidc.authdev2.dev.account.gov.uk
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     authdev3:
@@ -374,7 +355,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 60
       AMApiFMSTagValue: accountmanagement
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
-      lockoutDuration: 30
+      lockoutDuration: 7200
       otpCodeTtlDuration: 120
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
@@ -382,12 +363,8 @@ Mappings:
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
-      termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
       accountManagementInternationalSmsEnabled: false
-      OrchAccountID: 816047645251
-      OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     dev:
@@ -415,24 +392,19 @@ Mappings:
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "Yes"
       IsSplunkEnabled: "No"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
       UseAlarmActions: "No"
       emailAcctCreationOtpCodeTtlDuration: 60
-      lockoutDuration: 30
+      lockoutDuration: 7200
       otpCodeTtlDuration: 120
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
       supportReauthSignoutEnabled: false
-      termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
       accountManagementInternationalSmsEnabled: false
-      OrchAccountID: 816047645251
-      OrchApiBaseUrl: https://oidc.dev.account.gov.uk
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     build:
@@ -459,7 +431,6 @@ Mappings:
       frontendBaseUrl: https://signin.build.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "Yes"
       HomeApiVpcEndpointId: ["vpce-0e1bb7e9c33b0e516", "vpce-0f4845b63ae267db4"]
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
@@ -468,17 +439,13 @@ Mappings:
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
       UseAlarmActions: "Yes"
       emailAcctCreationOtpCodeTtlDuration: 7200
-      lockoutDuration: 900
+      lockoutDuration: 7200
       otpCodeTtlDuration: 900
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
       supportReauthSignoutEnabled: true
-      termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
       accountManagementInternationalSmsEnabled: false
-      OrchAccountID: 767397776536
-      OrchApiBaseUrl: https://oidc.build.account.gov.uk
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.build.account.gov.uk/.well-known/jwks.json
     staging:
@@ -505,7 +472,6 @@ Mappings:
       frontendBaseUrl: https://signin.staging.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "Yes"
       HomeApiVpcEndpointId: ["vpce-0c9ce65be09f99db7", "vpce-0fed7b2d44a0bde33"]
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
@@ -513,17 +479,13 @@ Mappings:
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
       UseAlarmActions: "Yes"
       emailAcctCreationOtpCodeTtlDuration: 7200
-      lockoutDuration: 900
+      lockoutDuration: 7200
       otpCodeTtlDuration: 900
       reauthEnterEmailCountTtl: 300
       reducedLockoutDuration: 900
       supportReauthSignoutEnabled: true
-      termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
       accountManagementInternationalSmsEnabled: false
-      OrchAccountID: 590183975515
-      OrchApiBaseUrl: https://oidc.staging.account.gov.uk
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
     integration:
@@ -542,7 +504,6 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       emailAcctCreationOtpCodeTtlDuration: 7200
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
-      EnforceLambdaDeploymentOrder: "Yes"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       AMApiFMSTagValue: accountmanagementint
@@ -554,22 +515,18 @@ Mappings:
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
-      lockoutDuration: 900
+      lockoutDuration: 7200
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 900
       supportReauthSignoutEnabled: true
-      termsConditionsVersion: 1.13
       testClientsEnabled: false
       UseAlarmActions: "Yes"
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3fd823db-5980-4853-bd9b-ed674ea8719e
-      useStronglyConsistentReads: false
       accountManagementInternationalSmsEnabled: false
-      OrchAccountID: 058264132019
-      OrchApiBaseUrl: https://oidc.integration.account.gov.uk
       testSigningKeyEnabled: false
       accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
     production:
@@ -589,7 +546,6 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       emailAcctCreationOtpCodeTtlDuration: 7200
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/aca649a0-488b-4696-b94a-49156254afd2
-      EnforceLambdaDeploymentOrder: "Yes"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
       AMApiFMSTagValue: accountmanagementprod
@@ -600,22 +556,18 @@ Mappings:
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
-      lockoutDuration: 900
+      lockoutDuration: 7200
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 900
       supportReauthSignoutEnabled: true
-      termsConditionsVersion: 1.13
       testClientsEnabled: false
       UseAlarmActions: "Yes"
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6269785d-3811-487d-af5a-a732d318c6ca
-      useStronglyConsistentReads: false
       accountManagementInternationalSmsEnabled: false
-      OrchAccountID: 533266965190
-      OrchApiBaseUrl: https://oidc.account.gov.uk
       legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:172348255554:legacy-account-deletion-topic
       testSigningKeyEnabled: false
       accessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
