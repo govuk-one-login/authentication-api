@@ -63,3 +63,34 @@ This repo uses Spotless for its formatting. You run this by running the followin
 ```shell
 ./gradlew spotlessApply
 ```
+
+## Deployment
+
+### SAM
+
+#### Deployment via GitHub Actions
+
+- Use the following GitHub actions to deploy to specific dev environments
+  - [Deploy Account Management](https://github.com/govuk-one-login/authentication-api/actions/workflows/deploy-api-account-management-sp-dev.yml)
+  - [Deploy Internal API, External API, IPV API and Delivery Receipts API](https://github.com/govuk-one-login/authentication-api/actions/workflows/deploy-api-modules-sp-dev.yml)
+  - [Deploy Account Data](https://github.com/govuk-one-login/authentication-api/actions/workflows/deploy-api-account-data-dev.yml)
+  - [Deploy TICF and Account Intervention](https://github.com/govuk-one-login/authentication-api/actions/workflows/deploy-api-modules-sp-stubs-dev.yml)
+
+#### Deployment via script locally
+
+- For a slightly faster deployment (by deploying specific modules), you can use the following script [sam-deploy-authdevs.sh](./sam-deploy-authdevs.sh)
+- This can be used to deploy changes to an individual module, rather than the full api
+
+### Terraform
+
+**NOTE**: We are in the process of migrating all of our api modules to SAM
+
+#### Deployment via GitHub Actions
+
+- Similarly to SAM, there is a [GitHub Action](https://github.com/govuk-one-login/authentication-api/actions/workflows/deploy-api-modules-dev.yml) to deploy the authentication-api to the dev env (can't be used for authdevs)
+- These will deploy in our old account (`di-auth-development`)
+
+#### Deployment via script locally
+
+- Use the [deploy-authdevs.sh](./deploy-authdevs.sh) to deploy to an authdev
+- Make sure to include the `-p` flag
