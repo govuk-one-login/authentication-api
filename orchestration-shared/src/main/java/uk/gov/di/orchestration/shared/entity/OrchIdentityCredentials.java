@@ -16,6 +16,7 @@ public class OrchIdentityCredentials {
     private Map<String, String> additionalClaims;
     private String ipvVot;
     private String ipvCoreIdentity;
+    private Long spotQueuedAtMs;
 
     public OrchIdentityCredentials() {}
 
@@ -115,6 +116,20 @@ public class OrchIdentityCredentials {
 
     public OrchIdentityCredentials withIpvCoreIdentity(String ipvCoreIdentity) {
         this.ipvCoreIdentity = ipvCoreIdentity;
+        return this;
+    }
+
+    @DynamoDbAttribute("SpotQueuedAtMs")
+    public Long getSpotQueuedAtMs() {
+        return spotQueuedAtMs;
+    }
+
+    public void setSpotQueuedAtMs(Long spotQueuedAtMs) {
+        this.spotQueuedAtMs = spotQueuedAtMs;
+    }
+
+    public OrchIdentityCredentials withSpotQueuedAtMs(Long spotQueuedAtMs) {
+        this.spotQueuedAtMs = spotQueuedAtMs;
         return this;
     }
 }
