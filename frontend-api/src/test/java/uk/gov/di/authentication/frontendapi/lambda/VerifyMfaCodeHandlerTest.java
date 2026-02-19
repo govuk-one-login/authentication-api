@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -234,14 +233,9 @@ class VerifyMfaCodeHandlerTest {
 
     @Nested
     class SuccessfulRequest {
-        private static Stream<CredentialTrustLevel> credentialTrustLevels() {
-            return Stream.of(CredentialTrustLevel.LOW_LEVEL, MEDIUM_LEVEL);
-        }
-
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequest(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequest()
+                throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -279,10 +273,8 @@ class VerifyMfaCodeHandlerTest {
                             PriorityIdentifier.DEFAULT);
         }
 
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void checkAuditEventStillEmittedWhenTICFHeaderNotProvided(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -309,10 +301,9 @@ class VerifyMfaCodeHandlerTest {
                             pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
         }
 
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulAuthAppCodePasswordResetRequest(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void shouldReturn204WhenSuccessfulAuthAppCodePasswordResetRequest()
+                throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -359,10 +350,8 @@ class VerifyMfaCodeHandlerTest {
                             PriorityIdentifier.DEFAULT);
         }
 
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequest(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequest() throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -407,10 +396,9 @@ class VerifyMfaCodeHandlerTest {
                             PriorityIdentifier.DEFAULT);
         }
 
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulAuthAppCodeForAccountRecovery(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void shouldReturn204WhenSuccessfulAuthAppCodeForAccountRecovery()
+                throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
