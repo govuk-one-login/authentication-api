@@ -232,7 +232,7 @@ public class AMCService {
 
         return new JWTAuthenticationClaimsSet(
                 new ClientID(configurationService.getAMCClientId()),
-                singletonList(new Audience(configurationService.getAuthToAMCAudience())),
+                singletonList(new Audience(configurationService.getAuthToAMCPrivateAudience())),
                 expiryDate,
                 now,
                 now,

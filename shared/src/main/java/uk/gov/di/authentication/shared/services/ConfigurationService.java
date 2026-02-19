@@ -825,6 +825,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("AUTH_TO_AMC_AUDIENCE", "");
     }
 
+    public String getAuthToAMCPrivateAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_PRIVATE_AUDIENCE", "");
+    }
+
     public String getAMCRedirectURI() {
         return System.getenv().getOrDefault("AMC_REDIRECT_URI", "");
     }

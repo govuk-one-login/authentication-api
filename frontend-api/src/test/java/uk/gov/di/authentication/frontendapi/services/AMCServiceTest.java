@@ -67,6 +67,7 @@ class AMCServiceTest {
     private static final String AUTH_ISSUER_CLAIM = "https://signin.account.gov.uk/";
     private static final String AUTH_TO_AUTH_AUDIENCE = "https://api.manage.account.gov.uk";
     private static final String AUTH_TO_AMC_AUDIENCE = "https://amc.account.gov.uk";
+    private static final String AUTH_TO_AMC_PRIVATE_AUDIENCE = "https://amc.account.gov.uk";
     private static final String CLIENT_ID = "test-client-id";
     private static final String SESSION_ID = "test-session-id";
     private static final String RESPONSE_TYPE = "code";
@@ -537,7 +538,8 @@ class AMCServiceTest {
         @BeforeEach
         public void setup() throws JOSEException {
             when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
-            when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
+            when(configurationService.getAuthToAMCPrivateAudience())
+                    .thenReturn(AUTH_TO_AMC_PRIVATE_AUDIENCE);
             when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
             when(nowClock.now()).thenReturn(NOW);
             when(nowClock.nowPlus(SESSION_EXPIRY, ChronoUnit.SECONDS))

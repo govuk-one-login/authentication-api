@@ -41,11 +41,11 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcClientId,
             ]
-          AUTH_TO_AMC_AUDIENCE:
+          AUTH_TO_AMC_PRIVATE_AUDIENCE:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              amcAudience,
+              amcPrivateAudience,
             ]
           SESSION_EXPIRY: "3600"
           AMC_REDIRECT_URI:

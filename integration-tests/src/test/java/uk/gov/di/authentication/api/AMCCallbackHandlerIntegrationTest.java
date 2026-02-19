@@ -52,7 +52,7 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @BeforeAll
     static void setupEnvironment() {
         environment.set("AMC_CLIENT_ID", "a client id");
-        environment.set("AUTH_TO_AMC_AUDIENCE", "auth to amc audience");
+        environment.set("AUTH_TO_AMC_PRIVATE_AUDIENCE", "auth to amc audience");
         environment.set("AMC_REDIRECT_URI", "https://example.com/redirect");
         environment.set("AUTH_TO_AMC_PRIVATE_SIGNING_KEY", amcJwtSigningKey.getKeyId());
         environment.set(

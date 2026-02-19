@@ -222,6 +222,7 @@ Mappings:
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev1.dev.account.gov.uk
       amcAudience: https://api.manage.authdev1.dev.account.gov.uk
+      amcPrivateAudience: https://api.manage.authdev1.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev1.dev.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.authdev1.dev.account.gov.uk/token
@@ -263,6 +264,7 @@ Mappings:
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev2.dev.account.gov.uk
       amcAudience: https://api.manage.authdev2.dev.account.gov.uk
+      amcPrivateAudience: https://api.manage.authdev2.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev2.dev.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.authdev2.dev.account.gov.uk/token
@@ -308,6 +310,7 @@ Mappings:
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/6c12b394-e3b7-4ca6-a137-2d3a9da8ad9f
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/12a2f192-542c-48f5-9c88-20c62e8944c4
       amcAudience: https://api.manage.authdev3.dev.account.gov.uk
+      amcPrivateAudience: https://api.manage.authdev3.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev3.dev.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.authdev3.dev.account.gov.uk/token
@@ -359,6 +362,7 @@ Mappings:
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.dev.account.gov.uk
       amcAudience: https://api.manage.dev.account.gov.uk
+      amcPrivateAudience: https://api.manage.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.dev.account.gov.uk/authorize
       amcTokenUri: https://amcstub.signin.dev.account.gov.uk/token
       amcClientId: auth_amc
@@ -414,6 +418,7 @@ Mappings:
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/e284a04a-bac2-42b0-b723-ef0d32722ad5
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:767397776536:key/84243770-7ba6-42c6-a26c-28bc82e3efa2
       amcAudience: https://api.manage.build.account.gov.uk
+      amcPrivateAudience: https://api.manage.build.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.build.account.gov.uk/authorize
       amcRedirectUri: https://signin.build.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.build.account.gov.uk/token
@@ -470,6 +475,7 @@ Mappings:
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/d0bdb864-8478-4411-a44a-a4232fc97cf3
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/4373aa74-95b2-454c-bd86-9716f105a1c4
       amcAudience: https://api.manage.staging.account.gov.uk
+      amcPrivateAudience: https://api.manage.staging.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.staging.account.gov.uk/authorize
       amcRedirectUri: https://signin.staging.account.gov.uk/amc-callback
       amcTokenUri: https://api.manage.staging.account.gov.uk/token
@@ -526,6 +532,7 @@ Mappings:
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/808a8c1e-82d8-487e-abb8-e13d6564b426
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/11948d7f-8e88-41d3-afe5-5ec9f37f979d
       amcAudience: https://api.manage.integration.account.gov.uk
+      amcPrivateAudience: https://api.manage.integration.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.integration.account.gov.uk/authorize
       amcRedirectUri: https://signin.integration.account.gov.uk/amc-callback
       amcTokenUri: https://api.manage.integration.account.gov.uk/token
@@ -582,6 +589,7 @@ Mappings:
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/b2979629-c62f-458d-992b-ac4239c2cf81
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/e9f1350d-75e2-4532-be84-8bec6de99755
       amcAudience: https://api.manage.account.gov.uk
+      amcPrivateAudience: https://api.manage.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.account.gov.uk/authorize
       amcRedirectUri: https://signin.account.gov.uk/amc-callback
       amcTokenUri: https://api.manage.account.gov.uk/token
