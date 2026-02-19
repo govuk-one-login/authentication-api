@@ -20,7 +20,6 @@ Options:
     -h, --help                  display this help message.
 
     -a, --account-management    deploy the account-management API. (default: true)
-    -x, --auth-external         deploy the auth-external API. (default: true)
     --ticf-stub                 deploy the TICF CRI stub. (default: true)
     -d, --delivery-receipts     deploy the delivery receipts API. (default: false)
     -o, --oidc                  deploy the OIDC API. (default: true)
@@ -41,7 +40,6 @@ O_SHELL=0   # --shell
 O_REFRESH=0 # -r, --refresh-only
 
 T_ACCOUNT_MANAGEMENT=0     # -a, --account-management
-T_AUTH_EXTERNAL_API=0      # -x, --auth-external
 T_TICF_CRI_STUB=0          # --ticf-stub
 T_DELIVERY_RECEIPTS=0      # -d, --delivery-receipts
 T_OIDC=0                   # -o, --oidc
@@ -66,7 +64,6 @@ while (($#)); do
     -r | --refresh-only) O_REFRESH=1 ;;
 
     -a | --account-management) T_ACCOUNT_MANAGEMENT=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
-    -x | --auth-external) T_AUTH_EXTERNAL_API=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     --ticf-stub) T_TICF_CRI_STUB=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -d | --delivery-receipts) T_DELIVERY_RECEIPTS=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -o | --oidc) T_OIDC=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
@@ -74,7 +71,7 @@ while (($#)); do
     -s | --shared) T_SHARED=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -i | --interventions | --interventions-stub) T_INTERVENTIONS_API_STUB=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -t | --test-services) T_TEST_SERVICE=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
-    --all) T_ACCOUNT_MANAGEMENT=1 T_AUTH_EXTERNAL_API=1 T_TICF_CRI_STUB=1 T_DELIVERY_RECEIPTS=1 T_OIDC=1 T_UTILS=1 T_SHARED=1 T_INTERVENTIONS_API_STUB=1 T_TEST_SERVICE=1 NUMBER_PICKED=-1 ;;
+    --all) T_ACCOUNT_MANAGEMENT=1 T_TICF_CRI_STUB=1 T_DELIVERY_RECEIPTS=1 T_OIDC=1 T_UTILS=1 T_SHARED=1 T_INTERVENTIONS_API_STUB=1 T_TEST_SERVICE=1 NUMBER_PICKED=-1 ;;
 
     -h | --help)
       usage
@@ -116,7 +113,6 @@ fi
 if [[ ${NUMBER_PICKED} -eq 0 ]]; then
   O_BUILD=1
   T_ACCOUNT_MANAGEMENT=1
-  T_AUTH_EXTERNAL_API=1
   T_TICF_CRI_STUB=1
   T_OIDC=1
   T_SHARED=1
@@ -197,8 +193,4 @@ fi
 
 if [[ ${T_TEST_SERVICE} -eq 1 ]]; then
   run_terraform "test-services"
-fi
-
-if [[ ${T_AUTH_EXTERNAL_API} -eq 1 ]]; then
-  run_terraform "auth-external-api"
 fi
