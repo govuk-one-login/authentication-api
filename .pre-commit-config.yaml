@@ -144,3 +144,29 @@ repos:
         language: system
         pass_filenames: false
         files: '\.java$'
+      - id: sam-validate
+        name: SAM validate with lint
+        entry: bash
+        args:
+          - -c
+          - |
+            export GITHUB_WORKSPACE=$(pwd)
+
+            # Generate and validate auth template
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/auth TEMPLATE_FILE=auth-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint -t auth-template.yaml
+
+            # Generate and validate stubs template
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/stubs TEMPLATE_FILE=stubs-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint -t stubs-template.yaml
+
+            # Generate and validate am template
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/account-management TEMPLATE_FILE=am-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint -t am-template.yaml
+
+            # Generate and validate ad template
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/account-data TEMPLATE_FILE=ad-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint -t ad-template.yaml
+        language: system
+        pass_filenames: false
+        files: '^ci/cloudformation/.*\.(yml|yaml)$'
