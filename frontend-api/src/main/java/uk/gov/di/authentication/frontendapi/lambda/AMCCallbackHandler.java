@@ -11,8 +11,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
 import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -76,21 +78,34 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
 
         var requestResult = amcService.buildTokenRequest(request.code());
 
-        return requestResult
-                .map(tokenRequest -> sendTokenRequest(tokenRequest))
+        if (requestResult.isFailure()) {
+            return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(
+                    requestResult.getFailure());
+        }
+
+        return sendTokenRequest(requestResult.getSuccess())
                 .fold(
                         AMCFailureAntiCorruption::toApiGatewayProxyErrorResponse,
                         tokenResponse -> generateApiGatewayProxyResponse(200, "very cool"));
     }
 
-    private TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
+    private Result<TokenResponseError, TokenResponse> sendTokenRequest(TokenRequest tokenRequest) {
         try {
             var response = tokenRequest.toHTTPRequest().send();
-            return TokenResponse.parse(response);
+            if (!response.indicatesSuccess()) {
+                LOG.warn(
+                        "Error {} when attempting to call AMC token endpoint: {}",
+                        response.getStatusCode(),
+                        response.getContent());
+                return Result.failure(TokenResponseError.ERROR_RESPONSE_FROM_TOKEN_REQUEST);
+            }
+            return Result.success(TokenResponse.parse(response));
         } catch (IOException e) {
-            throw new RuntimeException("TODO");
+            LOG.warn("IO Exception when attempting to get token response: {}", e.getMessage());
+            return Result.failure(TokenResponseError.IO_EXCEPTION);
         } catch (ParseException e) {
-            throw new RuntimeException("TODO");
+            LOG.warn("Parse exception when attempting to parse token response: {}", e.getMessage());
+            return Result.failure(TokenResponseError.PARSE_EXCEPTION);
         }
     }
 }

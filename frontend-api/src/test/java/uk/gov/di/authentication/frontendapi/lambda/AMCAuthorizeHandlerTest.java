@@ -10,7 +10,7 @@ import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCo
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
-import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;

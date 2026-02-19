@@ -9,7 +9,7 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
-import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -19,11 +19,15 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.io.IOException;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_TOKEN_RESPONSE_ERROR;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class AMCCallbackHandlerTest {
     private static final Context CONTEXT = mock(Context.class);
@@ -35,8 +39,7 @@ class AMCCallbackHandlerTest {
             mock(AuthenticationService.class);
     private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final AMCService AMC_SERVICE = mock(AMCService.class);
-    private static final TokenRequest tokenRequest = mock(TokenRequest.class);
-    private static final HTTPRequest httpRequest = mock(HTTPRequest.class);
+    private static TokenRequest tokenRequest;
 
     private static final String STATE = "state";
     private static final String AUTH_CODE = "1234";
@@ -51,6 +54,7 @@ class AMCCallbackHandlerTest {
 
     @BeforeAll
     static void setUp() {
+        tokenRequest = mock(TokenRequest.class);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
     }
 
@@ -63,6 +67,7 @@ class AMCCallbackHandlerTest {
                         authSessionService,
                         AMC_SERVICE);
 
+        HTTPRequest httpRequest = mock(HTTPRequest.class);
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
@@ -102,6 +107,88 @@ class AMCCallbackHandlerTest {
                         USER_CONTEXT);
 
         assertEquals(400, result.getStatusCode());
+    }
+
+    @Test
+    void shouldReturn500WhenErrorRetrievingToken() throws ParseException, IOException {
+        AMCCallbackHandler handler =
+                new AMCCallbackHandler(
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        AMC_SERVICE);
+
+        HTTPRequest httpRequest = mock(HTTPRequest.class);
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        setupTokenHttpResponse(httpRequest, 500, "error from token response");
+
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(500, result.getStatusCode());
+        assertThat(result, hasJsonBody(AMC_TOKEN_RESPONSE_ERROR));
+    }
+
+    @Test
+    void shouldReturn500WhenErrorResponseCannotBeParsedAsTokenResponse()
+            throws ParseException, IOException {
+        AMCCallbackHandler handler =
+                new AMCCallbackHandler(
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        AMC_SERVICE);
+
+        HTTPRequest httpRequest = mock(HTTPRequest.class);
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        setupTokenHttpResponse(httpRequest, 200, "{\"foo\": \"not a token response\"}");
+
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(500, result.getStatusCode());
+        assertThat(result, hasJsonBody(AMC_TOKEN_UNEXPECTED_ERROR));
+    }
+
+    @Test
+    void shouldReturn500WhenIOExceptionCallingTokenEndpoint() throws IOException {
+        AMCCallbackHandler handler =
+                new AMCCallbackHandler(
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        AMC_SERVICE);
+
+        HTTPRequest httpRequest = mock(HTTPRequest.class);
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        when(httpRequest.send()).thenThrow(new IOException("Uh oh"));
+
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(500, result.getStatusCode());
+        assertThat(result, hasJsonBody(AMC_TOKEN_UNEXPECTED_ERROR));
     }
 
     private void setupTokenHttpResponse(
