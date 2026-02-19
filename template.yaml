@@ -5447,20 +5447,6 @@ Resources:
               - sqs:GetQueueAttributes
             Resource: !GetAtt SpotRequestDeadLetterQueue.Arn
 
-  SpotRequestQueueEncryptionPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowSpotQueueEncryption
-            Effect: Allow
-            Action:
-              - kms:GenerateDataKey
-              - kms:Decrypt
-              - kms:Encrypt
-            Resource: !GetAtt SpotRequestQueueKey.Arn
-
   SpotRequestQueueWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
