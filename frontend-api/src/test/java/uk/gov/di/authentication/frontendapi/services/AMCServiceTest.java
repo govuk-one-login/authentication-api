@@ -47,6 +47,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -117,7 +118,10 @@ class AMCServiceTest {
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
-            mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
+            mockKmsSigning(
+                    Map.of(
+                            ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
+                            COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
@@ -346,7 +350,10 @@ class AMCServiceTest {
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
-            mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
+            mockKmsSigning(
+                    Map.of(
+                            ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
+                            COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
@@ -408,7 +415,10 @@ class AMCServiceTest {
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
-            mockKmsSigningWithDifferentKeys(accessTokenKey, compositeJWTKey);
+            mockKmsSigning(
+                    Map.of(
+                            ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
+                            COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
@@ -421,34 +431,6 @@ class AMCServiceTest {
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
-        }
-
-        private void mockKmsSigningWithDifferentKeys(ECKey accessTokenKey, ECKey compositeJWTKey) {
-            when(kmsConnectionService.sign(any(SignRequest.class)))
-                    .thenAnswer(
-                            invocation -> {
-                                SignRequest request = invocation.getArgument(0);
-                                String keyId = request.keyId();
-                                String input = request.message().asUtf8String();
-
-                                ECKey keyToUse =
-                                        keyId.equals(ACCESS_TOKEN_KEY_ALIAS)
-                                                ? accessTokenKey
-                                                : compositeJWTKey;
-
-                                byte[] signature =
-                                        new ECDSASigner(keyToUse)
-                                                .sign(
-                                                        new JWSHeader(JWSAlgorithm.ES256),
-                                                        input.getBytes(StandardCharsets.UTF_8))
-                                                .decode();
-
-                                byte[] derSignature = ECDSA.transcodeSignatureToDER(signature);
-
-                                return SignResponse.builder()
-                                        .signature(SdkBytes.fromByteArray(derSignature))
-                                        .build();
-                            });
         }
 
         private void mockConfigurationService(Date expiryDate) {
@@ -532,11 +514,10 @@ class AMCServiceTest {
     @DisplayName("Token Tests")
     class TokenTests {
 
-        private static final String KEY_ID = UUID.randomUUID().toString();
-        private static ECKey signingKeyPair;
+        private ECKey signingKeyPair;
 
         @BeforeEach
-        public void setup() throws JOSEException {
+        void setup() throws JOSEException {
             when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
             when(configurationService.getAuthToAMCPrivateAudience())
                     .thenReturn(AUTH_TO_AMC_PRIVATE_AUDIENCE);
@@ -549,7 +530,7 @@ class AMCServiceTest {
             signingKeyPair =
                     new ECKeyGenerator(Curve.P_256)
                             .algorithm(JWSAlgorithm.ES256)
-                            .keyID(KEY_ID)
+                            .keyIDFromThumbprint(true)
                             .generate();
         }
 
@@ -558,7 +539,7 @@ class AMCServiceTest {
             when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                     .thenReturn(signingKeyPair.getKeyID());
 
-            mockKmsSigning(signingKeyPair);
+            mockKmsSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
 
             TokenRequest result = amcService.buildTokenRequest(AUTH_CODE).getSuccess();
 
@@ -588,7 +569,7 @@ class AMCServiceTest {
         }
 
         @Test
-        void shouldReturnTokenRequestErrorWhenSigningFails() throws JOSEException {
+        void shouldReturnTokenRequestErrorWhenSigningFails() {
             var invalidKeyAlias = "invalid-key-alias";
             when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                     .thenReturn(invalidKeyAlias);
@@ -604,16 +585,22 @@ class AMCServiceTest {
         }
     }
 
-    private void mockKmsSigning(ECKey signingKey) {
-        when(kmsConnectionService.sign(
-                        argThat(request -> request.keyId().equals(signingKey.getKeyID()))))
+    private void mockKmsSigning(Map<String, ECKey> keysByAlias) {
+        when(kmsConnectionService.sign(any(SignRequest.class)))
                 .thenAnswer(
                         invocation -> {
                             SignRequest request = invocation.getArgument(0);
+                            String keyId = request.keyId();
                             String input = request.message().asUtf8String();
 
+                            ECKey key = keysByAlias.get(keyId);
+                            if (key == null) {
+                                throw new IllegalArgumentException(
+                                        "Unexpected key alias: " + keyId);
+                            }
+
                             byte[] signature =
-                                    new ECDSASigner(signingKey)
+                                    new ECDSASigner(key)
                                             .sign(
                                                     new JWSHeader(JWSAlgorithm.ES256),
                                                     input.getBytes(StandardCharsets.UTF_8))
