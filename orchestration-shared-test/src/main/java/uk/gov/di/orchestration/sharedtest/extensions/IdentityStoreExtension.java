@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
@@ -64,7 +65,12 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
             String ipvVot,
             String ipvCoreIdentity) {
         dynamoService.saveIdentityClaims(
-                clientSessionId, subjectID, additionalClaims, ipvVot, ipvCoreIdentity);
+                clientSessionId,
+                subjectID,
+                additionalClaims,
+                ipvVot,
+                ipvCoreIdentity,
+                NowHelper.now().toInstant().toEpochMilli());
     }
 
     public Optional<OrchIdentityCredentials> getIdentityCredentials(String clientSessionId) {

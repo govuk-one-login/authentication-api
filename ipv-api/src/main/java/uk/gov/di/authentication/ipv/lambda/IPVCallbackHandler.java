@@ -40,6 +40,7 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -437,12 +438,17 @@ public class IPVCallbackHandler
                     userIdentityUserInfo,
                     clientId);
 
+            var spotQueuedAt = NowHelper.now().toInstant().toEpochMilli();
+
             auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
             segmentedFunctionCall(
                     "saveIdentityClaims",
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
-                                    clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+                                    clientSessionId,
+                                    rpPairwiseSubject,
+                                    userIdentityUserInfo,
+                                    spotQueuedAt));
 
             URI redirectURI = null;
             if (configurationService.isSyncWaitForSpotEnabled()) {

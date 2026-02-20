@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -71,6 +72,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED;
@@ -273,6 +275,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 objectMapper.readValue(
                         additionalClaims.get(ValidClaims.RETURN_CODE.getValue()), JSONArray.class);
         assertThat(returnCode.size(), equalTo(2));
+        assertNotNull(identityCredentials.getSpotQueuedAtMs());
+        assertTrue(
+                identityCredentials.getSpotQueuedAtMs()
+                        < NowHelper.now().toInstant().toEpochMilli());
     }
 
     @Test
