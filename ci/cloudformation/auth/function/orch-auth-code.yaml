@@ -56,13 +56,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  OrchAuthCodeFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt OrchAuthCodeFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   OrchAuthCodeFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

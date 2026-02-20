@@ -36,13 +36,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  IDReverificationStateFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt IDReverificationStateFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   IDReverificationStateFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

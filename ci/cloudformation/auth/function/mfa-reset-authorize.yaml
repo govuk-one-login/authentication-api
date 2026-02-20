@@ -140,13 +140,6 @@ Resources:
         EnforceLambdaDeploymentOrder:
           !If [EnforceLambdaDeploymentOrder, !Ref MfaFunctionAliasactive, ""]
 
-  MfaResetAuthorizeFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt MfaResetAuthorizeFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   MfaResetAuthorizeFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

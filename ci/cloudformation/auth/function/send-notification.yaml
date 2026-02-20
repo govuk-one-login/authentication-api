@@ -135,13 +135,6 @@ Resources:
             "",
           ]
 
-  SendNotificationFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt SendNotificationFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   SendNotificationFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

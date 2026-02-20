@@ -40,13 +40,6 @@ Resources:
             "",
           ]
 
-  SmsQuotaMonitorFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt SmsQuotaMonitorFunction.Arn
-      Principal: events.amazonaws.com
-
   SmsQuotaMonitorFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

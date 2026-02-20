@@ -50,13 +50,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  StartPasskeyAssertionFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt StartPasskeyAssertionFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   StartPasskeyAssertionFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

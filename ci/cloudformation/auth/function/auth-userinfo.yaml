@@ -56,13 +56,6 @@ Resources:
             "",
           ]
 
-  AuthUserInfoFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt AuthUserInfoFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   AuthUserInfoFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

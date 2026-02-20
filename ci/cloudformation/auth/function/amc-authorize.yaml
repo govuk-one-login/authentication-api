@@ -107,13 +107,6 @@ Resources:
       Tags:
         EnforceLambdaDeploymentOrder: ""
 
-  AMCAuthorizeFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt AMCAuthorizeFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   AMCAuthorizeFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
