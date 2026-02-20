@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.CREDENTIAL;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PASSKEY_TRANSPORTS;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.TEST_AAGUID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
@@ -58,7 +59,7 @@ class PasskeysCreateHandlerTest {
                             TEST_AAGUID,
                             false,
                             0,
-                            List.of("transport1", "transport2"),
+                            PASSKEY_TRANSPORTS,
                             false,
                             false,
                             false);
@@ -88,7 +89,7 @@ class PasskeysCreateHandlerTest {
                             TEST_AAGUID,
                             false,
                             0,
-                            List.of("transport1", "transport2"),
+                            PASSKEY_TRANSPORTS,
                             false,
                             false,
                             false);

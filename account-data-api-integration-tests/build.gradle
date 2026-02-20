@@ -50,6 +50,7 @@ test {
     environment "ENVIRONMENT", "local"
     environment "HEADERS_CASE_INSENSITIVE", "true"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
+    environment "REDIS_KEY", "account-data"
     environment "SQS_ENDPOINT", "http://localhost:45678"
     environment "SNS_ENDPOINT", "http://localhost:45678"
     environment "TRACING_ENABLED", "false"
