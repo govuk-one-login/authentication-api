@@ -6,11 +6,19 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -24,6 +32,8 @@ class SPOTResponseHandlerTest {
     private final Context context = mock(Context.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private static final String REQUEST_ID = "request-id";
     private static final String SESSION_ID = "a-session-id";
@@ -39,13 +49,17 @@ class SPOTResponseHandlerTest {
 
     @BeforeEach
     void setup() {
-        handler = new SPOTResponseHandler(dynamoIdentityService, auditService);
+        handler =
+                new SPOTResponseHandler(
+                        dynamoIdentityService, auditService, cloudwatchMetricsService);
 
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
     }
 
     @Test
     void shouldWriteToDynamoForSuccessfulSPOTResponse() {
+        when(dynamoIdentityService.addCoreIdentityJWT(any(), any(), any()))
+                .thenReturn(new OrchIdentityCredentials().withSpotQueuedAtMs(123456789L));
         var json =
                 format(
                         "{\"sub\":\"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"status\":\"ACCEPTED\","
@@ -58,6 +72,39 @@ class SPOTResponseHandlerTest {
                         CLIENT_SESSION_ID);
 
         handler.handleRequest(generateSQSEvent(json), context);
+
+        verify(dynamoIdentityService)
+                .addCoreIdentityJWT(
+                        CLIENT_SESSION_ID,
+                        "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+                        "random-searalized-credential");
+
+        verify(auditService)
+                .submitAuditEvent(
+                        IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED, CLIENT_ID.getValue(), USER);
+        verify(cloudwatchMetricsService)
+                .putEmbeddedValue(eq("SpotLatencyMs"), any(Double.class), anyMap());
+    }
+
+    @Test
+    void itGracefullyHandlesCloudwatchMetricThrowingAnError() {
+        when(dynamoIdentityService.addCoreIdentityJWT(any(), any(), any()))
+                .thenReturn(new OrchIdentityCredentials().withSpotQueuedAtMs(123456789L));
+        doThrow(RuntimeException.class)
+                .when(cloudwatchMetricsService)
+                .putEmbeddedValue(anyString(), any(Double.class), anyMap());
+        var json =
+                format(
+                        "{\"sub\":\"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"status\":\"ACCEPTED\","
+                                + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}, "
+                                + "\"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\",\"client_session_id\":\"%s\"}}",
+                        SESSION_ID,
+                        PERSISTENT_SESSION_ID,
+                        REQUEST_ID,
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID);
+
+        assertDoesNotThrow(() -> handler.handleRequest(generateSQSEvent(json), context));
 
         verify(dynamoIdentityService)
                 .addCoreIdentityJWT(
