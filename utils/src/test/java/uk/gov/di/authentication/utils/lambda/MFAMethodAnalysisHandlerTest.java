@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.utils.entity.MFAMethodAnalysisRequest;
 
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -34,6 +36,8 @@ class MFAMethodAnalysisHandlerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoDbClient client = mock(DynamoDbClient.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private MFAMethodAnalysisRequest createRequest() {
         return new MFAMethodAnalysisRequest(10, 5, true, true);
@@ -41,7 +45,9 @@ class MFAMethodAnalysisHandlerTest {
 
     @Test
     void shouldThrowIfNoArgs() {
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var exception =
                 assertThrows(
                         IllegalArgumentException.class,
@@ -62,7 +68,9 @@ class MFAMethodAnalysisHandlerTest {
         List<Map<String, AttributeValue>> requestKeys = new ArrayList<>();
         mockProfileBatchGetItem(requestKeys, items);
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
 
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
@@ -74,6 +82,7 @@ class MFAMethodAnalysisHandlerTest {
         assertEquals(0, result.countOfUsersWithMfaMethodsMigrated());
         assertEquals(0, result.countOfUsersWithoutMfaMethodsMigrated());
         assertEquals(0, result.missingUserProfileCount());
+        verify(cloudwatchMetricsService, never()).putEmbeddedValue(any(), anyDouble(), any());
     }
 
     @Test
@@ -92,7 +101,9 @@ class MFAMethodAnalysisHandlerTest {
         mockCredentialsScan(items, size);
         mockProfileBatchGetItem(new ArrayList<>(), items);
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
 
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
@@ -164,7 +175,9 @@ class MFAMethodAnalysisHandlerTest {
         }
         mockProfileBatchGetItem(requestKeys, profileItems);
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
 
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
@@ -184,7 +197,9 @@ class MFAMethodAnalysisHandlerTest {
         mockPhoneNumberAndUserCredentialScans(List.of(), 0, 0, List.of(), 90, 100);
         mockProfileBatchGetItem(new ArrayList<>(), List.of());
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
 
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
@@ -209,7 +224,9 @@ class MFAMethodAnalysisHandlerTest {
                 List.of(), 0, 0, phoneItems, phoneItems.size(), phoneItems.size());
         mockProfileBatchGetItem(new ArrayList<>(), List.of());
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
 
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
@@ -219,6 +236,35 @@ class MFAMethodAnalysisHandlerTest {
         assertEquals(1L, result.phoneDestinationCounts().get("UNKNOWN"));
         assertEquals(1L, result.phoneDestinationCounts().get("33"));
         assertEquals(1L, result.phoneDestinationCounts().get("1"));
+    }
+
+    @Test
+    void shouldEmitMetricPerCountryCodeInPhoneDestinationCounts() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+
+        List<Map<String, AttributeValue>> phoneItems =
+                List.of(
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+447777777777").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+447777777778").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+33777777777").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+447777777779").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+17777777777").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+33777777778").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("invalid").build()));
+
+        mockPhoneNumberAndUserCredentialScans(
+                List.of(), 0, 0, phoneItems, phoneItems.size(), phoneItems.size());
+        mockProfileBatchGetItem(new ArrayList<>(), List.of());
+
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
+        handler.handleRequest(createRequest(), mock(Context.class));
+
+        verifyPhoneDestinationMetric("44", 3);
+        verifyPhoneDestinationMetric("UNKNOWN", 1);
+        verifyPhoneDestinationMetric("33", 2);
+        verifyPhoneDestinationMetric("1", 1);
     }
 
     @Test
@@ -256,7 +302,9 @@ class MFAMethodAnalysisHandlerTest {
         }
         mockProfileBatchGetItem(requestKeys, profileItems);
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         assertEquals(0, result.countOfAuthAppUsersAssessed());
@@ -408,7 +456,9 @@ class MFAMethodAnalysisHandlerTest {
         List<Map<String, AttributeValue>> profileItems = credentialItems.subList(0, 7);
         mockProfileBatchGetItem(credentialItems, profileItems);
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         assertEquals(0, result.countOfAuthAppUsersAssessed());
@@ -434,7 +484,9 @@ class MFAMethodAnalysisHandlerTest {
                 createKeysFromCredentials(credentialItems),
                 createProfilesFromCredentials(credentialItems));
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         assertEquals(6, result.countOfUsersWithMfaMethodsMigrated());
@@ -469,7 +521,9 @@ class MFAMethodAnalysisHandlerTest {
                 createKeysFromCredentials(credentialItems),
                 createProfilesFromCredentials(credentialItems));
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         assertEquals(2, result.countOfUsersWithMfaMethodsMigrated());
@@ -551,7 +605,9 @@ class MFAMethodAnalysisHandlerTest {
 
         mockProfileBatchGetItem(createKeysFromCredentials(credentialItems), profileItems);
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         assertEquals(0, result.countOfAuthAppUsersAssessed());
@@ -586,7 +642,9 @@ class MFAMethodAnalysisHandlerTest {
 
         mockProfileBatchGetItem(createKeysFromCredentials(credentialItems), profileItems);
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         // Only user 1 has no MFA methods (no auth app and no SMS)
@@ -666,7 +724,9 @@ class MFAMethodAnalysisHandlerTest {
                 createKeysFromCredentials(credentialItems),
                 createProfilesFromCredentials(credentialItems));
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         assertEquals(2, result.countOfAuthAppUsersAssessed());
@@ -685,7 +745,9 @@ class MFAMethodAnalysisHandlerTest {
                 createKeysFromCredentials(credentialItems),
                 createProfilesFromCredentials(credentialItems));
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         assertEquals(0, result.countOfAuthAppUsersAssessed());
@@ -710,7 +772,9 @@ class MFAMethodAnalysisHandlerTest {
                 createKeysFromCredentials(credentialItems),
                 createProfilesFromCredentials(credentialItems));
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         // Only users 1 and 4 are counted (enabled=true, verified=true, has credential)
@@ -763,7 +827,9 @@ class MFAMethodAnalysisHandlerTest {
                                 .unprocessedKeys(unprocessedKeys)
                                 .build());
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var result = handler.handleRequest(createRequest(), mock(Context.class));
 
         // Should have retrieved 2 items and counted 3 as missing (items 3-5 were unprocessed)
@@ -778,7 +844,9 @@ class MFAMethodAnalysisHandlerTest {
         mockCredentialsScan(credentialItems, 0);
         mockProfileBatchGetItem(new ArrayList<>(), List.of());
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var request = new MFAMethodAnalysisRequest(10, 5, false, true);
         handler.handleRequest(request, mock(Context.class));
 
@@ -792,7 +860,9 @@ class MFAMethodAnalysisHandlerTest {
 
         mockPhoneNumberIndexScan(0, 0);
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var request = new MFAMethodAnalysisRequest(10, 5, true, false);
         handler.handleRequest(request, mock(Context.class));
 
@@ -803,11 +873,39 @@ class MFAMethodAnalysisHandlerTest {
     void shouldSkipBothFetchesWhenFlagsAreNull() {
         when(configurationService.getEnvironment()).thenReturn("test");
 
-        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
         var request = new MFAMethodAnalysisRequest(10, 5, null, null);
         handler.handleRequest(request, mock(Context.class));
 
         verify(client, never()).scan(any(ScanRequest.class));
         verify(client, never()).batchGetItem(any(BatchGetItemRequest.class));
+    }
+
+    @Test
+    void shouldNotEmitPhoneDestinationMetricsWhenFetchPhoneStatsFlagIsFalse() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        mockCredentialsScan(items, 0);
+        mockProfileBatchGetItem(new ArrayList<>(), List.of());
+
+        var handler =
+                new MFAMethodAnalysisHandler(
+                        configurationService, client, cloudwatchMetricsService);
+        var request = new MFAMethodAnalysisRequest(10, 5, false, true);
+        handler.handleRequest(request, mock(Context.class));
+
+        verify(cloudwatchMetricsService, never())
+                .putEmbeddedValue(argThat("PhoneDestinationCount"::equals), anyDouble(), any());
+    }
+
+    private void verifyPhoneDestinationMetric(String countryCode, double expectedCount) {
+        verify(cloudwatchMetricsService)
+                .putEmbeddedValue(
+                        "PhoneDestinationCount",
+                        expectedCount,
+                        Map.of("Environment", "test", "CountryCode", countryCode));
     }
 }
