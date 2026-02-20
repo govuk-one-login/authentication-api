@@ -124,7 +124,8 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.getChannel(),
                     clientRegistrationRequest.isMaxAgeEnabled(),
                     clientRegistrationRequest.isPkceEnforced(),
-                    clientRegistrationRequest.getLandingPageUrl());
+                    clientRegistrationRequest.getLandingPageUrl(),
+                    2000);
 
             var clientRegistrationResponse =
                     new ClientRegistrationResponse(
