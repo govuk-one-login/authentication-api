@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.utils.entity.MFAMethodAnalysisRequest;
 import uk.gov.di.authentication.utils.entity.MFAMethodAnalysisResponse;
@@ -38,12 +39,18 @@ public class MFAMethodAnalysisHandler
     public static final String ABSENT_ATTRIBUTE = "absent_attribute";
     private static final Logger LOG = LogManager.getLogger(MFAMethodAnalysisHandler.class);
     private final DynamoDbClient client;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final ConfigurationService configurationService;
     private final String userCredentialsTableName;
     private final String userProfileTableName;
 
     public MFAMethodAnalysisHandler(
-            ConfigurationService configurationService, DynamoDbClient client) {
+            ConfigurationService configurationService,
+            DynamoDbClient client,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.client = client;
+        this.configurationService = configurationService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
         userCredentialsTableName =
                 format("{0}-user-credentials", configurationService.getEnvironment());
         userProfileTableName = format("{0}-user-profile", configurationService.getEnvironment());
@@ -52,7 +59,8 @@ public class MFAMethodAnalysisHandler
     public MFAMethodAnalysisHandler() {
         this(
                 ConfigurationService.getInstance(),
-                createDynamoClient(ConfigurationService.getInstance()));
+                createDynamoClient(ConfigurationService.getInstance()),
+                new CloudwatchMetricsService(ConfigurationService.getInstance()));
     }
 
     @Override
@@ -110,10 +118,31 @@ public class MFAMethodAnalysisHandler
                             formatMfaMethodDetailsCombinations(
                                     combinedResults.getMfaMethodDetailsCombinations()));
             LOG.info("MFA Method Analysis Response: {}", response);
+
+            if (fetchPhoneStats) {
+                emitPhoneDestinationMetrics(combinedResults.getPhoneDestinationCounts());
+            }
+
             return response;
         } finally {
             Pool.forcePoolShutdown(forkJoinPool);
         }
+    }
+
+    private void emitPhoneDestinationMetrics(Map<String, Long> phoneDestinationCounts) {
+        LOG.info(
+                "Emitting phone destination metrics for {} destination(s).",
+                phoneDestinationCounts.size());
+        phoneDestinationCounts.forEach(
+                (countryCode, count) ->
+                        cloudwatchMetricsService.putEmbeddedValue(
+                                "PhoneDestinationCount",
+                                count,
+                                Map.of(
+                                        "Environment",
+                                        configurationService.getEnvironment(),
+                                        "CountryCode",
+                                        countryCode)));
     }
 
     private static MFAMethodAnalysis combineTaskResults(
