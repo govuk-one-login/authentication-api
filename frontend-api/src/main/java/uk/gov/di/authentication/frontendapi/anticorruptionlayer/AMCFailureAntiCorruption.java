@@ -1,7 +1,8 @@
 package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -10,7 +11,7 @@ public class AMCFailureAntiCorruption {
 
     private AMCFailureAntiCorruption() {}
 
-    public static ErrorResponseWithStatus toHttpResponse(AMCAuthorizeFailureReason failureReason) {
+    public static ErrorResponseWithStatus toHttpResponse(JwtFailureReason failureReason) {
         return switch (failureReason) {
             case JWT_ENCODING_ERROR -> new ErrorResponseWithStatus(
                     400, ErrorResponse.AMC_JWT_ENCODING_ERROR);
@@ -26,9 +27,27 @@ public class AMCFailureAntiCorruption {
         };
     }
 
+    public static ErrorResponseWithStatus toHttpResponse(TokenResponseError tokenResponseError) {
+        return switch (tokenResponseError) {
+            case ERROR_RESPONSE_FROM_TOKEN_REQUEST -> new ErrorResponseWithStatus(
+                    500, ErrorResponse.AMC_TOKEN_RESPONSE_ERROR);
+            case IO_EXCEPTION -> new ErrorResponseWithStatus(
+                    500, ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR);
+            case PARSE_EXCEPTION -> new ErrorResponseWithStatus(
+                    500, ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR);
+        };
+    }
+
     public static APIGatewayProxyResponseEvent toApiGatewayProxyErrorResponse(
-            AMCAuthorizeFailureReason failureReason) {
+            JwtFailureReason failureReason) {
         var httpResponse = toHttpResponse(failureReason);
+        return generateApiGatewayProxyErrorResponse(
+                httpResponse.statusCode(), httpResponse.errorResponse());
+    }
+
+    public static APIGatewayProxyResponseEvent toApiGatewayProxyErrorResponse(
+            TokenResponseError tokenResponseError) {
+        var httpResponse = toHttpResponse(tokenResponseError);
         return generateApiGatewayProxyErrorResponse(
                 httpResponse.statusCode(), httpResponse.errorResponse());
     }

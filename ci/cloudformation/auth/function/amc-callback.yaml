@@ -25,6 +25,35 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               useStronglyConsistentReads,
             ]
+          AMC_TOKEN_URI:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcTokenUri,
+            ]
+          AUTH_TO_AMC_PRIVATE_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-amc-signing-key
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AMC_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcClientId,
+            ]
+          AUTH_TO_AMC_PRIVATE_AUDIENCE:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcPrivateAudience,
+            ]
+          SESSION_EXPIRY: "3600"
+          AMC_REDIRECT_URI:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcRedirectUri,
+            ]
       LoggingConfig:
         LogGroup: !Ref AMCCallbackFunctionLogGroup
       Policies:
@@ -32,6 +61,7 @@ Resources:
         - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref AuthToAMCSigningKeyPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

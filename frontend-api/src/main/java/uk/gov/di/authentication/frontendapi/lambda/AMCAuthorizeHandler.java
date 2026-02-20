@@ -4,11 +4,11 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
-import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
-import uk.gov.di.authentication.frontendapi.services.AMCAuthorizationService;
+import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -28,7 +28,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest> {
-    private final AMCAuthorizationService amcAuthorizationService;
+    private final AMCService amcService;
 
     public AMCAuthorizeHandler() {
         this(ConfigurationService.getInstance());
@@ -36,8 +36,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
 
     public AMCAuthorizeHandler(ConfigurationService configurationService) {
         super(AMCAuthorizeRequest.class, configurationService);
-        this.amcAuthorizationService =
-                new AMCAuthorizationService(
+        this.amcService =
+                new AMCService(
                         configurationService,
                         new NowHelper.NowClock(Clock.systemUTC()),
                         new JwtService(new KmsConnectionService(configurationService)));
@@ -54,13 +54,13 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
-            AMCAuthorizationService amcAuthorizationService) {
+            AMCService amcService) {
         super(
                 AMCAuthorizeRequest.class,
                 configurationService,
                 authenticationService,
                 authSessionService);
-        this.amcAuthorizationService = amcAuthorizationService;
+        this.amcService = amcService;
     }
 
     @Override
@@ -81,8 +81,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
 
-        Result<AMCAuthorizeFailureReason, String> result =
-                amcAuthorizationService.buildAuthorizationUrl(
+        Result<JwtFailureReason, String> result =
+                amcService.buildAuthorizationUrl(
                         authSessionItem.getInternalCommonSubjectId(),
                         new AMCScope[] {AMCScope.ACCOUNT_DELETE},
                         authSessionItem,

@@ -19,7 +19,12 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcAuthorizeUri,
             ]
-          AMC_CLIENT_ID: "auth_amc"
+          AMC_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcClientId,
+            ]
           AMC_REDIRECT_URI:
             !FindInMap [
               EnvironmentConfiguration,

@@ -1,6 +1,6 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.frontendapi.entity.amc;
 
-public enum AMCAuthorizeFailureReason {
+public enum JwtFailureReason {
     JWT_ENCODING_ERROR("jwt_encoding_error"),
     UNKNOWN_JWT_SIGNING_ERROR("unknown_jwt_signing_error"),
     TRANSCODING_ERROR("transcoding_error"),
@@ -10,7 +10,7 @@ public enum AMCAuthorizeFailureReason {
 
     private final String value;
 
-    AMCAuthorizeFailureReason(String value) {
+    JwtFailureReason(String value) {
         this.value = value;
     }
 
