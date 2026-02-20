@@ -69,6 +69,7 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -162,6 +163,7 @@ public class IPVCallbackHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         attachTraceId();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         LOG.info("Request received to IPVCallbackHandler");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
