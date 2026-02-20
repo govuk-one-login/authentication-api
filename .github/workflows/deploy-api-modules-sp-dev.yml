@@ -13,6 +13,11 @@ on:
           - authdev2
           - authdev3
           - dev
+      lambdas:
+        description: "Comma-separated lambda resource IDs to deploy (e.g. LoginFunction,SignUpFunction). Leave empty for all."
+        type: string
+        required: false
+        default: ""
 
 env:
   AWS_REGION: eu-west-2
@@ -80,7 +85,16 @@ jobs:
       - name: SAM build
         run: |
           sam validate --lint -t auth-template.yaml
-          sam build --parallel -t auth-template.yaml
+          if [ -n "${{ inputs.lambdas }}" ]; then
+            RESOURCE_FLAGS=""
+            IFS=',' read -ra LAMBDA_ARRAY <<< "${{ inputs.lambdas }}"
+            for lambda in "${LAMBDA_ARRAY[@]}"; do
+              RESOURCE_FLAGS="$RESOURCE_FLAGS --resource-id ${lambda}"
+            done
+            sam build --parallel -t auth-template.yaml $RESOURCE_FLAGS
+          else
+            sam build --parallel -t auth-template.yaml
+          fi
 
       - name: Extract PR number and commit message
         id: version_info
