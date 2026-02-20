@@ -250,6 +250,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("NEXT_AUTH_SIGNING_KEY_ALIAS");
     }
 
+    public boolean isUseNewAuthSigningKey() {
+        return getFlagOrFalse("USE_NEW_AUTH_SIGNING_KEY");
+    }
+
     public String getOrchestrationToAuthenticationEncryptionPublicKey() {
         var paramName = System.getenv("ORCH_TO_AUTH_ENCRYPTION_KEY_PARAM");
         try {
