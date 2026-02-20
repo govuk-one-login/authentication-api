@@ -190,6 +190,11 @@ Conditions:
     ]
   ProvisionNewExternalTokenSigningKeysV2:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
+  PublishNextExternalTokenSigningKeysV2:
+    !And [
+      !Condition ProvisionNewExternalTokenSigningKeysV2,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -1920,6 +1925,14 @@ Resources:
             - UseNewSigningKeys
             - true
             - false
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref BackChannelLogoutQueueConsumePolicy
@@ -2337,6 +2350,18 @@ Resources:
             - UseNewSigningKeys
             - true
             - false
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2553,6 +2578,18 @@ Resources:
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
             - PublishNextExternalTokenSigningKeys
             - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
@@ -3436,6 +3473,18 @@ Resources:
             - PublishNextExternalTokenSigningKeys
             - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
             - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
           PUBLISH_NEXT_DOC_APP_SIGNING_KEY: !If
             - PublishNextDocAppSigningKey
             - true
@@ -3944,6 +3993,14 @@ Resources:
             - PublishNextExternalTokenSigningKeys
             - !Ref OrchExternalTokenEcSigningKmsKeyAlias
             - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
@@ -4201,6 +4258,18 @@ Resources:
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
             - PublishNextExternalTokenSigningKeys
             - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
+            - PublishNextExternalTokenSigningKeysV2
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
