@@ -89,6 +89,7 @@ Resources:
         - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

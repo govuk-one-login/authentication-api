@@ -117,6 +117,7 @@ Resources:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref AuditEventsSnsPolicy
         - !Ref PepperParametersAccessPolicy

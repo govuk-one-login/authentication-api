@@ -114,6 +114,7 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoIdReverificationStateWriteAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref IPVPublicEncryptionKeyParameterPolicy
         - !Ref IPVReverificationRequestSigningKeyPolicy
         - !Ref MfaResetTokenKmsSigningPolicy
