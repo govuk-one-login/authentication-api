@@ -87,13 +87,6 @@ Resources:
             "",
           ]
 
-  CheckReAuthUserFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt CheckReAuthUserFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   CheckReAuthUserFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

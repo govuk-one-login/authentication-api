@@ -71,13 +71,6 @@ Resources:
             "",
           ]
 
-  UserExistsFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt UserExistsFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   UserExistsFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

@@ -43,13 +43,6 @@ Resources:
             "",
           ]
 
-  MfaResetJarJwkFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt MfaResetJarJwkFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   MfaResetJarJwkFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

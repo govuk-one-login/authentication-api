@@ -131,13 +131,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  VerifyCodeFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt VerifyCodeFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   VerifyCodeFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
