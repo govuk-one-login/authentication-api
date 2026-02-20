@@ -75,6 +75,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
             }
 
             if (previousAuthSession.isPresent()) {
+                LOG.info("Setting hasVerifiedPassword & hasVerifiedMfa to false");
                 var updatedSession =
                         previousAuthSession
                                 .get()
@@ -84,7 +85,9 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
-                                                .getEpochSecond());
+                                                .getEpochSecond())
+                                .withHasVerifiedPassword(false)
+                                .withHasVerifiedMfa(false);
 
                 delete(previousSessionId.get());
                 LOG.info(

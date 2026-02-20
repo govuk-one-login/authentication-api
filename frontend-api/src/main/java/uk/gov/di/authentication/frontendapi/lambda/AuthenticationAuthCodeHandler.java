@@ -26,6 +26,8 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.net.URI;
 import java.util.Map;
@@ -44,6 +46,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
     private final DynamoAuthCodeService dynamoAuthCodeService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public AuthenticationAuthCodeHandler(
             DynamoAuthCodeService dynamoAuthCodeService,
@@ -51,7 +54,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             AuthenticationService authenticationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 AuthCodeRequest.class,
                 configurationService,
@@ -60,6 +64,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
         this.dynamoAuthCodeService = dynamoAuthCodeService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public AuthenticationAuthCodeHandler(ConfigurationService configurationService) {
@@ -67,6 +72,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     public AuthenticationAuthCodeHandler() {
@@ -94,6 +100,27 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
             }
+
+            // region New safeguarding logic
+            var authSession = userContext.getAuthSession();
+            var permissionContext =
+                    PermissionContext.builder().withAuthSessionItem(authSession).build();
+            var canIssueAuthCodeResult = permissionDecisionManager.canIssueAuthCode(authSession);
+
+            if (!canIssueAuthCodeResult) {
+                LOG.warn("Not permitted to issue auth code");
+
+                if (configurationService.isEnhancedAuthCodeProtectionEnabled()) {
+                    return generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+                } else {
+                    LOG.info(
+                            "Enhanced auth code protection disabled: Did not block issuing auth code");
+                }
+            } else {
+                LOG.warn("Permitted to issue auth code");
+            }
+            // endregion
 
             var authorisationCode = new AuthorizationCode();
             dynamoAuthCodeService.saveAuthCode(

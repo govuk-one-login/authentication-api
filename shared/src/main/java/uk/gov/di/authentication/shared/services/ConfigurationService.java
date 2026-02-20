@@ -849,4 +849,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             throw new RuntimeException(e);
         }
     }
+
+    public boolean isEnhancedAuthCodeProtectionEnabled() {
+        return System.getenv()
+                .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
+                .equals("true");
+    }
 }

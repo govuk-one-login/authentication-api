@@ -44,6 +44,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -150,6 +151,7 @@ class VerifyCodeHandlerTest {
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
 
     private final AuditContext AUDIT_CONTEXT =
@@ -194,6 +196,7 @@ class VerifyCodeHandlerTest {
                         authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
+                        userActionsManager,
                         testUserHelper);
 
         when(authenticationService.getUserProfileFromEmail(EMAIL))
@@ -1178,6 +1181,25 @@ class VerifyCodeHandlerTest {
                             withMessageContaining(
                                     "Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.")));
         }
+    }
+
+    @Test
+    void shouldCallCorrectSmsOtpReceivedWhenMfaSmsCodeIsValid() {
+        // Arrange
+        when(codeStorageService.getOtpCode(
+                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
+                .thenReturn(Optional.of(CODE));
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
+
+        // Act
+        var result = makeCallWithCode(CODE, MFA_SMS.toString());
+
+        // Assert
+        assertThat(result, hasStatus(204));
+        verify(userActionsManager)
+                .correctSmsOtpReceived(any(), argThat(pc -> pc.authSessionItem() != null));
     }
 
     private void withReauthTurnedOn() {

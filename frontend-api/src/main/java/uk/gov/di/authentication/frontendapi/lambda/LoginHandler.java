@@ -212,6 +212,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         .withInternalSubjectId(userProfile.getSubjectID())
                         .withRpPairwiseId(calculatedPairwiseId)
                         .withEmailAddress(userProfile.getEmail())
+                        .withAuthSessionItem(authSession)
                         .build();
 
         var decisionResult =
@@ -341,6 +342,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 authSessionItem.setAchievedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
             }
         }
+
+        LOG.info("Setting hasVerifiedPassword to true");
+        userActionsManager.correctPasswordReceived(journeyType, permissionContext);
 
         authSessionService.updateSession(
                 authSessionItem

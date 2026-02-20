@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -28,6 +29,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -868,6 +870,68 @@ class PermissionDecisionManagerTest {
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+        }
+    }
+
+    @Nested
+    class CanIssueAuthCode {
+        AuthSessionItem mockSession;
+
+        @BeforeEach
+        void setUp() {
+            mockSession = mock(AuthSessionItem.class);
+            when(mockSession.getHasVerifiedPassword()).thenReturn(true);
+            when(mockSession.getHasVerifiedMfa()).thenReturn(true);
+            when(mockSession.getAchievedCredentialStrength())
+                    .thenReturn(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(mockSession.getRequestedCredentialStrength())
+                    .thenReturn(CredentialTrustLevel.MEDIUM_LEVEL);
+        }
+
+        @Test
+        void shouldReturnTrueWhenAllRequirementsMet() {
+            // Act
+            var result = permissionDecisionManager.canIssueAuthCode(mockSession);
+
+            // Assert
+            assertTrue(result);
+        }
+
+        @Test
+        void shouldReturnFalseIfHasNotVerifiedPassword() {
+            // Arrange
+            when(mockSession.getHasVerifiedPassword()).thenReturn(false);
+
+            // Act
+            var result = permissionDecisionManager.canIssueAuthCode(mockSession);
+
+            // Assert
+            assertFalse(result);
+        }
+
+        @Test
+        void shouldReturnFalseIfHasNotVerifiedMfa() {
+            // Arrange
+            when(mockSession.getHasVerifiedMfa()).thenReturn(false);
+
+            // Act
+            var result = permissionDecisionManager.canIssueAuthCode(mockSession);
+
+            // Assert
+            assertFalse(result);
+        }
+
+        @Test
+        void shouldReturnFalseIfNotAchievedRequiredCredentialStrength() {
+            // Arrange
+            when(mockSession.getAchievedCredentialStrength())
+                    .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+
+            // Act
+            var result = permissionDecisionManager.canIssueAuthCode(mockSession);
+
+            // Assert
+            assertFalse(result);
         }
     }
 

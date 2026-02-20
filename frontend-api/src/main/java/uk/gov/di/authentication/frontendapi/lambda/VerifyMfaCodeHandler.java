@@ -47,6 +47,8 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -90,6 +92,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
+    private final UserActionsManager userActionsManager;
     private final TestUserHelper testUserHelper;
 
     public VerifyMfaCodeHandler(
@@ -102,6 +105,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
+            UserActionsManager userActionsManager,
             TestUserHelper testUserHelper) {
         super(
                 VerifyMfaCodeRequest.class,
@@ -114,6 +118,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
+        this.userActionsManager = userActionsManager;
         this.testUserHelper = testUserHelper;
     }
 
@@ -139,6 +144,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -160,6 +166,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     @Override
@@ -384,6 +391,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             auditFailure(codeRequest, errorResponse, authSession, auditContext, activeMfaMethod);
         } else {
             auditSuccess(codeRequest, authSession, auditContext, activeMfaMethod);
+
             processSuccessfulCodeSession(
                     userContext.getAuthSession(),
                     input,
@@ -537,6 +545,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (JourneyType.ACCOUNT_RECOVERY.equals(codeRequest.getJourneyType())) {
             authSessionService.updateSession(
                     authSession.withResetMfaState(AuthSessionItem.ResetMfaState.SUCCEEDED));
+        }
+
+        LOG.info("Setting hasVerifiedMfa to true");
+        PermissionContext permissionContext =
+                PermissionContext.builder().withAuthSessionItem(authSession).build();
+        if (codeRequest.getMfaMethodType() == MFAMethodType.SMS) {
+            userActionsManager.correctSmsOtpReceived(
+                    codeRequest.getJourneyType(), permissionContext);
+        } else if (codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
+            userActionsManager.correctAuthAppOtpReceived(
+                    codeRequest.getJourneyType(), permissionContext);
         }
     }
 

@@ -34,6 +34,12 @@ Resources:
               supportReauthSignoutEnabled,
             ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          ENHANCED_AUTH_CODE_PROTECTION_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              enhancedAuthCodeProtectionEnabled,
+            ]
       LoggingConfig:
         LogGroup: !Ref OrchAuthCodeFunctionLogGroup
       Policies:

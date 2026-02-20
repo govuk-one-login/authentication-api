@@ -208,8 +208,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
 
         PermissionContext.Builder permissionContextBuilder =
-                PermissionContext.builder().withEmailAddress(userCredentials.getEmail());
+                PermissionContext.builder()
+                        .withEmailAddress(userCredentials.getEmail())
+                        .withAuthSessionItem(userContext.getAuthSession());
 
+        LOG.info("Setting hasVerifiedPassword to true");
         userActionsManager.passwordReset(
                 JourneyType.PASSWORD_RESET, permissionContextBuilder.build());
 

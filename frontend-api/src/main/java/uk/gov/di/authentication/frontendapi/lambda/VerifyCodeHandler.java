@@ -43,6 +43,8 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -86,6 +88,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final DynamoAccountModifiersService accountModifiersService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
+    private final UserActionsManager userActionsManager;
     private final TestUserHelper testUserHelper;
 
     protected VerifyCodeHandler(
@@ -98,6 +101,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
+            UserActionsManager userActionsManager,
             TestUserHelper testUserHelper) {
         super(
                 VerifyCodeRequest.class,
@@ -110,6 +114,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = accountModifiersService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
+        this.userActionsManager = userActionsManager;
         this.testUserHelper = testUserHelper;
     }
 
@@ -126,6 +131,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -139,6 +145,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -513,6 +520,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     MFAMethodType.SMS.getValue(),
                     journeyType,
                     countryCode);
+
+            LOG.info("Setting hasVerifiedMfa to true");
+            var permissionContext =
+                    PermissionContext.builder().withAuthSessionItem(authSession).build();
+            userActionsManager.correctSmsOtpReceived(journeyType, permissionContext);
+
             authSessionService.updateSession(
                     authSession
                             .withVerifiedMfaMethodType(MFAMethodType.SMS)
