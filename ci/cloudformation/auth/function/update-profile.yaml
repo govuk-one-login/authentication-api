@@ -69,13 +69,6 @@ Resources:
             "",
           ]
 
-  UpdateProfileFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt UpdateProfileFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   UpdateProfileFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

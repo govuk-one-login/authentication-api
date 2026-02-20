@@ -53,13 +53,6 @@ Resources:
             "",
           ]
 
-  MfaResetStorageTokenJwkFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt MfaResetStorageTokenJwkFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   MfaResetStorageTokenJwkFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

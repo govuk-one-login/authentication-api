@@ -58,13 +58,6 @@ Resources:
             "",
           ]
 
-  AccountRecoveryFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt AccountRecoveryFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   AccountRecoveryFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
