@@ -188,6 +188,8 @@ Conditions:
       !Condition PublishNextAuthSigningKey,
       !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
     ]
+  ProvisionNewExternalTokenSigningKeysV2:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -8160,6 +8162,62 @@ Resources:
     Properties:
       AliasName: !Sub "alias/${Environment}-orch-external-token-rsa-signing-kms-key-alias"
       TargetKeyId: !Ref OrchExternalTokenRsaSigningKmsKey
+
+  # KMS Keys to be used
+
+  OrchExternalTokenEcSigningKmsKeyV2:
+    Condition: ProvisionNewExternalTokenSigningKeysV2
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS signing key for signing external tokens issued to RPs. This key is specifically for use in signing with EC based algorithms.
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  OrchExternalTokenEcSigningKmsKeyAliasV2:
+    Condition: ProvisionNewExternalTokenSigningKeysV2
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-external-token-ec-signing-kms-key-alias-v2"
+      TargetKeyId: !Ref OrchExternalTokenEcSigningKmsKeyV2
+
+  OrchExternalTokenRsaSigningKmsKeyV2:
+    Condition: ProvisionNewExternalTokenSigningKeysV2
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS signing key for signing external tokens issued to RPs. This key is specifically for use in signing with RSA based algorithms.
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: RSA_4096
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  OrchExternalTokenRsaSigningKmsKeyAliasV2:
+    Condition: ProvisionNewExternalTokenSigningKeysV2
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-external-token-rsa-signing-kms-key-alias-v2"
+      TargetKeyId: !Ref OrchExternalTokenRsaSigningKmsKeyV2
 
   #endregion
 
