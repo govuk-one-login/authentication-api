@@ -6708,6 +6708,16 @@ Resources:
                 Resource:
                   - !GetAtt OrchExternalTokenEcSigningKmsKey.Arn
               - !Ref AWS::NoValue
+          - Fn::If:
+              - ProvisionNewExternalTokenSigningKeysV2
+              - Sid: AllowNewIdTokenSigningKmsV2
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchExternalTokenEcSigningKmsKeyV2.Arn
+              - !Ref AWS::NoValue
 
   IdTokenKmsRsaAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6735,6 +6745,16 @@ Resources:
                   - kms:GetPublicKey
                 Resource:
                   - !GetAtt OrchExternalTokenRsaSigningKmsKey.Arn
+              - !Ref AWS::NoValue
+          - Fn::If:
+              - ProvisionNewExternalTokenSigningKeysV2
+              - Sid: AllowNewIdTokenSigningKmsV2
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchExternalTokenRsaSigningKmsKeyV2.Arn
               - !Ref AWS::NoValue
 
   DocAppSigningKmsAccessPolicy:
