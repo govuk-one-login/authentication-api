@@ -207,6 +207,11 @@ Conditions:
       !Condition ProvisionNewExternalTokenSigningKeysV2,
       !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
     ]
+  UseNewV2SigningKeys:
+    !And [
+      !Condition PublishNextExternalTokenSigningKeysV2,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -1945,6 +1950,10 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
+          USE_NEW_V2_TOKEN_SIGNING_KEYS: !If
+            - UseNewV2SigningKeys
+            - true
+            - false
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref BackChannelLogoutQueueConsumePolicy
@@ -2382,6 +2391,10 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
+          USE_NEW_V2_TOKEN_SIGNING_KEYS: !If
+            - UseNewV2SigningKeys
+            - true
+            - false
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
