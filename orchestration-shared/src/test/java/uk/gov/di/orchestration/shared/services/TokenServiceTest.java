@@ -528,6 +528,9 @@ class TokenServiceTest {
     @Nested
     class KeyRotation {
 
+        private final String NEW_V2_KEY_ALIAS = "alias/new-signing-key-v2";
+        private final String NEW_V2_KEY_ALIAS_RSA = "alias/new-signing-key-rsa-v2";
+
         private final String NEW_KEY_ALIAS = "alias/new-signing-key";
         private final String NEW_KEY_ALIAS_RSA = "alias/new-signing-key-rsa";
 
@@ -544,14 +547,22 @@ class TokenServiceTest {
         private final String EXPECTED_OPAQUE_PREVIOUS_RSA_KEY_ID =
                 hashSha256String(MOCK_PREVIOUS_RSA_KEY_ID);
 
-        private final String MOCK_SIGNATURE =
-                "f1pIGJZixTCGckjMnnAJM7efIPCJF177FqsenqflVXRQPa-FE-5viRrgPXdTjlDShFOwOQEfF6c8IlBixzorPA";
-
         private final String MOCK_NEW_EC_KEY_ID = "i4rwnl-SLuhPjdtP1GJyKXZRDG00znaRld8sSArsToM";
         private final String MOCK_NEW_RSA_KEY_ID = "LA9hmMyeZ2h4oOZcoWpReQKHGp0PwfyzuKCce68xpxs";
 
         private final String EXPECTED_OPAQUE_NEW_EC_KEY_ID = hashSha256String(MOCK_NEW_EC_KEY_ID);
         private final String EXPECTED_OPAQUE_NEW_RSA_KEY_ID = hashSha256String(MOCK_NEW_RSA_KEY_ID);
+
+        private final String MOCK_NEW_V2_EC_KEY_ID = "i4rwnl-SLuhPjdtP1GJyKXZRDG00znaRld8s-h6Fn2i";
+        private final String MOCK_NEW_V2_RSA_KEY_ID = "LA9hmMyeZ2h4oOZcoWpReQKHGp0PwfyzuKCc08cdjYh";
+
+        private final String EXPECTED_OPAQUE_NEW_V2_EC_KEY_ID =
+                hashSha256String(MOCK_NEW_V2_EC_KEY_ID);
+        private final String EXPECTED_OPAQUE_NEW_V2_RSA_KEY_ID =
+                hashSha256String(MOCK_NEW_V2_RSA_KEY_ID);
+
+        private final String MOCK_SIGNATURE =
+                "f1pIGJZixTCGckjMnnAJM7efIPCJF177FqsenqflVXRQPa-FE-5viRrgPXdTjlDShFOwOQEfF6c8IlBixzorPA";
 
         private SignResponse mockSignResponseRsa;
         private SignResponse mockSignResponseEc;
@@ -585,12 +596,35 @@ class TokenServiceTest {
                             GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS_RSA).build()))
                     .thenReturn(GetPublicKeyResponse.builder().keyId(MOCK_NEW_RSA_KEY_ID).build());
 
+            when(configurationService.getNextExternalTokenSigningKeyAliasV2())
+                    .thenReturn(NEW_V2_KEY_ALIAS);
+            when(configurationService.getNextExternalTokenSigningKeyRsaAliasV2())
+                    .thenReturn(NEW_V2_KEY_ALIAS_RSA);
+
             when(kmsConnectionService.getPublicKey(
-                            GetPublicKeyRequest.builder().keyId(KEY_ID).build()))
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_EC_KEY_ID).build());
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS_RSA).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_RSA_KEY_ID).build());
+
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS).build()))
                     .thenReturn(GetPublicKeyResponse.builder().keyId(MOCK_NEW_EC_KEY_ID).build());
             when(kmsConnectionService.getPublicKey(
                             GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS_RSA).build()))
                     .thenReturn(GetPublicKeyResponse.builder().keyId(MOCK_NEW_RSA_KEY_ID).build());
+
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_EC_KEY_ID).build());
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS_RSA).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_RSA_KEY_ID).build());
 
             mockSignResponseEc =
                     SignResponse.builder()
@@ -629,6 +663,28 @@ class TokenServiceTest {
         }
 
         @Test
+        void itShouldUseTheNewV2KeyToCreateATokenWhenFeatureFlagEnabled() {
+            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(true);
+            when(configurationService.isUseNewTokenSigningKeysEnabled()).thenReturn(true);
+            when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseEc);
+
+            var testClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .claim("sub", FIXED_INTERNAL_PAIRWISE_SUBJECT)
+                            .build();
+
+            var signedToken =
+                    tokenService.generateSignedJwtUsingExternalKey(
+                            testClaimsSet, Optional.empty(), JWSAlgorithm.ES256);
+
+            verify(kmsConnectionService)
+                    .getPublicKey(GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS).build());
+            assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+            assertThat(
+                    signedToken.getHeader().getKeyID(), equalTo(EXPECTED_OPAQUE_NEW_V2_EC_KEY_ID));
+        }
+
+        @Test
         void itShouldUseTheNewRsaKeyToCreateATokenWhenFeatureFlagEnabled() {
             when(configurationService.isUseNewTokenSigningKeysEnabled()).thenReturn(true);
             when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseRsa);
@@ -649,7 +705,31 @@ class TokenServiceTest {
         }
 
         @Test
+        void itShouldUseTheNewV2RsaKeyToCreateATokenWhenFeatureFlagEnabled() {
+            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(true);
+            when(configurationService.isUseNewTokenSigningKeysEnabled()).thenReturn(true);
+            when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseRsa);
+
+            var testClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .claim("sub", FIXED_INTERNAL_PAIRWISE_SUBJECT)
+                            .build();
+
+            var signedToken =
+                    tokenService.generateSignedJwtUsingExternalKey(
+                            testClaimsSet, Optional.empty(), JWSAlgorithm.RS256);
+
+            verify(kmsConnectionService)
+                    .getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS_RSA).build());
+            assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.RS256));
+            assertThat(
+                    signedToken.getHeader().getKeyID(), equalTo(EXPECTED_OPAQUE_NEW_V2_RSA_KEY_ID));
+        }
+
+        @Test
         void itShouldContinueToUseOldKeyWhenFeatureFlagIsDisabled() {
+            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(false);
             when(configurationService.isUseNewTokenSigningKeysEnabled()).thenReturn(false);
             when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseEc);
 
@@ -672,6 +752,7 @@ class TokenServiceTest {
 
         @Test
         void itShouldContinueToUseOldRsaKeyWhenFeatureFlagIsDisabled() {
+            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(false);
             when(configurationService.isUseNewTokenSigningKeysEnabled()).thenReturn(false);
             when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseRsa);
 
@@ -695,9 +776,13 @@ class TokenServiceTest {
     }
 
     private void createSignedIdToken() throws JOSEException {
+        createSignedIdTokenWithKeyId(KEY_ID);
+    }
+
+    private void createSignedIdTokenWithKeyId(String keyId) throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
+                        .keyID(keyId)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         SignedJWT signedIdToken = createSignedIdToken(ecSigningKey);
@@ -706,7 +791,7 @@ class TokenServiceTest {
         SignResponse idTokenSignedResult =
                 SignResponse.builder()
                         .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
-                        .keyId(KEY_ID)
+                        .keyId(keyId)
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .build();
 
