@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.accountdata.entity;
+package uk.gov.di.authentication.accountdata.entity.passkey;
 
 public enum PasskeysUpdateFailureReason {
     PARSING_PASSKEY_UPDATE_REQUEST_ERROR("parsing_passkey_update_request_error");

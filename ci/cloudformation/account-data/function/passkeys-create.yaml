@@ -19,6 +19,7 @@ Resources:
         LogGroup: !Ref PasskeysCreateFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoAuthenticatorTableReadWriteDeletePolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
