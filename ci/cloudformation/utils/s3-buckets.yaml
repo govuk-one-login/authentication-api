@@ -1,0 +1,182 @@
+# S3 Buckets for Utils Stack
+#
+# Creates S3 buckets with -utils- prefix to avoid clashes with existing Terraform buckets:
+#   CloudFormation: ${Environment}-utils-bulk-test-user-bucket
+#   CloudFormation: ${Environment}-utils-common-passwords-bucket
+#   CloudFormation: ${Environment}-utils-lambda-source-bucket
+#
+#   Terraform (existing): ${Environment}-bulk-test-user-bucket
+#   Terraform (existing): ${Environment}-common-passwords-bucket
+#   Terraform (existing): ${Environment}-utils-lambda-source-* (random suffix)
+#
+# Note: Parameters and Conditions are defined in parent.yaml
+
+Resources:
+  # Bulk Test User Bucket
+  BulkTestUserBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - "${EnvironmentName}-utils-bulk-test-user-bucket"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  BulkTestUserBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BulkTestUserBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt BulkTestUserBucket.Arn
+              - !Sub "${BulkTestUserBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+  # Common Passwords Bucket
+  CommonPasswordsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - "${EnvironmentName}-utils-common-passwords-bucket"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  CommonPasswordsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CommonPasswordsBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt CommonPasswordsBucket.Arn
+              - !Sub "${CommonPasswordsBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+  # Source Code Bucket
+  SourceCodeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - "${EnvironmentName}-utils-lambda-source-bucket"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  SourceCodeBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SourceCodeBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt SourceCodeBucket.Arn
+              - !Sub "${SourceCodeBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+Outputs:
+  BulkTestUserBucketName:
+    Description: Name of the Bulk Test User S3 bucket
+    Value: !Ref BulkTestUserBucket
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-utils-bulk-test-user-bucket-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkTestUserBucketArn:
+    Description: ARN of the Bulk Test User S3 bucket
+    Value: !GetAtt BulkTestUserBucket.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-utils-bulk-test-user-bucket-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  CommonPasswordsBucketName:
+    Description: Name of the Common Passwords S3 bucket
+    Value: !Ref CommonPasswordsBucket
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-utils-common-passwords-bucket-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  CommonPasswordsBucketArn:
+    Description: ARN of the Common Passwords S3 bucket
+    Value: !GetAtt CommonPasswordsBucket.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-utils-common-passwords-bucket-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  SourceCodeBucketName:
+    Description: Name of the Source Code S3 bucket
+    Value: !Ref SourceCodeBucket
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-utils-lambda-source-bucket-name"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  SourceCodeBucketArn:
+    Description: ARN of the Source Code S3 bucket
+    Value: !GetAtt SourceCodeBucket.Arn
+    Export:
+      Name: !Sub
+        - "${EnvironmentName}-utils-lambda-source-bucket-arn"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
