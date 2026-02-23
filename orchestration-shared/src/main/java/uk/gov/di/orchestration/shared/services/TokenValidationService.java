@@ -64,33 +64,26 @@ public class TokenValidationService {
                     var oldPublicKey = jwksService.getPublicTokenRsaJwkWithOpaqueId();
                     if (Objects.equals(jwt.getHeader().getKeyID(), oldPublicKey.getKeyID())) {
                         return jwt.verify(new RSASSAVerifier(oldPublicKey.toRSAKey()));
-                    } else {
-                        return jwt.verify(
-                                new RSASSAVerifier(
-                                        jwksService
-                                                .getNextPublicTokenRsaJwkWithOpaqueId()
-                                                .toRSAKey()));
                     }
-                } else {
                     return jwt.verify(
                             new RSASSAVerifier(
-                                    jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
+                                    jwksService.getNextPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
                 }
+                return jwt.verify(
+                        new RSASSAVerifier(
+                                jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
             } else {
                 if (configuration.isPublishNextExternalTokenSigningKeysEnabled()) {
                     var oldPublicKey = jwksService.getPublicTokenJwkWithOpaqueId();
                     if (Objects.equals(jwt.getHeader().getKeyID(), oldPublicKey.getKeyID())) {
                         return jwt.verify(new ECDSAVerifier(oldPublicKey.toECKey()));
-                    } else {
-                        return jwt.verify(
-                                new ECDSAVerifier(
-                                        jwksService.getNextPublicTokenJwkWithOpaqueId().toECKey()));
                     }
-                } else {
                     return jwt.verify(
                             new ECDSAVerifier(
-                                    jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
+                                    jwksService.getNextPublicTokenJwkWithOpaqueId().toECKey()));
                 }
+                return jwt.verify(
+                        new ECDSAVerifier(jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
             }
 
         } catch (JOSEException | java.text.ParseException e) {
