@@ -82,6 +82,14 @@ public class JwksHandler
                 }
             }
 
+            if (configurationService.isPublishNextExternalTokenSigningKeysEnabledV2()) {
+                signingKeys.add(jwksService.getNextPublicTokenJwkWithOpaqueIdV2());
+
+                if (configurationService.isRsaSigningAvailable()) {
+                    signingKeys.add(jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2());
+                }
+            }
+
             if (configurationService.isPublishNextDocAppSigningKeyEnabled()) {
                 signingKeys.add(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId());
             }
