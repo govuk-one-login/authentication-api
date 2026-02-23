@@ -120,6 +120,9 @@ public enum ErrorResponse {
     UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error"),
     // Account_Data
     UNEXPECTED_ACCOUNT_DATA_API_ERROR(1092, "Account Data API encountered an unexpected error"),
+    PASSKEY_ALREADY_EXISTS(1093, "Passkey already exists"),
+    INVALID_AAGUID(1094, "Invalid AAGUID format"),
+    INVALID_CREDENTIAL(1095, "Invalid credential format"),
     // Passkeys
     PASSKEY_ASSERTION_INVALID_PKC(1100, "Invalid passkey PKC object"),
     PASSKEY_ASSERTION_FAILED(1101, "Passkey assertion failed"),
