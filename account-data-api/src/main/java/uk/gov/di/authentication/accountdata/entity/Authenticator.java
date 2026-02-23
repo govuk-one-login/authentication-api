@@ -8,7 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortK
 @DynamoDbBean
 public abstract class Authenticator<T extends Authenticator<T>> {
 
-    public static final String ATTRIBUTE_PUBLIC_SUBJECT_ID = "PublicSubjectId";
+    public static final String ATTRIBUTE_PUBLIC_SUBJECT_ID = "PublicSubjectID";
     public static final String ATTRIBUTE_SORT_KEY = "SK";
     public static final String ATTRIBUTE_CREATED = "Created";
     public static final String ATTRIBUTE_LAST_USED = "LastUsed";
