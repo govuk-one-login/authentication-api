@@ -31,6 +31,7 @@ import software.amazon.awssdk.services.kms.model.KmsException;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -602,7 +603,34 @@ class AMCServiceTest {
 
             var result = amcService.requestJourneyOutcome(userInfoRequest);
 
-            assertEquals(result, response);
+            assertEquals(Result.success(null), result);
+        }
+
+        @Test
+        void shouldReturnAnErrorForAnUnsuccessfulRequest() throws IOException {
+            var userInfoRequest = mock(UserInfoRequest.class);
+            var httpRequest = mock(HTTPRequest.class);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
+            var response = new HTTPResponse(400);
+            when(httpRequest.send()).thenReturn(response);
+
+            var result = amcService.requestJourneyOutcome(userInfoRequest);
+
+            assertEquals(
+                    Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME),
+                    result);
+        }
+
+        @Test
+        void shouldReturnAnErrorForAnIOException() throws IOException {
+            var userInfoRequest = mock(UserInfoRequest.class);
+            var httpRequest = mock(HTTPRequest.class);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
+            when(httpRequest.send()).thenThrow(new IOException("Uh oh"));
+
+            var result = amcService.requestJourneyOutcome(userInfoRequest);
+
+            assertEquals(Result.failure(JourneyOutcomeError.IO_EXCEPTION), result);
         }
     }
 

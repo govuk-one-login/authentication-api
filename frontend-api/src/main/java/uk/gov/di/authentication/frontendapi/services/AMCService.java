@@ -13,7 +13,6 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
-import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
@@ -24,6 +23,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkException;
 import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -226,11 +226,16 @@ public class AMCService {
                                         URI.create(configurationService.getAMCRedirectURI()))));
     }
 
-    public HTTPResponse requestJourneyOutcome(UserInfoRequest userInfoRequest) {
+    public Result<JourneyOutcomeError, Void> requestJourneyOutcome(
+            UserInfoRequest userInfoRequest) {
         try {
-            return userInfoRequest.toHTTPRequest().send();
+            var response = userInfoRequest.toHTTPRequest().send();
+            if (!response.indicatesSuccess()) {
+                return Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME);
+            }
+            return Result.success(null);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            return Result.failure(JourneyOutcomeError.IO_EXCEPTION);
         }
     }
 

@@ -7,8 +7,10 @@ import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -23,6 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_TOKEN_RESPONSE_ERROR;
@@ -61,6 +64,11 @@ class AMCCallbackHandlerTest {
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
     }
 
+    @BeforeEach
+    void resetMocks() {
+        reset(AMC_SERVICE);
+    }
+
     @Test
     void shouldReturn200WhenTokenResponseSuccessful() throws IOException, ParseException {
         AMCCallbackHandler handler =
@@ -78,8 +86,11 @@ class AMCCallbackHandlerTest {
         when(AMC_SERVICE.requestJourneyOutcome(
                         argThat(
                                 userInfoRequest ->
-                                        userInfoRequest.getAccessToken().equals(ACCESS_TOKEN))))
-                .thenReturn(new HTTPResponse(200));
+                                        userInfoRequest
+                                                .getAccessToken()
+                                                .toString()
+                                                .equals(ACCESS_TOKEN))))
+                .thenReturn(Result.success(null));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
 
@@ -198,6 +209,79 @@ class AMCCallbackHandlerTest {
 
         assertEquals(500, result.getStatusCode());
         assertThat(result, hasJsonBody(AMC_TOKEN_UNEXPECTED_ERROR));
+    }
+
+    @Test
+    void shouldReturn400WhenJourneyOutcomeResponseUnsuccessful()
+            throws ParseException, IOException {
+        AMCCallbackHandler handler =
+                new AMCCallbackHandler(
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        AMC_SERVICE);
+
+        HTTPRequest httpRequest = mock(HTTPRequest.class);
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
+
+        when(AMC_SERVICE.requestJourneyOutcome(
+                        argThat(
+                                userInfoRequest ->
+                                        userInfoRequest
+                                                .getAccessToken()
+                                                .toString()
+                                                .equals(ACCESS_TOKEN))))
+                .thenReturn(
+                        Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME));
+
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(400, result.getStatusCode());
+    }
+
+    @Test
+    void shouldReturn500WhenJourneyOutcomeResponseGetsIOException()
+            throws ParseException, IOException {
+        AMCCallbackHandler handler =
+                new AMCCallbackHandler(
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        AMC_SERVICE);
+
+        HTTPRequest httpRequest = mock(HTTPRequest.class);
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
+
+        when(AMC_SERVICE.requestJourneyOutcome(
+                        argThat(
+                                userInfoRequest ->
+                                        userInfoRequest
+                                                .getAccessToken()
+                                                .toString()
+                                                .equals(ACCESS_TOKEN))))
+                .thenReturn(Result.failure(JourneyOutcomeError.IO_EXCEPTION));
+
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(500, result.getStatusCode());
     }
 
     private void setupTokenHttpResponse(

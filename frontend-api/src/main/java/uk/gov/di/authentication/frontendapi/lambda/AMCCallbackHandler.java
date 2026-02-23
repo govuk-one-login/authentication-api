@@ -85,19 +85,33 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(failure);
         }
 
-        return sendTokenRequest(requestResult.getSuccess())
+        var tokenResponse = sendTokenRequest(requestResult.getSuccess());
+
+        if (tokenResponse.isFailure()) {
+            return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(
+                    tokenResponse.getFailure());
+        }
+
+        LOG.info("AMC token response received");
+
+        var userInfoRequest =
+                new UserInfoRequest(
+                        configurationService.getAMCJourneyOutcomeURI(),
+                        tokenResponse
+                                .getSuccess()
+                                .toSuccessResponse()
+                                .getTokens()
+                                .getBearerAccessToken());
+
+        return amcService
+                .requestJourneyOutcome(userInfoRequest)
                 .fold(
-                        AMCFailureAntiCorruption::toApiGatewayProxyErrorResponse,
-                        tokenResponse -> {
-                            LOG.info("AMC token response received");
-                            var userInfoRequest =
-                                    new UserInfoRequest(
-                                            configurationService.getAMCJourneyOutcomeURI(),
-                                            tokenResponse
-                                                    .toSuccessResponse()
-                                                    .getTokens()
-                                                    .getBearerAccessToken());
-                            amcService.requestJourneyOutcome(userInfoRequest);
+                        error -> {
+                            LOG.warn("Error requesting journey outcome: {}", error.getValue());
+                            return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(error);
+                        },
+                        success -> {
+                            LOG.info("Journey outcome received successfully");
                             return generateApiGatewayProxyResponse(200, "very cool");
                         });
     }
