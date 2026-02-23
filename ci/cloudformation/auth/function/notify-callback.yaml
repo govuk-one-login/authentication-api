@@ -497,3 +497,28 @@ Resources:
           lambdaLogAlarmErrorRateThreshold,
           DefaultValue: 10,
         ]
+
+  # Generate  RandomString for notify-callback-bearer-token
+  NotifyCallbackBearerTokenSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub
+        - ${Env}-notify-callback-bearer-token-secret
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: alias/aws/secretsmanager
+      GenerateSecretString:
+        ExcludeCharacters: "'\"@/\\#`.,;~|'*()^&'"
+        PasswordLength: 65
+        ExcludePunctuation: false
+
+  # Note : If new String is generated manually copy the string from Secret manger to SSM parameter because secret cannot be dynamically referenced here
+  NotifyCallbackBearerTokenParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub
+        - /${Env}-notify-callback-bearer-token
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Type: String
+      Value: !Sub "{{resolve:secretsmanager:${NotifyCallbackBearerTokenSecret}}}"
