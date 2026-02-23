@@ -32,9 +32,7 @@ public class AMCFailureAntiCorruption {
         return switch (tokenResponseError) {
             case ERROR_RESPONSE_FROM_TOKEN_REQUEST -> new ErrorResponseWithStatus(
                     500, ErrorResponse.AMC_TOKEN_RESPONSE_ERROR);
-            case IO_EXCEPTION -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR);
-            case PARSE_EXCEPTION -> new ErrorResponseWithStatus(
+            case IO_EXCEPTION, PARSE_EXCEPTION -> new ErrorResponseWithStatus(
                     500, ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR);
         };
     }
