@@ -1019,7 +1019,10 @@ class IPVCallbackHandlerTest {
                             eq(CLIENT_ID.getValue()));
             verify(ipvCallbackHelper)
                     .saveIdentityClaimsToDynamo(
-                            any(String.class), any(Subject.class), any(UserInfo.class));
+                            any(String.class),
+                            any(Subject.class),
+                            any(UserInfo.class),
+                            any(Long.class));
 
             verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
             verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -1061,7 +1064,10 @@ class IPVCallbackHandlerTest {
                             any(), anyString(), any(), any(), any(UserInfo.class), anyString());
             verify(ipvCallbackHelper, never())
                     .saveIdentityClaimsToDynamo(
-                            any(String.class), any(Subject.class), any(UserInfo.class));
+                            any(String.class),
+                            any(Subject.class),
+                            any(UserInfo.class),
+                            any(Long.class));
         }
     }
 
@@ -1239,7 +1245,10 @@ class IPVCallbackHandlerTest {
                             eq(CLIENT_ID.getValue()));
             verify(ipvCallbackHelper)
                     .saveIdentityClaimsToDynamo(
-                            any(String.class), any(Subject.class), any(UserInfo.class));
+                            any(String.class),
+                            any(Subject.class),
+                            any(UserInfo.class),
+                            any(Long.class));
         }
     }
 
@@ -1376,7 +1385,10 @@ class IPVCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()));
         verify(ipvCallbackHelper)
                 .saveIdentityClaimsToDynamo(
-                        any(String.class), any(Subject.class), any(UserInfo.class));
+                        any(String.class),
+                        any(Subject.class),
+                        any(UserInfo.class),
+                        any(Long.class));
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);

@@ -148,6 +148,7 @@ class IPVCallbackHelperTest {
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final Long AUTH_TIME = 1234L;
     private static final UserInfo authUserInfo = generateAuthUserInfo();
+    private static final Long fakeSpotQueuedAt = 1771589314135L;
 
     private static final UserInfo p0VotUserIdentityUserInfo =
             new UserInfo(
@@ -398,7 +399,10 @@ class IPVCallbackHelperTest {
     @Test
     void shouldSaveAdditionalIdentityClaimsToDynamo() {
         helper.saveIdentityClaimsToDynamo(
-                CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, p2VotUserIdentityUserInfo);
+                CLIENT_SESSION_ID,
+                RP_PAIRWISE_SUBJECT,
+                p2VotUserIdentityUserInfo,
+                fakeSpotQueuedAt);
 
         assertThat(
                 logging.events(),
@@ -414,7 +418,8 @@ class IPVCallbackHelperTest {
                         "rp-pairwise-id",
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
-                        "core-identity");
+                        "core-identity",
+                        fakeSpotQueuedAt);
     }
 
     @Test
@@ -427,7 +432,8 @@ class IPVCallbackHelperTest {
                                         "vot", "P2",
                                         "vtm", OIDC_TRUSTMARK_URI.toString(),
                                         "https://vocab.account.gov.uk/v1/passport", "passport")));
-        helper.saveIdentityClaimsToDynamo(CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo);
+        helper.saveIdentityClaimsToDynamo(
+                CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo, fakeSpotQueuedAt);
 
         assertThat(
                 logging.events(),
@@ -443,7 +449,8 @@ class IPVCallbackHelperTest {
                         "rp-pairwise-id",
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
-                        "");
+                        "",
+                        fakeSpotQueuedAt);
     }
 
     @Test
@@ -460,7 +467,8 @@ class IPVCallbackHelperTest {
                                         put("https://vocab.account.gov.uk/v1/passport", "passport");
                                     }
                                 }));
-        helper.saveIdentityClaimsToDynamo(CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo);
+        helper.saveIdentityClaimsToDynamo(
+                CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo, fakeSpotQueuedAt);
 
         assertThat(
                 logging.events(),
@@ -476,7 +484,42 @@ class IPVCallbackHelperTest {
                         "rp-pairwise-id",
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
-                        "");
+                        "",
+                        fakeSpotQueuedAt);
+    }
+
+    @Test
+    void handlesNullSpotQueuedAtTimestamp() {
+        var userInfo =
+                new UserInfo(
+                        new JSONObject(
+                                new HashMap<String, String>() {
+                                    {
+                                        put("sub", "sub-val");
+                                        put("vot", "P2");
+                                        put("vtm", OIDC_TRUSTMARK_URI.toString());
+                                        put("https://vocab.account.gov.uk/v1/coreIdentity", null);
+                                        put("https://vocab.account.gov.uk/v1/passport", "passport");
+                                    }
+                                }));
+        helper.saveIdentityClaimsToDynamo(CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo, null);
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Checking for additional identity claims to save to dynamo")));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Additional identity claims present: true")));
+        verify(dynamoIdentityService)
+                .saveIdentityClaims(
+                        CLIENT_SESSION_ID,
+                        "rp-pairwise-id",
+                        Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
+                        "P2",
+                        "",
+                        null);
     }
 
     @Test

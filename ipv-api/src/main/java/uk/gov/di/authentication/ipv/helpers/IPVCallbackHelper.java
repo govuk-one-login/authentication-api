@@ -178,7 +178,7 @@ public class IPVCallbackHelper {
                 "saveIdentityClaims",
                 () ->
                         saveIdentityClaimsToDynamo(
-                                clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+                                clientSessionId, rpPairwiseSubject, userIdentityUserInfo, null));
         return generateAuthenticationResponse(
                 authRequest,
                 orchSession,
@@ -333,7 +333,10 @@ public class IPVCallbackHelper {
     }
 
     public void saveIdentityClaimsToDynamo(
-            String clientSessionId, Subject rpPairwiseSubject, UserInfo userIdentityUserInfo) {
+            String clientSessionId,
+            Subject rpPairwiseSubject,
+            UserInfo userIdentityUserInfo,
+            Long spotQueuedAt) {
         LOG.info("Checking for additional identity claims to save to dynamo");
         var additionalClaims = new HashMap<String, String>();
         ValidClaims.getAllValidClaims().stream()
@@ -358,6 +361,7 @@ public class IPVCallbackHelper {
                 rpPairwiseSubject.getValue(),
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),
-                ipvCoreIdentityString);
+                ipvCoreIdentityString,
+                spotQueuedAt);
     }
 }
