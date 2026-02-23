@@ -15,6 +15,14 @@ Resources:
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
       LoggingConfig:
         LogGroup: !Ref PasskeysRetrieveFunctionLogGroup
       Policies:
