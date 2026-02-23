@@ -20,7 +20,7 @@ public class DynamoIdentityService extends BaseDynamoService<OrchIdentityCredent
         this.timeToExist = configurationService.getAccessTokenExpiry();
     }
 
-    public void addCoreIdentityJWT(
+    public OrchIdentityCredentials addCoreIdentityJWT(
             String clientSessionId, String subjectID, String coreIdentityJWT) {
         var identityCredentials =
                 get(clientSessionId)
@@ -33,6 +33,7 @@ public class DynamoIdentityService extends BaseDynamoService<OrchIdentityCredent
                                         .toInstant()
                                         .getEpochSecond());
         update(identityCredentials);
+        return identityCredentials;
     }
 
     public Optional<OrchIdentityCredentials> getIdentityCredentials(String clientSessionId) {
