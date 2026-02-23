@@ -55,7 +55,7 @@ jobs:
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 
       - name: 🏗️ Install rain
-        run: go install github.com/aws-cloudformation/rain/cmd/rain@latest
+        run: go install github.com/aws-cloudformation/rain/cmd/rain@db5e93462ec830ed7096a9c3ad68efc061f638d6 # v1.24.3
         shell: bash
 
       - name: 🏗️ Install Pre-commit
