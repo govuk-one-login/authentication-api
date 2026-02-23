@@ -44,6 +44,7 @@ class AMCCallbackHandlerTest {
     private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final AMCService AMC_SERVICE = mock(AMCService.class);
     private static TokenRequest tokenRequest;
+    private static AMCCallbackHandler handler;
 
     private static final String STATE = "state";
     private static final String AUTH_CODE = "1234";
@@ -62,6 +63,12 @@ class AMCCallbackHandlerTest {
     static void setUp() {
         tokenRequest = mock(TokenRequest.class);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
+        handler =
+                new AMCCallbackHandler(
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        AMC_SERVICE);
     }
 
     @BeforeEach
@@ -71,13 +78,6 @@ class AMCCallbackHandlerTest {
 
     @Test
     void shouldReturn200WhenTokenResponseSuccessful() throws IOException, ParseException {
-        AMCCallbackHandler handler =
-                new AMCCallbackHandler(
-                        configurationService,
-                        authenticationService,
-                        authSessionService,
-                        AMC_SERVICE);
-
         HTTPRequest httpRequest = mock(HTTPRequest.class);
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
@@ -107,13 +107,6 @@ class AMCCallbackHandlerTest {
 
     @Test
     void shouldReturn400WhenTokenResponseUnsuccessful() {
-        AMCCallbackHandler handler =
-                new AMCCallbackHandler(
-                        configurationService,
-                        authenticationService,
-                        authSessionService,
-                        AMC_SERVICE);
-
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE))
                 .thenReturn(Result.failure(JwtFailureReason.JWT_ENCODING_ERROR));
 
@@ -131,13 +124,6 @@ class AMCCallbackHandlerTest {
 
     @Test
     void shouldReturn500WhenErrorRetrievingToken() throws ParseException, IOException {
-        AMCCallbackHandler handler =
-                new AMCCallbackHandler(
-                        configurationService,
-                        authenticationService,
-                        authSessionService,
-                        AMC_SERVICE);
-
         HTTPRequest httpRequest = mock(HTTPRequest.class);
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
@@ -159,13 +145,6 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldReturn500WhenErrorResponseCannotBeParsedAsTokenResponse()
             throws ParseException, IOException {
-        AMCCallbackHandler handler =
-                new AMCCallbackHandler(
-                        configurationService,
-                        authenticationService,
-                        authSessionService,
-                        AMC_SERVICE);
-
         HTTPRequest httpRequest = mock(HTTPRequest.class);
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
@@ -186,13 +165,6 @@ class AMCCallbackHandlerTest {
 
     @Test
     void shouldReturn500WhenIOExceptionCallingTokenEndpoint() throws IOException {
-        AMCCallbackHandler handler =
-                new AMCCallbackHandler(
-                        configurationService,
-                        authenticationService,
-                        authSessionService,
-                        AMC_SERVICE);
-
         HTTPRequest httpRequest = mock(HTTPRequest.class);
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
@@ -214,13 +186,6 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldReturn400WhenJourneyOutcomeResponseUnsuccessful()
             throws ParseException, IOException {
-        AMCCallbackHandler handler =
-                new AMCCallbackHandler(
-                        configurationService,
-                        authenticationService,
-                        authSessionService,
-                        AMC_SERVICE);
-
         HTTPRequest httpRequest = mock(HTTPRequest.class);
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
@@ -251,13 +216,6 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldReturn500WhenJourneyOutcomeResponseGetsIOException()
             throws ParseException, IOException {
-        AMCCallbackHandler handler =
-                new AMCCallbackHandler(
-                        configurationService,
-                        authenticationService,
-                        authSessionService,
-                        AMC_SERVICE);
-
         HTTPRequest httpRequest = mock(HTTPRequest.class);
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
