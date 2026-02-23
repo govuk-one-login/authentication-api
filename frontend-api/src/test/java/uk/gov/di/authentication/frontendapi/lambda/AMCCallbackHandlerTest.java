@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
@@ -43,14 +44,16 @@ class AMCCallbackHandlerTest {
 
     private static final String STATE = "state";
     private static final String AUTH_CODE = "1234";
+    private static final String ACCESS_TOKEN = "accessToken";
     private static final String SUCCESSFUL_TOKEN_RESPONSE =
             """
-                {
-                    "access_token": "someAccessToken",
-                    "token_type": "Bearer",
-                    "expires_in": 3600
-                }
-                """;
+                    {
+                        "access_token": "%s",
+                        "token_type": "Bearer",
+                        "expires_in": 3600
+                    }
+                    """
+                    .formatted(ACCESS_TOKEN);
 
     @BeforeAll
     static void setUp() {
@@ -71,6 +74,12 @@ class AMCCallbackHandlerTest {
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
+
+        when(AMC_SERVICE.requestJourneyOutcome(
+                        argThat(
+                                userInfoRequest ->
+                                        userInfoRequest.getAccessToken().equals(ACCESS_TOKEN))))
+                .thenReturn(new HTTPResponse(200));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
 

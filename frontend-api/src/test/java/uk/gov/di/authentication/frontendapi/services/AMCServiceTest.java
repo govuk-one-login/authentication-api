@@ -18,6 +18,9 @@ import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,6 +39,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -582,6 +586,23 @@ class AMCServiceTest {
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
+        }
+    }
+
+    @Nested
+    @DisplayName("Journey Outcome Tests")
+    class JourneyOutcomeTests {
+        @Test
+        void shouldSendAJourneyOutcomeRequest() throws IOException {
+            var userInfoRequest = mock(UserInfoRequest.class);
+            var httpRequest = mock(HTTPRequest.class);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
+            var response = new HTTPResponse(200);
+            when(httpRequest.send()).thenReturn(response);
+
+            var result = amcService.requestJourneyOutcome(userInfoRequest);
+
+            assertEquals(result, response);
         }
     }
 

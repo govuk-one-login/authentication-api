@@ -857,4 +857,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public URI getAMCTokenEndpointURI() {
         return URI.create(System.getenv().getOrDefault("AMC_TOKEN_URI", ""));
     }
+
+    public URI getAMCJourneyOutcomeURI() {
+        return URI.create(System.getenv().getOrDefault("AMC_JOURNEY_OUTCOME_URI", ""));
+    }
 }

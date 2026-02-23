@@ -13,11 +13,13 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -29,6 +31,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.io.IOException;
 import java.net.URI;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -221,6 +224,14 @@ public class AMCService {
                                 new AuthorizationCodeGrant(
                                         new AuthorizationCode(authCode),
                                         URI.create(configurationService.getAMCRedirectURI()))));
+    }
+
+    public HTTPResponse requestJourneyOutcome(UserInfoRequest userInfoRequest) {
+        try {
+            return userInfoRequest.toHTTPRequest().send();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private JWTAuthenticationClaimsSet buildClientAssertionJwt() {

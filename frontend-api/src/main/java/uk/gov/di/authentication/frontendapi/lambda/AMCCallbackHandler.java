@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
@@ -89,6 +90,14 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         AMCFailureAntiCorruption::toApiGatewayProxyErrorResponse,
                         tokenResponse -> {
                             LOG.info("AMC token response received");
+                            var userInfoRequest =
+                                    new UserInfoRequest(
+                                            configurationService.getAMCJourneyOutcomeURI(),
+                                            tokenResponse
+                                                    .toSuccessResponse()
+                                                    .getTokens()
+                                                    .getBearerAccessToken());
+                            amcService.requestJourneyOutcome(userInfoRequest);
                             return generateApiGatewayProxyResponse(200, "very cool");
                         });
     }

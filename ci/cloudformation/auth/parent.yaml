@@ -226,6 +226,7 @@ Mappings:
       amcAuthorizeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev1.dev.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.authdev1.dev.account.gov.uk/token
+      amcJourneyOutcomeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
       EvcsApiVpcEndpointId: ""
     authdev2:
@@ -268,6 +269,7 @@ Mappings:
       amcAuthorizeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev2.dev.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.authdev2.dev.account.gov.uk/token
+      amcJourneyOutcomeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
       EvcsApiVpcEndpointId: ""
     authdev3:
@@ -314,6 +316,7 @@ Mappings:
       amcAuthorizeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/authorize
       amcRedirectUri: https://signin.authdev3.dev.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.authdev3.dev.account.gov.uk/token
+      amcJourneyOutcomeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
       EvcsApiVpcEndpointId: ""
     dev:
@@ -365,6 +368,7 @@ Mappings:
       amcPrivateAudience: https://api.manage.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.dev.account.gov.uk/authorize
       amcTokenUri: https://amcstub.signin.dev.account.gov.uk/token
+      amcJourneyOutcomeUri: https://amcstub.signin.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
       amcRedirectUri: https://signin.dev.account.gov.uk/amc-callback
     build:
@@ -422,6 +426,7 @@ Mappings:
       amcAuthorizeUri: https://amcstub.signin.build.account.gov.uk/authorize
       amcRedirectUri: https://signin.build.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.build.account.gov.uk/token
+      amcJourneyOutcomeUri: https://amcstub.signin.build.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
