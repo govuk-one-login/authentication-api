@@ -10,11 +10,12 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticatorExtension;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
+import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId;
+import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.buildPasskeyForUser;
 
 class DynamoPasskeyServiceIntegrationTest {
 
@@ -31,9 +32,8 @@ class DynamoPasskeyServiceIntegrationTest {
         @Test
         void shouldSavePasskey() {
             // Given
-            // When
-            var resultFromSave =
-                    savePasskeyForUser(
+            var passkeyToSave =
+                    buildPasskeyForUser(
                             CommonTestVariables.PUBLIC_SUBJECT_ID,
                             CommonTestVariables.CREDENTIAL,
                             CommonTestVariables.PRIMARY_PASSKEY_ID,
@@ -46,8 +46,11 @@ class DynamoPasskeyServiceIntegrationTest {
 
             var expectedSortKey = "PASSKEY#" + CommonTestVariables.PRIMARY_PASSKEY_ID;
 
+            // When
+            var passkeySavedResult = dynamoPasskeyService.savePasskeyIfUnique(passkeyToSave);
+
             // Then
-            assertThat(resultFromSave, equalTo(true));
+            assertThat(passkeySavedResult, equalTo(true));
 
             var savedPasskeys =
                     dynamoPasskeyService.getPasskeysForUser(CommonTestVariables.PUBLIC_SUBJECT_ID);
@@ -79,13 +82,14 @@ class DynamoPasskeyServiceIntegrationTest {
         @Test
         void shouldNotSavePasskeyIfAlreadyExists() {
             // Given
-            // When
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID, CommonTestVariables.PRIMARY_PASSKEY_ID);
-            var result =
-                    saveGenericPasskeyForUser(
+            var duplicatePasskey =
+                    buildGenericPasskeyForUserWithSubjectId(
                             CommonTestVariables.PUBLIC_SUBJECT_ID,
                             CommonTestVariables.PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(duplicatePasskey);
+
+            // When
+            var result = dynamoPasskeyService.savePasskeyIfUnique(duplicatePasskey);
 
             // Then
             assertThat(result, equalTo(false));
@@ -98,21 +102,25 @@ class DynamoPasskeyServiceIntegrationTest {
         @Test
         void shouldGetPasskeysForUser() {
             // Given
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID, CommonTestVariables.PRIMARY_PASSKEY_ID);
-            savePasskeyForUser(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID,
-                    CommonTestVariables.CREDENTIAL,
-                    CommonTestVariables.SECONDARY_PASSKEY_ID,
-                    CommonTestVariables.PASSKEY_AAGUID,
-                    false,
-                    0,
-                    CommonTestVariables.PASSKEY_TRANSPORTS,
-                    true,
-                    false);
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,
-                    CommonTestVariables.ANOTHER_USER_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.PRIMARY_PASSKEY_ID));
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildPasskeyForUser(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.CREDENTIAL,
+                            CommonTestVariables.SECONDARY_PASSKEY_ID,
+                            CommonTestVariables.PASSKEY_AAGUID,
+                            false,
+                            0,
+                            CommonTestVariables.PASSKEY_TRANSPORTS,
+                            true,
+                            false));
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.ANOTHER_USER_PASSKEY_ID));
 
             // When
             var result =
@@ -136,11 +144,14 @@ class DynamoPasskeyServiceIntegrationTest {
         @Test
         void shouldGetPasskeyForUserWithPasskeyId() {
             // Given
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID, CommonTestVariables.PRIMARY_PASSKEY_ID);
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,
-                    CommonTestVariables.ANOTHER_USER_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.PRIMARY_PASSKEY_ID));
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.ANOTHER_USER_PASSKEY_ID));
 
             // When
             var result =
@@ -165,8 +176,10 @@ class DynamoPasskeyServiceIntegrationTest {
         @Test
         void shouldUpdatePasskeyForUser() {
             // Given
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID, CommonTestVariables.PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.PRIMARY_PASSKEY_ID));
 
             String lastUsedTime = LocalDateTime.now().plusHours(1).toString();
 
@@ -189,12 +202,15 @@ class DynamoPasskeyServiceIntegrationTest {
         @Test
         void shouldUpdateCorrectPasskeyWhenMultiplePasskeysHaveTheSameId() {
             // Given
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID, CommonTestVariables.PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.PRIMARY_PASSKEY_ID));
             // Save passkey with same credentialId for another user
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,
-                    CommonTestVariables.PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.PRIMARY_PASSKEY_ID));
 
             var lastUsedTime = LocalDateTime.now().plusHours(1).toString();
 
@@ -225,11 +241,14 @@ class DynamoPasskeyServiceIntegrationTest {
         @Test
         void shouldDeleteCorrectPasskeyForUser() {
             // Given
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID, CommonTestVariables.PRIMARY_PASSKEY_ID);
-            saveGenericPasskeyForUser(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID,
-                    CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.PRIMARY_PASSKEY_ID));
+            dynamoPasskeyService.savePasskeyIfUnique(
+                    buildGenericPasskeyForUserWithSubjectId(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID,
+                            CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID));
 
             // When
             dynamoPasskeyService.deletePasskey(
@@ -243,40 +262,5 @@ class DynamoPasskeyServiceIntegrationTest {
                     usersPasskeys.get(0).getCredentialId(),
                     equalTo(CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID));
         }
-    }
-
-    private boolean saveGenericPasskeyForUser(String publicSubjectId, String passkeyId) {
-        return savePasskeyForUser(
-                publicSubjectId,
-                CommonTestVariables.CREDENTIAL,
-                passkeyId,
-                CommonTestVariables.PASSKEY_AAGUID,
-                true,
-                1,
-                CommonTestVariables.PASSKEY_TRANSPORTS,
-                true,
-                false);
-    }
-
-    private boolean savePasskeyForUser(
-            String publicSubjectId,
-            String credential,
-            String passkeyId,
-            String aaguid,
-            boolean isAttested,
-            int signCount,
-            List<String> transports,
-            boolean backupEligible,
-            boolean backedUp) {
-        return dynamoPasskeyService.savePasskeyIfUnique(
-                publicSubjectId,
-                credential,
-                passkeyId,
-                aaguid,
-                isAttested,
-                signCount,
-                transports,
-                backupEligible,
-                backedUp);
     }
 }
