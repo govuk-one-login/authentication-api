@@ -61,6 +61,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -537,8 +538,9 @@ class CheckUserExistsHandlerTest {
         }
 
         @Test
-        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseWhenMfaNotRequired()
-                throws Json.JsonException {
+        void
+                shouldReturnNeedsForcedMFAResetAfterMFACheckAsTrueForInternationalNumberRegardlessOfCredentialStrength()
+                        throws Json.JsonException {
             var lowTrustAuthSession =
                     new AuthSessionItem()
                             .withSessionId(SESSION_ID)
@@ -554,13 +556,23 @@ class CheckUserExistsHandlerTest {
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            var internationalSms =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            "sms-id");
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(Result.success(List.of(internationalSms)));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(200));
             var checkUserExistsResponse =
                     objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+            assertTrue(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
         }
 
         @Test
