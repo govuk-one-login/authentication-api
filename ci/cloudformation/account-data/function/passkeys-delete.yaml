@@ -15,11 +15,20 @@ Resources:
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
       LoggingConfig:
         LogGroup: !Ref PasskeysDeleteFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref DynamoAuthenticatorTableReadWriteDeletePolicy
+        - !Ref DynamoAuthenticatorTableReadAccessPolicy
+        - !Ref DynamoAuthenticatorTableDeleteAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
