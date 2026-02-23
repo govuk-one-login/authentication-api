@@ -60,6 +60,22 @@ public class TokenValidationService {
 
             if (JWSAlgorithm.RS256 == jwt.getHeader().getAlgorithm()
                     && configuration.isRsaSigningAvailable()) {
+                if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
+                    var nextKeyV2 = jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2();
+                    var nextKeyV1 = jwksService.getNextPublicTokenRsaJwkWithOpaqueId();
+                    var previousKey = jwksService.getPublicTokenRsaJwkWithOpaqueId();
+
+                    if (Objects.equals(jwt.getHeader().getKeyID(), previousKey.getKeyID())) {
+                        return jwt.verify(new RSASSAVerifier(previousKey.toRSAKey()));
+                    }
+
+                    if (Objects.equals(jwt.getHeader().getKeyID(), nextKeyV1.getKeyID())) {
+                        return jwt.verify(new RSASSAVerifier(nextKeyV1.toRSAKey()));
+                    }
+
+                    return jwt.verify(new RSASSAVerifier(nextKeyV2.toRSAKey()));
+                }
+
                 if (configuration.isPublishNextExternalTokenSigningKeysEnabled()) {
                     var oldPublicKey = jwksService.getPublicTokenRsaJwkWithOpaqueId();
                     if (Objects.equals(jwt.getHeader().getKeyID(), oldPublicKey.getKeyID())) {
@@ -69,11 +85,27 @@ public class TokenValidationService {
                             new RSASSAVerifier(
                                     jwksService.getNextPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
                 }
+
                 return jwt.verify(
                         new RSASSAVerifier(
                                 jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
             } else {
-                if (configuration.isPublishNextExternalTokenSigningKeysEnabled()) {
+                if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
+                    var nextKeyV2 = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
+                    var nextKeyV1 = jwksService.getNextPublicTokenJwkWithOpaqueId();
+                    var previousKey = jwksService.getPublicTokenJwkWithOpaqueId();
+
+                    if (Objects.equals(jwt.getHeader().getKeyID(), previousKey.getKeyID())) {
+                        return jwt.verify(new ECDSAVerifier(previousKey.toECKey()));
+                    }
+
+                    if (Objects.equals(jwt.getHeader().getKeyID(), nextKeyV1.getKeyID())) {
+                        return jwt.verify(new ECDSAVerifier(nextKeyV1.toECKey()));
+                    }
+
+                    return jwt.verify(new ECDSAVerifier(nextKeyV2.toECKey()));
+
+                } else if (configuration.isPublishNextExternalTokenSigningKeysEnabled()) {
                     var oldPublicKey = jwksService.getPublicTokenJwkWithOpaqueId();
                     if (Objects.equals(jwt.getHeader().getKeyID(), oldPublicKey.getKeyID())) {
                         return jwt.verify(new ECDSAVerifier(oldPublicKey.toECKey()));
