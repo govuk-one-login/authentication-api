@@ -58,9 +58,6 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: go-cache-rain-v1.20.1-${{ runner.os }}
-          restore-keys: |
-            go-cache-rain-v1.20.1-
-            go-cache-rain-
 
       # Go modules expect semantic version tags like v1.20.1 not commit hashes.
       - name: 🏗️ Install rain
