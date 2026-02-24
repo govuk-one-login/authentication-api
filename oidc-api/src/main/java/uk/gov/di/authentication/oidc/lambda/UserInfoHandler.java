@@ -173,7 +173,7 @@ public class UserInfoHandler
                         Map.of(
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
                                 CLIENT.getValue(), accessTokenInfo.clientID()));
-        metrics.incrementCounter(USER_INFO_RETURNED.getValue(), dimensions);
+        metrics.increment(USER_INFO_RETURNED.getValue(), dimensions);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }

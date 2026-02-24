@@ -276,7 +276,7 @@ public class TokenHandler
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
                                 CLIENT.getValue(), clientRegistry.getClientID(),
                                 CLIENT_NAME.getValue(), clientRegistry.getClientName()));
-        metrics.incrementCounter(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
+        metrics.increment(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
 
         LOG.info("Successfully generated tokens");
         return ApiResponse.ok(tokenResponse);

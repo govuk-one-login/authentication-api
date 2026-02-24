@@ -121,7 +121,7 @@ class IdentityProgressServiceTest {
 
     private void verifyCloudwatchMetricIncrements(IdentityProgressStatus status) {
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",

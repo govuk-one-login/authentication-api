@@ -276,15 +276,15 @@ public class IPVCallbackHelper {
         var dimensions =
                 authCodeResponseService.getDimensions(orchSession, clientName, clientId, false);
 
-        metrics.incrementCounter("SignIn", dimensions);
+        metrics.increment("SignIn", dimensions);
 
         metrics.incrementSignInByClient(orchSession.getIsNewAccount(), clientId, clientName);
-        metrics.incrementCounter(
+        metrics.increment(
                 "orchIdentityJourneyCompleted",
                 Map.of(
                         "clientName", clientName,
                         "clientId", clientId));
-        metrics.incrementCounter("orchJourneyCompleted", Map.of("journeyType", "identity"));
+        metrics.increment("orchJourneyCompleted", Map.of("journeyType", "identity"));
     }
 
     public void queueSPOTRequest(

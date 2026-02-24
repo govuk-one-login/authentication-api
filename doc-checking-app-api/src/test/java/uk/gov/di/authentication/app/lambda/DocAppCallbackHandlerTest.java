@@ -220,7 +220,7 @@ class DocAppCallbackHandlerTest {
                 .addDocAppCredential(
                         PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "DocAppCallback",
                         Map.of("Environment", ENVIRONMENT, "Successful", Boolean.toString(true)));
 
@@ -328,7 +328,7 @@ class DocAppCallbackHandlerTest {
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         verifyNoInteractions(dynamoDocAppCriService);
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",
@@ -377,7 +377,7 @@ class DocAppCallbackHandlerTest {
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",
@@ -433,7 +433,7 @@ class DocAppCallbackHandlerTest {
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",
@@ -489,7 +489,7 @@ class DocAppCallbackHandlerTest {
                                 .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                 .withUserId(PAIRWISE_SUBJECT_ID.getValue()));
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",
@@ -585,7 +585,7 @@ class DocAppCallbackHandlerTest {
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",

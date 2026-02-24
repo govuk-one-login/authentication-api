@@ -346,18 +346,18 @@ public class AuthCodeHandler
             authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
         }
 
-        metrics.incrementCounter("SignIn", dimensions);
+        metrics.increment("SignIn", dimensions);
 
         metrics.incrementSignInByClient(
                 orchSession.getIsNewAccount(),
                 clientID.getValue(),
                 orchClientSession.getClientName());
-        metrics.incrementCounter(
+        metrics.increment(
                 "orchIdentityJourneyCompleted",
                 Map.of(
                         "clientName", client.getClientName(),
                         "clientId", clientID.getValue()));
-        metrics.incrementCounter("orchJourneyCompleted", Map.of("journeyType", "identity"));
+        metrics.increment("orchJourneyCompleted", Map.of("journeyType", "identity"));
     }
 
     private static Optional<UserInfo> getAuthUserInfo(

@@ -39,7 +39,7 @@ public class RateLimitService {
 
     private void emitRateLimitExceededMetric(RateLimitDecision rateLimitDecision, String clientId) {
         try {
-            metrics.incrementCounter(
+            metrics.increment(
                     "RpRateLimitExceeded",
                     Map.of(
                             "clientId",

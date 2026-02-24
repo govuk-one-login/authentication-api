@@ -866,7 +866,7 @@ public class TokenHandlerTest {
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         SUCCESSFUL_TOKEN_ISSUED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
@@ -1048,7 +1048,7 @@ public class TokenHandlerTest {
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasBody("Internal server error"));
-        verify(metrics, never()).incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
+        verify(metrics, never()).increment(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
         verify(auditService, never())
                 .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
         verifyAuthCodeExchangeDataRetrieved(authCode);
@@ -1496,7 +1496,7 @@ public class TokenHandlerTest {
 
     private void verifySuccessfulTokenMetricIncremented() {
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         SUCCESSFUL_TOKEN_ISSUED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
@@ -1516,7 +1516,7 @@ public class TokenHandlerTest {
     }
 
     private void verifyNoMetricsOrAuditEvents() {
-        verify(metrics, never()).incrementCounter(any(), anyMap());
+        verify(metrics, never()).increment(any(), anyMap());
         verify(auditService, never())
                 .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
     }

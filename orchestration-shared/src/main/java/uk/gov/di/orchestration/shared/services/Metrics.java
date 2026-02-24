@@ -49,14 +49,14 @@ public class Metrics {
         }
     }
 
-    public void incrementCounter(String name, Map<String, String> dimensions) {
+    public void increment(String name, Map<String, String> dimensions) {
         emit(name, 1, dimensions);
     }
 
     public void incrementSignInByClient(
             OrchSessionItem.AccountState accountState, String clientId, String clientName) {
         if (OrchSessionItem.AccountState.NEW.equals(accountState)) {
-            incrementCounter(
+            increment(
                     SIGN_IN_NEW_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(
                             ENVIRONMENT.getValue(),
@@ -67,7 +67,7 @@ public class Metrics {
                             clientName));
         }
         if (OrchSessionItem.AccountState.EXISTING.equals(accountState)) {
-            incrementCounter(
+            increment(
                     SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(
                             ENVIRONMENT.getValue(),
@@ -94,7 +94,7 @@ public class Metrics {
                 accountInterventionStr = "blocked";
             }
         }
-        incrementCounter(
+        increment(
                 LOGOUT_SUCCESS.getValue(),
                 Map.of(
                         ENVIRONMENT.getValue(),

@@ -188,7 +188,7 @@ class ProcessingIdentityHandlerTest {
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.COMPLETED))));
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -269,7 +269,7 @@ class ProcessingIdentityHandlerTest {
                                 new ProcessingIdentityInterventionResponse(
                                         ProcessingIdentityStatus.INTERVENTION, redirectUrl))));
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -300,7 +300,7 @@ class ProcessingIdentityHandlerTest {
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.PROCESSING))));
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -328,7 +328,7 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(ProcessingIdentityStatus.ERROR))));
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -356,7 +356,7 @@ class ProcessingIdentityHandlerTest {
                                         ProcessingIdentityStatus.NO_ENTRY))));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(0));
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",

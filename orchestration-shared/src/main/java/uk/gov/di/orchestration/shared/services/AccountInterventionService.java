@@ -138,7 +138,7 @@ public class AccountInterventionService {
     }
 
     private AccountIntervention handleException(Exception e) {
-        metrics.incrementCounter(
+        metrics.increment(
                 configurationService.getAccountInterventionsErrorMetricName(),
                 Map.of(
                         "Environment",
@@ -245,7 +245,7 @@ public class AccountInterventionService {
     }
 
     private void incrementCloudwatchMetrics(AccountIntervention intervention) {
-        metrics.incrementCounter(
+        metrics.increment(
                 "AISResult",
                 Map.of(
                         "blocked",

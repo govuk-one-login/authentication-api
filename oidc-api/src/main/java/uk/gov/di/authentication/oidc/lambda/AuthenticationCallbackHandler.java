@@ -450,7 +450,7 @@ public class AuthenticationCallbackHandler
                         pair("new_account", newAccount),
                         pair("credential_trust_level", credentialTrustLevel.toString()));
 
-                metrics.incrementCounter("AuthenticationCallback", dimensions);
+                metrics.increment("AuthenticationCallback", dimensions);
 
                 var auditContext =
                         new AuditContext(
@@ -542,13 +542,13 @@ public class AuthenticationCallbackHandler
 
                 orchSessionService.updateSession(orchSession);
 
-                metrics.incrementCounter("SignIn", dimensions);
+                metrics.increment("SignIn", dimensions);
                 metrics.incrementSignInByClient(
                         orchAccountState, clientId, orchClientSession.getClientName());
-                metrics.incrementCounter(
+                metrics.increment(
                         "orchAuthJourneyCompleted",
                         Map.of("clientName", client.getClientName(), "clientId", clientId));
-                metrics.incrementCounter("orchJourneyCompleted", Map.of("journeyType", "auth"));
+                metrics.increment("orchJourneyCompleted", Map.of("journeyType", "auth"));
                 LOG.info("Successfully processed request");
 
                 var metadataPairs = new ArrayList<AuditService.MetadataPair>();

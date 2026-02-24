@@ -230,7 +230,7 @@ public class InitiateIPVAuthorisationServiceTest {
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("clientLandingPageUrl", LANDING_PAGE_URL),
                         pair("rpPairwiseId", RP_PAIRWISE_ID));
-        verify(metrics).incrementCounter("IPVHandoff", Map.of("Environment", ENVIRONMENT));
+        verify(metrics).increment("IPVHandoff", Map.of("Environment", ENVIRONMENT));
     }
 
     @Test

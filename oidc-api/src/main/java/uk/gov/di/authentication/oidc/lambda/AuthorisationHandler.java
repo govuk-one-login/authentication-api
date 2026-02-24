@@ -413,7 +413,7 @@ public class AuthorisationHandler
                         authRequest.toParameters(),
                         client.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
-        metrics.incrementCounter(
+        metrics.increment(
                 "orchAuthorizeRequestCount",
                 Map.of(
                         "clientName",
@@ -422,7 +422,7 @@ public class AuthorisationHandler
                         Boolean.toString(isDocAppJourney),
                         "isIdentityJourney",
                         Boolean.toString(isIdentityJourney)));
-        metrics.incrementCounter(
+        metrics.increment(
                 "orchAuthorizeRequestCountForAlarm",
                 Map.of(
                         "isDocAppJourney",
@@ -628,7 +628,7 @@ public class AuthorisationHandler
                 "AuthorisationHandler successfully processed doc app request, redirect URI {}",
                 authorisationRequestUri);
 
-        metrics.incrementCounter(
+        metrics.increment(
                 "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
 
         List<String> cookies =

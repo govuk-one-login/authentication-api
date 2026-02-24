@@ -118,7 +118,7 @@ class UserInfoHandlerTest {
                                 .withGovukSigninJourneyId(JOURNEY_ID));
 
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
@@ -168,7 +168,7 @@ class UserInfoHandlerTest {
         assertEquals(INVALID_TOKEN_RESPONSE, result.getMultiValueHeaders());
 
         verify(metrics, never())
-                .incrementCounter(
+                .increment(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
@@ -188,7 +188,7 @@ class UserInfoHandlerTest {
         assertEquals(missingTokenExpectedResponse, result.getMultiValueHeaders());
 
         verify(metrics, never())
-                .incrementCounter(
+                .increment(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
