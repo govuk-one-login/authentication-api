@@ -110,9 +110,9 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                             LOG.warn("Error requesting journey outcome: {}", error.getValue());
                             return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(error);
                         },
-                        success -> {
+                        response -> {
                             LOG.info("Journey outcome received successfully");
-                            return generateApiGatewayProxyResponse(200, "very cool");
+                            return generateApiGatewayProxyResponse(200, response.getContent());
                         });
     }
 

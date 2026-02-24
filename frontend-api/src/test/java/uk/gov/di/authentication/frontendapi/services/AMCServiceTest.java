@@ -603,7 +603,7 @@ class AMCServiceTest {
 
             var result = amcService.requestJourneyOutcome(userInfoRequest);
 
-            assertEquals(Result.success(null), result);
+            assertEquals(Result.success(response), result);
         }
 
         @Test

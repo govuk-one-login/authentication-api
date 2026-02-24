@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
@@ -226,14 +227,14 @@ public class AMCService {
                                         URI.create(configurationService.getAMCRedirectURI()))));
     }
 
-    public Result<JourneyOutcomeError, Void> requestJourneyOutcome(
+    public Result<JourneyOutcomeError, HTTPResponse> requestJourneyOutcome(
             UserInfoRequest userInfoRequest) {
         try {
             var response = userInfoRequest.toHTTPRequest().send();
             if (!response.indicatesSuccess()) {
                 return Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME);
             }
-            return Result.success(null);
+            return Result.success(response);
         } catch (IOException e) {
             return Result.failure(JourneyOutcomeError.IO_EXCEPTION);
         }

@@ -58,6 +58,24 @@ class AMCCallbackHandlerTest {
                     }
                     """
                     .formatted(ACCESS_TOKEN);
+    public static final String JOURNEY_OUTCOME_RESULT =
+            """
+                            {
+                              "outcome_id": "9cd4c45f8f33cced99cfaa48394e1acf5e90f6e2616bba40",
+                              "sub": "urn:fdc:gov.uk:2022:JG0RJI1pYbnanbvPs-j4j5-a-PFcmhry9Qu9NCEp5d4",
+                              "email": "user@example.com",
+                              "scope": "account-delete",
+                              "success": true,
+                              "journeys": [
+                                {
+                                  "journey": "account-delete",
+                                  "timestamp": 1760718467000,
+                                  "success": true,
+                                  "details": {}
+                                }
+                              ]
+                            }
+                    """;
 
     @BeforeAll
     static void setUp() {
@@ -83,6 +101,9 @@ class AMCCallbackHandlerTest {
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
 
+        var successfulJourneyOutcomeHttpResponse = new HTTPResponse(200);
+        successfulJourneyOutcomeHttpResponse.setContent(JOURNEY_OUTCOME_RESULT);
+
         when(AMC_SERVICE.requestJourneyOutcome(
                         argThat(
                                 userInfoRequest ->
@@ -90,7 +111,7 @@ class AMCCallbackHandlerTest {
                                                 .getAccessToken()
                                                 .toString()
                                                 .equals(ACCESS_TOKEN))))
-                .thenReturn(Result.success(null));
+                .thenReturn(Result.success(successfulJourneyOutcomeHttpResponse));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
 
@@ -102,7 +123,7 @@ class AMCCallbackHandlerTest {
                         USER_CONTEXT);
 
         assertEquals(200, result.getStatusCode());
-        assertEquals("very cool", result.getBody());
+        assertEquals(JOURNEY_OUTCOME_RESULT, result.getBody());
     }
 
     @Test

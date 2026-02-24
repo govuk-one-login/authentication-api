@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -151,5 +152,6 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 "Authorization", containing("Bearer %s".formatted(ACCESS_TOKEN))));
 
         assertThat(response, hasStatus(200));
+        assertThat(response, hasBody(JOURNEY_OUTCOME_RESULT));
     }
 }
