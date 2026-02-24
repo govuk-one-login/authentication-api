@@ -372,7 +372,7 @@ class AuthorisationHandlerTest {
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
             verify(metrics)
-                    .putEmbeddedValue(
+                    .emit(
                             "AuthRedirectQueryParamSize",
                             1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
@@ -397,7 +397,7 @@ class AuthorisationHandlerTest {
                     splitQuery(locationHeader).get("response_type"),
                     equalTo(ResponseType.CODE.toString()));
             verify(metrics)
-                    .putEmbeddedValue(
+                    .emit(
                             "AuthRedirectQueryParamSize",
                             1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
@@ -488,7 +488,7 @@ class AuthorisationHandlerTest {
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
             verify(metrics)
-                    .putEmbeddedValue(
+                    .emit(
                             "AuthRedirectQueryParamSize",
                             1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
@@ -560,7 +560,7 @@ class AuthorisationHandlerTest {
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
             verify(metrics)
-                    .putEmbeddedValue(
+                    .emit(
                             "AuthRedirectQueryParamSize",
                             1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
@@ -605,7 +605,7 @@ class AuthorisationHandlerTest {
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
             verify(metrics)
-                    .putEmbeddedValue(
+                    .emit(
                             "AuthRedirectQueryParamSize",
                             1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
@@ -831,7 +831,7 @@ class AuthorisationHandlerTest {
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
             verify(metrics)
-                    .putEmbeddedValue(
+                    .emit(
                             "AuthRedirectQueryParamSize",
                             1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
@@ -918,7 +918,7 @@ class AuthorisationHandlerTest {
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
             verify(metrics)
-                    .putEmbeddedValue(
+                    .emit(
                             "AuthRedirectQueryParamSize",
                             1012,
                             Map.of("clientId", CLIENT_ID.getValue()));

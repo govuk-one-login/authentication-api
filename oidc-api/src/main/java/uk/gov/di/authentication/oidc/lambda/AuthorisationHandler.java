@@ -397,7 +397,7 @@ public class AuthorisationHandler
                     "Scope parameter in query parameters contains commas. Client ID: {}", clientId);
         }
         try {
-            metrics.putEmbeddedValue(
+            metrics.emit(
                     "rpStateLength",
                     authRequest.getState().getValue().length(),
                     Map.of("clientId", clientId, "clientName", client.getClientName()));
@@ -873,7 +873,7 @@ public class AuthorisationHandler
                     user);
         }
         try {
-            metrics.putEmbeddedValue(
+            metrics.emit(
                     "AuthRedirectQueryParamSize",
                     authorizationRequest.toQueryString().length(),
                     Map.of("clientId", client.getClientID()));

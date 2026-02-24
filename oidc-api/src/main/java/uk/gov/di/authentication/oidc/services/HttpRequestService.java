@@ -59,8 +59,7 @@ public class HttpRequestService {
 
             LOG.info(new ObjectMessage(logMessage));
 
-            METRICS.putEmbeddedValue(
-                    "BackChannelLogoutRequest", 1, Map.of("StatusCode", statusCode));
+            METRICS.emit("BackChannelLogoutRequest", 1, Map.of("StatusCode", statusCode));
 
             if (!statusCode.equals("200")) {
                 throw new PostRequestFailureException(

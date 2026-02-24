@@ -79,7 +79,7 @@ class SPOTResponseHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED, CLIENT_ID.getValue(), USER);
-        verify(metrics).putEmbeddedValue(eq("SpotLatencyMs"), any(Double.class), anyMap());
+        verify(metrics).emit(eq("SpotLatencyMs"), any(Double.class), anyMap());
     }
 
     @Test
@@ -88,7 +88,7 @@ class SPOTResponseHandlerTest {
                 .thenReturn(new OrchIdentityCredentials().withSpotQueuedAtMs(123456789L));
         doThrow(RuntimeException.class)
                 .when(metrics)
-                .putEmbeddedValue(anyString(), any(Double.class), anyMap());
+                .emit(anyString(), any(Double.class), anyMap());
         var json =
                 format(
                         "{\"sub\":\"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"status\":\"ACCEPTED\","

@@ -241,7 +241,7 @@ public class AccountInterventionService {
     }
 
     private void instrumentResponse(double duration, String status) {
-        metrics.putEmbeddedValue("AISResponseTimeMs", duration, Map.of("statusCode", status));
+        metrics.emit("AISResponseTimeMs", duration, Map.of("statusCode", status));
     }
 
     private void incrementCloudwatchMetrics(AccountIntervention intervention) {
