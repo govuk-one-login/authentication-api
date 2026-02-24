@@ -51,6 +51,22 @@ jobs:
           python-version: "3.13"
           cache: "pip"
 
+      - name: 📦 Cache Go modules
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-cache-rain-v1.20.1-${{ runner.os }}
+
+      # Go modules expect semantic version tags like v1.20.1 not commit hashes.
+      - name: 🏗️ Install rain
+        run: |
+          go install github.com/aws-cloudformation/rain/cmd/rain@v1.20.1
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+          "$HOME/go/bin/rain" --version
+        shell: bash
+
       - name: 🏗️ Set Up Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 

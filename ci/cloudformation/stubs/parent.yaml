@@ -13,7 +13,7 @@ Metadata:
         - W8001
 
 Description: >
-  SAM template for deploying Auth Stub's Ticf and Account-Interventions Api's
+  SAM template for deploying Auth Ticf Stub  and Account-Interventions stub Api
 
 Parameters:
   VpcStackName:
