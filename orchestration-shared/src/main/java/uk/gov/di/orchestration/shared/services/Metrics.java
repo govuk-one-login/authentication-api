@@ -6,7 +6,7 @@ import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
-import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem.AccountState;
 
 import java.util.Map;
 import java.util.Optional;
@@ -54,21 +54,18 @@ public class Metrics {
     }
 
     public void incrementSignInByClient(
-            OrchSessionItem.AccountState accountState, String clientId, String clientName) {
-        if (OrchSessionItem.AccountState.NEW.equals(accountState)) {
+            AccountState accountState, String clientId, String clientName) {
+
+        var metric =
+                switch (accountState) {
+                    case NEW -> SIGN_IN_NEW_ACCOUNT_BY_CLIENT;
+                    case EXISTING -> SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT;
+                    default -> null;
+                };
+
+        if (metric != null) {
             increment(
-                    SIGN_IN_NEW_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
-        }
-        if (OrchSessionItem.AccountState.EXISTING.equals(accountState)) {
-            increment(
-                    SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
+                    metric.getValue(),
                     Map.of(
                             ENVIRONMENT.getValue(),
                             configurationService.getEnvironment(),
