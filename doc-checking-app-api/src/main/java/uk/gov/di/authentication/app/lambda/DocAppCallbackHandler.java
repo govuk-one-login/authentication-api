@@ -269,8 +269,8 @@ public class DocAppCallbackHandler
                                 Map.of(
                                         "Environment", configurationService.getEnvironment(),
                                         "Successful", Boolean.toString(true)));
-                metrics.incrementCounter("DocAppCallback", dimensions);
-                metrics.incrementCounter("orchJourneyCompleted", Map.of("journeyType", "docapp"));
+                metrics.increment("DocAppCallback", dimensions);
+                metrics.increment("orchJourneyCompleted", Map.of("journeyType", "docapp"));
 
                 var authCode =
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
@@ -378,6 +378,6 @@ public class DocAppCallbackHandler
                                 "Successful", Boolean.toString(false),
                                 "Error", error));
 
-        metrics.incrementCounter("DocAppCallback", dimensions);
+        metrics.increment("DocAppCallback", dimensions);
     }
 }

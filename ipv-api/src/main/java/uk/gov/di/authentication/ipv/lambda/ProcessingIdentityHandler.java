@@ -114,7 +114,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             if (processingStatus == ProcessingIdentityStatus.NO_ENTRY) {
                 userContext.getOrchSession().resetProcessingIdentityAttempts();
             }
-            metrics.incrementCounter(
+            metrics.increment(
                     "ProcessingIdentity",
                     Map.of(
                             "Environment",

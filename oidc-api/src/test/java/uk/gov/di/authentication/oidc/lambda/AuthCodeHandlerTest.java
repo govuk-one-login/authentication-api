@@ -329,7 +329,7 @@ class AuthCodeHandlerTest {
                         "RequestedLevelOfConfidence",
                         "P0");
 
-        verify(metrics).incrementCounter("SignIn", dimensions);
+        verify(metrics).increment("SignIn", dimensions);
 
         assertAuthCodeSavedForAuthJourney();
     }
@@ -426,7 +426,7 @@ class AuthCodeHandlerTest {
                         "ClientName",
                         CLIENT_NAME);
 
-        verify(metrics).incrementCounter("SignIn", expectedDimensions);
+        verify(metrics).increment("SignIn", expectedDimensions);
 
         assertAuthCodeSavedForDocAppJourney();
     }

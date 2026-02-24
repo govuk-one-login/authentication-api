@@ -1688,7 +1688,7 @@ class AuthorisationHandlerTest {
                                     + "&client_id="
                                     + CLIENT_ID.getValue()));
 
-            verify(metrics).incrementCounter(eq("DocAppHandoff"), any());
+            verify(metrics).increment(eq("DocAppHandoff"), any());
 
             verify(auditService)
                     .submitAuditEvent(

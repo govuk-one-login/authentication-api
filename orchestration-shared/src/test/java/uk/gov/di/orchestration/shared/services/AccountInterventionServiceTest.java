@@ -141,7 +141,7 @@ class AccountInterventionServiceTest {
         assertFalse(intervention.getResetPassword());
 
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "AISResult",
                         Map.of(
                                 "blocked", "false",
@@ -173,7 +173,7 @@ class AccountInterventionServiceTest {
         assertFalse(intervention.getResetPassword());
 
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "AISResult",
                         Map.of(
                                 "blocked", "false",
@@ -236,7 +236,7 @@ class AccountInterventionServiceTest {
                 () -> accountInterventionService.getAccountIntervention(internalPairwiseSubjectId));
 
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "AISException", Map.of("Environment", ENVIRONMENT, "AbortOnError", "true"));
     }
 

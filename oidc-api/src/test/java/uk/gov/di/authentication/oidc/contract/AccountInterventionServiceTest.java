@@ -367,7 +367,7 @@ class AccountInterventionServiceTest {
         assertThat(intervention.getStatus(), equalTo(accountInterventionStatus));
 
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "AISResult",
                         Map.of(
                                 "blocked",

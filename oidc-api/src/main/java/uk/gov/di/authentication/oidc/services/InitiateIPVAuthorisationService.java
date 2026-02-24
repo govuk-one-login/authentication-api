@@ -124,7 +124,7 @@ public class InitiateIPVAuthorisationService {
         LOG.info(
                 "AuthenticationCallbackHandler successfully processed IPV authorisation request, redirect URI {}",
                 ipvAuthorisationRequest.toURI().toString());
-        metrics.incrementCounter(
+        metrics.increment(
                 "IPVHandoff", Map.of("Environment", configurationService.getEnvironment()));
         return generateApiGatewayProxyResponse(
                 302,

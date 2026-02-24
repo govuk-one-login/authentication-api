@@ -326,8 +326,8 @@ class AuthenticationCallbackHandlerTest {
         assertThat(response.getHeaders().get("Cache-Control"), equalTo("no-store"));
         verifyUserInfoRequest();
 
-        verify(metrics).incrementCounter(eq("AuthenticationCallback"), any());
-        verify(metrics).incrementCounter(eq("SignIn"), any());
+        verify(metrics).increment(eq("AuthenticationCallback"), any());
+        verify(metrics).increment(eq("SignIn"), any());
         verify(metrics)
                 .incrementSignInByClient(
                         eq(OrchSessionItem.AccountState.NEW),

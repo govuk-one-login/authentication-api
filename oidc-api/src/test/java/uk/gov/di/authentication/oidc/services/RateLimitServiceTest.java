@@ -48,7 +48,7 @@ class RateLimitServiceTest {
         assertEquals(RateLimitDecision.RateLimitAction.RETURN_TO_RP, rateLimitDecision.getAction());
 
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "RpRateLimitExceeded",
                         Map.of(
                                 "clientId",
@@ -70,7 +70,7 @@ class RateLimitServiceTest {
 
         if (outcome.hasExceededRateLimit()) {
             verify(metrics)
-                    .incrementCounter(
+                    .increment(
                             "RpRateLimitExceeded",
                             Map.of(
                                     "clientId",

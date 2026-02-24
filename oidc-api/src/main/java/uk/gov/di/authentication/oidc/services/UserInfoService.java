@@ -193,7 +193,7 @@ public class UserInfoService {
     }
 
     private void incrementClaimIssuedCounter(String claimName, String clientID) {
-        metrics.incrementCounter(
+        metrics.increment(
                 "ClaimIssued",
                 Map.of(
                         "Environment",

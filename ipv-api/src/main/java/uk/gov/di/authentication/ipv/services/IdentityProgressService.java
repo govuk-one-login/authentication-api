@@ -70,7 +70,7 @@ public class IdentityProgressService {
             }
         }
         LOG.info("Client session ID {} identity progress status: {}", clientSessionId, status);
-        metrics.incrementCounter(
+        metrics.increment(
                 "ProcessingIdentity",
                 Map.of(
                         "Environment",

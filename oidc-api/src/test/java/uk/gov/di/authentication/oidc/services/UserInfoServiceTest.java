@@ -454,7 +454,7 @@ class UserInfoServiceTest {
 
     private void assertClaimMetricPublished(String v3) {
         verify(metrics)
-                .incrementCounter(
+                .increment(
                         "ClaimIssued",
                         Map.of("Environment", "test", "Client", CLIENT_ID, "Claim", v3));
     }
