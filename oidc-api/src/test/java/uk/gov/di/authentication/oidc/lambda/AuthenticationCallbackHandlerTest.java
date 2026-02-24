@@ -88,10 +88,10 @@ import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -158,8 +158,7 @@ class AuthenticationCallbackHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
@@ -292,7 +291,7 @@ class AuthenticationCallbackHandlerTest {
                         orchClientSessionService,
                         auditService,
                         userInfoStorageService,
-                        cloudwatchMetricsService,
+                        metrics,
                         orchAuthCodeService,
                         clientService,
                         initiateIPVAuthorisationService,
@@ -327,9 +326,9 @@ class AuthenticationCallbackHandlerTest {
         assertThat(response.getHeaders().get("Cache-Control"), equalTo("no-store"));
         verifyUserInfoRequest();
 
-        verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
-        verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
-        verify(cloudwatchMetricsService)
+        verify(metrics).incrementCounter(eq("AuthenticationCallback"), any());
+        verify(metrics).incrementCounter(eq("SignIn"), any());
+        verify(metrics)
                 .incrementSignInByClient(
                         eq(OrchSessionItem.AccountState.NEW),
                         eq(CLIENT_ID.getValue()),
@@ -405,8 +404,7 @@ class AuthenticationCallbackHandlerTest {
                 List.of(OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED),
                 auditService);
 
-        verifyNoInteractions(
-                tokenService, userInfoStorageService, cloudwatchMetricsService, logoutService);
+        verifyNoInteractions(tokenService, userInfoStorageService, metrics, logoutService);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -448,7 +446,7 @@ class AuthenticationCallbackHandlerTest {
                         CLIENT_ID.getValue(),
                         TxmaAuditUser.user().withGovukSigninJourneyId(CLIENT_SESSION_ID));
 
-        verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(tokenService, userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -474,8 +472,7 @@ class AuthenticationCallbackHandlerTest {
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
-        verifyNoInteractions(
-                tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(tokenService, auditService, userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -512,7 +509,7 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.toString()),
                         any());
 
-        verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(tokenService, userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -536,7 +533,7 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED),
                 auditService);
-        verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -564,7 +561,7 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
-        verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -1368,8 +1365,7 @@ class AuthenticationCallbackHandlerTest {
             assertThat(response, hasStatus(302));
             assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
-            verifyNoInteractions(
-                    tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
+            verifyNoInteractions(tokenService, auditService, userInfoStorageService, metrics);
 
             assertNoAuthorisationCodeGeneratedAndSaved();
         }

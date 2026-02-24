@@ -24,10 +24,10 @@ import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
@@ -60,8 +60,7 @@ class UserInfoServiceTest {
     private final DynamoDocAppCriService dynamoDocAppCriService =
             mock(DynamoDocAppCriService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject("test-subject");
@@ -100,7 +99,7 @@ class UserInfoServiceTest {
                         identityService,
                         dynamoClientService,
                         dynamoDocAppCriService,
-                        cloudwatchMetricsService,
+                        metrics,
                         configurationService,
                         userInfoStorageService);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
@@ -454,7 +453,7 @@ class UserInfoServiceTest {
     }
 
     private void assertClaimMetricPublished(String v3) {
-        verify(cloudwatchMetricsService)
+        verify(metrics)
                 .incrementCounter(
                         "ClaimIssued",
                         Map.of("Environment", "test", "Client", CLIENT_ID, "Claim", v3));

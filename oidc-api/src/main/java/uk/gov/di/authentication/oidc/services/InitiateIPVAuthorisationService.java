@@ -21,9 +21,9 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.util.List;
@@ -42,7 +42,7 @@ public class InitiateIPVAuthorisationService {
     private final ConfigurationService configurationService;
     private final AuditService auditService;
     private final IPVAuthorisationService authorisationService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final TokenService tokenService;
 
@@ -50,13 +50,13 @@ public class InitiateIPVAuthorisationService {
             ConfigurationService configurationService,
             AuditService auditService,
             IPVAuthorisationService authorisationService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             TokenService tokenService) {
         this.configurationService = configurationService;
         this.auditService = auditService;
         this.authorisationService = authorisationService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.tokenService = tokenService;
     }
@@ -124,7 +124,7 @@ public class InitiateIPVAuthorisationService {
         LOG.info(
                 "AuthenticationCallbackHandler successfully processed IPV authorisation request, redirect URI {}",
                 ipvAuthorisationRequest.toURI().toString());
-        cloudwatchMetricsService.incrementCounter(
+        metrics.incrementCounter(
                 "IPVHandoff", Map.of("Environment", configurationService.getEnvironment()));
         return generateApiGatewayProxyResponse(
                 302,

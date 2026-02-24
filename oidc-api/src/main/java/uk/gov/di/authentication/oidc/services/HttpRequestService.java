@@ -6,8 +6,8 @@ import org.apache.logging.log4j.message.ObjectMessage;
 import uk.gov.di.authentication.oidc.exceptions.HttpRequestTimeoutException;
 import uk.gov.di.authentication.oidc.exceptions.PostRequestFailureException;
 import uk.gov.di.orchestration.shared.helpers.HttpClientHelper;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.io.IOException;
 import java.net.URI;
@@ -24,7 +24,7 @@ import static java.net.http.HttpRequest.BodyPublishers.ofString;
 public class HttpRequestService {
 
     private static final Logger LOG = LogManager.getLogger(HttpRequestService.class);
-    private static final CloudwatchMetricsService METRICS = new CloudwatchMetricsService();
+    private static final Metrics METRICS = new Metrics();
     private final ConfigurationService configurationService;
     private final HttpClient httpClient;
 

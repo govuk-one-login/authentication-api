@@ -34,32 +34,26 @@ public class AccountInterventionService {
     private final boolean accountInterventionsCallEnabled;
     private final boolean accountInterventionsActionEnabled;
     private final boolean acountInterventionsAbortOnError;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final ConfigurationService configurationService;
 
     public AccountInterventionService(ConfigurationService configService) {
         this(
                 configService,
                 HttpClientHelper.newInstrumentedHttpClient(),
-                new CloudwatchMetricsService(),
+                new Metrics(),
                 new AuditService(configService));
     }
 
     public AccountInterventionService(
-            ConfigurationService configService,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            AuditService auditService) {
-        this(
-                configService,
-                HttpClientHelper.newInstrumentedHttpClient(),
-                cloudwatchMetricsService,
-                auditService);
+            ConfigurationService configService, Metrics metrics, AuditService auditService) {
+        this(configService, HttpClientHelper.newInstrumentedHttpClient(), metrics, auditService);
     }
 
     public AccountInterventionService(
             ConfigurationService configService,
             HttpClient httpClient,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             AuditService auditService) {
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.accountInterventionsCallEnabled =
@@ -69,7 +63,7 @@ public class AccountInterventionService {
         this.acountInterventionsAbortOnError =
                 configService.abortOnAccountInterventionsErrorResponse();
         this.httpClient = httpClient;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.auditService = auditService;
         this.configurationService = configService;
     }
@@ -144,7 +138,7 @@ public class AccountInterventionService {
     }
 
     private AccountIntervention handleException(Exception e) {
-        cloudwatchMetricsService.incrementCounter(
+        metrics.incrementCounter(
                 configurationService.getAccountInterventionsErrorMetricName(),
                 Map.of(
                         "Environment",
@@ -247,12 +241,11 @@ public class AccountInterventionService {
     }
 
     private void instrumentResponse(double duration, String status) {
-        cloudwatchMetricsService.putEmbeddedValue(
-                "AISResponseTimeMs", duration, Map.of("statusCode", status));
+        metrics.putEmbeddedValue("AISResponseTimeMs", duration, Map.of("statusCode", status));
     }
 
     private void incrementCloudwatchMetrics(AccountIntervention intervention) {
-        cloudwatchMetricsService.incrementCounter(
+        metrics.incrementCounter(
                 "AISResult",
                 Map.of(
                         "blocked",

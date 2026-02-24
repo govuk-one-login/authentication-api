@@ -15,9 +15,9 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.Map;
@@ -38,7 +38,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
     private final Json objectMapper = SerializationService.getInstance();
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
 
     private static final Logger LOG = LogManager.getLogger(SPOTResponseHandler.class);
 
@@ -49,16 +49,16 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
     public SPOTResponseHandler(ConfigurationService configurationService) {
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
     }
 
     public SPOTResponseHandler(
             DynamoIdentityService dynamoIdentityService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            Metrics metrics) {
         this.dynamoIdentityService = dynamoIdentityService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
     }
 
     @Override
@@ -133,7 +133,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                         "Orch identity credentials does not contain SPOT Queued at timestamp, continuing without metric");
                 return;
             }
-            cloudwatchMetricsService.putEmbeddedValue(
+            metrics.putEmbeddedValue(
                     "SpotLatencyMs",
                     (double) NowHelper.now().toInstant().toEpochMilli()
                             - identityCredentials.getSpotQueuedAtMs().doubleValue(),

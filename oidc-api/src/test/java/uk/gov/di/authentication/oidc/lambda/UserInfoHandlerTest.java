@@ -20,8 +20,8 @@ import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.util.List;
 import java.util.Map;
@@ -62,8 +62,7 @@ class UserInfoHandlerTest {
                     "client-id");
     private final AccessTokenService accessTokenService = mock(AccessTokenService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
 
     private static final Map<String, List<String>> INVALID_TOKEN_RESPONSE =
             new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap();
@@ -77,7 +76,7 @@ class UserInfoHandlerTest {
                         userInfoService,
                         accessTokenService,
                         auditService,
-                        cloudwatchMetricsService);
+                        metrics);
         when(context.getAwsRequestId()).thenReturn("aws-request-id");
 
         when(configurationService.getEnvironment()).thenReturn("test");
@@ -118,7 +117,7 @@ class UserInfoHandlerTest {
                                 .withUserId(AUDIT_SUBJECT_ID.getValue())
                                 .withGovukSigninJourneyId(JOURNEY_ID));
 
-        verify(cloudwatchMetricsService)
+        verify(metrics)
                 .incrementCounter(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(
@@ -168,7 +167,7 @@ class UserInfoHandlerTest {
         assertThat(result, hasStatus(401));
         assertEquals(INVALID_TOKEN_RESPONSE, result.getMultiValueHeaders());
 
-        verify(cloudwatchMetricsService, never())
+        verify(metrics, never())
                 .incrementCounter(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(
@@ -188,7 +187,7 @@ class UserInfoHandlerTest {
                 new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap();
         assertEquals(missingTokenExpectedResponse, result.getMultiValueHeaders());
 
-        verify(cloudwatchMetricsService, never())
+        verify(metrics, never())
                 .incrementCounter(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(

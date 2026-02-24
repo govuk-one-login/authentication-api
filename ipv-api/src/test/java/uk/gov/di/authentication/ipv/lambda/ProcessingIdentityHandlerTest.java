@@ -28,11 +28,11 @@ import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -92,8 +92,7 @@ class ProcessingIdentityHandlerTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final LogoutService logoutService = mock(LogoutService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
@@ -125,7 +124,7 @@ class ProcessingIdentityHandlerTest {
                         dynamoClientService,
                         configurationService,
                         auditService,
-                        cloudwatchMetricsService,
+                        metrics,
                         logoutService,
                         orchSessionService,
                         orchClientSessionService);
@@ -137,7 +136,7 @@ class ProcessingIdentityHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -148,7 +147,7 @@ class ProcessingIdentityHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -160,7 +159,7 @@ class ProcessingIdentityHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Orch session has no internalCommonSubjectId")));
@@ -188,7 +187,7 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.COMPLETED))));
-        verify(cloudwatchMetricsService)
+        verify(metrics)
                 .incrementCounter(
                         "ProcessingIdentity",
                         Map.of(
@@ -269,7 +268,7 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityInterventionResponse(
                                         ProcessingIdentityStatus.INTERVENTION, redirectUrl))));
-        verify(cloudwatchMetricsService)
+        verify(metrics)
                 .incrementCounter(
                         "ProcessingIdentity",
                         Map.of(
@@ -300,7 +299,7 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.PROCESSING))));
-        verify(cloudwatchMetricsService)
+        verify(metrics)
                 .incrementCounter(
                         "ProcessingIdentity",
                         Map.of(
@@ -328,7 +327,7 @@ class ProcessingIdentityHandlerTest {
                 hasBody(
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(ProcessingIdentityStatus.ERROR))));
-        verify(cloudwatchMetricsService)
+        verify(metrics)
                 .incrementCounter(
                         "ProcessingIdentity",
                         Map.of(
@@ -356,7 +355,7 @@ class ProcessingIdentityHandlerTest {
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.NO_ENTRY))));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(0));
-        verify(cloudwatchMetricsService)
+        verify(metrics)
                 .incrementCounter(
                         "ProcessingIdentity",
                         Map.of(

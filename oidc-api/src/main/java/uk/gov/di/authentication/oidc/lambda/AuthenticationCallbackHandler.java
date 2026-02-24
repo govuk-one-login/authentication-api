@@ -58,12 +58,12 @@ import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -117,7 +117,7 @@ public class AuthenticationCallbackHandler
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final OrchAuthCodeService orchAuthCodeService;
     private final ClientService clientService;
     private final InitiateIPVAuthorisationService initiateIPVAuthorisationService;
@@ -146,7 +146,7 @@ public class AuthenticationCallbackHandler
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
 
@@ -155,7 +155,7 @@ public class AuthenticationCallbackHandler
                         configurationService,
                         auditService,
                         new IPVAuthorisationService(configurationService, kmsConnectionService),
-                        cloudwatchMetricsService,
+                        metrics,
                         new CrossBrowserOrchestrationService(configurationService),
                         new TokenService(
                                 configurationService,
@@ -164,8 +164,7 @@ public class AuthenticationCallbackHandler
                                 orchRefreshTokenService,
                                 oidcApi));
         this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configurationService, metrics, auditService);
         this.logoutService = new LogoutService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.crossBrowserOrchestrationService =
@@ -182,7 +181,7 @@ public class AuthenticationCallbackHandler
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             OrchAuthCodeService orchAuthCodeService,
             ClientService clientService,
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
@@ -199,7 +198,7 @@ public class AuthenticationCallbackHandler
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.userInfoStorageService = dynamoAuthUserInfoService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.orchAuthCodeService = orchAuthCodeService;
         this.clientService = clientService;
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
@@ -451,7 +450,7 @@ public class AuthenticationCallbackHandler
                         pair("new_account", newAccount),
                         pair("credential_trust_level", credentialTrustLevel.toString()));
 
-                cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
+                metrics.incrementCounter("AuthenticationCallback", dimensions);
 
                 var auditContext =
                         new AuditContext(
@@ -543,14 +542,13 @@ public class AuthenticationCallbackHandler
 
                 orchSessionService.updateSession(orchSession);
 
-                cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
-                cloudwatchMetricsService.incrementSignInByClient(
+                metrics.incrementCounter("SignIn", dimensions);
+                metrics.incrementSignInByClient(
                         orchAccountState, clientId, orchClientSession.getClientName());
-                cloudwatchMetricsService.incrementCounter(
+                metrics.incrementCounter(
                         "orchAuthJourneyCompleted",
                         Map.of("clientName", client.getClientName(), "clientId", clientId));
-                cloudwatchMetricsService.incrementCounter(
-                        "orchJourneyCompleted", Map.of("journeyType", "auth"));
+                metrics.incrementCounter("orchJourneyCompleted", Map.of("journeyType", "auth"));
                 LOG.info("Successfully processed request");
 
                 var metadataPairs = new ArrayList<AuditService.MetadataPair>();

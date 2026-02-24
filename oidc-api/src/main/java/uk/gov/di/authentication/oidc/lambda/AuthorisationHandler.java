@@ -62,7 +62,6 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
@@ -70,6 +69,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
@@ -124,7 +124,7 @@ public class AuthorisationHandler
     private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator;
     private final AuditService auditService;
     private final ClientService clientService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final AuthenticationAuthorizationService authenticationAuthorisationService;
     private final DocAppAuthorisationService docAppAuthorisationService;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
@@ -145,7 +145,7 @@ public class AuthorisationHandler
             ClientService clientService,
             AuthenticationAuthorizationService authenticationAuthorisationService,
             DocAppAuthorisationService docAppAuthorisationService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             TokenValidationService tokenValidationService,
             AuthFrontend authFrontend,
@@ -162,7 +162,7 @@ public class AuthorisationHandler
         this.clientService = clientService;
         this.authenticationAuthorisationService = authenticationAuthorisationService;
         this.docAppAuthorisationService = docAppAuthorisationService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.tokenValidationService = tokenValidationService;
         this.authFrontend = authFrontend;
@@ -210,8 +210,8 @@ public class AuthorisationHandler
                         kmsConnectionService,
                         jwksCacheService,
                         stateStorageService);
-        var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
-        this.cloudwatchMetricsService = cloudwatchMetricService;
+        var cloudwatchMetricService = new Metrics(configurationService);
+        this.metrics = cloudwatchMetricService;
         this.authorisationService = new AuthorisationService(configurationService);
         var slidingWindowAlgorithm = new SlidingWindowAlgorithm(configurationService);
         this.rateLimitService =
@@ -397,7 +397,7 @@ public class AuthorisationHandler
                     "Scope parameter in query parameters contains commas. Client ID: {}", clientId);
         }
         try {
-            cloudwatchMetricsService.putEmbeddedValue(
+            metrics.putEmbeddedValue(
                     "rpStateLength",
                     authRequest.getState().getValue().length(),
                     Map.of("clientId", clientId, "clientName", client.getClientName()));
@@ -413,7 +413,7 @@ public class AuthorisationHandler
                         authRequest.toParameters(),
                         client.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
-        cloudwatchMetricsService.incrementCounter(
+        metrics.incrementCounter(
                 "orchAuthorizeRequestCount",
                 Map.of(
                         "clientName",
@@ -422,7 +422,7 @@ public class AuthorisationHandler
                         Boolean.toString(isDocAppJourney),
                         "isIdentityJourney",
                         Boolean.toString(isIdentityJourney)));
-        cloudwatchMetricsService.incrementCounter(
+        metrics.incrementCounter(
                 "orchAuthorizeRequestCountForAlarm",
                 Map.of(
                         "isDocAppJourney",
@@ -628,7 +628,7 @@ public class AuthorisationHandler
                 "AuthorisationHandler successfully processed doc app request, redirect URI {}",
                 authorisationRequestUri);
 
-        cloudwatchMetricsService.incrementCounter(
+        metrics.incrementCounter(
                 "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
 
         List<String> cookies =
@@ -873,7 +873,7 @@ public class AuthorisationHandler
                     user);
         }
         try {
-            cloudwatchMetricsService.putEmbeddedValue(
+            metrics.putEmbeddedValue(
                     "AuthRedirectQueryParamSize",
                     authorizationRequest.toQueryString().length(),
                     Map.of("clientId", client.getClientID()));

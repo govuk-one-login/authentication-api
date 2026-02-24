@@ -8,7 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.sharedtest.helper.Constants;
 
 import java.util.Map;
@@ -24,13 +24,11 @@ class RateLimitServiceTest {
 
     private static final RateLimitAlgorithm neverExceededAlgorithm = (client) -> false;
     private static final RateLimitAlgorithm alwaysExceededAlgorithm = (client) -> true;
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
 
     @Test
     void itReturnsNoActionDecisionWhenTheClientHasNoRateLimit() {
-        var rateLimitService =
-                new RateLimitService(alwaysExceededAlgorithm, cloudwatchMetricsService);
+        var rateLimitService = new RateLimitService(alwaysExceededAlgorithm, metrics);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
                         new ClientRateLimitConfig(
@@ -41,8 +39,7 @@ class RateLimitServiceTest {
 
     @Test
     void itReturnsOverLimitReturnToRPWhenTheClientRateLimitIsZero() {
-        var rateLimitService =
-                new RateLimitService(neverExceededAlgorithm, cloudwatchMetricsService);
+        var rateLimitService = new RateLimitService(neverExceededAlgorithm, metrics);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
                         new ClientRateLimitConfig(
@@ -50,7 +47,7 @@ class RateLimitServiceTest {
         assertTrue(rateLimitDecision.hasExceededRateLimit());
         assertEquals(RateLimitDecision.RateLimitAction.RETURN_TO_RP, rateLimitDecision.getAction());
 
-        verify(cloudwatchMetricsService)
+        verify(metrics)
                 .incrementCounter(
                         "RpRateLimitExceeded",
                         Map.of(
@@ -64,7 +61,7 @@ class RateLimitServiceTest {
     @MethodSource("rateLimitAlgosAndOutcomes")
     void itDelegatesToTheRateLimitAlgoWhenClientHasARateLimitConfigured(
             RateLimitAlgorithm algorithm, RateLimitDecision outcome) {
-        var rateLimitService = new RateLimitService(algorithm, cloudwatchMetricsService);
+        var rateLimitService = new RateLimitService(algorithm, metrics);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
                         new ClientRateLimitConfig(
@@ -72,7 +69,7 @@ class RateLimitServiceTest {
         assertEquals(outcome, rateLimitDecision);
 
         if (outcome.hasExceededRateLimit()) {
-            verify(cloudwatchMetricsService)
+            verify(metrics)
                     .incrementCounter(
                             "RpRateLimitExceeded",
                             Map.of(

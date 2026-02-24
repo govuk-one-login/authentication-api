@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -32,8 +32,7 @@ class SPOTResponseHandlerTest {
     private final Context context = mock(Context.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
 
     private static final String REQUEST_ID = "request-id";
     private static final String SESSION_ID = "a-session-id";
@@ -49,9 +48,7 @@ class SPOTResponseHandlerTest {
 
     @BeforeEach
     void setup() {
-        handler =
-                new SPOTResponseHandler(
-                        dynamoIdentityService, auditService, cloudwatchMetricsService);
+        handler = new SPOTResponseHandler(dynamoIdentityService, auditService, metrics);
 
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
     }
@@ -82,8 +79,7 @@ class SPOTResponseHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED, CLIENT_ID.getValue(), USER);
-        verify(cloudwatchMetricsService)
-                .putEmbeddedValue(eq("SpotLatencyMs"), any(Double.class), anyMap());
+        verify(metrics).putEmbeddedValue(eq("SpotLatencyMs"), any(Double.class), anyMap());
     }
 
     @Test
@@ -91,7 +87,7 @@ class SPOTResponseHandlerTest {
         when(dynamoIdentityService.addCoreIdentityJWT(any(), any(), any()))
                 .thenReturn(new OrchIdentityCredentials().withSpotQueuedAtMs(123456789L));
         doThrow(RuntimeException.class)
-                .when(cloudwatchMetricsService)
+                .when(metrics)
                 .putEmbeddedValue(anyString(), any(Double.class), anyMap());
         var json =
                 format(

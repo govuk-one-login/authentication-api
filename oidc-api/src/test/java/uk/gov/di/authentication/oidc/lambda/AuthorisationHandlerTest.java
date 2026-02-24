@@ -87,10 +87,10 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -171,8 +171,7 @@ class AuthorisationHandlerTest {
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
     private final AuthorisationService authorisationService = mock(AuthorisationService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
@@ -310,7 +309,7 @@ class AuthorisationHandlerTest {
                         clientService,
                         authenticationAuthorisationService,
                         docAppAuthorisationService,
-                        cloudwatchMetricsService,
+                        metrics,
                         crossBrowserOrchestrationService,
                         tokenValidationService,
                         authFrontend,
@@ -372,7 +371,7 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
-            verify(cloudwatchMetricsService)
+            verify(metrics)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
                             1012,
@@ -397,7 +396,7 @@ class AuthorisationHandlerTest {
             assertThat(
                     splitQuery(locationHeader).get("response_type"),
                     equalTo(ResponseType.CODE.toString()));
-            verify(cloudwatchMetricsService)
+            verify(metrics)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
                             1012,
@@ -488,7 +487,7 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
-            verify(cloudwatchMetricsService)
+            verify(metrics)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
                             1012,
@@ -560,7 +559,7 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
-            verify(cloudwatchMetricsService)
+            verify(metrics)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
                             1012,
@@ -605,7 +604,7 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
-            verify(cloudwatchMetricsService)
+            verify(metrics)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
                             1012,
@@ -831,7 +830,7 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
-            verify(cloudwatchMetricsService)
+            verify(metrics)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
                             1012,
@@ -918,7 +917,7 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
-            verify(cloudwatchMetricsService)
+            verify(metrics)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
                             1012,
@@ -1689,7 +1688,7 @@ class AuthorisationHandlerTest {
                                     + "&client_id="
                                     + CLIENT_ID.getValue()));
 
-            verify(cloudwatchMetricsService).incrementCounter(eq("DocAppHandoff"), any());
+            verify(metrics).incrementCounter(eq("DocAppHandoff"), any());
 
             verify(auditService)
                     .submitAuditEvent(

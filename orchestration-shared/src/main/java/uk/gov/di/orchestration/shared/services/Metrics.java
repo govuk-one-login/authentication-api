@@ -20,17 +20,17 @@ import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_EX
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_NEW_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
-public class CloudwatchMetricsService {
+public class Metrics {
 
-    private static final Logger LOG = LogManager.getLogger(CloudwatchMetricsService.class);
+    private static final Logger LOG = LogManager.getLogger(Metrics.class);
 
     private final ConfigurationService configurationService;
 
-    public CloudwatchMetricsService() {
+    public Metrics() {
         configurationService = ConfigurationService.getInstance();
     }
 
-    public CloudwatchMetricsService(ConfigurationService configurationService) {
+    public Metrics(ConfigurationService configurationService) {
         this.configurationService = configurationService;
     }
 
