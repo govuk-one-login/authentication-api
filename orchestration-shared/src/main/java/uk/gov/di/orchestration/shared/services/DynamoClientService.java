@@ -48,7 +48,6 @@ public class DynamoClientService implements ClientService {
                 != null;
     }
 
-    @Override
     public void addClient(
             String clientID,
             String clientName,
@@ -75,6 +74,63 @@ public class DynamoClientService implements ClientService {
             boolean maxAgeEnabled,
             boolean pkceEnforced,
             String landingPageUrl) {
+        addClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                publicKeySource,
+                publicKey,
+                jwksUrl,
+                scopes,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                jarValidationRequired,
+                claims,
+                clientType,
+                identityVerificationSupported,
+                clientSecret,
+                tokenAuthMethod,
+                idTokenSigningAlgorithm,
+                clientLoCs,
+                channel,
+                maxAgeEnabled,
+                pkceEnforced,
+                landingPageUrl,
+                null);
+    }
+
+    @Override
+    public void addClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            String publicKeySource,
+            String publicKey,
+            String jwksUrl,
+            List<String> scopes,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean jarValidationRequired,
+            List<String> claims,
+            String clientType,
+            boolean identityVerificationSupported,
+            String clientSecret,
+            String tokenAuthMethod,
+            String idTokenSigningAlgorithm,
+            List<String> clientLoCs,
+            String channel,
+            boolean maxAgeEnabled,
+            boolean pkceEnforced,
+            String landingPageUrl,
+            Integer rateLimit) {
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(clientID)
@@ -106,6 +162,10 @@ public class DynamoClientService implements ClientService {
         }
         if (Objects.nonNull(clientLoCs)) {
             clientRegistry.withClientLoCs(clientLoCs);
+        }
+
+        if (rateLimit != null) {
+            clientRegistry.withRateLimit(rateLimit);
         }
         dynamoClientRegistryTable.putItem(clientRegistry);
     }

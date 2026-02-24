@@ -135,7 +135,8 @@ class ClientRegistrationHandlerTest {
                         Channel.WEB.getValue(),
                         false,
                         false,
-                        "https://landing-page.com");
+                        "https://landing-page.com",
+                        2000);
     }
 
     @Test
@@ -178,7 +179,8 @@ class ClientRegistrationHandlerTest {
                         Channel.WEB.getValue(),
                         false,
                         false,
-                        null);
+                        null,
+                        2000);
     }
 
     @Test
@@ -221,7 +223,8 @@ class ClientRegistrationHandlerTest {
                         Channel.WEB.getValue(),
                         false,
                         false,
-                        null);
+                        null,
+                        2000);
     }
 
     @Test
