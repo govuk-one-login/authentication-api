@@ -23,7 +23,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkException;
-import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;

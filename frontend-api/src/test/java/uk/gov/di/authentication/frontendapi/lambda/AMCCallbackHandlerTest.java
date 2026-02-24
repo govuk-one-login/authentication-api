@@ -9,7 +9,7 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.services.AMCService;

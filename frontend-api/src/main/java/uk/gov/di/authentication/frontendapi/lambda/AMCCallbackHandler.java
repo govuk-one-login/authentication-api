@@ -11,7 +11,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
-import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
