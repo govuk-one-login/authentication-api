@@ -23,13 +23,16 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
     protected KmsClient kms;
     protected final String keyAliasSuffix;
     protected final String newKeyAliasSuffix;
+    protected final String newKeyAliasSuffixV2;
 
     private String keyAlias;
     private String newKeyAlias;
+    private String newKeyAliasV2;
     private final KeyUsageType keyUsageType;
 
     private String keyId;
     private String newKeyId;
+    private String newKeyIdV2;
 
     public KmsKeyExtension(String keyAliasSuffix) {
         this(keyAliasSuffix, SIGN_VERIFY);
@@ -38,6 +41,7 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
     public KmsKeyExtension(String keyAliasSuffix, KeyUsageType keyUsageType) {
         this.keyAliasSuffix = keyAliasSuffix;
         this.newKeyAliasSuffix = "new-" + keyAliasSuffix;
+        this.newKeyAliasSuffixV2 = "new-" + keyAliasSuffix + "-v2";
         this.keyUsageType = keyUsageType;
     }
 
@@ -62,6 +66,12 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         newKeyAliasSuffix);
 
+        newKeyAliasV2 =
+                format(
+                        "alias/{0}-{1}",
+                        context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
+                        newKeyAliasSuffixV2);
+
         if (!keyExists(keyAlias)) {
             if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
                 createEncryptionKey();
@@ -74,6 +84,7 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
     protected void createTokenSigningKeys() {
         keyId = createTokenSigningKey(keyAlias);
         newKeyId = createTokenSigningKey(newKeyAlias);
+        newKeyIdV2 = createTokenSigningKey(newKeyAliasV2);
     }
 
     // https://github.com/aws/aws-sdk/issues/125
@@ -135,11 +146,19 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
         return newKeyAlias;
     }
 
+    public String getNewKeyAliasV2() {
+        return newKeyAliasV2;
+    }
+
     public String getKeyId() {
         return keyId;
     }
 
     public String getNewKeyId() {
         return newKeyId;
+    }
+
+    public String getNewKeyIdV2() {
+        return newKeyIdV2;
     }
 }
