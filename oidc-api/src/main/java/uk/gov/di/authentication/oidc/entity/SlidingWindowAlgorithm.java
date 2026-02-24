@@ -82,7 +82,7 @@ public class SlidingWindowAlgorithm implements RateLimitAlgorithm {
         if (rateLimit > 0) {
             var consumption = (previousCountInWindow + currentCount) / rateLimit;
             LOG.info(new ObjectMessage(Map.of("client", clientId, "consumption", consumption)));
-            metrics.putEmbeddedValue(
+            metrics.emit(
                     "RateLimitConsumption",
                     consumption,
                     Map.of("ClientID", clientId, "Client", rateLimitConfig.clientName()));

@@ -34,7 +34,7 @@ public class Metrics {
         this.configurationService = configurationService;
     }
 
-    public void putEmbeddedValue(String name, double value, Map<String, String> dimensions) {
+    public void emit(String name, double value, Map<String, String> dimensions) {
         segmentedFunctionCall(
                 "Metrics::EMF",
                 () -> {
@@ -55,7 +55,7 @@ public class Metrics {
     }
 
     public void incrementCounter(String name, Map<String, String> dimensions) {
-        putEmbeddedValue(name, 1, dimensions);
+        emit(name, 1, dimensions);
     }
 
     public void incrementSignInByClient(

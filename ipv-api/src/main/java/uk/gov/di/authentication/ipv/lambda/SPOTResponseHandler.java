@@ -133,7 +133,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                         "Orch identity credentials does not contain SPOT Queued at timestamp, continuing without metric");
                 return;
             }
-            metrics.putEmbeddedValue(
+            metrics.emit(
                     "SpotLatencyMs",
                     (double) NowHelper.now().toInstant().toEpochMilli()
                             - identityCredentials.getSpotQueuedAtMs().doubleValue(),
