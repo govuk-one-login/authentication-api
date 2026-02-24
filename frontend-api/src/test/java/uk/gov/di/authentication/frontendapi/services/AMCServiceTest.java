@@ -120,7 +120,7 @@ class AMCServiceTest {
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
             mockKmsSigning(
@@ -452,7 +452,7 @@ class AMCServiceTest {
             when(configurationService.getAMCAuthorizeURI())
                     .thenReturn(URI.create(AMC_AUTHORIZE_URI));
             when(nowClock.now()).thenReturn(NOW);
-            when(nowClock.nowPlus(SESSION_EXPIRY, ChronoUnit.SECONDS)).thenReturn(expiryDate);
+            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
         }
 
         private void mockAuthSessionItem() {
@@ -543,6 +543,9 @@ class AMCServiceTest {
         void shouldBuildTokenRequest() throws ParseException, JOSEException {
             when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                     .thenReturn(signingKeyPair.getKeyID());
+            when(nowClock.now()).thenReturn(NOW);
+            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
+            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
 
             mockKmsSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
 
@@ -568,9 +571,7 @@ class AMCServiceTest {
             assertInstanceOf(String.class, claims.getJWTID());
             assertEquals(NOW, claims.getIssueTime());
             assertEquals(NOW, claims.getNotBeforeTime());
-            assertEquals(
-                    Date.from(Instant.ofEpochSecond(NOW.getTime() + (3600 * 1000))),
-                    claims.getExpirationTime());
+            assertEquals(expiryDate, claims.getExpirationTime());
         }
 
         @Test
@@ -578,6 +579,9 @@ class AMCServiceTest {
             var invalidKeyAlias = "invalid-key-alias";
             when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                     .thenReturn(invalidKeyAlias);
+            when(nowClock.now()).thenReturn(NOW);
+            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
+            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
 
             when(kmsConnectionService.sign(
                             argThat(request -> request.keyId().equals(invalidKeyAlias))))

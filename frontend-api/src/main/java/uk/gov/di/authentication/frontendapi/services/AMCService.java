@@ -49,6 +49,7 @@ public class AMCService {
     private final NowHelper.NowClock nowClock;
     private final JwtService jwtService;
     private static final Logger LOG = LogManager.getLogger(AMCService.class);
+    private static final Long CLIENT_ASSERTION_LIFETIME = 5L;
 
     public AMCService(
             ConfigurationService configurationService,
@@ -91,10 +92,11 @@ public class AMCService {
     }
 
     private Result<JwtFailureReason, BearerAccessToken> createAccessToken(
-            String internalPairwiseSubject, AMCScope[] scope, AuthSessionItem authSessionItem) {
-        Date issueTime = nowClock.now();
-        Date expiryDate =
-                nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
+            String internalPairwiseSubject,
+            AMCScope[] scope,
+            AuthSessionItem authSessionItem,
+            Date issueTime,
+            Date expiryDate) {
         List<String> scopeValues = Arrays.stream(scope).map(AMCScope::getValue).toList();
 
         var claims =
@@ -132,10 +134,11 @@ public class AMCService {
             String publicSubject) {
         List<String> scopeValues = Arrays.stream(scope).map(AMCScope::getValue).toList();
         Date issueTime = nowClock.now();
-        Date expiryDate =
-                nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
+        // TODO: Check this value
+        Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
 
-        return createAccessToken(internalPairwiseSubject, scope, authSessionItem)
+        return createAccessToken(
+                        internalPairwiseSubject, scope, authSessionItem, issueTime, expiryDate)
                 .flatMap(
                         accessToken -> {
                             var claims =
@@ -244,8 +247,8 @@ public class AMCService {
         LOG.info("Building AMC authorization JWT");
 
         Date now = nowClock.now();
-        Date expiryDate =
-                nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
+        // TODO check this value
+        Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
 
         return new JWTAuthenticationClaimsSet(
                 new ClientID(configurationService.getAMCClientId()),
