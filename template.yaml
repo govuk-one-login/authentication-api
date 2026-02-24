@@ -190,7 +190,11 @@ Conditions:
   UseNewAuthSigningKey:
     !And [
       !Condition PublishNextAuthSigningKey,
-      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+      !Or [
+        !Equals [dev, !Ref Environment],
+        !Equals [build, !Ref Environment],
+        !Equals [staging, !Ref Environment],
+      ],
     ]
   ProvisionNewExternalTokenSigningKeysV2:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
