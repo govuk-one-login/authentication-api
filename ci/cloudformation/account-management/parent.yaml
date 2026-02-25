@@ -2086,6 +2086,61 @@ Resources:
                       !Ref SubEnvironment,
                       !Ref Environment,
                     ]
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+
+  ManuallyDeleteAccountFunctionSQSPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for permission to send SQS message and sns mock account SNS topic"
+      Path: !Sub
+        - /${Env}/am-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToSNS
+            Effect: Allow
+            Action:
+              - sns:Publish
+            Resource:
+              - !If
+                - IsProduction
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    legacyAccountDeletionTopicArn,
+                    DefaultValue: "",
+                  ]
+                - !Ref MockAccountDeletionTopic
+          - Sid: AllowSendSQS
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt EmailNotificationQueue.Arn
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !GetAtt MainKmsKey.Arn
 
   DynamoAuthSessionStoreReadWriteDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy

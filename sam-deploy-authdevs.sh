@@ -141,7 +141,7 @@ if [[ ${O_DEPLOYAM} -eq 1 ]]; then
   sso_login
 
   if [[ ${ENVIRONMENT} == "dev" ]]; then
-    SAM_CONFIG_ENV="authdevam"
+    SAM_CONFIG_ENV="devam"
   elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
     SAM_CONFIG_ENV="authdev1am"
   elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
