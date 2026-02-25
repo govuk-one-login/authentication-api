@@ -207,7 +207,7 @@ components:
           description: Credential ID
         credential:
           type: string
-          description: Public key in COSE format
+          description: Public key in COSE format, encoded in Base64URL
         aaguid:
           type: string
           description: Authenticator Attestation GUID (AAGUID)
