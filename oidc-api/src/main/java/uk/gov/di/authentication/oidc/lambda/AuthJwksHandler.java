@@ -57,9 +57,7 @@ public class AuthJwksHandler
 
             List<JWK> signingKeys = new ArrayList<>();
 
-            if (configurationService.isPublishOldOrchToAuthSigningKey()) {
-                signingKeys.add(jwksService.getPublicAuthSigningJwkWithOpaqueId());
-            }
+            signingKeys.add(jwksService.getPublicAuthSigningJwkWithOpaqueId());
             if (configurationService.isPublishNextOrchToAuthSigningKey()) {
                 signingKeys.add(jwksService.getNextPublicAuthSigningJwkWithOpaqueId());
             }
