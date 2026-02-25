@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -15,10 +16,14 @@ import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -29,6 +34,8 @@ import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -47,6 +54,7 @@ class JwtServiceTest {
     private static final String TEST_KEY_ID = "12345678";
     private static final Base64URL TEST_EXPECTED_HEADER =
             new JWSHeader.Builder(TEST_ALGORITHM)
+                    .type(JOSEObjectType.JWT)
                     .keyID(hashSha256String(TEST_KEY_ID))
                     .build()
                     .toBase64URL();
@@ -58,6 +66,8 @@ class JwtServiceTest {
     @BeforeEach
     void testSetup() throws JOSEException, ParseException {
         byte[] signatureToDER = ECDSA.transcodeSignatureToDER(TEST_SIGNATURE.decode());
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(GetPublicKeyResponse.builder().keyId(TEST_KEY_ID).build());
         when(kmsConnectionService.sign(any()))
                 .thenReturn(
                         SignResponse.builder()
@@ -73,15 +83,11 @@ class JwtServiceTest {
 
     @Test
     void CallsKmsToGenerateSignatureAndReturnsJWS() throws ParseException {
-        Base64URL encodedHeader =
-                new JWSHeader.Builder(TEST_ALGORITHM)
-                        .type(com.nimbusds.jose.JOSEObjectType.JWT)
-                        .build()
-                        .toBase64URL();
         Base64URL encodedClaims = TEST_CLAIMS.toPayload().toBase64URL();
         SdkBytes expectedMessage =
                 SdkBytes.fromByteArray(
-                        (encodedHeader + "." + encodedClaims).getBytes(StandardCharsets.UTF_8));
+                        (TEST_EXPECTED_HEADER + "." + encodedClaims)
+                                .getBytes(StandardCharsets.UTF_8));
         SignRequest expectedSignRequest =
                 SignRequest.builder()
                         .message(expectedMessage)
@@ -89,9 +95,14 @@ class JwtServiceTest {
                         .messageType(MessageType.RAW)
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .build();
+
         SignedJWT signedJWT = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
+
+        verify(kmsConnectionService)
+                .getPublicKey(GetPublicKeyRequest.builder().keyId(TEST_KEY_ID).build());
         verify(kmsConnectionService).sign(expectedSignRequest);
-        assertEquals(encodedHeader, signedJWT.getHeader().toBase64URL());
+
+        assertEquals(TEST_EXPECTED_HEADER, signedJWT.getHeader().toBase64URL());
         assertEquals(TEST_SIGNATURE.toString(), signedJWT.getSignature().toString());
         assertEquals(TEST_CLAIM_VALUE, signedJWT.getJWTClaimsSet().getClaim(TEST_CLAIM_NAME));
         assertEquals(encodedClaims, signedJWT.getPayload().toBase64URL());
@@ -128,6 +139,20 @@ class JwtServiceTest {
         assertEquals("AWS SDK error when signing JWT", exception.getMessage());
         org.junit.jupiter.api.Assertions.assertInstanceOf(
                 software.amazon.awssdk.core.exception.SdkException.class, exception.getCause());
+    }
+
+    @Test
+    void shouldThrowJwtServiceExceptionWithSdkExceptionCauseWhenResolvingKeyIdFails() {
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenThrow(SdkException.builder().message("KMS unavailable").build());
+
+        var exception =
+                assertThrows(
+                        JwtServiceException.class,
+                        () -> jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID));
+
+        assertEquals("AWS SDK error when resolving key ID", exception.getMessage());
+        assertInstanceOf(SdkException.class, exception.getCause());
     }
 
     @Test
