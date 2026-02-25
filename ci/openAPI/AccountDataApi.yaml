@@ -38,6 +38,17 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PasskeyAuthenticatorRead"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
     post:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
@@ -103,6 +114,17 @@ paths:
                   value:
                     code: 4222
                     message: "Invalid attestation signature"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
 
   /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
     parameters:
@@ -160,6 +182,17 @@ paths:
                   value:
                     code: 4040
                     message: "Passkey not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
     delete:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
@@ -186,6 +219,17 @@ paths:
                   value:
                     code: 4040
                     message: "Passkey not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
 
 components:
   schemas:
