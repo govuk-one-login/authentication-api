@@ -41,6 +41,9 @@ public class JwtService {
     }
 
     public SignedJWT signJWT(JWTClaimsSet jwtClaims, String keyId) throws JwtServiceException {
+
+        LOG.info("MVM keyId provided: {}, sha256: {}", keyId, hashSha256String(keyId));
+
         Base64URL encodedHeader =
                 new JWSHeader.Builder(JWSAlgorithm.ES256)
                         .keyID(hashSha256String(keyId))

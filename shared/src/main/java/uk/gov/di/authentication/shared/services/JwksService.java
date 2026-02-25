@@ -99,6 +99,13 @@ public class JwksService {
 
         PublicKey publicKey = createPublicKey(publicKeyResponse);
 
+        LOG.info(
+                "MVM keyId provided: {}, sha256: {}, keyId from KMS: {}, sha256: {}",
+                keyId,
+                hashSha256String(keyId),
+                publicKeyResponse.keyId(),
+                hashSha256String(publicKeyResponse.keyId()));
+
         if (publicKeyResponse.signingAlgorithms().contains(ECDSA_SHA_256)) {
             return new ECKey.Builder(P_256, (ECPublicKey) publicKey)
                     .keyID(hashSha256String(publicKeyResponse.keyId()))
