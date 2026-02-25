@@ -1,12 +1,17 @@
 package uk.gov.di.authentication.frontendapi.services;
 
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSADecrypter;
-import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
@@ -25,11 +30,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.kms.model.KmsException;
-import software.amazon.awssdk.services.kms.model.SignRequest;
-import software.amazon.awssdk.services.kms.model.SignResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
@@ -38,11 +40,9 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -61,7 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
@@ -101,12 +101,20 @@ class AMCServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final NowHelper.NowClock nowClock = mock(NowHelper.NowClock.class);
-    private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final JwtService jwtService = mock(JwtService.class);
+    private ECKey accessTokenKey;
+    private ECKey compositeJWTKey;
 
     @BeforeEach
-    void setup() {
-        JwtService jwtService = new JwtService(kmsConnectionService);
+    void setup() throws Exception {
         amcService = new AMCService(configurationService, nowClock, jwtService);
+        accessTokenKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        compositeJWTKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        mockJwtSigning(
+                Map.of(
+                        ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
+                        COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
+        mockJwtEncryption();
     }
 
     @Nested
@@ -114,19 +122,11 @@ class AMCServiceTest {
 
         @Test
         void shouldBuildAuthorizationUrlWithValidJWT() throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            ECKey compositeJWTKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
-            mockKmsSigning(
-                    Map.of(
-                            ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
-                            COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
@@ -166,8 +166,11 @@ class AMCServiceTest {
             mockAuthSessionItem();
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-            when(kmsConnectionService.sign(any(SignRequest.class)))
-                    .thenThrow(SdkException.builder().message("KMS Unreachable").build());
+            when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
+                    .thenThrow(
+                            new JwtServiceException(
+                                    "AWS SDK error when signing JWT",
+                                    SdkException.builder().message("KMS Unreachable").build()));
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -188,11 +191,10 @@ class AMCServiceTest {
             mockAuthSessionItem();
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-            when(kmsConnectionService.sign(any(SignRequest.class)))
-                    .thenReturn(
-                            SignResponse.builder()
-                                    .signature(SdkBytes.fromByteArray(new byte[] {0x00, 0x01}))
-                                    .build());
+            when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
+                    .thenThrow(
+                            new JwtServiceException(
+                                    "Failed to transcode signature", new JOSEException("Invalid")));
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -207,30 +209,21 @@ class AMCServiceTest {
         }
 
         @Test
-        void shouldReturnEncryptionErrorWhenJoseExceptionOccursDuringEncryption() throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        void shouldReturnEncryptionErrorWhenJoseExceptionOccursDuringEncryption() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-
-            JwtService mockJwtService = mock(JwtService.class);
-            SignedJWT signedJWT =
-                    new SignedJWT(
-                            new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
-            signedJWT.sign(new ECDSASigner(accessTokenKey));
-            when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
-            when(mockJwtService.encryptJWT(any(), any()))
+            when(jwtService.encryptJWT(any(), any()))
                     .thenThrow(
                             new JwtServiceException(
                                     "Encryption failed",
                                     new com.nimbusds.jose.JOSEException("Encryption error")));
 
             AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, mockJwtService);
+                    new AMCService(configurationService, nowClock, jwtService);
 
             Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
@@ -245,28 +238,18 @@ class AMCServiceTest {
         }
 
         @Test
-        void shouldReturnUnknownEncryptionErrorForUnknownExceptionDuringEncryption()
-                throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        void shouldReturnUnknownEncryptionErrorForUnknownExceptionDuringEncryption() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-
-            JwtService mockJwtService = mock(JwtService.class);
-            SignedJWT signedJWT =
-                    new SignedJWT(
-                            new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
-            signedJWT.sign(new ECDSASigner(accessTokenKey));
-            when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
-            when(mockJwtService.encryptJWT(any(), any()))
+            when(jwtService.encryptJWT(any(), any()))
                     .thenThrow(new JwtServiceException("Unknown encryption error"));
 
             AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, mockJwtService);
+                    new AMCService(configurationService, nowClock, jwtService);
 
             Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
@@ -281,30 +264,20 @@ class AMCServiceTest {
         }
 
         @Test
-        void shouldReturnJwtEncodingErrorWhenParseExceptionOccursDuringEncryption()
-                throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        void shouldReturnJwtEncodingErrorWhenParseExceptionOccursDuringEncryption() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-
-            JwtService mockJwtService = mock(JwtService.class);
-            SignedJWT signedJWT =
-                    new SignedJWT(
-                            new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
-            signedJWT.sign(new ECDSASigner(accessTokenKey));
-            when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
-            when(mockJwtService.encryptJWT(any(), any()))
+            when(jwtService.encryptJWT(any(), any()))
                     .thenThrow(
                             new JwtServiceException(
                                     "Parse error", new java.text.ParseException("Invalid", 0)));
 
             AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, mockJwtService);
+                    new AMCService(configurationService, nowClock, jwtService);
 
             Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
@@ -324,13 +297,11 @@ class AMCServiceTest {
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-
-            JwtService mockJwtService = mock(JwtService.class);
-            when(mockJwtService.signJWT(any(), any()))
+            when(jwtService.signJWT(any(), any()))
                     .thenThrow(new JwtServiceException("Unknown error"));
 
             AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, mockJwtService);
+                    new AMCService(configurationService, nowClock, jwtService);
 
             Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
@@ -346,19 +317,11 @@ class AMCServiceTest {
 
         @Test
         void shouldHandleMultipleScopes() throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            ECKey compositeJWTKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
-            mockKmsSigning(
-                    Map.of(
-                            ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
-                            COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
@@ -387,15 +350,13 @@ class AMCServiceTest {
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-
-            JwtService mockJwtService = mock(JwtService.class);
-            when(mockJwtService.signJWT(any(), any()))
+            when(jwtService.signJWT(any(), any()))
                     .thenThrow(
                             new JwtServiceException(
                                     "Parse error", new java.text.ParseException("Invalid", 0)));
 
             AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, mockJwtService);
+                    new AMCService(configurationService, nowClock, jwtService);
 
             Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
@@ -410,20 +371,12 @@ class AMCServiceTest {
         }
 
         @Test
-        void shouldReturnJwtEncodingErrorWhenPublicKeyParsingFails() throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            ECKey compositeJWTKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        void shouldReturnJwtEncodingErrorWhenPublicKeyParsingFails() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn("invalid-pem-key");
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
-            mockKmsSigning(
-                    Map.of(
-                            ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
-                            COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
             when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
@@ -547,7 +500,7 @@ class AMCServiceTest {
             Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
             when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
 
-            mockKmsSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
+            mockJwtSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
 
             TokenRequest result = amcService.buildTokenRequest(AUTH_CODE).getSuccess();
 
@@ -583,9 +536,11 @@ class AMCServiceTest {
             Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
             when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
 
-            when(kmsConnectionService.sign(
-                            argThat(request -> request.keyId().equals(invalidKeyAlias))))
-                    .thenThrow(KmsException.create("Unable to sign", new RuntimeException()));
+            when(jwtService.signJWT(any(JWTClaimsSet.class), eq(invalidKeyAlias)))
+                    .thenThrow(
+                            new JwtServiceException(
+                                    "AWS SDK error when signing JWT",
+                                    KmsException.create("Unable to sign", new RuntimeException())));
 
             Result<JwtFailureReason, TokenRequest> result = amcService.buildTokenRequest(AUTH_CODE);
 
@@ -638,13 +593,12 @@ class AMCServiceTest {
         }
     }
 
-    private void mockKmsSigning(Map<String, ECKey> keysByAlias) {
-        when(kmsConnectionService.sign(any(SignRequest.class)))
+    private void mockJwtSigning(Map<String, ECKey> keysByAlias) {
+        when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                 .thenAnswer(
                         invocation -> {
-                            SignRequest request = invocation.getArgument(0);
-                            String keyId = request.keyId();
-                            String input = request.message().asUtf8String();
+                            JWTClaimsSet claims = invocation.getArgument(0);
+                            String keyId = invocation.getArgument(1);
 
                             ECKey key = keysByAlias.get(keyId);
                             if (key == null) {
@@ -652,18 +606,42 @@ class AMCServiceTest {
                                         "Unexpected key alias: " + keyId);
                             }
 
-                            byte[] signature =
-                                    new ECDSASigner(key)
-                                            .sign(
-                                                    new JWSHeader(JWSAlgorithm.ES256),
-                                                    input.getBytes(StandardCharsets.UTF_8))
-                                            .decode();
+                            try {
+                                SignedJWT signedJWT =
+                                        new SignedJWT(
+                                                new JWSHeader.Builder(JWSAlgorithm.ES256)
+                                                        .type(com.nimbusds.jose.JOSEObjectType.JWT)
+                                                        .keyID(key.getKeyID())
+                                                        .build(),
+                                                claims);
+                                signedJWT.sign(new ECDSASigner(key));
+                                return signedJWT;
+                            } catch (JOSEException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+    }
 
-                            byte[] derSignature = ECDSA.transcodeSignatureToDER(signature);
-
-                            return SignResponse.builder()
-                                    .signature(SdkBytes.fromByteArray(derSignature))
-                                    .build();
+    private void mockJwtEncryption() {
+        when(jwtService.encryptJWT(any(SignedJWT.class), any(RSAPublicKey.class)))
+                .thenAnswer(
+                        invocation -> {
+                            SignedJWT signedJWT = invocation.getArgument(0);
+                            RSAPublicKey publicKey = invocation.getArgument(1);
+                            try {
+                                JWEObject jweObject =
+                                        new JWEObject(
+                                                new JWEHeader.Builder(
+                                                                JWEAlgorithm.RSA_OAEP_256,
+                                                                EncryptionMethod.A256GCM)
+                                                        .contentType("JWT")
+                                                        .build(),
+                                                new Payload(signedJWT));
+                                jweObject.encrypt(new RSAEncrypter(publicKey));
+                                return EncryptedJWT.parse(jweObject.serialize());
+                            } catch (JOSEException | ParseException e) {
+                                throw new RuntimeException(e);
+                            }
                         });
     }
 }
