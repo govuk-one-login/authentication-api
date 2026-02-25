@@ -35,6 +35,7 @@ class AuthJwksHandlerTest {
         handler = new AuthJwksHandler(configurationService, jwksService);
 
         when(jwksService.getPublicAuthSigningJwkWithOpaqueId()).thenReturn(authSigningKey);
+        when(configurationService.isPublishOldOrchToAuthSigningKey()).thenReturn(true);
     }
 
     @Test
@@ -71,6 +72,24 @@ class AuthJwksHandlerTest {
         var result = handler.handleRequest(event, context);
 
         var expectedJWKSet = new JWKSet(List.of(authSigningKey, newAuthSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+    }
+
+    @Test
+    void shouldNotPublishOldKeyIfFeatureFlagDisabled() throws Exception {
+        var newAuthSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        when(jwksService.getNextPublicAuthSigningJwkWithOpaqueId())
+                .thenReturn(newAuthSigningKey.toPublicJWK());
+        when(configurationService.isPublishOldOrchToAuthSigningKey()).thenReturn(false);
+        when(configurationService.isPublishNextOrchToAuthSigningKey()).thenReturn(true);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet = new JWKSet(List.of(newAuthSigningKey));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));
