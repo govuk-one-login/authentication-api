@@ -25,7 +25,7 @@ paths:
       tags:
         - Passkey
       summary: Retrieve all passkeys for a user
-      description: Get all passkeys registered to a user account.
+      description: Get all passkeys registered to a user account
       responses:
         "200":
           description: Passkeys retrieved successfully
@@ -38,17 +38,6 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PasskeyAuthenticatorRead"
-        "404":
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              examples:
-                user_not_found:
-                  value:
-                    code: 4040
-                    message: "User not found"
     post:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
@@ -60,7 +49,7 @@ paths:
       tags:
         - Passkey
       summary: Create a passkey for a user
-      description: Register a new passkey authenticator for a user account.
+      description: Register a new passkey authenticator for a user account
       requestBody:
         content:
           application/json:
@@ -84,17 +73,6 @@ paths:
                   value:
                     code: 4001
                     message: "Missing required fields"
-        "404":
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              examples:
-                user_not_found:
-                  value:
-                    code: 4040
-                    message: "User not found"
         "409":
           description: Passkey already exists
           content:
@@ -151,7 +129,7 @@ paths:
       tags:
         - Passkey
       summary: Update a passkey
-      description: Update passkey metadata such as last used timestamp.
+      description: Update passkey metadata such as last used timestamp
       requestBody:
         content:
           application/json:
@@ -172,19 +150,15 @@ paths:
                     code: 4000
                     message: "Invalid request body"
         "404":
-          description: User not found
+          description: Not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
               examples:
-                user_not_found:
-                  value:
-                    code: 4040
-                    message: "User not found"
                 passkey_not_found:
                   value:
-                    code: 4041
+                    code: 4040
                     message: "Passkey not found"
     delete:
       x-amazon-apigateway-integration:
@@ -197,24 +171,20 @@ paths:
       tags:
         - Passkey
       summary: Delete a passkey
-      description: Remove a passkey authenticator from a user account.
+      description: Remove a passkey authenticator from a user account
       responses:
         "204":
           description: Passkey deleted successfully
         "404":
-          description: User not found
+          description: Not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
               examples:
-                user_not_found:
-                  value:
-                    code: 4040
-                    message: "User not found"
                 passkey_not_found:
                   value:
-                    code: 4041
+                    code: 4040
                     message: "Passkey not found"
 
 components:
