@@ -189,11 +189,7 @@ Conditions:
         !Equals [integration, !Ref Environment],
       ],
     ]
-  PublishOldAuthSigningKey:
-    !Or [
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
+  PublishOldAuthSigningKey: !Equals [production, !Ref Environment]
   UseNewAuthSigningKey:
     !And [
       !Condition PublishNextAuthSigningKey,
