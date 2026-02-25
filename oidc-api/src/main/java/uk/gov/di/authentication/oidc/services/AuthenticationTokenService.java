@@ -169,8 +169,15 @@ public class AuthenticationTokenService {
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {
         try {
             LOG.info("Generating PrivateKeyJWT");
-            var tokenSigningKeyAlias =
-                    configurationService.getOrchestrationToAuthenticationTokenSigningKeyAlias();
+            String tokenSigningKeyAlias;
+            if (configurationService.isUseNewAuthSigningKey()) {
+                LOG.info("Signing with new auth signing key");
+                tokenSigningKeyAlias = configurationService.getNextAuthSigningKeyAlias();
+            } else {
+                LOG.info("Signing with old auth signing key");
+                tokenSigningKeyAlias =
+                        configurationService.getOrchestrationToAuthenticationTokenSigningKeyAlias();
+            }
             var signingKeyId =
                     kmsService
                             .getPublicKey(

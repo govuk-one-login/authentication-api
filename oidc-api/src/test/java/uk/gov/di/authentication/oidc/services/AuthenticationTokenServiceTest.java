@@ -22,6 +22,8 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
@@ -55,6 +57,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.sharedtest.exceptions.Unchecked.unchecked;
 
 class AuthenticationTokenServiceTest {
@@ -62,14 +65,15 @@ class AuthenticationTokenServiceTest {
 
     private KmsConnectionService kmsService = mock(KmsConnectionService.class);
     private final HTTPRequest httpRequest = mock(HTTPRequest.class);
-    private static final String SIGNING_KID = "14342354354353";
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final URI AUTH_BACKEND_URI = URI.create("https://auth.backend.uri/");
     private static final URI ORCH_CALLBACK_URI = URI.create("https://orch.callback.uri/");
-    private static final GetPublicKeyResponse PUBLIC_KEY_RESPONSE =
-            GetPublicKeyResponse.builder().keyId("test").build();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final UserInfo USER_INFO = new UserInfo(new Subject());
+    private static final String OLD_KEY_ALIAS = "old-token-key-alias";
+    private static final String OLD_KEY_ID = "old-token-key-id";
+    private static final String NEW_KEY_ALIAS = "new-token-key-alias";
+    private static final String NEW_KEY_ID = "old-token-key-id";
 
     private AuthenticationTokenService authenticationTokenService;
 
@@ -79,19 +83,23 @@ class AuthenticationTokenServiceTest {
         when(configurationService.getAuthenticationBackendURI()).thenReturn(AUTH_BACKEND_URI);
         when(configurationService.getOrchestrationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configurationService.getOrchestrationToAuthenticationTokenSigningKeyAlias())
-                .thenReturn("token-key-alias");
+                .thenReturn(OLD_KEY_ALIAS);
+        when(configurationService.getNextAuthSigningKeyAlias()).thenReturn(NEW_KEY_ALIAS);
 
-        when(kmsService.getPublicKey(any())).thenReturn(PUBLIC_KEY_RESPONSE);
+        when(kmsService.getPublicKey(GetPublicKeyRequest.builder().keyId(OLD_KEY_ALIAS).build()))
+                .thenReturn(GetPublicKeyResponse.builder().keyId(OLD_KEY_ID).build());
+        when(kmsService.getPublicKey(GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS).build()))
+                .thenReturn(GetPublicKeyResponse.builder().keyId(NEW_KEY_ID).build());
 
         authenticationTokenService =
                 new AuthenticationTokenService(configurationService, kmsService);
     }
 
-    @Test
-    void shouldConstructTokenRequest() throws JOSEException {
-        signJWTWithKMS();
-        when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldConstructTokenRequest(boolean signWithNewKey) throws JOSEException {
+        when(configurationService.isUseNewAuthSigningKey()).thenReturn(signWithNewKey);
+        signJWTWithKMS(signWithNewKey ? NEW_KEY_ID : OLD_KEY_ID);
         TokenRequest tokenRequest =
                 authenticationTokenService.constructTokenRequest(AUTH_CODE.getValue());
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(AUTH_BACKEND_URI + "token"));
@@ -228,10 +236,11 @@ class AuthenticationTokenServiceTest {
                 equalTo("Error parsing authentication userinfo response as JSON"));
     }
 
-    private void signJWTWithKMS() throws JOSEException {
+    private void signJWTWithKMS(String kmsKeyId) throws JOSEException {
+        var signingKeyId = hashSha256String(kmsKeyId);
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
-                        .keyID(SIGNING_KID)
+                        .keyID(signingKeyId)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         var claimsSet =
@@ -252,7 +261,7 @@ class AuthenticationTokenServiceTest {
         var signResult =
                 SignResponse.builder()
                         .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
-                        .keyId(SIGNING_KID)
+                        .keyId(signingKeyId)
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .build();
 
