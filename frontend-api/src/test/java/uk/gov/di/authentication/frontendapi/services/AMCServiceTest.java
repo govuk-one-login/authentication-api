@@ -180,6 +180,28 @@ class AMCServiceTest {
         }
 
         @Test
+        void shouldHandleMultipleScopes() throws Exception {
+            when(configurationService.getAuthToAMCPublicEncryptionKey())
+                    .thenReturn(constructTestPublicKey());
+
+            Result<JwtFailureReason, String> result =
+                    amcService.buildAuthorizationUrl(
+                            INTERNAL_PAIRWISE_ID,
+                            new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
+                            authSessionItem,
+                            JOURNEY_ID,
+                            PUBLIC_SUBJECT);
+
+            assertTrue(result.isSuccess());
+            SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(result.getSuccess());
+            JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
+
+            assertEquals(
+                    List.of(AMCScope.ACCOUNT_DELETE.getValue(), AMCScope.ACCOUNT_DELETE.getValue()),
+                    compositeClaims.getClaim("scope"));
+        }
+
+        @Test
         void shouldReturnFailureWhenKmsSigningFails() {
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenThrow(
@@ -277,28 +299,6 @@ class AMCServiceTest {
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR, result.getFailure());
-        }
-
-        @Test
-        void shouldHandleMultipleScopes() throws Exception {
-            when(configurationService.getAuthToAMCPublicEncryptionKey())
-                    .thenReturn(constructTestPublicKey());
-
-            Result<JwtFailureReason, String> result =
-                    amcService.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isSuccess());
-            SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(result.getSuccess());
-            JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
-
-            assertEquals(
-                    List.of(AMCScope.ACCOUNT_DELETE.getValue(), AMCScope.ACCOUNT_DELETE.getValue()),
-                    compositeClaims.getClaim("scope"));
         }
 
         @Test
