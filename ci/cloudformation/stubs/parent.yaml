@@ -61,6 +61,16 @@ Parameters:
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
+  AddOrchApiVpcEndpointId:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              orchApiVpcEndpointId,
+            ]
+          - ""
+
   EnableLogging: !Equals [!Ref EnableApiGatewayExecutionLogging, "true"]
 
   IsNotProduction:
@@ -114,44 +124,44 @@ Mappings:
   EnvironmentConfiguration:
     authdev1:
       dataStoreAccountId: 653994557586
-      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "No"
       UseAlarmActions: "No"
+      orchApiVpcEndpointId: ""
     authdev2:
       dataStoreAccountId: 653994557586
-      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables"
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "No"
       UseAlarmActions: "No"
+      orchApiVpcEndpointId: ""
     authdev3:
       dataStoreAccountId: 653994557586
-      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "No"
       UseAlarmActions: "No"
+      orchApiVpcEndpointId: ""
     dev:
       dataStoreAccountId: 653994557586
-      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "No"
       UseAlarmActions: "No"
+      orchApiVpcEndpointId: ""
     build:
       dataStoreAccountId: 761723964695
-      frontendBaseUrl: https://apitest.signin.build.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "No"
+      orchApiVpcEndpointId: vpce-0867442e4d95fb43e
 
 Globals:
   Function:
