@@ -5490,14 +5490,6 @@ Resources:
               AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: kms:*
             Resource: "*"
-          - Sid: AllowSpotQueueDecryption
-            Effect: Allow
-            Principal:
-              Service: sqs.amazonaws.com
-            Action:
-              - kms:GenerateDataKey
-              - kms:Decrypt
-            Resource: "*"
           - Sid: AllowSpotRequestQueueKms
             Effect: Allow
             Principal:
@@ -5544,15 +5536,6 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowOrchAccountToSend
-            Effect: Allow
-            Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
-            Action:
-              - sqs:SendMessage
-              - sqs:ChangeMessageVisibility
-              - sqs:GetQueueAttributes
-            Resource: !GetAtt SpotRequestQueue.Arn
           - Sid: AllowSpotAccountToReceive
             Effect: Allow
             Principal:
@@ -5585,20 +5568,6 @@ Resources:
               - sqs:DeleteMessage
               - sqs:GetQueueAttributes
             Resource: !GetAtt SpotRequestDeadLetterQueue.Arn
-
-  SpotRequestQueueEncryptionPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowSpotQueueEncryption
-            Effect: Allow
-            Action:
-              - kms:GenerateDataKey
-              - kms:Decrypt
-              - kms:Encrypt
-            Resource: !GetAtt SpotRequestQueueKey.Arn
 
   SpotRequestQueueWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
