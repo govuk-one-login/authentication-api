@@ -3,11 +3,11 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -90,7 +90,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         userProfile.getPublicSubjectID());
 
         return result.fold(
-                AMCFailureAntiCorruption::toApiGatewayProxyErrorResponse,
+                AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,
                 success -> {
                     try {
                         return generateApiGatewayProxyResponse(

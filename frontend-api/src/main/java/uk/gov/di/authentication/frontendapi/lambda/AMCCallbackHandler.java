@@ -10,9 +10,9 @@ import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
+import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -82,14 +82,13 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         if (requestResult.isFailure()) {
             var failure = requestResult.getFailure();
             LOG.warn("Failure building token request {}", failure.getValue());
-            return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(failure);
+            return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(failure);
         }
 
         var tokenResponse = sendTokenRequest(requestResult.getSuccess());
 
         if (tokenResponse.isFailure()) {
-            return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(
-                    tokenResponse.getFailure());
+            return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(tokenResponse.getFailure());
         }
 
         LOG.info("AMC token response received");
@@ -108,7 +107,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                 .fold(
                         error -> {
                             LOG.warn("Error requesting journey outcome: {}", error.getValue());
-                            return AMCFailureAntiCorruption.toApiGatewayProxyErrorResponse(error);
+                            return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(error);
                         },
                         response -> {
                             LOG.info("Journey outcome received successfully");

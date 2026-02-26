@@ -8,10 +8,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.lambda.NotificationHandler;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.security.SecureRandom;
 import java.util.stream.Stream;

@@ -1,11 +1,11 @@
-package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
+package uk.gov.di.authentication.frontendapi.errormapper;
 
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
-public class ForbiddenReasonAntiCorruption {
+public class ForbiddenReasonErrorMapper {
 
-    private ForbiddenReasonAntiCorruption() {}
+    private ForbiddenReasonErrorMapper() {}
 
     public static ReauthFailureReasons toReauthFailureReason(ForbiddenReason decisionError) {
         return switch (decisionError) {

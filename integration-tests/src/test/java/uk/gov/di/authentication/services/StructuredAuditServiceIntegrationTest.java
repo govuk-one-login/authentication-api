@@ -6,9 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.auditevents.entity.ComponentId;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.List;
 

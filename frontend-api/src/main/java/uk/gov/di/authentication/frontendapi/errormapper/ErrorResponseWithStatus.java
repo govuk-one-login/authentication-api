@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
+package uk.gov.di.authentication.frontendapi.errormapper;
 
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 

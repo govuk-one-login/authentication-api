@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_TOKEN_RESPONSE_ERROR;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class AMCCallbackHandlerTest {

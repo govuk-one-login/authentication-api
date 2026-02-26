@@ -6,22 +6,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.Optional;
 
@@ -35,12 +35,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 
 class AMCAuthorizeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -141,7 +141,7 @@ class AMCAuthorizeHandlerTest {
                 handler.handleRequestWithUserContext(
                         event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
-        var httpResponse = AMCFailureAntiCorruption.toHttpResponse(failureReason);
+        var httpResponse = AMCFailureHttpMapper.toHttpResponse(failureReason);
         int expectedStatusCode = httpResponse.statusCode();
         ErrorResponse expectedError = httpResponse.errorResponse();
 

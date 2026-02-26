@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
+package uk.gov.di.authentication.frontendapi.errormapper;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -11,7 +11,7 @@ public class TrackingErrorHttpMapper {
     private TrackingErrorHttpMapper() {}
 
     public static ErrorResponseWithStatus toHttpResponse(TrackingError trackingError) {
-        ErrorResponse errorResponse = TrackingErrorAntiCorruption.toErrorResponse(trackingError);
+        ErrorResponse errorResponse = TrackingErrorMapper.toErrorResponse(trackingError);
         int statusCode =
                 switch (trackingError) {
                     case STORAGE_SERVICE_ERROR -> 500;

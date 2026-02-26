@@ -4,7 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

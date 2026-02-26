@@ -7,14 +7,14 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorAntiCorruption;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.ForbiddenReasonAntiCorruption;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
+import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorMapper;
+import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
@@ -227,7 +227,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (decision instanceof Decision.ReauthLockedOut reauthLockedOut) {
             ReauthFailureReasons reauthFailureReason =
-                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                    ForbiddenReasonErrorMapper.toReauthFailureReason(
                             reauthLockedOut.forbiddenReason());
 
             auditService.submitAuditEvent(
@@ -440,7 +440,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (decision instanceof Decision.ReauthLockedOut reauthLockedOut) {
             ReauthFailureReasons reauthFailureReason =
-                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                    ForbiddenReasonErrorMapper.toReauthFailureReason(
                             reauthLockedOut.forbiddenReason());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
@@ -490,7 +490,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (canSendSmsOtpResult.isFailure()) {
             DecisionError failure = canSendSmsOtpResult.getFailure();
             LOG.error("Failure to get canSendSmsOtpNotification decision due to {}", failure);
-            return Optional.of(DecisionErrorAntiCorruption.toErrorResponse(failure));
+            return Optional.of(DecisionErrorMapper.toErrorResponse(failure));
         }
 
         Decision canSendSmsOtpDecision = canSendSmsOtpResult.getSuccess();
@@ -509,7 +509,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (canVerifyMfaOtpResult.isFailure()) {
             DecisionError failure = canVerifyMfaOtpResult.getFailure();
             LOG.error("Failure to get canVerifyMfaOtp decision due to {}", failure);
-            return Optional.of(DecisionErrorAntiCorruption.toErrorResponse(failure));
+            return Optional.of(DecisionErrorMapper.toErrorResponse(failure));
         }
 
         Decision canVerifyMfaOtpDecision = canVerifyMfaOtpResult.getSuccess();

@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -19,6 +18,7 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.List;
 import java.util.Map;

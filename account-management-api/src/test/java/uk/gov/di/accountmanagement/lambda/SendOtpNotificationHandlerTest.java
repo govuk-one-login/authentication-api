@@ -76,9 +76,9 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSI
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_EMAIL_FORMAT;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.PERSISTENT_ID_HEADER_NAME;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
