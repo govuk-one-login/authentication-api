@@ -25,6 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.kms.model.KmsException;
@@ -56,6 +59,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -216,84 +220,37 @@ class AMCServiceTest {
             assertEquals(JwtFailureReason.TRANSCODING_ERROR, result.getFailure());
         }
 
-        @Test
-        void shouldReturnEncryptionErrorWhenJoseExceptionOccursDuringEncryption() throws Exception {
-            when(configurationService.getAuthToAMCPublicEncryptionKey())
-                    .thenReturn(constructTestPublicKey());
-
-            JwtService mockJwtService = mock(JwtService.class);
-            SignedJWT signedJWT =
-                    new SignedJWT(
-                            new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
-            signedJWT.sign(new ECDSASigner(accessTokenKey));
-            when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
-            when(mockJwtService.encryptJWT(any(), any()))
-                    .thenThrow(
+        private static Stream<Arguments> jwtServiceErrorsToJwtFailureReason() {
+            return Stream.of(
+                    Arguments.of(
                             new JwtServiceException(
                                     "Encryption failed",
-                                    new com.nimbusds.jose.JOSEException("Encryption error")));
-
-            AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, NOW_CLOCK, mockJwtService);
-
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.ENCRYPTION_ERROR, result.getFailure());
-        }
-
-        @Test
-        void shouldReturnUnknownEncryptionErrorForUnknownExceptionDuringEncryption()
-                throws Exception {
-            when(configurationService.getAuthToAMCPublicEncryptionKey())
-                    .thenReturn(constructTestPublicKey());
-
-            JwtService mockJwtService = mock(JwtService.class);
-            SignedJWT signedJWT =
-                    new SignedJWT(
-                            new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
-            signedJWT.sign(new ECDSASigner(accessTokenKey));
-            when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
-            when(mockJwtService.encryptJWT(any(), any()))
-                    .thenThrow(new JwtServiceException("Unknown encryption error"));
-
-            AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, NOW_CLOCK, mockJwtService);
-
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR, result.getFailure());
-        }
-
-        @Test
-        void shouldReturnJwtEncodingErrorWhenParseExceptionOccursDuringEncryption()
-                throws Exception {
-            when(configurationService.getAuthToAMCPublicEncryptionKey())
-                    .thenReturn(constructTestPublicKey());
-
-            JwtService mockJwtService = mock(JwtService.class);
-            SignedJWT signedJWT =
-                    new SignedJWT(
-                            new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
-            signedJWT.sign(new ECDSASigner(accessTokenKey));
-            when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
-            when(mockJwtService.encryptJWT(any(), any()))
-                    .thenThrow(
+                                    new com.nimbusds.jose.JOSEException("Encryption error")),
+                            JwtFailureReason.ENCRYPTION_ERROR),
+                    Arguments.of(
+                            new JwtServiceException("Unknown encryption error"),
+                            JwtFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR),
+                    Arguments.of(
                             new JwtServiceException(
-                                    "Parse error", new java.text.ParseException("Invalid", 0)));
+                                    "Parse error", new java.text.ParseException("Invalid", 0)),
+                            JwtFailureReason.JWT_ENCODING_ERROR));
+        }
+
+        @ParameterizedTest
+        @MethodSource("jwtServiceErrorsToJwtFailureReason")
+        void shouldMapJwtServiceExceptionsToJwtFailureReason(
+                Exception encryptionException, JwtFailureReason expectedFailureReason)
+                throws JOSEException {
+            when(configurationService.getAuthToAMCPublicEncryptionKey())
+                    .thenReturn(constructTestPublicKey());
+
+            JwtService mockJwtService = mock(JwtService.class);
+            SignedJWT signedJWT =
+                    new SignedJWT(
+                            new JWSHeader(JWSAlgorithm.ES256), new JWTClaimsSet.Builder().build());
+            signedJWT.sign(new ECDSASigner(accessTokenKey));
+            when(mockJwtService.signJWT(any(), any())).thenReturn(signedJWT);
+            when(mockJwtService.encryptJWT(any(), any())).thenThrow(encryptionException);
 
             AMCService serviceWithMockJwt =
                     new AMCService(configurationService, NOW_CLOCK, mockJwtService);
@@ -307,7 +264,7 @@ class AMCServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+            assertEquals(expectedFailureReason, result.getFailure());
         }
 
         @Test
