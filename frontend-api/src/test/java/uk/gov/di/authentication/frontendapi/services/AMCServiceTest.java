@@ -124,6 +124,20 @@ class AMCServiceTest {
                         .withClientId(CLIENT_ID)
                         .withSessionId(SESSION_ID)
                         .withEmailAddress(EMAIL);
+        mockConfigurationService();
+    }
+
+    private void mockConfigurationService() {
+        when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
+        when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
+        when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
+        when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
+                .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
+        when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
+                .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
+        when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
+        when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
+        when(configurationService.getAMCAuthorizeURI()).thenReturn(URI.create(AMC_AUTHORIZE_URI));
     }
 
     @Nested
@@ -133,7 +147,6 @@ class AMCServiceTest {
         void shouldBuildAuthorizationUrlWithValidJWT() throws Exception {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            mockConfigurationService();
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -167,7 +180,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnFailureWhenKmsSigningFails() {
-            mockConfigurationService();
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenThrow(
                             new JwtServiceException(
@@ -188,7 +200,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnFailureWhenSignatureTranscodingFails() {
-            mockConfigurationService();
 
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenThrow(
@@ -211,7 +222,6 @@ class AMCServiceTest {
         void shouldReturnEncryptionErrorWhenJoseExceptionOccursDuringEncryption() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            mockConfigurationService();
             when(jwtService.encryptJWT(any(), any()))
                     .thenThrow(
                             new JwtServiceException(
@@ -235,7 +245,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnUnknownEncryptionErrorForUnknownExceptionDuringEncryption() {
-            mockConfigurationService();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
             when(jwtService.encryptJWT(any(), any()))
@@ -260,7 +269,6 @@ class AMCServiceTest {
         void shouldReturnJwtEncodingErrorWhenParseExceptionOccursDuringEncryption() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            mockConfigurationService();
 
             when(jwtService.encryptJWT(any(), any()))
                     .thenThrow(
@@ -284,7 +292,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnJwtConstructionErrorForUnknownExceptionCause() {
-            mockConfigurationService();
             when(jwtService.signJWT(any(), any()))
                     .thenThrow(new JwtServiceException("Unknown error"));
 
@@ -307,7 +314,6 @@ class AMCServiceTest {
         void shouldHandleMultipleScopes() throws Exception {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            mockConfigurationService();
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -355,7 +361,6 @@ class AMCServiceTest {
         void shouldReturnJwtEncodingErrorWhenPublicKeyParsingFails() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn("invalid-pem-key");
-            mockConfigurationService();
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -367,20 +372,6 @@ class AMCServiceTest {
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
-        }
-
-        private void mockConfigurationService() {
-            when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
-            when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
-            when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
-            when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
-                    .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
-            when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
-                    .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
-            when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
-            when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
-            when(configurationService.getAMCAuthorizeURI())
-                    .thenReturn(URI.create(AMC_AUTHORIZE_URI));
         }
 
         private void assertCompositeJWTClaims(JWTClaimsSet compositeClaims) {
