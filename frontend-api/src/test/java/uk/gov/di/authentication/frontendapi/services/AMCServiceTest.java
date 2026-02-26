@@ -480,13 +480,20 @@ class AMCServiceTest {
     @Nested
     @DisplayName("Journey Outcome Tests")
     class JourneyOutcomeTests {
+        private UserInfoRequest userInfoRequest;
+        private HTTPRequest httpRequestFromUserInfoRequest;
+
+        @BeforeEach
+        void setup() {
+            userInfoRequest = mock(UserInfoRequest.class);
+            httpRequestFromUserInfoRequest = mock(HTTPRequest.class);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequestFromUserInfoRequest);
+        }
+
         @Test
         void shouldSendAJourneyOutcomeRequest() throws IOException {
-            var userInfoRequest = mock(UserInfoRequest.class);
-            var httpRequest = mock(HTTPRequest.class);
-            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
             var response = new HTTPResponse(200);
-            when(httpRequest.send()).thenReturn(response);
+            when(httpRequestFromUserInfoRequest.send()).thenReturn(response);
 
             var result = amcService.requestJourneyOutcome(userInfoRequest);
 
@@ -495,11 +502,8 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnAnErrorForAnUnsuccessfulRequest() throws IOException {
-            var userInfoRequest = mock(UserInfoRequest.class);
-            var httpRequest = mock(HTTPRequest.class);
-            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
             var response = new HTTPResponse(400);
-            when(httpRequest.send()).thenReturn(response);
+            when(httpRequestFromUserInfoRequest.send()).thenReturn(response);
 
             var result = amcService.requestJourneyOutcome(userInfoRequest);
 
@@ -510,10 +514,7 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnAnErrorForAnIOException() throws IOException {
-            var userInfoRequest = mock(UserInfoRequest.class);
-            var httpRequest = mock(HTTPRequest.class);
-            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
-            when(httpRequest.send()).thenThrow(new IOException("Uh oh"));
+            when(httpRequestFromUserInfoRequest.send()).thenThrow(new IOException("Uh oh"));
 
             var result = amcService.requestJourneyOutcome(userInfoRequest);
 
