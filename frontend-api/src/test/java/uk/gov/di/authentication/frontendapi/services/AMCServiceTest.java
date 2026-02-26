@@ -293,34 +293,23 @@ class AMCServiceTest {
             assertEquals(expectedFailureReason, result.getFailure());
         }
 
-        @Test
-        void shouldReturnJwtConstructionErrorForUnknownExceptionCause() {
-            JwtService mockJwtService = mock(JwtService.class);
-            when(mockJwtService.signJWT(any(), any()))
-                    .thenThrow(new JwtServiceException("Unknown error"));
-
-            AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, NOW_CLOCK, mockJwtService);
-
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR, result.getFailure());
-        }
-
-        @Test
-        void shouldReturnJwtEncodingErrorWhenParseExceptionOccurs() {
-            JwtService mockJwtService = mock(JwtService.class);
-            when(mockJwtService.signJWT(any(), any()))
-                    .thenThrow(
+        private static Stream<Arguments> signingErrorsToJwtFailureReasons() {
+            return Stream.of(
+                    Arguments.of(
+                            new JwtServiceException("Unknown error"),
+                            JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR),
+                    Arguments.of(
                             new JwtServiceException(
-                                    "Parse error", new java.text.ParseException("Invalid", 0)));
+                                    "Parse error", new java.text.ParseException("Invalid", 0)),
+                            JwtFailureReason.JWT_ENCODING_ERROR));
+        }
+
+        @ParameterizedTest
+        @MethodSource("signingErrorsToJwtFailureReasons")
+        void shouldMapJwtSigningErrorsToJwtFailureReason(
+                Exception signingException, JwtFailureReason expectedFailureReason) {
+            JwtService mockJwtService = mock(JwtService.class);
+            when(mockJwtService.signJWT(any(), any())).thenThrow(signingException);
 
             AMCService serviceWithMockJwt =
                     new AMCService(configurationService, NOW_CLOCK, mockJwtService);
@@ -334,11 +323,11 @@ class AMCServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+            assertEquals(expectedFailureReason, result.getFailure());
         }
 
         @Test
-        void shouldReturnJwtEncodingErrorWhenPublicKeyParsingFails() throws Exception {
+        void shouldReturnJwtEncodingErrorWhenPublicKeyParsingFails() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn("invalid-pem-key");
             mockKmsSigning(
