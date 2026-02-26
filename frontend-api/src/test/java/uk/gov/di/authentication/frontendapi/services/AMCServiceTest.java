@@ -161,10 +161,7 @@ class AMCServiceTest {
             String authorizationUrl = result.getSuccess();
             assertTrue(authorizationUrl.startsWith(AMC_AUTHORIZE_URI));
 
-            AuthorizationRequest authRequest = AuthorizationRequest.parse(authorizationUrl);
-            EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
-            encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
-            SignedJWT compositeJWT = encryptedJWT.getPayload().toSignedJWT();
+            SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(authorizationUrl);
 
             assertTrue(compositeJWT.verify(new ECDSAVerifier(compositeJWTKey.toECPublicKey())));
 
@@ -361,10 +358,7 @@ class AMCServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isSuccess());
-            AuthorizationRequest authRequest = AuthorizationRequest.parse(result.getSuccess());
-            EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
-            encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
-            SignedJWT compositeJWT = encryptedJWT.getPayload().toSignedJWT();
+            SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(result.getSuccess());
             JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
 
             assertEquals(
@@ -487,6 +481,13 @@ class AMCServiceTest {
         private static String constructTestPublicKey() {
             var encodedKey = Base64.getMimeEncoder().encodeToString(TEST_PUBLIC_KEY.getEncoded());
             return "-----BEGIN PUBLIC KEY-----\n" + encodedKey + "\n-----END PUBLIC KEY-----\n";
+        }
+
+        private SignedJWT extractSignedJwtFromAuthUrl(String authorizationUrl) throws Exception {
+            AuthorizationRequest authRequest = AuthorizationRequest.parse(authorizationUrl);
+            EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
+            encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
+            return encryptedJWT.getPayload().toSignedJWT();
         }
     }
 
