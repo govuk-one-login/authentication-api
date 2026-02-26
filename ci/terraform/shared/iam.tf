@@ -38,6 +38,11 @@ data "aws_dynamodb_table" "account_modifiers_table" {
   name  = "${var.environment}-account-modifiers"
 }
 
+data "aws_dynamodb_table" "international_sms_send_count_table" {
+  count = local.allow_cross_account_role ? 1 : 0
+  name  = "${var.environment}-international-sms-send-count"
+}
+
 
 # Create a new IAM policy for the role
 data "aws_iam_policy_document" "dynamo_access_policy" {
@@ -59,6 +64,7 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       data.aws_dynamodb_table.user_credentials_table[0].arn,
       data.aws_dynamodb_table.user_profile_table[0].arn,
       data.aws_dynamodb_table.account_modifiers_table[0].arn,
+      data.aws_dynamodb_table.international_sms_send_count_table[0].arn,
       "arn:aws:dynamodb:eu-west-2:${var.auth_new_account_id}:table/${var.environment}-stub-account-interventions",
     ]
   }
@@ -78,7 +84,8 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       aws_kms_key.client_registry_table_encryption_key.arn,
       aws_kms_key.user_profile_table_encryption_key.arn,
       aws_kms_key.user_credentials_table_encryption_key.arn,
-      aws_kms_key.account_modifiers_table_encryption_key.arn
+      aws_kms_key.account_modifiers_table_encryption_key.arn,
+      aws_kms_key.international_sms_send_count_encryption_key.arn
     ]
   }
 
