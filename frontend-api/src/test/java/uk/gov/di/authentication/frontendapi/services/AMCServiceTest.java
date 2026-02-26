@@ -117,6 +117,20 @@ class AMCServiceTest {
                         .withClientId(CLIENT_ID)
                         .withSessionId(SESSION_ID)
                         .withEmailAddress(EMAIL);
+        mockConfigurationService();
+    }
+
+    private void mockConfigurationService() {
+        when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
+        when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
+        when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
+        when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
+                .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
+        when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
+                .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
+        when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
+        when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
+        when(configurationService.getAMCAuthorizeURI()).thenReturn(URI.create(AMC_AUTHORIZE_URI));
     }
 
     @Nested
@@ -130,7 +144,6 @@ class AMCServiceTest {
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            mockConfigurationService();
             mockKmsSigning(
                     Map.of(
                             ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
@@ -185,7 +198,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnFailureWhenSignatureTranscodingFails() {
-            mockConfigurationService();
 
             when(kmsConnectionService.sign(any(SignRequest.class)))
                     .thenReturn(
@@ -211,7 +223,6 @@ class AMCServiceTest {
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            mockConfigurationService();
 
             JwtService mockJwtService = mock(JwtService.class);
             SignedJWT signedJWT =
@@ -279,7 +290,6 @@ class AMCServiceTest {
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            mockConfigurationService();
 
             JwtService mockJwtService = mock(JwtService.class);
             SignedJWT signedJWT =
@@ -309,7 +319,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnJwtConstructionErrorForUnknownExceptionCause() {
-            mockConfigurationService();
 
             JwtService mockJwtService = mock(JwtService.class);
             when(mockJwtService.signJWT(any(), any()))
@@ -338,7 +347,6 @@ class AMCServiceTest {
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            mockConfigurationService();
             mockKmsSigning(
                     Map.of(
                             ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
@@ -366,7 +374,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnJwtEncodingErrorWhenParseExceptionOccurs() {
-            mockConfigurationService();
 
             JwtService mockJwtService = mock(JwtService.class);
             when(mockJwtService.signJWT(any(), any()))
@@ -397,7 +404,6 @@ class AMCServiceTest {
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn("invalid-pem-key");
-            mockConfigurationService();
             mockKmsSigning(
                     Map.of(
                             ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
@@ -413,20 +419,6 @@ class AMCServiceTest {
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
-        }
-
-        private void mockConfigurationService() {
-            when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
-            when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
-            when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
-            when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
-                    .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
-            when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
-                    .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
-            when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
-            when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
-            when(configurationService.getAMCAuthorizeURI())
-                    .thenReturn(URI.create(AMC_AUTHORIZE_URI));
         }
 
         private void assertCompositeJWTClaims(JWTClaimsSet compositeClaims) {
