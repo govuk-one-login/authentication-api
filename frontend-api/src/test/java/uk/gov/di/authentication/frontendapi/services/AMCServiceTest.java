@@ -64,6 +64,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 
 class AMCServiceTest {
@@ -74,14 +77,11 @@ class AMCServiceTest {
     private static final String AUTH_TO_AUTH_AUDIENCE = "https://api.manage.account.gov.uk";
     private static final String AUTH_TO_AMC_AUDIENCE = "https://amc.account.gov.uk";
     private static final String AUTH_TO_AMC_PRIVATE_AUDIENCE = "https://amc.account.gov.uk";
-    private static final String CLIENT_ID = "test-client-id";
-    private static final String SESSION_ID = "test-session-id";
     private static final String RESPONSE_TYPE = "code";
     private static final String REDIRECT_URI = "https://example.com/callback";
     private static final String AMC_CLIENT_ID = "amc-client-id";
     private static final String AMC_AUTHORIZE_URI = "https://amc.account.gov.uk/authorize";
     private static final URI TOKEN_ENDPOINT_URI = URI.create("https://amc.account.gov.uk/token");
-    private static final String EMAIL = "test@example.com";
     private static final String JOURNEY_ID = "test-journey-id";
     private static final String PUBLIC_SUBJECT = "test-public-subject";
     private static final String ACCESS_TOKEN_KEY_ALIAS = "test-key-alias";
