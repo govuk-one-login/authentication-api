@@ -172,24 +172,13 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
-  ProvisionNewAuthSigningKey:
+  PublishNextAuthSigningKey:
     !Or [
       !Equals [dev, !Ref Environment],
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
-    ]
-  PublishNextAuthSigningKey:
-    !And [
-      !Condition ProvisionNewAuthSigningKey,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
     ]
   UseNewAuthSigningKey:
     !And [
@@ -6882,16 +6871,13 @@ Resources:
                   !Ref Environment,
                   orchToAuthKeyArn,
                 ]
-          - Fn::If:
-              - ProvisionNewAuthSigningKey
-              - Sid: AllowNewAuthSigningKey
-                Effect: Allow
-                Action:
-                  - kms:Sign
-                  - kms:GetPublicKey
-                Resource:
-                  - !GetAtt OrchAuthSigningKmsKey.Arn
-              - !Ref AWS::NoValue
+          - Sid: AllowNewAuthSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt OrchAuthSigningKmsKey.Arn
 
   BackChannelLogoutQueueWritePolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -8219,7 +8205,6 @@ Resources:
   #region Auth signing key pair
 
   OrchAuthSigningKmsKey:
-    Condition: ProvisionNewAuthSigningKey
     Type: AWS::KMS::Key
     Properties:
       Description: KMS signing key for authentication to Auth
@@ -8237,7 +8222,6 @@ Resources:
             Resource: "*"
 
   OrchAuthSigningKmsKeyAlias:
-    Condition: ProvisionNewAuthSigningKey
     Type: AWS::KMS::Alias
     Properties:
       AliasName: !Sub "alias/${Environment}-orch-auth-kms-key-alias"
