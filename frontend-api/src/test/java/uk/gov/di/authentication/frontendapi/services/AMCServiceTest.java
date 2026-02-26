@@ -90,7 +90,7 @@ class AMCServiceTest {
     private static final RSAPublicKey TEST_PUBLIC_KEY = (RSAPublicKey) TEST_KEY_PAIR.getPublic();
     private static final RSAPrivateKey TEST_PRIVATE_KEY =
             (RSAPrivateKey) TEST_KEY_PAIR.getPrivate();
-    private static final AuthSessionItem authSessionItem = mock(AuthSessionItem.class);
+    private AuthSessionItem authSessionItem;
     private static final String AUTH_CODE = "1234";
 
     // Ensure 0 milliseconds for JWT compatibility
@@ -115,6 +115,11 @@ class AMCServiceTest {
                         ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
                         COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
         mockJwtEncryption();
+        authSessionItem =
+                new AuthSessionItem()
+                        .withClientId(CLIENT_ID)
+                        .withSessionId(SESSION_ID)
+                        .withEmailAddress(EMAIL);
     }
 
     @Nested
@@ -126,8 +131,6 @@ class AMCServiceTest {
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -163,8 +166,6 @@ class AMCServiceTest {
         void shouldReturnFailureWhenKmsSigningFails() {
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenThrow(
@@ -188,8 +189,6 @@ class AMCServiceTest {
         void shouldReturnFailureWhenSignatureTranscodingFails() {
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenThrow(
@@ -214,8 +213,6 @@ class AMCServiceTest {
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
             when(jwtService.encryptJWT(any(), any()))
                     .thenThrow(
                             new JwtServiceException(
@@ -243,8 +240,6 @@ class AMCServiceTest {
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
             when(jwtService.encryptJWT(any(), any()))
                     .thenThrow(new JwtServiceException("Unknown encryption error"));
 
@@ -269,8 +264,6 @@ class AMCServiceTest {
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
             when(jwtService.encryptJWT(any(), any()))
                     .thenThrow(
                             new JwtServiceException(
@@ -295,8 +288,6 @@ class AMCServiceTest {
         void shouldReturnJwtConstructionErrorForUnknownExceptionCause() {
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
             when(jwtService.signJWT(any(), any()))
                     .thenThrow(new JwtServiceException("Unknown error"));
 
@@ -321,8 +312,6 @@ class AMCServiceTest {
                     .thenReturn(constructTestPublicKey());
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -348,8 +337,6 @@ class AMCServiceTest {
         void shouldReturnJwtEncodingErrorWhenParseExceptionOccurs() {
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
             when(jwtService.signJWT(any(), any()))
                     .thenThrow(
                             new JwtServiceException(
@@ -376,8 +363,6 @@ class AMCServiceTest {
                     .thenReturn("invalid-pem-key");
             Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
             mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -406,11 +391,6 @@ class AMCServiceTest {
                     .thenReturn(URI.create(AMC_AUTHORIZE_URI));
             when(nowClock.now()).thenReturn(NOW);
             when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
-        }
-
-        private void mockAuthSessionItem() {
-            when(authSessionItem.getClientId()).thenReturn(CLIENT_ID);
-            when(authSessionItem.getSessionId()).thenReturn(SESSION_ID);
         }
 
         private void assertCompositeJWTClaims(JWTClaimsSet compositeClaims, Date expiryDate) {
