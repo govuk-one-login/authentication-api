@@ -513,8 +513,8 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         @DisplayName(
-                "Response needsForcedMFAResetAfterMFACheck is false when MFA is not required for requested credential strength")
-        void shouldReturnFalseWhenMfaNotRequired() throws JsonException {
+                "Response needsForcedMFAResetAfterMFACheck is true when user has international number regardless of credential strength")
+        void shouldReturnTrueWhenMfaNotRequired() throws JsonException {
             handler =
                     new CheckUserExistsHandler(
                             new IntegrationTestConfigurationService(
@@ -550,7 +550,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(response, hasStatus(200));
             CheckUserExistsResponse checkUserExistsResponse =
                     objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
-            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+            assertTrue(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
 
             assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
         }

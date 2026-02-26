@@ -47,7 +47,6 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.hasInternationalPhoneNumber;
-import static uk.gov.di.authentication.shared.conditions.MfaHelper.mfaRequired;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -242,12 +241,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private boolean requiresMfaResetForInternationalNumber(
             AuthSessionItem authSession, UserCredentials userCredentials, UserProfile userProfile) {
-        if (!mfaRequired(authSession.getRequestedCredentialStrength())) {
-            LOG.info(
-                    "MFA is not required for journey, skipping international number check for forced MFA reset.");
-            return false;
-        }
-
         var mfaMethodsResult = mfaMethodsService.getMfaMethods(userProfile, userCredentials, true);
         List<MFAMethod> mfaMethods =
                 mfaMethodsResult.isSuccess()
