@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
@@ -30,6 +29,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+
 public class JwtService {
     private static final Logger LOG = LogManager.getLogger(JwtService.class);
     private static final int ECDSA_P256_SIGNATURE_LENGTH = 64;
@@ -40,10 +41,14 @@ public class JwtService {
     }
 
     public SignedJWT signJWT(JWTClaimsSet jwtClaims, String keyId) throws JwtServiceException {
-        JWSHeader header =
-                new JWSHeader.Builder(JWSAlgorithm.ES256).type(JOSEObjectType.JWT).build();
 
-        Base64URL encodedHeader = header.toBase64URL();
+        LOG.info("MVM keyId provided: {}, sha256: {}", keyId, hashSha256String(keyId));
+
+        Base64URL encodedHeader =
+                new JWSHeader.Builder(JWSAlgorithm.ES256)
+                        .keyID(hashSha256String(keyId))
+                        .build()
+                        .toBase64URL();
         Base64URL encodedClaims = jwtClaims.toPayload().toBase64URL();
         String signingInput = encodedHeader + "." + encodedClaims;
 
