@@ -37,13 +37,11 @@ class JwksHandlerTest {
     }
 
     @Test
-    void shouldReturnTwoJwksWhenPublishOldKeyIsEnabledAndRsaSigningIsDisabled()
-            throws JOSEException {
-        when(configurationService.isPublishOldDocAppSigningKeyEnabled()).thenReturn(true);
+    void shouldReturnTwoJwksWhenRsaSigningIsDisabled() throws JOSEException {
         var tokenSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
-        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -55,9 +53,7 @@ class JwksHandlerTest {
     }
 
     @Test
-    void shouldReturnThreeJwksWhenPublishOldKeyIsEnabledAndRsaSigningIsEnabled()
-            throws JOSEException {
-        when(configurationService.isPublishOldDocAppSigningKeyEnabled()).thenReturn(true);
+    void shouldReturnThreeJwksWhenRsaSigningIsEnabled() throws JOSEException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
         var tokenSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
@@ -65,7 +61,7 @@ class JwksHandlerTest {
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
         when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaTokenSigningKey);
-        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -79,11 +75,10 @@ class JwksHandlerTest {
 
     @Test
     void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
-        when(configurationService.isPublishOldDocAppSigningKeyEnabled()).thenReturn(true);
         var opaqueSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
-        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -110,58 +105,10 @@ class JwksHandlerTest {
         var opaqueSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
-        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
         assertThat(response, hasHeader("Cache-Control", "max-age=86400"));
-    }
-
-    @Test
-    void
-            shouldPublishNewExternalKeysAlongsideOldWhenNewKeyPublishingIsEnabledAndOldKeyPublishIsEnabled()
-                    throws JOSEException {
-        when(configurationService.isPublishOldDocAppSigningKeyEnabled()).thenReturn(true);
-        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
-                .thenReturn(true);
-
-        var tokenSigningKey = generateECKey();
-        var docAppSigningKey = generateECKey();
-        var rsaTokenSigningKey =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        var newTokenSigningKey = generateECKey();
-        var newRsaTokenSigningKey =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        var newTokenSigningKeyV2 = generateECKey();
-        var newRsaTokenSigningKeyV2 =
-                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-
-        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaTokenSigningKey);
-        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
-        when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newTokenSigningKey);
-        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueId()).thenReturn(newRsaTokenSigningKey);
-        when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newTokenSigningKeyV2);
-        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2())
-                .thenReturn(newRsaTokenSigningKeyV2);
-
-        var event = new APIGatewayProxyRequestEvent();
-        var result = handler.handleRequest(event, context);
-
-        var expectedJWKSet =
-                new JWKSet(
-                        List.of(
-                                tokenSigningKey,
-                                docAppSigningKey,
-                                rsaTokenSigningKey,
-                                newTokenSigningKey,
-                                newRsaTokenSigningKey,
-                                newTokenSigningKeyV2,
-                                newRsaTokenSigningKeyV2));
-
-        assertThat(result, hasStatus(200));
-        assertThat(result, hasBody(expectedJWKSet.toString(true)));
     }
 
     @Test
@@ -172,10 +119,12 @@ class JwksHandlerTest {
                 .thenReturn(true);
 
         var tokenSigningKey = generateECKey();
+        var docAppSigningKey = generateECKey();
         var newTokenSigningKey = generateECKey();
         var newTokenSigningKeyV2 = generateECKey();
 
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
+        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
         when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newTokenSigningKey);
         when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newTokenSigningKeyV2);
 
@@ -183,27 +132,12 @@ class JwksHandlerTest {
         var result = handler.handleRequest(event, context);
 
         var expectedJWKSet =
-                new JWKSet(List.of(tokenSigningKey, newTokenSigningKey, newTokenSigningKeyV2));
-
-        assertThat(result, hasStatus(200));
-        assertThat(result, hasBody(expectedJWKSet.toString(true)));
-    }
-
-    @Test
-    void shouldPublishNextDocAppSigningKeyWhenPublishingIsEnabled() throws JOSEException {
-        when(configurationService.isPublishNextDocAppSigningKeyEnabled()).thenReturn(true);
-
-        var tokenSigningKey = generateECKey();
-        var nextDocAppSigningKey = generateECKey();
-
-        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
-        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId())
-                .thenReturn(nextDocAppSigningKey);
-
-        var event = new APIGatewayProxyRequestEvent();
-        var result = handler.handleRequest(event, context);
-
-        var expectedJWKSet = new JWKSet(List.of(tokenSigningKey, nextDocAppSigningKey));
+                new JWKSet(
+                        List.of(
+                                tokenSigningKey,
+                                docAppSigningKey,
+                                newTokenSigningKey,
+                                newTokenSigningKeyV2));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));
