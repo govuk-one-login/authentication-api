@@ -31,7 +31,6 @@ module "authentication_callback" {
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
-    AUTHENTICATION_BACKEND_URI                  = "https://${local.di_auth_ext_api_id}-${local.vpce_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
     ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME     = var.account_interventions_error_metric_name
     ENVIRONMENT                                 = var.environment
     IDENTITY_ENABLED                            = var.ipv_api_enabled
