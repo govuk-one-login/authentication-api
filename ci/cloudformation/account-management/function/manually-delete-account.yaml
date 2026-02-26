@@ -64,6 +64,7 @@ Resources:
         - !Ref S3AcceptanceTestsBucketPolicy
         - !Ref LegacyAccountDeletionTopicPolicy
         - !Ref AuditEventsSnsPolicy
+        - !Ref ManuallyDeleteAccountFunctionSQSPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
