@@ -8,16 +8,6 @@ data "terraform_remote_state" "shared" {
   }
 }
 
-data "terraform_remote_state" "auth-ext-api" {
-  backend = "s3"
-  config = {
-    bucket      = var.shared_state_bucket
-    key         = "${var.environment}-auth-external-api-terraform.tfstate"
-    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
-    region      = var.aws_region
-  }
-}
-
 data "terraform_remote_state" "contra" {
   backend = "s3"
   config = {
@@ -50,8 +40,6 @@ locals {
   pepper_ssm_parameter_policy                     = data.terraform_remote_state.shared.outputs.pepper_ssm_parameter_policy
   lambda_code_signing_configuration_arn           = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
   auth_code_store_signing_configuration_arn       = data.terraform_remote_state.shared.outputs.auth_code_store_signing_configuration_arn
-  di_auth_ext_api_id                              = data.terraform_remote_state.auth-ext-api.outputs.di_auth_ext_api_id
-  vpce_id                                         = data.terraform_remote_state.auth-ext-api.outputs.vpce_id
   client_registry_encryption_key_arn              = data.terraform_remote_state.shared.outputs.client_registry_encryption_key_arn
   account_modifiers_encryption_policy_arn         = data.terraform_remote_state.shared.outputs.account_modifiers_encryption_policy_arn
   common_passwords_encryption_policy_arn          = data.terraform_remote_state.shared.outputs.common_passwords_encryption_policy_arn
