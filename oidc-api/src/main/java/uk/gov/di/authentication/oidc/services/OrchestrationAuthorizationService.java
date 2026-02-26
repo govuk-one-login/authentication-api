@@ -143,18 +143,8 @@ public class OrchestrationAuthorizationService {
 
     public SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet) {
         LOG.info("Generating signed and encrypted JWT");
-        JWK signingKey;
-        String signingKeyAlias;
-        if (configurationService.isUseNewAuthSigningKey()) {
-            LOG.info("Signing with new auth signing key");
-            signingKey = jwksService.getNextPublicAuthSigningJwkWithOpaqueId();
-            signingKeyAlias = configurationService.getNextAuthSigningKeyAlias();
-        } else {
-            LOG.info("Signing with old auth signing key");
-            signingKey = jwksService.getPublicAuthSigningJwkWithOpaqueId();
-            signingKeyAlias =
-                    configurationService.getOrchestrationToAuthenticationTokenSigningKeyAlias();
-        }
+        var signingKey = jwksService.getNextPublicAuthSigningJwkWithOpaqueId();
+        var signingKeyAlias = configurationService.getNextAuthSigningKeyAlias();
         var jwsHeader =
                 new JWSHeader.Builder(SIGNING_ALGORITHM).keyID(signingKey.getKeyID()).build();
 

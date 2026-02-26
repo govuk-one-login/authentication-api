@@ -304,7 +304,7 @@ public class IntegrationTest {
         }
 
         @Override
-        public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
+        public String getNextAuthSigningKeyAlias() {
             return orchestrationPrivateKeyJwtSigner.getKeyAlias();
         }
 

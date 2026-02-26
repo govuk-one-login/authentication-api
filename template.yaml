@@ -172,14 +172,6 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
-  UseNewAuthSigningKey:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   ProvisionNewExternalTokenSigningKeysV2:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -3195,14 +3187,8 @@ Resources:
               !Ref Environment,
               orchToAuthKeyArn,
             ]
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !If
-            - UseNewAuthSigningKey
-            - !Ref OrchAuthSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          USE_NEW_AUTH_SIGNING_KEY: !If
-            - UseNewAuthSigningKey
-            - true
-            - false
+          NEXT_AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
+          USE_NEW_AUTH_SIGNING_KEY: true
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           OIDC_API_BASE_URL: !Sub
@@ -4072,14 +4058,8 @@ Resources:
               !Ref Environment,
               orchToAuthKeyArn,
             ]
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !If
-            - UseNewAuthSigningKey
-            - !Ref OrchAuthSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          USE_NEW_AUTH_SIGNING_KEY: !If
-            - UseNewAuthSigningKey
-            - true
-            - false
+          NEXT_AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
+          USE_NEW_AUTH_SIGNING_KEY: true
           ORCH_TO_AUTH_ENCRYPTION_KEY_PARAM: !If
             - UseAuthStub
             - !Sub /orch-stubs/${Environment}-auth-stub-auth-public-encryption-key
