@@ -17,11 +17,11 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.Optional;
 
@@ -35,12 +35,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 
 class AMCAuthorizeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);

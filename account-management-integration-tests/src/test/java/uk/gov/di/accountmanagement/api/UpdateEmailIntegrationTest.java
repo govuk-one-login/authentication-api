@@ -16,13 +16,13 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.Collections;
 import java.util.HashMap;

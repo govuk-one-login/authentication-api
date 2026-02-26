@@ -8,8 +8,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 

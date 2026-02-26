@@ -1,9 +1,10 @@
-package uk.gov.di.authentication.shared.helpers;
+package uk.gov.di.authentication.sharedtest.helper;
 
 import com.google.gson.JsonParser;
 import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 
 import java.util.List;
 import java.util.Map;

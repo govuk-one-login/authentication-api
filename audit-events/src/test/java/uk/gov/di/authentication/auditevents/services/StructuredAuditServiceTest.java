@@ -8,9 +8,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import uk.gov.di.authentication.auditevents.entity.ComponentId;
 import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Optional;

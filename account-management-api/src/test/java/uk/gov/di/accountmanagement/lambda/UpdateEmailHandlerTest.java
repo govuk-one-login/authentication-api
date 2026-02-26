@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -44,6 +43,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.ArrayList;

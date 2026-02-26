@@ -35,7 +35,7 @@ import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADet
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class MfaHelperTest {

@@ -5,11 +5,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.time.temporal.ChronoUnit;
 

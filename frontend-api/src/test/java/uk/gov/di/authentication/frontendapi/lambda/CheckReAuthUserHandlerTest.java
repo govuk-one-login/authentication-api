@@ -54,13 +54,13 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class CheckReAuthUserHandlerTest {

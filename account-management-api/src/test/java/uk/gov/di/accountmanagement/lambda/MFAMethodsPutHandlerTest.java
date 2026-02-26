@@ -75,11 +75,11 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.containsMetadataPair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_SMS_METHOD;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_SMS_METHOD;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;

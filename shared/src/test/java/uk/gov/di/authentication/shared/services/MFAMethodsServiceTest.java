@@ -36,11 +36,11 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_SMS_METHOD;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class MFAMethodsServiceTest {

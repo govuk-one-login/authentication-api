@@ -50,10 +50,10 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;

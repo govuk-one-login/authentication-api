@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -35,6 +34,7 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,10 +63,10 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
 
 class PhoneNumberCodeProcessorTest {
 

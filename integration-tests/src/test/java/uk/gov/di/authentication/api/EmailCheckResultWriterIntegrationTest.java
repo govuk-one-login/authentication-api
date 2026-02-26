@@ -8,11 +8,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.utils.lambda.EmailCheckResultWriterHandler;
 
 import java.util.List;
