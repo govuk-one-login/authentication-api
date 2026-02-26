@@ -287,7 +287,7 @@ Mappings:
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       defaultProvisionedConcurrency: 1
-      aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
+      aisUriSecretId: 15fd1c23-eac2-4881-9ca8-d287b476fc3b
       authStubEnabled: false
       syncWaitForSpotTimeout: 20000
     staging:
