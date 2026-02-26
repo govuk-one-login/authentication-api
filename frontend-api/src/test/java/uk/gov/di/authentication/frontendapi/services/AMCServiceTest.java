@@ -136,12 +136,15 @@ class AMCServiceTest {
     @Nested
     class AuthorizationUrlTests {
 
+        private final ECKey accessTokenKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        private final ECKey compositeJWTKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+
+        AuthorizationUrlTests() throws JOSEException {}
+
         @Test
         void shouldBuildAuthorizationUrlWithValidJWT() throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            ECKey compositeJWTKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
             mockKmsSigning(
@@ -195,7 +198,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnFailureWhenSignatureTranscodingFails() {
-
             when(kmsConnectionService.sign(any(SignRequest.class)))
                     .thenReturn(
                             SignResponse.builder()
@@ -216,8 +218,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnEncryptionErrorWhenJoseExceptionOccursDuringEncryption() throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
 
@@ -251,8 +251,6 @@ class AMCServiceTest {
         @Test
         void shouldReturnUnknownEncryptionErrorForUnknownExceptionDuringEncryption()
                 throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
 
@@ -283,8 +281,6 @@ class AMCServiceTest {
         @Test
         void shouldReturnJwtEncodingErrorWhenParseExceptionOccursDuringEncryption()
                 throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
 
@@ -316,7 +312,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnJwtConstructionErrorForUnknownExceptionCause() {
-
             JwtService mockJwtService = mock(JwtService.class);
             when(mockJwtService.signJWT(any(), any()))
                     .thenThrow(new JwtServiceException("Unknown error"));
@@ -338,10 +333,6 @@ class AMCServiceTest {
 
         @Test
         void shouldHandleMultipleScopes() throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            ECKey compositeJWTKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
             mockKmsSigning(
@@ -368,7 +359,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnJwtEncodingErrorWhenParseExceptionOccurs() {
-
             JwtService mockJwtService = mock(JwtService.class);
             when(mockJwtService.signJWT(any(), any()))
                     .thenThrow(
@@ -392,10 +382,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnJwtEncodingErrorWhenPublicKeyParsingFails() throws Exception {
-            ECKey accessTokenKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            ECKey compositeJWTKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn("invalid-pem-key");
             mockKmsSigning(
