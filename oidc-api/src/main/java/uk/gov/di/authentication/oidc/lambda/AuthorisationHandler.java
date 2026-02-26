@@ -74,6 +74,7 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
+import uk.gov.di.orchestration.shared.validation.ClientRegistryDynamoExtensions;
 
 import java.net.URI;
 import java.time.Clock;
@@ -192,7 +193,8 @@ public class AuthorisationHandler
                 new QueryParamsAuthorizeValidator(configurationService);
         this.requestObjectAuthorizeValidator =
                 new RequestObjectAuthorizeValidator(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
+        this.clientService =
+                new DynamoClientService(configurationService, new ClientRegistryDynamoExtensions());
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
