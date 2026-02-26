@@ -171,23 +171,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getDocAppTokenSigningKeyAlias() {
-        return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getNextDocAppTokenSigningKeyAlias() {
-        return System.getenv("NEXT_DOC_APP_SIGNING_KEY_ALIAS");
-    }
-
-    public boolean isPublishNextDocAppSigningKeyEnabled() {
-        return getFlagOrFalse("PUBLISH_NEXT_DOC_APP_SIGNING_KEY");
-    }
-
-    public boolean isPublishOldDocAppSigningKeyEnabled() {
-        return getFlagOrTrue("PUBLISH_OLD_DOC_APP_SIGNING_KEY");
-    }
-
-    public boolean isUseNewDocAppSigningKey() {
-        return getFlagOrFalse("USE_NEW_DOC_APP_SIGNING_KEY");
+        return System.getenv("DOC_APP_SIGNING_KEY_ALIAS");
     }
 
     public String getDocAppCriV2DataEndpoint() {

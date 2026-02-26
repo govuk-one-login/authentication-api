@@ -22,8 +22,6 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
@@ -54,13 +52,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
-import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.sharedtest.exceptions.Unchecked.unchecked;
 
 class DocAppCriServiceTest {
@@ -73,8 +69,6 @@ class DocAppCriServiceTest {
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String SIGNING_KID = "14342354354353";
-    private static final String KEY_ALIAS = "test-key-alias";
-    private static final String NEXT_KEY_ALIAS = "test-new-key-alias";
     private static final String DOC_APP_SUBJECT_ID = "some-doc-app-subject-id";
     private static final URI DOC_APP_JWKS_URI =
             URI.create("http://localhost/doc-app/.well-known/jwks.json");
@@ -174,31 +168,6 @@ class DocAppCriServiceTest {
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
             verify(tokenRequest.toHTTPRequest(), times(2)).send();
-        }
-
-        @ParameterizedTest
-        @ValueSource(booleans = {true, false})
-        void shouldSignWithCorrectKeyBasedOnFeatureFlag(boolean useNewSigningKey)
-                throws JOSEException {
-            when(configService.isUseNewDocAppSigningKey()).thenReturn(useNewSigningKey);
-            when(configService.getDocAppTokenSigningKeyAlias()).thenReturn(KEY_ALIAS);
-            when(configService.getNextDocAppTokenSigningKeyAlias()).thenReturn(NEXT_KEY_ALIAS);
-
-            String keyAlias = useNewSigningKey ? NEXT_KEY_ALIAS : KEY_ALIAS;
-            String keyId = useNewSigningKey ? "new-key-id-123" : "old-key-id-456";
-
-            when(kmsService.getPublicKey(GetPublicKeyRequest.builder().keyId(keyAlias).build()))
-                    .thenReturn(GetPublicKeyResponse.builder().keyId(keyId).build());
-
-            signJWTWithKMS(keyId);
-
-            TokenRequest tokenRequest =
-                    docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
-
-            var clientAuth = (PrivateKeyJWT) tokenRequest.getClientAuthentication();
-            SignedJWT signedJWT = clientAuth.getClientAssertion();
-            assertThat(signedJWT.getHeader().getKeyID(), equalTo(hashSha256String(keyId)));
-            verify(kmsService).sign(argThat(signRequest -> keyAlias.equals(signRequest.keyId())));
         }
 
         private void signJWTWithKMS() throws JOSEException {
