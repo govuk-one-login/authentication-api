@@ -19,6 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
@@ -30,6 +31,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+
 public class JwtService {
     private static final Logger LOG = LogManager.getLogger(JwtService.class);
     private static final int ECDSA_P256_SIGNATURE_LENGTH = 64;
@@ -40,8 +43,21 @@ public class JwtService {
     }
 
     public SignedJWT signJWT(JWTClaimsSet jwtClaims, String keyId) throws JwtServiceException {
+        String nonAliasKeyId;
+        try {
+            GetPublicKeyRequest getPublicKeyRequest =
+                    GetPublicKeyRequest.builder().keyId(keyId).build();
+            nonAliasKeyId = kmsConnectionService.getPublicKey(getPublicKeyRequest).keyId();
+        } catch (SdkException e) {
+            LOG.error("AWS SDK error when resolving key ID", e);
+            throw new JwtServiceException("AWS SDK error when resolving key ID", e);
+        }
+
         JWSHeader header =
-                new JWSHeader.Builder(JWSAlgorithm.ES256).type(JOSEObjectType.JWT).build();
+                new JWSHeader.Builder(JWSAlgorithm.ES256)
+                        .type(JOSEObjectType.JWT)
+                        .keyID(hashSha256String(nonAliasKeyId))
+                        .build();
 
         Base64URL encodedHeader = header.toBase64URL();
         Base64URL encodedClaims = jwtClaims.toPayload().toBase64URL();
