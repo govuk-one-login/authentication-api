@@ -92,12 +92,6 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    public JWK getPublicAuthSigningJwkWithOpaqueId() {
-        LOG.info("Retrieving Auth public signing key");
-        return getPublicJWKWithKeyId(
-                configurationService.getOrchestrationToAuthenticationTokenSigningKeyAlias());
-    }
-
     public JWK getNextPublicAuthSigningJwkWithOpaqueId() {
         LOG.info("Retrieving next Auth public signing key");
         return getPublicJWKWithKeyId(configurationService.getNextAuthSigningKeyAlias());

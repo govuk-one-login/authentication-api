@@ -172,24 +172,13 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
-  PublishNextAuthSigningKey:
+  UseNewAuthSigningKey:
     !Or [
       !Equals [dev, !Ref Environment],
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
-    ]
-  UseNewAuthSigningKey:
-    !And [
-      !Condition PublishNextAuthSigningKey,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
     ]
   ProvisionNewExternalTokenSigningKeysV2:
     !Or [
@@ -3803,14 +3792,8 @@ Resources:
               !Ref Environment,
               orchToAuthKeyArn,
             ]
-          PUBLISH_NEXT_AUTH_SIGNING_KEY: !If
-            - PublishNextAuthSigningKey
-            - true
-            - false
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !If
-            - PublishNextAuthSigningKey
-            - !Ref OrchAuthSigningKmsKeyAlias
-            - !Ref AWS::NoValue
+          PUBLISH_NEXT_AUTH_SIGNING_KEY: true
+          NEXT_AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
           PUBLISH_OLD_AUTH_SIGNING_KEY: false
       Policies:
         - !Ref OrchToAuthSigningKmsAccessPolicy
