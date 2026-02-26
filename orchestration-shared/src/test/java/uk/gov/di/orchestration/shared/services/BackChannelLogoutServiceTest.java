@@ -16,6 +16,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 
+// QualityGateUnitTest
 class BackChannelLogoutServiceTest {
 
     private final AwsSqsClient sqs = mock(AwsSqsClient.class);
@@ -23,6 +24,7 @@ class BackChannelLogoutServiceTest {
     private static final String RP_SECTOR_HOST = "example.sign-in.service.gov.uk";
     private static final String SUBJECT_ID = "subject";
 
+    // QualityGateRegressionTest
     @Test
     void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients() {
         var rpPairwiseId =
@@ -48,6 +50,7 @@ class BackChannelLogoutServiceTest {
         assertThat(message.getSubjectId(), is(rpPairwiseId));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotPostMessageToSqsWhenRequiredFieldsAreNotPresent() {
         var noLogoutUri = new ClientRegistry().withClientID("client-id");

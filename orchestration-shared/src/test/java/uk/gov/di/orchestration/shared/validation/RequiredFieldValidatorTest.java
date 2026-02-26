@@ -11,10 +11,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 
+// QualityGateUnitTest
 class RequiredFieldValidatorTest {
 
     private RequiredFieldValidator validator = new RequiredFieldValidator();
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnNoErrorsWhenAllFieldsPassValidation() {
         var subject = new TestClass("value1", 2, null);
@@ -22,6 +24,7 @@ class RequiredFieldValidatorTest {
         assertThat(validator.validate(subject), hasSize(0));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("failScenarios")
     void shouldReturnCorrectViolationWhenFieldsFailValidation(

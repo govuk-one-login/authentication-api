@@ -16,6 +16,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.GlobalLogoutAuditableEvent.GLOBAL_LOG_OUT_SUCCESS;
 
+// QualityGateUnitTest
 public class GlobalLogoutServiceTest {
     private static final String INTERNAL_COMMON_SUBJECT_ID = "test-icsid";
     public static final String SESSION_ID_1 = "test-session-id-1";
@@ -45,6 +46,7 @@ public class GlobalLogoutServiceTest {
                         auditService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotLogoutAnySessionsIfNoneFound() {
         withNoSessions();
@@ -57,6 +59,7 @@ public class GlobalLogoutServiceTest {
         verifyNoInteractions(auditService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldLogoutOneSession() {
         withSessions(
@@ -75,6 +78,7 @@ public class GlobalLogoutServiceTest {
                         auditUser(INTERNAL_COMMON_SUBJECT_ID, SESSION_ID_1, CLIENT_SESSION_ID_1));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldLogoutMultipleSessions() {
         withSessions(

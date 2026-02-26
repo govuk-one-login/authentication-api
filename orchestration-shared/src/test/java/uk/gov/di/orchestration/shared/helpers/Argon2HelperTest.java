@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+// QualityGateUnitTest
 class Argon2HelperTest {
 
+    // QualityGateRegressionTest
     @Test
     void correctPasswordShouldMatchEncodedPassword() {
         String testPassword = "test-password123";
@@ -16,6 +18,7 @@ class Argon2HelperTest {
                 Argon2MatcherHelper.matchRawStringWithEncoded(testPassword, encodedPassword));
     }
 
+    // QualityGateRegressionTest
     @Test
     void wrongPasswordShouldNotMatchEncodedPassword() {
         String testPassword = "test-password123";

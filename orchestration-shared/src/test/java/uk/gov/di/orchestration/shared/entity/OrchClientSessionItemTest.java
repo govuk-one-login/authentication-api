@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+// QualityGateUnitTest
 class OrchClientSessionItemTest {
 
     private static final String RP_PAIRWISE_ID = "rp-pairwise-id";
@@ -14,12 +15,14 @@ class OrchClientSessionItemTest {
                     .withRpPairwiseId(RP_PAIRWISE_ID)
                     .withPublicSubjectId(PUBLIC_SUBJECT_ID);
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnRpPairwiseIdForClientsWithPairwiseSubjectType() {
         assertEquals(
                 RP_PAIRWISE_ID, orchClientSession.getCorrectPairwiseIdGivenSubjectType("pairwise"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnRpPairwiseIdForClientsWithPublicSubjectType() {
         assertEquals(

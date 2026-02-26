@@ -21,6 +21,7 @@ import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachAuditFiel
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
+// QualityGateUnitTest
 class AuditHelperTest {
 
     private final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
@@ -34,6 +35,7 @@ class AuditHelperTest {
         ThreadContext.clearAll();
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAttachValidTxmaHeaderToThreadContext() {
         Map<String, String> headers = new HashMap<>();
@@ -47,6 +49,7 @@ class AuditHelperTest {
                 TXMA_ENCODED_HEADER_VALUE, ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotAttachMissingTxmaHeaders() {
         Map<String, String> headers = new HashMap<>();
@@ -55,6 +58,7 @@ class AuditHelperTest {
         assertFalse(ThreadContext.containsKey(TXMA_ENCODED_HEADER.getFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldLogMalformedTxmaHeaders() {
         Map<String, String> headers = new HashMap<>();
@@ -67,6 +71,7 @@ class AuditHelperTest {
                 hasItem(withMessageContaining("Audit field has invalid base64url encoding")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAttachAuditFieldToThreadContextUsingAttachAuditField()
             throws InvalidEncodingException {
@@ -78,18 +83,21 @@ class AuditHelperTest {
                 TXMA_ENCODED_HEADER_VALUE, ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldHandleBlankAuditField() {
         assertThrows(
                 InvalidEncodingException.class, () -> attachAuditField(TXMA_ENCODED_HEADER, ""));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldHandleNullAuditField() {
         assertThrows(
                 InvalidEncodingException.class, () -> attachAuditField(TXMA_ENCODED_HEADER, null));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfEncodingIsWrong() {
 
