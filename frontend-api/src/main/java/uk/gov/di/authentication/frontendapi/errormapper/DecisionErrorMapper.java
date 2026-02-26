@@ -1,11 +1,11 @@
-package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
+package uk.gov.di.authentication.frontendapi.errormapper;
 
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 
-public class DecisionErrorAntiCorruption {
+public class DecisionErrorMapper {
 
-    private DecisionErrorAntiCorruption() {}
+    private DecisionErrorMapper() {}
 
     public static ErrorResponse toErrorResponse(DecisionError decisionError) {
         return switch (decisionError) {

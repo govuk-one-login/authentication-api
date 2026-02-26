@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
+package uk.gov.di.authentication.frontendapi.errormapper;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -11,7 +11,7 @@ public class DecisionErrorHttpMapper {
     private DecisionErrorHttpMapper() {}
 
     public static ErrorResponseWithStatus toHttpResponse(DecisionError decisionError) {
-        ErrorResponse errorResponse = DecisionErrorAntiCorruption.toErrorResponse(decisionError);
+        ErrorResponse errorResponse = DecisionErrorMapper.toErrorResponse(decisionError);
         int statusCode =
                 switch (decisionError) {
                     case CONFIGURATION_ERROR -> 500;

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
+package uk.gov.di.authentication.frontendapi.errormapper;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
@@ -8,9 +8,9 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 
-public class AMCFailureAntiCorruption {
+public class AMCFailureHttpMapper {
 
-    private AMCFailureAntiCorruption() {}
+    private AMCFailureHttpMapper() {}
 
     public static ErrorResponseWithStatus toHttpResponse(JwtFailureReason failureReason) {
         return switch (failureReason) {

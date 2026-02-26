@@ -7,12 +7,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.ForbiddenReasonAntiCorruption;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.TrackingErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
+import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapper;
+import uk.gov.di.authentication.frontendapi.errormapper.TrackingErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -202,7 +202,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         if (canReceiveEmailAddressDecision instanceof Decision.ReauthLockedOut reauthLockedOut) {
             ReauthFailureReasons failureReason =
-                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                    ForbiddenReasonErrorMapper.toReauthFailureReason(
                             reauthLockedOut.forbiddenReason());
 
             auditService.submitAuditEvent(
@@ -308,7 +308,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         if (canReceiveEmailAddressDecision instanceof Decision.ReauthLockedOut reauthLockedOut) {
             ReauthFailureReasons failureReason =
-                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                    ForbiddenReasonErrorMapper.toReauthFailureReason(
                             reauthLockedOut.forbiddenReason());
 
             auditService.submitAuditEvent(

@@ -6,11 +6,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.AMCFailureAntiCorruption;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -141,7 +141,7 @@ class AMCAuthorizeHandlerTest {
                 handler.handleRequestWithUserContext(
                         event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
-        var httpResponse = AMCFailureAntiCorruption.toHttpResponse(failureReason);
+        var httpResponse = AMCFailureHttpMapper.toHttpResponse(failureReason);
         int expectedStatusCode = httpResponse.statusCode();
         ErrorResponse expectedError = httpResponse.errorResponse();
 
