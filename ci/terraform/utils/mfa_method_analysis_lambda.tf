@@ -36,6 +36,7 @@ module "mfa_method_analysis_lambda_role" {
 
   environment = var.environment
   role_name   = "mfa-method-analysis-lambda-role"
+  vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
     aws_iam_policy.mfa_method_analysis_dynamo_access.arn,
@@ -54,6 +55,11 @@ resource "aws_lambda_function" "mfa_method_analysis_lambda" {
   s3_bucket         = aws_s3_object.utils_release_zip.bucket
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
+
+  vpc_config {
+    security_group_ids = [local.allow_aws_service_access_security_group_id]
+    subnet_ids         = local.authentication_private_subnet_ids
+  }
 
   environment {
     variables = merge({
