@@ -191,7 +191,6 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
-  PublishOldAuthSigningKey: !Equals [production, !Ref Environment]
   UseNewAuthSigningKey:
     !And [
       !Condition PublishNextAuthSigningKey,
@@ -3823,10 +3822,7 @@ Resources:
             - PublishNextAuthSigningKey
             - !Ref OrchAuthSigningKmsKeyAlias
             - !Ref AWS::NoValue
-          PUBLISH_OLD_AUTH_SIGNING_KEY: !If
-            - PublishOldAuthSigningKey
-            - true
-            - false
+          PUBLISH_OLD_AUTH_SIGNING_KEY: false
       Policies:
         - !Ref OrchToAuthSigningKmsAccessPolicy
       Tags:
