@@ -13,7 +13,6 @@ jobs:
           - account-management
           - auth-external-api
           - delivery-receipts
-          - interventions-api-stub
           - oidc
           - shared
           - test-services

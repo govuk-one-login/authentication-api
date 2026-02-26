@@ -101,7 +101,6 @@ jobs:
           - delivery-receipts-api
           - doc-checking-app-api
           - frontend-api
-          - interventions-api-stub
           - ipv-api
           - oidc-api
           - test-services-api
@@ -146,8 +145,6 @@ jobs:
             terraform_directory_name: auth-external-api
           - module_name: delivery-receipts-api
             terraform_directory_name: delivery-receipts
-          - module_name: interventions-api-stub
-            terraform_directory_name: interventions-api-stub
           - module_name: test-services-api
             terraform_directory_name: test-services
           - module_name: utils
