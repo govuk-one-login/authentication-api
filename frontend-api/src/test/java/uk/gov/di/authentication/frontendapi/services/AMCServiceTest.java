@@ -18,6 +18,9 @@ import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,7 +30,8 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.kms.model.KmsException;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
-import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -36,6 +40,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -115,7 +120,7 @@ class AMCServiceTest {
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
+            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
             mockConfigurationService(expiryDate);
             mockAuthSessionItem();
             mockKmsSigning(
@@ -447,7 +452,7 @@ class AMCServiceTest {
             when(configurationService.getAMCAuthorizeURI())
                     .thenReturn(URI.create(AMC_AUTHORIZE_URI));
             when(nowClock.now()).thenReturn(NOW);
-            when(nowClock.nowPlus(SESSION_EXPIRY, ChronoUnit.SECONDS)).thenReturn(expiryDate);
+            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
         }
 
         private void mockAuthSessionItem() {
@@ -538,6 +543,9 @@ class AMCServiceTest {
         void shouldBuildTokenRequest() throws ParseException, JOSEException {
             when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                     .thenReturn(signingKeyPair.getKeyID());
+            when(nowClock.now()).thenReturn(NOW);
+            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
+            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
 
             mockKmsSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
 
@@ -563,9 +571,7 @@ class AMCServiceTest {
             assertInstanceOf(String.class, claims.getJWTID());
             assertEquals(NOW, claims.getIssueTime());
             assertEquals(NOW, claims.getNotBeforeTime());
-            assertEquals(
-                    Date.from(Instant.ofEpochSecond(NOW.getTime() + (3600 * 1000))),
-                    claims.getExpirationTime());
+            assertEquals(expiryDate, claims.getExpirationTime());
         }
 
         @Test
@@ -573,6 +579,9 @@ class AMCServiceTest {
             var invalidKeyAlias = "invalid-key-alias";
             when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                     .thenReturn(invalidKeyAlias);
+            when(nowClock.now()).thenReturn(NOW);
+            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
+            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
 
             when(kmsConnectionService.sign(
                             argThat(request -> request.keyId().equals(invalidKeyAlias))))
@@ -582,6 +591,50 @@ class AMCServiceTest {
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
+        }
+    }
+
+    @Nested
+    @DisplayName("Journey Outcome Tests")
+    class JourneyOutcomeTests {
+        @Test
+        void shouldSendAJourneyOutcomeRequest() throws IOException {
+            var userInfoRequest = mock(UserInfoRequest.class);
+            var httpRequest = mock(HTTPRequest.class);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
+            var response = new HTTPResponse(200);
+            when(httpRequest.send()).thenReturn(response);
+
+            var result = amcService.requestJourneyOutcome(userInfoRequest);
+
+            assertEquals(Result.success(response), result);
+        }
+
+        @Test
+        void shouldReturnAnErrorForAnUnsuccessfulRequest() throws IOException {
+            var userInfoRequest = mock(UserInfoRequest.class);
+            var httpRequest = mock(HTTPRequest.class);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
+            var response = new HTTPResponse(400);
+            when(httpRequest.send()).thenReturn(response);
+
+            var result = amcService.requestJourneyOutcome(userInfoRequest);
+
+            assertEquals(
+                    Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME),
+                    result);
+        }
+
+        @Test
+        void shouldReturnAnErrorForAnIOException() throws IOException {
+            var userInfoRequest = mock(UserInfoRequest.class);
+            var httpRequest = mock(HTTPRequest.class);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
+            when(httpRequest.send()).thenThrow(new IOException("Uh oh"));
+
+            var result = amcService.requestJourneyOutcome(userInfoRequest);
+
+            assertEquals(Result.failure(JourneyOutcomeError.IO_EXCEPTION), result);
         }
     }
 

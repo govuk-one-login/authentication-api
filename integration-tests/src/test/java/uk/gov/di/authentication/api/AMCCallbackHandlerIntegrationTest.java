@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
-import uk.gov.di.authentication.frontendapi.entity.AMCCallbackRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.lambda.AMCCallbackHandler;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -32,15 +33,35 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     private static WireMockServer wireMockServer;
     private String sessionId;
+    public static final String ACCESS_TOKEN = "some-access-token";
     public static final String SUCCESSFUL_TOKEN_RESPONSE =
             """
-            {
-                "access_token": "access-token",
-                "token_type": "bearer",
-                "expires_in": 3600,
-                "scope": "openid"
-            }
-            """;
+                    {
+                        "access_token": "%s",
+                        "token_type": "bearer",
+                        "expires_in": 3600,
+                        "scope": "openid"
+                    }
+                    """
+                    .formatted(ACCESS_TOKEN);
+    public static final String JOURNEY_OUTCOME_RESULT =
+            """
+                            {
+                              "outcome_id": "9cd4c45f8f33cced99cfaa48394e1acf5e90f6e2616bba40",
+                              "sub": "urn:fdc:gov.uk:2022:JG0RJI1pYbnanbvPs-j4j5-a-PFcmhry9Qu9NCEp5d4",
+                              "email": "user@example.com",
+                              "scope": "account-delete",
+                              "success": true,
+                              "journeys": [
+                                {
+                                  "journey": "account-delete",
+                                  "timestamp": 1760718467000,
+                                  "success": true,
+                                  "details": {}
+                                }
+                              ]
+                            }
+                    """;
     public static final String AUTH_CODE = "123456";
 
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
@@ -68,8 +89,11 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .willReturn(aResponse().proxiedFrom("http://localhost:45678")));
         environment.set("LOCALSTACK_ENDPOINT", "http://localhost:" + wireMockServer.port());
 
-        URI amcUri = URI.create("http://localhost:" + wireMockServer.port() + "/amc/token");
-        environment.set("AMC_TOKEN_URI", amcUri);
+        String baseUri = "http://localhost:" + wireMockServer.port();
+        URI tokenUri = URI.create(baseUri + "/amc/token");
+        environment.set("AMC_TOKEN_URI", tokenUri);
+        URI journeyOutcomeUri = URI.create(baseUri + "/amc/journeyoutcome");
+        environment.set("AMC_JOURNEY_OUTCOME_URI", journeyOutcomeUri);
     }
 
     @AfterAll
@@ -87,14 +111,21 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     @Test
-    void shouldReturn200AndMakeTokenRequestForValidCallback() {
-        stubFor(
-                post(urlPathMatching("/amc/token"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(SUCCESSFUL_TOKEN_RESPONSE)));
+    void shouldReturn200AndMakeTokenRequestAndJourneyOutcomeRequestForValidCallback() {
+        var tokenResponse =
+                aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(SUCCESSFUL_TOKEN_RESPONSE);
+        var journeyOutcomeResponse =
+                aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(JOURNEY_OUTCOME_RESULT);
+
+        stubFor(post(urlPathMatching("/amc/token")).willReturn(tokenResponse));
+
+        stubFor(get(urlPathMatching("/amc/journeyoutcome")).willReturn(journeyOutcomeResponse));
 
         var response =
                 makeRequest(
@@ -114,6 +145,13 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 equalTo("urn:ietf:params:oauth:client-assertion-type:jwt-bearer"))
                         .withFormParam("client_assertion", matching(clientAssertionRegex)));
 
+        WireMock.verify(
+                1,
+                getRequestedFor(urlPathMatching("/amc/journeyoutcome"))
+                        .withHeader(
+                                "Authorization", containing("Bearer %s".formatted(ACCESS_TOKEN))));
+
         assertThat(response, hasStatus(200));
+        assertThat(response, hasBody(JOURNEY_OUTCOME_RESULT));
     }
 }

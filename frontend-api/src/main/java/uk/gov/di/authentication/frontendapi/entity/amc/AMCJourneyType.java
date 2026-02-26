@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.frontendapi.entity.amc;
 
 public enum AMCJourneyType {
     SFAD(new String[] {AMCScope.ACCOUNT_DELETE.getValue()});

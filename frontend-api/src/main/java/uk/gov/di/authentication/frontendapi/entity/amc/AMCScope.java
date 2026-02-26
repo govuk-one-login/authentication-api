@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.frontendapi.entity.amc;
 
 public enum AMCScope {
     ACCOUNT_DELETE("account-delete");

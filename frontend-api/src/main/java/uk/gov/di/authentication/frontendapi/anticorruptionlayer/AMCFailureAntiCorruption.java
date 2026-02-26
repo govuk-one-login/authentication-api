@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.anticorruptionlayer;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -31,11 +32,25 @@ public class AMCFailureAntiCorruption {
         return switch (tokenResponseError) {
             case ERROR_RESPONSE_FROM_TOKEN_REQUEST -> new ErrorResponseWithStatus(
                     500, ErrorResponse.AMC_TOKEN_RESPONSE_ERROR);
-            case IO_EXCEPTION -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR);
-            case PARSE_EXCEPTION -> new ErrorResponseWithStatus(
+            case IO_EXCEPTION, PARSE_EXCEPTION -> new ErrorResponseWithStatus(
                     500, ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR);
         };
+    }
+
+    public static ErrorResponseWithStatus toHttpResponse(JourneyOutcomeError journeyOutcomeError) {
+        return switch (journeyOutcomeError) {
+            case ERROR_RESPONSE_FROM_JOURNEY_OUTCOME -> new ErrorResponseWithStatus(
+                    400, ErrorResponse.AMC_JOURNEY_OUTCOME_RESPONSE_ERROR);
+            case IO_EXCEPTION -> new ErrorResponseWithStatus(
+                    500, ErrorResponse.AMC_JOURNEY_OUTCOME_UNEXPECTED_ERROR);
+        };
+    }
+
+    public static APIGatewayProxyResponseEvent toApiGatewayProxyErrorResponse(
+            JourneyOutcomeError failureReason) {
+        var httpResponse = toHttpResponse(failureReason);
+        return generateApiGatewayProxyErrorResponse(
+                httpResponse.statusCode(), httpResponse.errorResponse());
     }
 
     public static APIGatewayProxyResponseEvent toApiGatewayProxyErrorResponse(

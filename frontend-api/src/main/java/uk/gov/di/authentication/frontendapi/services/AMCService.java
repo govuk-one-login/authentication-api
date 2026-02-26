@@ -13,15 +13,18 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkException;
-import uk.gov.di.authentication.frontendapi.entity.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -29,6 +32,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.io.IOException;
 import java.net.URI;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -45,6 +49,7 @@ public class AMCService {
     private final NowHelper.NowClock nowClock;
     private final JwtService jwtService;
     private static final Logger LOG = LogManager.getLogger(AMCService.class);
+    private static final Long CLIENT_ASSERTION_LIFETIME = 5L;
 
     public AMCService(
             ConfigurationService configurationService,
@@ -87,10 +92,11 @@ public class AMCService {
     }
 
     private Result<JwtFailureReason, BearerAccessToken> createAccessToken(
-            String internalPairwiseSubject, AMCScope[] scope, AuthSessionItem authSessionItem) {
-        Date issueTime = nowClock.now();
-        Date expiryDate =
-                nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
+            String internalPairwiseSubject,
+            AMCScope[] scope,
+            AuthSessionItem authSessionItem,
+            Date issueTime,
+            Date expiryDate) {
         List<String> scopeValues = Arrays.stream(scope).map(AMCScope::getValue).toList();
 
         var claims =
@@ -128,10 +134,11 @@ public class AMCService {
             String publicSubject) {
         List<String> scopeValues = Arrays.stream(scope).map(AMCScope::getValue).toList();
         Date issueTime = nowClock.now();
-        Date expiryDate =
-                nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
+        // TODO: Check this value
+        Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
 
-        return createAccessToken(internalPairwiseSubject, scope, authSessionItem)
+        return createAccessToken(
+                        internalPairwiseSubject, scope, authSessionItem, issueTime, expiryDate)
                 .flatMap(
                         accessToken -> {
                             var claims =
@@ -223,12 +230,25 @@ public class AMCService {
                                         URI.create(configurationService.getAMCRedirectURI()))));
     }
 
+    public Result<JourneyOutcomeError, HTTPResponse> requestJourneyOutcome(
+            UserInfoRequest userInfoRequest) {
+        try {
+            var response = userInfoRequest.toHTTPRequest().send();
+            if (!response.indicatesSuccess()) {
+                return Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME);
+            }
+            return Result.success(response);
+        } catch (IOException e) {
+            return Result.failure(JourneyOutcomeError.IO_EXCEPTION);
+        }
+    }
+
     private JWTAuthenticationClaimsSet buildClientAssertionJwt() {
         LOG.info("Building AMC authorization JWT");
 
         Date now = nowClock.now();
-        Date expiryDate =
-                nowClock.nowPlus(configurationService.getSessionExpiry(), ChronoUnit.SECONDS);
+        // TODO check this value
+        Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
 
         return new JWTAuthenticationClaimsSet(
                 new ClientID(configurationService.getAMCClientId()),
