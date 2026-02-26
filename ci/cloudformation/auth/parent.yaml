@@ -484,6 +484,7 @@ Mappings:
       amcAuthorizeUri: https://amcstub.signin.staging.account.gov.uk/authorize
       amcRedirectUri: https://signin.staging.account.gov.uk/amc-callback
       amcTokenUri: https://api.manage.staging.account.gov.uk/token
+      amcJourneyOutcomeUri: https://api.manage.staging.account.gov.uk/journeyoutcome
       amcClientId: bb8ba862f42b4e5eb97cc0950f6419ca
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
@@ -541,6 +542,7 @@ Mappings:
       amcAuthorizeUri: https://amcstub.signin.integration.account.gov.uk/authorize
       amcRedirectUri: https://signin.integration.account.gov.uk/amc-callback
       amcTokenUri: https://api.manage.integration.account.gov.uk/token
+      amcJourneyOutcomeUri: https://api.manage.integration.account.gov.uk/journeyoutcome
       amcClientId: 0b649817932e4632861f1ab3fccb650d
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
@@ -598,6 +600,7 @@ Mappings:
       amcAuthorizeUri: https://amcstub.signin.account.gov.uk/authorize
       amcRedirectUri: https://signin.account.gov.uk/amc-callback
       amcTokenUri: https://api.manage.account.gov.uk/token
+      amcJourneyOutcomeUri: https://api.manage.account.gov.uk/journeyoutcome
       amcClientId: be05e73e93e94626917b2bc0d7627cfa
   LambdaConfiguration:
     account-recovery:
