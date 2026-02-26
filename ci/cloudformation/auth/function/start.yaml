@@ -82,13 +82,6 @@ Resources:
         EnforceLambdaDeploymentOrder:
           !If [EnforceLambdaDeploymentOrder, !Ref LoginFunctionAliasactive, ""]
 
-  StartFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt StartFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   StartFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

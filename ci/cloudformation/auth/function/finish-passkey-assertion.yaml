@@ -42,13 +42,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  FinishPasskeyAssertionFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt FinishPasskeyAssertionFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   FinishPasskeyAssertionFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

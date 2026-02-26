@@ -74,13 +74,6 @@ Resources:
             "",
           ]
 
-  CheckEmailFraudBlockFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt CheckEmailFraudBlockFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   CheckEmailFraudBlockFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

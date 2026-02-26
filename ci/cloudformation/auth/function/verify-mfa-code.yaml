@@ -145,13 +145,6 @@ Resources:
             "",
           ]
 
-  VerifyMfaCodeFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt VerifyMfaCodeFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   VerifyMfaCodeFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

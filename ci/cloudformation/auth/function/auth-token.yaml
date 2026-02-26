@@ -97,13 +97,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
 
-  AuthTokenFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt AuthTokenFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   AuthTokenFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:

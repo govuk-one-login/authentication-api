@@ -79,13 +79,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
 
-  AMCCallbackFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt AMCCallbackFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   AMCCallbackFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
