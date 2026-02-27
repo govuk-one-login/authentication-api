@@ -6,9 +6,10 @@ import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.shared.services.BaseDynamoService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+
+import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.buildSortKey;
 
 public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
 
@@ -25,31 +26,7 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
         return get(publicSubjectId, buildSortKey(passkeyId));
     }
 
-    public boolean savePasskeyIfUnique(
-            String publicSubjectId,
-            String credential,
-            String passkeyId,
-            String aaguid,
-            boolean isAttested,
-            int signCount,
-            List<String> transports,
-            boolean backupEligible,
-            boolean backedUp) {
-        var created = LocalDateTime.now().toString();
-        var passkey =
-                new Passkey()
-                        .withPublicSubjectId(publicSubjectId)
-                        .withSortKey(buildSortKey(passkeyId))
-                        .withCredentialId(passkeyId)
-                        .withCreated(created)
-                        .withCredential(credential)
-                        .withPasskeyAaguid(aaguid)
-                        .withPasskeyIsAttested(isAttested)
-                        .withPasskeySignCount(signCount)
-                        .withPasskeyTransports(transports)
-                        .withPasskeyBackupEligible(backupEligible)
-                        .withPasskeyBackedUp(backedUp);
-
+    public boolean savePasskeyIfUnique(Passkey passkey) {
         return putIfUnique(passkey, Authenticator.ATTRIBUTE_SORT_KEY);
     }
 
@@ -65,9 +42,5 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
     public void deletePasskey(String publicSubjectId, String passkeyId) {
         var sortKey = buildSortKey(passkeyId);
         delete(publicSubjectId, sortKey);
-    }
-
-    private String buildSortKey(String passkeyId) {
-        return AccountDataConstants.PASSKEY_TYPE + "#" + passkeyId;
     }
 }

@@ -139,6 +139,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
                             entry(
                                     "local-account-management-redis-tls",
                                     valueOf(DOES_REDIS_USE_TLS)),
+                            entry("local-account-data-redis-master-host", REDIS_HOST),
+                            entry("local-account-data-redis-password", valueOf(REDIS_PASSWORD)),
+                            entry("local-account-data-redis-port", valueOf(REDIS_PORT)),
+                            entry("local-account-data-redis-tls", valueOf(DOES_REDIS_USE_TLS)),
                             entry("local-password-pepper", "pepper"),
                             entry("local-auth-public-signing-key", EC_PUBLIC_KEY),
                             entry("local-notify-callback-bearer-token", BEARER_TOKEN)));

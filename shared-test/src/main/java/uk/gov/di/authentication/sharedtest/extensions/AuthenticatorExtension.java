@@ -14,7 +14,7 @@ import java.util.Optional;
 public class AuthenticatorExtension extends DynamoExtension implements AfterEachCallback {
 
     public static final String AUTHENTICATOR_TABLE = "local-authenticator";
-    public static final String PUBLIC_SUBJECT_ID_FIELD = "PublicSubjectId";
+    public static final String PUBLIC_SUBJECT_ID_FIELD = "PublicSubjectID";
     public static final String SORT_KEY_FIELD = "SK";
 
     public AuthenticatorExtension() {
