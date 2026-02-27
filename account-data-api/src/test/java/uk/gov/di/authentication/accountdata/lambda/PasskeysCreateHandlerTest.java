@@ -65,8 +65,7 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysService.createPasskey(
-                            any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
+            when(passkeysService.createPasskey(any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.success(null));
 
             // When
@@ -150,8 +149,7 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysService.createPasskey(
-                            any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
+            when(passkeysService.createPasskey(any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
                     .thenReturn(
                             Result.failure(
                                     PasskeysCreateServiceFailureReason.FAILED_TO_SAVE_PASSKEY));
@@ -181,8 +179,7 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysService.createPasskey(
-                            any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
+            when(passkeysService.createPasskey(any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.failure(PasskeysCreateServiceFailureReason.PASSKEY_EXISTS));
 
             // When
