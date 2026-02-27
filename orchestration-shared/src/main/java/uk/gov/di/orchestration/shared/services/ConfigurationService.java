@@ -238,8 +238,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrThrow("AUTH_FRONTEND_BASE_URL");
     }
 
-    public String getNextAuthSigningKeyAlias() {
-        return System.getenv("NEXT_AUTH_SIGNING_KEY_ALIAS");
+    public String getAuthSigningKeyAlias() {
+        return System.getenv("AUTH_SIGNING_KEY_ALIAS");
     }
 
     public String getOrchestrationToAuthenticationEncryptionPublicKey() {

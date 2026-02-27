@@ -92,9 +92,9 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    public JWK getNextPublicAuthSigningJwkWithOpaqueId() {
-        LOG.info("Retrieving next Auth public signing key");
-        return getPublicJWKWithKeyId(configurationService.getNextAuthSigningKeyAlias());
+    public JWK getPublicAuthSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Auth public signing key");
+        return getPublicJWKWithKeyId(configurationService.getAuthSigningKeyAlias());
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {

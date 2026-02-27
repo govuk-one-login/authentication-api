@@ -34,7 +34,7 @@ class AuthJwksHandlerTest {
                 new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
         handler = new AuthJwksHandler(configurationService, jwksService);
 
-        when(jwksService.getNextPublicAuthSigningJwkWithOpaqueId()).thenReturn(authSigningKey);
+        when(jwksService.getPublicAuthSigningJwkWithOpaqueId()).thenReturn(authSigningKey);
     }
 
     @Test
@@ -50,7 +50,7 @@ class AuthJwksHandlerTest {
 
     @Test
     void shouldReturn500WhenSigningKeyIsNotPresent() {
-        when(jwksService.getNextPublicAuthSigningJwkWithOpaqueId()).thenReturn(null);
+        when(jwksService.getPublicAuthSigningJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);

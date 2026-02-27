@@ -219,7 +219,7 @@ class OrchestrationAuthorizationServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
-        when(jwksService.getNextPublicAuthSigningJwkWithOpaqueId())
+        when(jwksService.getPublicAuthSigningJwkWithOpaqueId())
                 .thenReturn(ecSigningKey.toPublicJWK());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwtClaimsSet = new JWTClaimsSet.Builder().claim("claim1", claim1Value).build();
@@ -257,7 +257,7 @@ class OrchestrationAuthorizationServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
-        when(jwksService.getNextPublicAuthSigningJwkWithOpaqueId())
+        when(jwksService.getPublicAuthSigningJwkWithOpaqueId())
                 .thenReturn(ecSigningKey.toPublicJWK());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwtClaimsSet =

@@ -78,7 +78,7 @@ class AuthenticationTokenServiceTest {
         when(configurationService.getAuthenticationAuthCallbackURI()).thenReturn(ORCH_CALLBACK_URI);
         when(configurationService.getAuthenticationBackendURI()).thenReturn(AUTH_BACKEND_URI);
         when(configurationService.getOrchestrationClientId()).thenReturn(CLIENT_ID.getValue());
-        when(configurationService.getNextAuthSigningKeyAlias()).thenReturn(KEY_ALIAS);
+        when(configurationService.getAuthSigningKeyAlias()).thenReturn(KEY_ALIAS);
 
         when(kmsService.getPublicKey(GetPublicKeyRequest.builder().keyId(KEY_ALIAS).build()))
                 .thenReturn(GetPublicKeyResponse.builder().keyId(KEY_ID).build());

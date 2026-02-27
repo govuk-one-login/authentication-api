@@ -3171,7 +3171,7 @@ Resources:
                     serviceDomain,
                   ]
           ORCH_CLIENT_ID: orchestrationAuth
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
+          AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           OIDC_API_BASE_URL: !Sub
@@ -3755,7 +3755,7 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
+          AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
       Policies:
         - !Ref OrchToAuthSigningKmsAccessPolicy
       Tags:
@@ -4027,7 +4027,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
+          AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
           ORCH_TO_AUTH_ENCRYPTION_KEY_PARAM: !If
             - UseAuthStub
             - !Sub /orch-stubs/${Environment}-auth-stub-auth-public-encryption-key

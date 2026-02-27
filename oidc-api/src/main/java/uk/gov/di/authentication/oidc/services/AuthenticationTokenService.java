@@ -169,7 +169,7 @@ public class AuthenticationTokenService {
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {
         try {
             LOG.info("Generating PrivateKeyJWT");
-            var tokenSigningKeyAlias = configurationService.getNextAuthSigningKeyAlias();
+            var tokenSigningKeyAlias = configurationService.getAuthSigningKeyAlias();
             var signingKeyId =
                     kmsService
                             .getPublicKey(

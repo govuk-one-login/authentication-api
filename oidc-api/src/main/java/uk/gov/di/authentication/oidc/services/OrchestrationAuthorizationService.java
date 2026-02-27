@@ -143,8 +143,8 @@ public class OrchestrationAuthorizationService {
 
     public SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet) {
         LOG.info("Generating signed and encrypted JWT");
-        var signingKey = jwksService.getNextPublicAuthSigningJwkWithOpaqueId();
-        var signingKeyAlias = configurationService.getNextAuthSigningKeyAlias();
+        var signingKey = jwksService.getPublicAuthSigningJwkWithOpaqueId();
+        var signingKeyAlias = configurationService.getAuthSigningKeyAlias();
         var jwsHeader =
                 new JWSHeader.Builder(SIGNING_ALGORITHM).keyID(signingKey.getKeyID()).build();
 
