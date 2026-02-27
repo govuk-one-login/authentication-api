@@ -10,7 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
-import uk.gov.di.authentication.accountdata.services.PasskeysCreateService;
+import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -30,7 +30,7 @@ public class PasskeysCreateHandler
 
     private static final Logger LOG = LogManager.getLogger(PasskeysCreateHandler.class);
     private final ConfigurationService configurationService;
-    private final PasskeysCreateService passkeysCreateService;
+    private final PasskeysService passkeysService;
     private final Json objectMapper = SerializationService.getInstance();
 
     public PasskeysCreateHandler() {
@@ -38,14 +38,14 @@ public class PasskeysCreateHandler
     }
 
     public PasskeysCreateHandler(
-            ConfigurationService configurationService, PasskeysCreateService passkeyService) {
+            ConfigurationService configurationService, PasskeysService passkeyService) {
         this.configurationService = configurationService;
-        this.passkeysCreateService = passkeyService;
+        this.passkeysService = passkeyService;
     }
 
     public PasskeysCreateHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.passkeysCreateService = new PasskeysCreateService(configurationService);
+        this.passkeysService = new PasskeysService(configurationService);
     }
 
     @Override
@@ -116,7 +116,7 @@ public class PasskeysCreateHandler
         var publicSubjectId = context.publicSubjectId();
 
         Result<PasskeysCreateServiceFailureReason, Void> result =
-                passkeysCreateService.createPasskey(passkeysCreateRequest, publicSubjectId);
+                passkeysService.createPasskey(passkeysCreateRequest, publicSubjectId);
 
         return result.fold(
                 failure ->

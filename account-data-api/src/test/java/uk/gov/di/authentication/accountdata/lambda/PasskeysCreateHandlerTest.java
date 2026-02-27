@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
 import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
-import uk.gov.di.authentication.accountdata.services.PasskeysCreateService;
+import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -36,14 +36,14 @@ class PasskeysCreateHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final PasskeysCreateService passkeysCreateService = mock(PasskeysCreateService.class);
+    private final PasskeysService passkeysService = mock(PasskeysService.class);
     private final Json objectMapper = SerializationService.getInstance();
 
     private PasskeysCreateHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new PasskeysCreateHandler(configurationService, passkeysCreateService);
+        handler = new PasskeysCreateHandler(configurationService, passkeysService);
     }
 
     @Nested
@@ -64,7 +64,7 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysCreateService.createPasskey(
+            when(passkeysService.createPasskey(
                             any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.success(null));
 
@@ -148,7 +148,7 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysCreateService.createPasskey(
+            when(passkeysService.createPasskey(
                             any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
                     .thenReturn(
                             Result.failure(
@@ -179,7 +179,7 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysCreateService.createPasskey(
+            when(passkeysService.createPasskey(
                             any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.failure(PasskeysCreateServiceFailureReason.PASSKEY_EXISTS));
 
