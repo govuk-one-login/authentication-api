@@ -61,6 +61,16 @@ Parameters:
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
+  AddOldAuthApiVpcEndpointId:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              oldAuthApiVpcEndpointId,
+            ]
+          - ""
+
   AddOrchApiVpcEndpointId:
     Fn::Not:
       - Fn::Equals:
@@ -130,6 +140,7 @@ Mappings:
       IsSplunkEnabled: "No"
       UseAlarmActions: "No"
       orchApiVpcEndpointId: ""
+      oldAuthApiVpcEndpointId: "vpce-01a1f8e880d273ec6"
     authdev2:
       dataStoreAccountId: 653994557586
       cloudwatchLogRetentionInDays: 1
@@ -138,6 +149,7 @@ Mappings:
       IsSplunkEnabled: "No"
       UseAlarmActions: "No"
       orchApiVpcEndpointId: ""
+      oldAuthApiVpcEndpointId: "vpce-01a1f8e880d273ec6"
     authdev3:
       dataStoreAccountId: 653994557586
       cloudwatchLogRetentionInDays: 1
@@ -146,6 +158,7 @@ Mappings:
       IsSplunkEnabled: "No"
       UseAlarmActions: "No"
       orchApiVpcEndpointId: ""
+      oldAuthApiVpcEndpointId: "vpce-01a1f8e880d273ec6"
     dev:
       dataStoreAccountId: 653994557586
       cloudwatchLogRetentionInDays: 1
@@ -154,6 +167,7 @@ Mappings:
       IsSplunkEnabled: "No"
       UseAlarmActions: "No"
       orchApiVpcEndpointId: ""
+      oldAuthApiVpcEndpointId: "vpce-01a1f8e880d273ec6"
     build:
       dataStoreAccountId: 761723964695
       cloudwatchLogRetentionInDays: 7
@@ -162,6 +176,7 @@ Mappings:
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "No"
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
+      oldAuthApiVpcEndpointId: "vpce-02837b184c6538fce"
 
 Globals:
   Function:
