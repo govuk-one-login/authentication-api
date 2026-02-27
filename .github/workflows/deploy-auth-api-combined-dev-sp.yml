@@ -1,5 +1,5 @@
-name: "DEV: Build and deploy API"
-run-name: "DEV: Build and deploy ${{ inputs.api_name }} API to ${{ inputs.environment }}"
+name: "SP - DEV: Build and deploy API modules"
+run-name: "Build and deploy ${{ inputs.api_name }} API to ${{ inputs.environment }}"
 
 on:
   workflow_dispatch:
