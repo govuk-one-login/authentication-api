@@ -28,6 +28,15 @@ Resources:
         Type: PRIVATE
         VpcEndpointIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+          - !If
+            - AddAccountComponentsVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                accountComponentsVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
       Auth:
         ResourcePolicy:
           CustomStatements:
@@ -45,6 +54,15 @@ Resources:
                 StringNotEquals:
                   aws:SourceVpce:
                     - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                    - !If
+                      - AddAccountComponentsVpcEndpointId
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          accountComponentsVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+                      - !Ref AWS::NoValue
       DefinitionBody:
         Fn::Transform:
           Name: AWS::Include

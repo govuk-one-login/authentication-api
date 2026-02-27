@@ -90,6 +90,17 @@ Conditions:
       - !FindInMap [EnvironmentConfiguration, !Ref Environment, UseAlarmActions]
       - "Yes"
 
+  AddAccountComponentsVpcEndpointId:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              accountComponentsVpcEndpointId,
+              DefaultValue: "",
+            ]
+          - ""
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -122,6 +133,7 @@ Mappings:
       UseAlarmActions: "Yes"
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed6c6a2d-866f-4e2e-9ebd-c499ce9513c6
       dataStoreAccountId: 758531536632
+      accountComponentsVpcEndpointId: vpce-0fed7b2d44a0bde33
     integration:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
@@ -129,6 +141,7 @@ Mappings:
       UseAlarmActions: "Yes"
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/743b2818-03fd-4414-bfaf-6aa8a4bb4e45
       dataStoreAccountId: 761723964695
+      accountComponentsVpcEndpointId: vpce-00865f4c00dcdbb83
     production:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
@@ -136,6 +149,7 @@ Mappings:
       UseAlarmActions: "Yes"
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/b380ea74-d240-4500-b02b-f5c3d414e34e
       dataStoreAccountId: 172348255554
+      accountComponentsVpcEndpointId: vpce-08bfce415b33dc8f6
   LambdaConfiguration:
     passkeys-create:
       RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
