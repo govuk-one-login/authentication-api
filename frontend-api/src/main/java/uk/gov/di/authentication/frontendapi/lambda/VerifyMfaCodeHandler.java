@@ -11,6 +11,7 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
+import uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
@@ -421,7 +422,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         codeRequest,
                                         codeRequest.getJourneyType(),
                                         authSession,
-                                        finalActiveMfaMethod));
+                                        finalActiveMfaMethod,
+                                        auditContext));
     }
 
     private void auditSuccess(
@@ -458,8 +460,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             JourneyType journeyType,
             AuthSessionItem authSession,
-            Optional<MFAMethod> activeMfaMethod) {
-
+            Optional<MFAMethod> activeMfaMethod,
+            AuditContext auditContext) {
         var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
         MFAMethodType mfaMethodType = null;
         PriorityIdentifier priorityIdentifier = null;
@@ -480,17 +482,21 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 mfaMethodType = MFAMethodType.SMS;
                 priorityIdentifier = PriorityIdentifier.DEFAULT;
             }
-        }
 
-        var levelOfConfidence =
-                Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
+            ForcedMfaResetHelper.emitForcedMfaResetAuditEventIfRequired(
+                    configurationService,
+                    auditService,
+                    journeyType,
+                    retrievedMfaMethods,
+                    activeMfaMethod,
+                    auditContext);
+        }
 
         String countryCode =
                 activeMfaMethod
                         .filter(method -> codeRequest.getMfaMethodType().equals(MFAMethodType.SMS))
-                        .flatMap(
-                                method ->
-                                        PhoneNumberHelper.maybeGetCountry(method.getDestination()))
+                        .map(MFAMethod::getDestination)
+                        .flatMap(PhoneNumberHelper::maybeGetCountry)
                         .orElse("unknown");
         LOG.info(
                 "MFA code has been successfully verified for MFA type: {}. JourneyType: {}. CountryCode: {}",
@@ -504,6 +510,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .withAchievedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
 
         var clientId = authSession.getClientId();
+
+        var levelOfConfidence =
+                Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 
         cloudwatchMetricsService.incrementAuthenticationSuccessWithMfa(
                 authSession.getIsNewAccount(),
