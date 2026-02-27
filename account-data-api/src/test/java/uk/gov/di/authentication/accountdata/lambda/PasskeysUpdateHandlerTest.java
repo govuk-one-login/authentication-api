@@ -45,7 +45,7 @@ class PasskeysUpdateHandlerTest {
     @Nested
     class Error {
         @Test
-        void shouldReturn400WhenReadValueFails() throws Json.JsonException {
+        void shouldReturn500WhenReadValueFails() throws Json.JsonException {
             var objectMapperMock = mock(SerializationService.class);
             handler = new PasskeysUpdateHandler(configurationService, objectMapperMock);
             when(objectMapperMock.readValue(any(), any(), anyBoolean()))
@@ -53,8 +53,8 @@ class PasskeysUpdateHandlerTest {
 
             var result = handler.handleRequest(passkeysUpdateRequest(), context);
 
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_ACCOUNT_DATA_API_ERROR));
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
         }
     }
 

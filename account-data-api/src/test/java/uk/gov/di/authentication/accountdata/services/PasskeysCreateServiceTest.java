@@ -4,7 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.DynamoPasskeyServiceFailureReason;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
@@ -39,7 +41,7 @@ class PasskeysCreateServiceTest {
         @Test
         void shouldCreatePasskeyGivenValidRequest() {
             // Given
-            when(dynamoPasskeyService.savePasskeyIfUnique(any())).thenReturn(true);
+            when(dynamoPasskeyService.savePasskeyIfUnique(any())).thenReturn(Result.success(null));
             var passkeysCreateRequest =
                     buildPasskeysCreateRequest(
                             CREDENTIAL,
@@ -67,7 +69,8 @@ class PasskeysCreateServiceTest {
         @Test
         void shouldReturnPasskeyExistsIfPasskeyWithCredentialIdExistsForSubjectId() {
             // Given
-            when(dynamoPasskeyService.savePasskeyIfUnique(any())).thenReturn(false);
+            when(dynamoPasskeyService.savePasskeyIfUnique(any()))
+                    .thenReturn(Result.failure(DynamoPasskeyServiceFailureReason.PASSKEY_EXISTS));
             var passkeysCreateRequest =
                     buildPasskeysCreateRequest(
                             CREDENTIAL,
@@ -92,9 +95,12 @@ class PasskeysCreateServiceTest {
         }
 
         @Test
-        void shouldReturnFailedToSavePasskeyIfExceptionThrown() {
+        void shouldReturnFailedToSavePasskeyIfFailedToSavePasskey() {
             // Given
-            when(dynamoPasskeyService.savePasskeyIfUnique(any())).thenThrow(new RuntimeException());
+            when(dynamoPasskeyService.savePasskeyIfUnique(any()))
+                    .thenReturn(
+                            Result.failure(
+                                    DynamoPasskeyServiceFailureReason.FAILED_TO_SAVE_PASSKEY));
             var passkeysCreateRequest =
                     buildPasskeysCreateRequest(
                             CREDENTIAL,

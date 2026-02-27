@@ -80,10 +80,10 @@ paths:
                   value:
                     code: 4000
                     message: "Invalid request body"
-                missing_required_fields:
+                missing_subject_id:
                   value:
                     code: 4001
-                    message: "Missing required fields"
+                    message: "Missing required subject id"
         "409":
           description: Passkey already exists
           content:
