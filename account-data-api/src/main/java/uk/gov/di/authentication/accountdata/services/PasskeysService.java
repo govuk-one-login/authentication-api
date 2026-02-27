@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -64,5 +65,16 @@ public class PasskeysService {
         }
 
         return Result.success(null);
+    }
+
+    public Result<PasskeysUpdateFailureReason, Passkey> updatePasskey(
+            String publicSubjectId, String passkeyId, String lastUsedTime, int updatedSignCount) {
+        try {
+            return dynamoPasskeyService.updatePasskey(
+                    publicSubjectId, passkeyId, lastUsedTime, updatedSignCount);
+        } catch (Exception e) {
+            LOG.error("Failed to update passkey", e);
+            return Result.failure(PasskeysUpdateFailureReason.FAILED_TO_UPDATE_PASSKEY);
+        }
     }
 }
