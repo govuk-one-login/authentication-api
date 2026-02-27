@@ -1,0 +1,73 @@
+Resources:
+  EmailCheckResultsWriterLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.EmailCheckResultsWriterHandler::handleRequest
+      Role: !GetAtt EmailCheckResultsWriterLambdaRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref EmailCheckResultsWriterLogGroup
+      AutoPublishAlias: live
+      ProvisionedConcurrencyConfig: !If
+        - EnableEmailCheckResultsProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - emailCheckResultsWriterProvisionedConcurrency
+        - !Ref AWS::NoValue
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-email-check-results-writer-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  EmailCheckResultsWriterLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-email-check-results-writer-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  EmailCheckResultsWriterLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref EmailCheckResultsWriterLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  EmailCheckResultsWriterErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: UseAlarmActions
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when email check results writer Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref EmailCheckResultsWriterLambda
+      TreatMissingData: notBreaching

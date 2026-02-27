@@ -34,6 +34,7 @@ Options:
     -x, --authapi               deploy the Auth Int & ext API
     -s  --Stubsapi              deploy the Stubs API
     -d  --actdataapi             deploy the Account data API
+    -u, --utils                 deploy the Utils stack
 
 
 Dependencies:
@@ -61,11 +62,13 @@ O_BUILD=0            # -b, --build
 O_CLEAN=""           # -c, --clean
 O_DEPLOYAUTHAPI=0    # -x, --auth-internal-external-api
 O_DEPLOYSTUBSAPI=0   # -s, --stubs-api
+O_DEPLOYUTILS=0      # -u, --utils
 O_DEPLOYACTDATAAPI=0 # -d, --accdata-api
 AMAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/am-template.yaml}"
 AUTHAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/auth-template.yaml}"
 ADAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/ad-template.yaml}"
 STUBSAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/stubs-template.yaml}"
+UTILS_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/utils-template.yaml}"
 SAMCONFIG_FILE=${SAMCONFIG_FILE:-${DIR}/scripts/dev-samconfig.toml}
 CONFIRM_CHANGESET_OPTION="--no-confirm-changeset"
 
@@ -79,6 +82,7 @@ while [[ $# -gt 0 ]]; do
     -x | --authapi) O_DEPLOYAUTHAPI=1 ;;
     -s | --stubsapi) O_DEPLOYSTUBSAPI=1 ;;
     -d | --actdataapi) O_DEPLOYACTDATAAPI=1 ;;
+    -u | --utils) O_DEPLOYUTILS=1 ;;
     -h | --help)
       usage
       exit 0
@@ -229,6 +233,40 @@ if [[ ${O_DEPLOYACTDATAAPI} -eq 1 ]]; then
 
   echo "Running sam build on template file"
   sam build --parallel --template-file="${ADAPI_TEMPLATE_FILE}"
+
+  sam deploy \
+    --no-fail-on-empty-changeset \
+    --config-env "${SAM_CONFIG_ENV}" \
+    --config-file "${SAMCONFIG_FILE}" \
+    ${CONFIRM_CHANGESET_OPTION}
+
+  echo "Deployment complete!"
+fi
+
+if [[ ${O_DEPLOYUTILS} -eq 1 ]]; then
+  sso_login
+
+  if [[ ${ENVIRONMENT} == "dev" ]]; then
+    SAM_CONFIG_ENV="devutils"
+  elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+    SAM_CONFIG_ENV="authdev1utils"
+  elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
+    SAM_CONFIG_ENV="authdev2utils"
+  elif [[ ${ENVIRONMENT} == "authdev3" ]]; then
+    SAM_CONFIG_ENV="authdev3utils"
+  else
+    SAM_CONFIG_ENV="${ENVIRONMENT}"
+  fi
+
+  echo "Merging all ${DIR}/ci/cloudformation/utils templates into a single ${UTILS_TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/utils" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${UTILS_TEMPLATE_FILE}"
+
+  echo "Lint template file"
+  sam validate --lint --template-file="${UTILS_TEMPLATE_FILE}"
+
+  echo "Running sam build on template file"
+  sam build --parallel --template-file="${UTILS_TEMPLATE_FILE}"
 
   sam deploy \
     --no-fail-on-empty-changeset \

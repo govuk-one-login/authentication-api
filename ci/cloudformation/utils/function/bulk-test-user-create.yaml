@@ -1,0 +1,68 @@
+Resources:
+  BulkTestUserCreateLambda:
+    Type: AWS::Serverless::Function
+    Condition: AllowBulkTestUsers
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.BulkTestUserCreateHandler::handleRequest
+      Role: !GetAtt BulkTestUserCreateLambdaRole.Arn
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref BulkTestUserCreateLogGroup
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-bulk-test-user-create-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  BulkTestUserCreateLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: AllowBulkTestUsers
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-bulk-test-user-create-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  BulkTestUserCreateLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: AllowBulkTestUsers
+    Properties:
+      LogGroupName: !Ref BulkTestUserCreateLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  BulkTestUserCreateErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: AllowBulkTestUsers
+    Properties:
+      AlarmName: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda-errors"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: Triggers when bulk test user create Lambda error rate exceeds threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - lambdaErrorThreshold
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BulkTestUserCreateLambda
+      TreatMissingData: notBreaching

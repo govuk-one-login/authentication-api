@@ -1,0 +1,1474 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W1028
+        - W8003
+        - E1011
+
+Description: >
+  SAM template for deploying utility Lambda functions and supporting infrastructure
+
+Parameters:
+  VpcStackName:
+    Description: "The VPC stack name in the account"
+    Type: "String"
+
+  CodeSigningConfigArn:
+    Type: String
+    Description: Asserts that lambdas are signed when deployed.
+    Default: "none"
+
+  PermissionsBoundary:
+    Description: "The ARN of the permissions boundary to apply when creating IAM roles"
+    Type: String
+    Default: "nonenonenonenonenone"
+
+  Environment:
+    Description: "The name of the environment to deploy to"
+    Type: "String"
+    AllowedValues:
+      - build
+      - staging
+      - production
+      - integration
+      - dev
+
+  SubEnvironment:
+    Type: String
+    Description: >
+      When deploying to dev, optionally configure which sub-environment to deploy to
+      i.e. authdev1, authdev2, authdev3. This feature is not available for route-to-live environments
+    Default: "none"
+
+  LambdaDeploymentPreference:
+    Type: String
+    Description: Specifies the configuration to enable gradual Lambda deployments
+    Default: AllAtOnce
+
+  LoggingSubscriptionEndpointArn:
+    Type: String
+    Description: The ARN of the subscription endpoint to send logs to splunk
+    Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
+
+Conditions:
+  # Environment Conditions
+  NotSubEnvironment:
+    Fn::Equals:
+      - !Ref SubEnvironment
+      - "none"
+
+  UseSubEnvironment:
+    Fn::And:
+      - Fn::Equals:
+          - !Ref Environment
+          - dev
+      - Fn::Not:
+          - Fn::Equals:
+              - !Ref SubEnvironment
+              - none
+
+  # Feature Conditions
+  AllowBulkTestUsers:
+    Fn::Equals:
+      - !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          allowBulkTestUsers,
+        ]
+      - "true"
+
+  BulkEmailSendingEnabled:
+    Fn::Equals:
+      - !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          bulkEmailSendingEnabled,
+        ]
+      - "true"
+
+  # Infrastructure Conditions
+  UseCodeSigning:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref CodeSigningConfigArn
+          - "none"
+
+  UsePermissionsBoundary:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref PermissionsBoundary
+          - "nonenonenonenonenone"
+
+  IsSplunkEnabled:
+    Fn::Equals:
+      - !FindInMap [EnvironmentConfiguration, !Ref Environment, IsSplunkEnabled]
+      - "Yes"
+
+  UseAlarmActions:
+    Fn::Equals:
+      - !FindInMap [EnvironmentConfiguration, !Ref Environment, UseAlarmActions]
+      - "Yes"
+
+  BulkEmailSendingEnabledAndSplunkEnabled:
+    Fn::And:
+      - !Condition BulkEmailSendingEnabled
+      - !Condition IsSplunkEnabled
+
+  BulkEmailSendingEnabledAndUseAlarmActions:
+    Fn::And:
+      - !Condition BulkEmailSendingEnabled
+      - !Condition UseAlarmActions
+
+  EnableEmailCheckResultsProvisionedConcurrency:
+    Fn::And:
+      - !Condition NotSubEnvironment
+      - Fn::Not:
+          - Fn::Equals:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  emailCheckResultsWriterProvisionedConcurrency,
+                ]
+              - "0"
+
+Mappings:
+  EnvironmentConfiguration:
+    authdev1:
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c4d54754-4c7f-47d2-b54f-4868342b3660
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
+      s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
+      lambdaMinConcurrency: 0
+      emailCheckResultsWriterProvisionedConcurrency: "0"
+      logRetentionDays: 30
+      lambdaErrorThreshold: 5
+      notifyUrl: https://api.notifications.service.gov.uk
+      notifyTemplateMap: "{}"
+      bulkEmailSendingEnabled: "false"
+      bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
+      bulkEmailSendScheduleState: DISABLED
+      bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
+      bulkEmailAudienceLoaderScheduleState: DISABLED
+      bulkEmailMaxAudienceLoadUserCount: 0
+      bulkEmailMaxAudienceLoadUserBatchSize: 0
+      bulkEmailBatchQueryLimit: 100
+      bulkEmailMaxBatchCount: 10
+      bulkEmailBatchPauseDuration: 1000
+      bulkEmailSendMode: PENDING
+      bulkEmailIncludedTermsAndConditions: "1.13"
+      allowBulkTestUsers: "true"
+      IsSplunkEnabled: "Yes"
+      UseAlarmActions: "No"
+      termsConditionsVersion: "1.13"
+
+    authdev2:
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
+      s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
+      lambdaMinConcurrency: 0
+      emailCheckResultsWriterProvisionedConcurrency: "0"
+      logRetentionDays: 30
+      lambdaErrorThreshold: 5
+      notifyUrl: https://api.notifications.service.gov.uk
+      notifyTemplateMap: "{}"
+      bulkEmailSendingEnabled: "false"
+      bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
+      bulkEmailSendScheduleState: DISABLED
+      bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
+      bulkEmailAudienceLoaderScheduleState: DISABLED
+      bulkEmailMaxAudienceLoadUserCount: 0
+      bulkEmailMaxAudienceLoadUserBatchSize: 0
+      bulkEmailBatchQueryLimit: 100
+      bulkEmailMaxBatchCount: 10
+      bulkEmailBatchPauseDuration: 1000
+      bulkEmailSendMode: PENDING
+      bulkEmailIncludedTermsAndConditions: "1.13"
+      allowBulkTestUsers: "true"
+      IsSplunkEnabled: "Yes"
+      UseAlarmActions: "No"
+      termsConditionsVersion: "1.13"
+
+    authdev3:
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e3d591b4-d295-4041-b8f0-f5eb71742014
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ab3306cf-843a-423d-96f8-4c88e3fa1906
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9d378f4a-de27-486a-93a4-56515d9ab372
+      s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6e26328c-9121-4247-a5a3-6ac3f28fca3f
+      lambdaMinConcurrency: 0
+      emailCheckResultsWriterProvisionedConcurrency: "0"
+      logRetentionDays: 30
+      lambdaErrorThreshold: 5
+      notifyUrl: https://api.notifications.service.gov.uk
+      notifyTemplateMap: "{}"
+      bulkEmailSendingEnabled: "false"
+      bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
+      bulkEmailSendScheduleState: DISABLED
+      bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
+      bulkEmailAudienceLoaderScheduleState: DISABLED
+      bulkEmailMaxAudienceLoadUserCount: 0
+      bulkEmailMaxAudienceLoadUserBatchSize: 0
+      bulkEmailBatchQueryLimit: 100
+      bulkEmailMaxBatchCount: 10
+      bulkEmailBatchPauseDuration: 1000
+      bulkEmailSendMode: PENDING
+      bulkEmailIncludedTermsAndConditions: "1.13"
+      allowBulkTestUsers: "true"
+      IsSplunkEnabled: "Yes"
+      UseAlarmActions: "No"
+      termsConditionsVersion: "1.13"
+
+    dev:
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/2e7ec5d4-f4b7-4342-a5d6-15952fd9111b
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/348c86dd-4507-4472-ab33-ee7448ce8959
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
+      s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
+      lambdaMinConcurrency: 0
+      emailCheckResultsWriterProvisionedConcurrency: "0"
+      logRetentionDays: 30
+      lambdaErrorThreshold: 5
+      notifyUrl: https://api.notifications.service.gov.uk
+      notifyTemplateMap: "{}"
+      bulkEmailSendingEnabled: "false"
+      bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
+      bulkEmailSendScheduleState: DISABLED
+      bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
+      bulkEmailAudienceLoaderScheduleState: DISABLED
+      bulkEmailMaxAudienceLoadUserCount: 0
+      bulkEmailMaxAudienceLoadUserBatchSize: 0
+      bulkEmailBatchQueryLimit: 100
+      bulkEmailMaxBatchCount: 10
+      bulkEmailBatchPauseDuration: 1000
+      bulkEmailSendMode: PENDING
+      bulkEmailIncludedTermsAndConditions: "1.13"
+      allowBulkTestUsers: "true"
+      IsSplunkEnabled: "No"
+      UseAlarmActions: "Yes"
+      termsConditionsVersion: "1.13"
+
+    build:
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/db350f01-bce4-4da8-9323-e70267569bd8
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2c3850f1-c841-487c-8236-746f01ff707d
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c6826c50-04a2-450a-95c5-0e1309b74d0e
+      s3EncryptionKey: arn:aws:kms:eu-west-2:761723964695:alias/aws/s3
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
+      lambdaMinConcurrency: 0
+      emailCheckResultsWriterProvisionedConcurrency: "0"
+      logRetentionDays: 30
+      lambdaErrorThreshold: 5
+      notifyUrl: https://api.notifications.service.gov.uk
+      notifyTemplateMap: "{}"
+      bulkEmailSendingEnabled: "false"
+      bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
+      bulkEmailSendScheduleState: DISABLED
+      bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
+      bulkEmailAudienceLoaderScheduleState: DISABLED
+      bulkEmailMaxAudienceLoadUserCount: 0
+      bulkEmailMaxAudienceLoadUserBatchSize: 0
+      bulkEmailBatchQueryLimit: 100
+      bulkEmailMaxBatchCount: 10
+      bulkEmailBatchPauseDuration: 1000
+      bulkEmailSendMode: PENDING
+      bulkEmailIncludedTermsAndConditions: "1.13"
+      allowBulkTestUsers: "true"
+      IsSplunkEnabled: "Yes"
+      UseAlarmActions: "Yes"
+      termsConditionsVersion: "1.13"
+
+    staging:
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/9c0cc476-e831-4ebf-81e6-c619e6b795e8
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed0ff55f-0ab2-463e-9c76-56be7052a436
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c289d5e1-1fd7-4629-9f3d-c059aabed970
+      s3EncryptionKey: arn:aws:kms:eu-west-2:758531536632:alias/aws/s3
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
+      lambdaMinConcurrency: 2
+      emailCheckResultsWriterProvisionedConcurrency: "5"
+      logRetentionDays: 60
+      lambdaErrorThreshold: 3
+      notifyUrl: https://api.notifications.service.gov.uk
+      notifyTemplateMap: "{}"
+      bulkEmailSendingEnabled: "true"
+      bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
+      bulkEmailSendScheduleState: ENABLED
+      bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
+      bulkEmailAudienceLoaderScheduleState: ENABLED
+      bulkEmailMaxAudienceLoadUserCount: 1000
+      bulkEmailMaxAudienceLoadUserBatchSize: 100
+      bulkEmailBatchQueryLimit: 100
+      bulkEmailMaxBatchCount: 10
+      bulkEmailBatchPauseDuration: 1000
+      bulkEmailSendMode: LIVE
+      bulkEmailIncludedTermsAndConditions: "1.13"
+      allowBulkTestUsers: "false"
+      IsSplunkEnabled: "Yes"
+      UseAlarmActions: "Yes"
+      termsConditionsVersion: "1.13"
+
+    integration:
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/85164499-9392-458c-8596-b5a810ca90f6
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
+      s3EncryptionKey: arn:aws:kms:eu-west-2:761723964695:alias/aws/s3
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
+      lambdaMinConcurrency: 3
+      emailCheckResultsWriterProvisionedConcurrency: 7
+      logRetentionDays: 90
+      lambdaErrorThreshold: 2
+      notifyUrl: https://api.notifications.service.gov.uk
+      notifyTemplateMap: "{}"
+      bulkEmailSendingEnabled: "true"
+      bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
+      bulkEmailSendScheduleState: ENABLED
+      bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
+      bulkEmailAudienceLoaderScheduleState: ENABLED
+      bulkEmailMaxAudienceLoadUserCount: 5000
+      bulkEmailMaxAudienceLoadUserBatchSize: 500
+      bulkEmailBatchQueryLimit: 200
+      bulkEmailMaxBatchCount: 20
+      bulkEmailBatchPauseDuration: 500
+      bulkEmailSendMode: LIVE
+      bulkEmailIncludedTermsAndConditions: "1.13"
+      allowBulkTestUsers: "false"
+      IsSplunkEnabled: "Yes"
+      UseAlarmActions: "Yes"
+      termsConditionsVersion: "1.13"
+
+    production:
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/8c0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/9c0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/ac0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/bc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/cc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      s3EncryptionKey: arn:aws:kms:eu-west-2:172348255554:alias/aws/s3
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/dc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      lambdaMinConcurrency: 5
+      emailCheckResultsWriterProvisionedConcurrency: 10
+      logRetentionDays: 90
+      lambdaErrorThreshold: 1
+      notifyUrl: https://api.notifications.service.gov.uk
+      notifyTemplateMap: "{}"
+      bulkEmailSendingEnabled: "true"
+      bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
+      bulkEmailSendScheduleState: ENABLED
+      bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
+      bulkEmailAudienceLoaderScheduleState: ENABLED
+      bulkEmailMaxAudienceLoadUserCount: 10000
+      bulkEmailMaxAudienceLoadUserBatchSize: 1000
+      bulkEmailBatchQueryLimit: 500
+      bulkEmailMaxBatchCount: 50
+      bulkEmailBatchPauseDuration: 200
+      bulkEmailSendMode: LIVE
+      bulkEmailIncludedTermsAndConditions: "1.13"
+      allowBulkTestUsers: "false"
+      IsSplunkEnabled: "Yes"
+      UseAlarmActions: "Yes"
+      termsConditionsVersion: "1.13"
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: java17
+    MemorySize: 4096
+    Timeout: 900
+    Architectures:
+      - x86_64
+    CodeSigningConfigArn: !If
+      - UseCodeSigning
+      - !Ref CodeSigningConfigArn
+      - !Ref AWS::NoValue
+    PermissionsBoundary: !If
+      - UsePermissionsBoundary
+      - !Ref PermissionsBoundary
+      - !Ref AWS::NoValue
+    DeploymentPreference:
+      Enabled: true
+      Type: !Ref LambdaDeploymentPreference
+      Role: !GetAtt CodeDeployServiceRole.Arn
+    Environment:
+      Variables:
+        ENVIRONMENT:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+    KmsKeyArn: !GetAtt MainKmsKey.Arn
+
+Resources:
+  # ============================================================================
+  # KMS Key for CloudWatch Logs Encryption
+  # ============================================================================
+  # This key is used by Lambda functions to encrypt CloudWatch logs
+  # Mirrors the MainKmsKey pattern from account-management stack
+
+  MainKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS Key that Lambda uses to encrypt and decrypt function's environment variables and logs
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Effect: Allow
+            Principal:
+              Service: !Sub logs.${AWS::Region}.amazonaws.com
+            Action:
+              - kms:Encrypt*
+              - kms:Decrypt*
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:Describe*
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+
+  MainKmsKeyAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: !Sub
+        - "alias/${Env}-utils-main-kms-alias"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref MainKmsKey
+
+  # ============================================================================
+  # CodeDeploy Service Role
+  # ============================================================================
+  # CodeDeploy Service Role for gradual Lambda deployments
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+
+  # ============================================================================
+  # DynamoDB Access Policies
+  # ============================================================================
+
+  # Policy for user_profile table read access (DescribeTable, GetItem, Query)
+  UserProfileReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: UserProfileReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:Query
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-profile"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref AccountMetricsLambdaRole
+        - !Ref MfaMethodAnalysisLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+
+  # Policy for user_profile table write access (PutItem, UpdateItem)
+  UserProfileWriteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserProfileWriteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-profile"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+
+  # Policy for user_credentials table write access (PutItem, UpdateItem)
+  UserCredentialsWriteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserCredentialsWriteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-credentials"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+
+  # Policy for user_profile table delete access (DeleteItem)
+  UserProfileDeleteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserProfileDeleteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-profile"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # Policy for user_credentials table delete access (DeleteItem)
+  UserCredentialsDeleteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserCredentialsDeleteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-user-credentials"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # Policy for common_passwords table full access (PutItem, BatchWriteItem, Scan)
+  CommonPasswordsFullAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CommonPasswordsFullAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-common-passwords"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref CommonPasswordsUpdateLambdaRole
+
+  # Policy for bulk_email tables access (Query, Scan, PutItem, UpdateItem)
+  BulkEmailTablesAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: BulkEmailTablesAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-bulk-email-*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+        - !Ref BulkUserEmailSendLambdaRole
+
+  # Policy for email_check_results table write access (PutItem)
+  EmailCheckResultsWriteAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EmailCheckResultsWriteAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-email-check-results"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref EmailCheckResultsWriterLambdaRole
+
+  # ============================================================================
+  # S3 Access Policies
+  # ============================================================================
+
+  # Policy for bulk_test_user bucket read access (GetObject, ListBucket)
+  BulkTestUserBucketReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: BulkTestUserBucketReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-bulk-test-user-bucket"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-bulk-test-user-bucket/*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+
+  # Policy for common_passwords bucket read access (GetObject, ListBucket)
+  CommonPasswordsBucketReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CommonPasswordsBucketReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-common-passwords-bucket"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-common-passwords-bucket/*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref CommonPasswordsUpdateLambdaRole
+
+  # Policy for source_code bucket read access (GetObject)
+  SourceCodeBucketReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SourceCodeBucketReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-lambda-source-bucket/*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref AccountMetricsLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+        - !Ref BulkUserEmailSendLambdaRole
+        - !Ref CommonPasswordsUpdateLambdaRole
+        - !Ref EmailCheckResultsWriterLambdaRole
+        - !Ref MfaMethodAnalysisLambdaRole
+
+  # Policy for source_code bucket read access for conditional bulk test user roles
+  SourceCodeBucketReadAccessPolicyForBulkTestUsers:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: SourceCodeBucketReadAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub
+                - "arn:aws:s3:::${EnvironmentName}-utils-lambda-source-bucket/*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # ============================================================================
+  # SQS Access Policies
+  # ============================================================================
+
+  # Policy for email_check_results SQS queue access
+  EmailCheckResultsSqsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EmailCheckResultsSqsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ChangeMessageVisibility
+            Resource:
+              - !Sub
+                - "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${EnvironmentName}-email-check-results-queue"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref EmailCheckResultsWriterLambdaRole
+
+  # ============================================================================
+  # Secrets Manager Access Policies
+  # ============================================================================
+
+  # Policy for Secrets Manager access to retrieve Notify API key
+  SecretsManagerNotifyAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SecretsManagerNotifyAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Sub
+                - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvironmentName}/notify/api-key-*"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref BulkUserEmailSendLambdaRole
+
+  # ============================================================================
+  # KMS Access Policies
+  # ============================================================================
+
+  # Policy for user_profile table KMS encryption key access
+  UserProfileTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: UserProfileTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - userProfileTableEncryptionKey
+      Roles:
+        - !Ref AccountMetricsLambdaRole
+        - !Ref MfaMethodAnalysisLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+
+  # Policy for user_profile table KMS encryption key access for bulk test user create
+  UserProfileTableKmsAccessPolicyForBulkTestUsers:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserProfileTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - userProfileTableEncryptionKey
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # Policy for user_credentials table KMS encryption key access
+  UserCredentialsTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: UserCredentialsTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - userCredentialsTableEncryptionKey
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # Policy for common_passwords table KMS encryption key access
+  CommonPasswordsTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CommonPasswordsTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - commonPasswordsTableEncryptionKey
+      Roles:
+        - !Ref CommonPasswordsUpdateLambdaRole
+
+  # Policy for email_check_results table KMS encryption key access
+  EmailCheckResultsTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EmailCheckResultsTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - emailCheckResultTableEncryptionKey
+      Roles:
+        - !Ref EmailCheckResultsWriterLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+        - !Ref BulkUserEmailSendLambdaRole
+
+  # Policy for SQS queue KMS encryption key access
+  SqsQueueKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SqsQueueKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - sqsEncryptionKey
+      Roles:
+        - !Ref EmailCheckResultsWriterLambdaRole
+
+  # Policy for S3 bucket KMS encryption key access for bulk test users
+  S3BucketKmsAccessPolicyForBulkTestUsers:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: S3BucketKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - s3EncryptionKey
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+
+  # Policy for S3 bucket KMS encryption key access for common passwords
+  S3BucketKmsAccessPolicyForCommonPasswords:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: S3BucketKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - s3EncryptionKey
+      Roles:
+        - !Ref CommonPasswordsUpdateLambdaRole
+
+  # Policy for CloudWatch Logs KMS encryption key access
+  CloudWatchLogsKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CloudWatchLogsKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - cloudwatchEncryptionKey
+      Roles:
+        - !Ref AccountMetricsLambdaRole
+        - !Ref BulkUserEmailAudienceLoaderLambdaRole
+        - !Ref BulkUserEmailSendLambdaRole
+        - !Ref CommonPasswordsUpdateLambdaRole
+        - !Ref EmailCheckResultsWriterLambdaRole
+        - !Ref MfaMethodAnalysisLambdaRole
+
+  # Policy for CloudWatch Logs KMS encryption key access for conditional bulk test user roles
+  CloudWatchLogsKmsAccessPolicyForBulkTestUsers:
+    Type: AWS::IAM::Policy
+    Condition: AllowBulkTestUsers
+    Properties:
+      PolicyName: CloudWatchLogsKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - cloudwatchEncryptionKey
+      Roles:
+        - !Ref BulkTestUserCreateLambdaRole
+        - !Ref BulkTestUserDeleteLambdaRole
+
+  # ============================================================================
+  # Lambda Execution Roles
+  # ============================================================================
+
+  # 1. Account Metrics Lambda Role (VPC-enabled)
+  AccountMetricsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-account-metrics-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-account-metrics-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 2. Bulk Test User Create Lambda Role (Conditional, non-VPC)
+  BulkTestUserCreateLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: AllowBulkTestUsers
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-bulk-test-user-create-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-bulk-test-user-create-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 3. Bulk Test User Delete Lambda Role (Conditional, non-VPC)
+  BulkTestUserDeleteLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: AllowBulkTestUsers
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-bulk-test-user-delete-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-bulk-test-user-delete-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 4. Bulk User Email Audience Loader Lambda Role (non-VPC)
+  BulkUserEmailAudienceLoaderLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-bulk-user-email-audience-loader-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 5. Bulk User Email Send Lambda Role (non-VPC)
+  BulkUserEmailSendLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-bulk-user-email-send-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-bulk-user-email-send-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 6. Common Passwords Update Lambda Role (VPC-enabled)
+  CommonPasswordsUpdateLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-common-passwords-update-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-common-passwords-update-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 7. Email Check Results Writer Lambda Role (non-VPC)
+  EmailCheckResultsWriterLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-email-check-results-writer-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-email-check-results-writer-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 8. MFA Method Analysis Lambda Role (VPC-enabled)
+  MfaMethodAnalysisLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-mfa-method-analysis-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-mfa-method-analysis-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # ============================================================================
+  # S3 Buckets
+  # ============================================================================
+
+  # Bulk Test User Bucket
+  BulkTestUserBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - "${EnvironmentName}-utils-bulk-test-user-bucket"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  BulkTestUserBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BulkTestUserBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt BulkTestUserBucket.Arn
+              - !Sub "${BulkTestUserBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+  # Common Passwords Bucket
+  CommonPasswordsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - "${EnvironmentName}-utils-common-passwords-bucket"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  CommonPasswordsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CommonPasswordsBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt CommonPasswordsBucket.Arn
+              - !Sub "${CommonPasswordsBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+  # Source Code Bucket
+  SourceCodeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - "${EnvironmentName}-utils-lambda-source-bucket"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  SourceCodeBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SourceCodeBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt SourceCodeBucket.Arn
+              - !Sub "${SourceCodeBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"

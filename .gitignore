@@ -41,6 +41,7 @@ auth-template.yaml
 stubs-template.yaml
 am-template.yaml
 ad-template.yaml
+utils-template.yaml
 
 # Amazon Q files
 .amazonq/
