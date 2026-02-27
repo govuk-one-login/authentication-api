@@ -172,36 +172,6 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
-  ProvisionNewAuthSigningKey:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
-  PublishNextAuthSigningKey:
-    !And [
-      !Condition ProvisionNewAuthSigningKey,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
-  UseNewAuthSigningKey:
-    !And [
-      !Condition PublishNextAuthSigningKey,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
   ProvisionNewExternalTokenSigningKeysV2:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -244,7 +214,6 @@ Mappings:
       idTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:653994557586:key/17e5e566-4e99-43b4-ad59-e1ef924a582b
       storageTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/cf42638b-73a6-498f-a56f-e7ec341c276b
-      orchToAuthKeyArn: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:653994557586:authdev3-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -256,7 +225,6 @@ Mappings:
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:653994557586:key/3e5dd566-314a-4be8-8976-d8177824f959
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/258b15a8-6157-439e-8018-24c59b91c8c5
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
-      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37?
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 3c2cb819-4dd1-4fbc-90f0-cbdc3ec24e50
@@ -274,7 +242,6 @@ Mappings:
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/0189356a-b80f-4f12-9f31-60f5b34a574f
       storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fcebbac-6a3a-4948-9700-e061ef3d308e
-      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -286,7 +253,6 @@ Mappings:
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
-      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       defaultProvisionedConcurrency: 1
       aisUriSecretId: 15fd1c23-eac2-4881-9ca8-d287b476fc3b
@@ -304,7 +270,6 @@ Mappings:
       idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:758531536632:key/1d506b73-c506-4cec-bc46-db0ac1a54149
       storageTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/01d22c46-bccf-4a2f-bd3b-149fe03f5321
-      orchToAuthKeyArn: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
       docAppDomain: https://api.review-b.staging.account.gov.uk
@@ -316,7 +281,6 @@ Mappings:
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:758531536632:key/00051d8b-de72-4952-baab-3be6460ad844
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
-      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
       defaultProvisionedConcurrency: 3
       aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
@@ -336,7 +300,6 @@ Mappings:
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
       storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6dccb5b3-2754-4c66-ba66-c11f861ad55f
-      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
       docAppDomain: https://api.review-b.integration.account.gov.uk
@@ -348,7 +311,6 @@ Mappings:
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/031ece8b-a59a-4991-a2aa-98f486c69f60
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
-      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
@@ -366,7 +328,6 @@ Mappings:
       idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:172348255554:key/ce5d0a05-909c-449b-be82-87009f5bef9a
       storageTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0fce68a7-62bd-407d-919e-07f3fd621304
-      orchToAuthKeyArn: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
       docAppDomain: https://api.review-b.account.gov.uk
@@ -378,7 +339,6 @@ Mappings:
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:172348255554:key/c6448889-ae6d-4db1-916c-9338a3c2bd1b
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
-      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
@@ -3211,20 +3171,7 @@ Resources:
                     serviceDomain,
                   ]
           ORCH_CLIENT_ID: orchestrationAuth
-          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              orchToAuthKeyArn,
-            ]
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !If
-            - UseNewAuthSigningKey
-            - !Ref OrchAuthSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          USE_NEW_AUTH_SIGNING_KEY: !If
-            - UseNewAuthSigningKey
-            - true
-            - false
+          AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           OIDC_API_BASE_URL: !Sub
@@ -3808,21 +3755,7 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              orchToAuthKeyArn,
-            ]
-          PUBLISH_NEXT_AUTH_SIGNING_KEY: !If
-            - PublishNextAuthSigningKey
-            - true
-            - false
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !If
-            - PublishNextAuthSigningKey
-            - !Ref OrchAuthSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          PUBLISH_OLD_AUTH_SIGNING_KEY: false
+          AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
       Policies:
         - !Ref OrchToAuthSigningKmsAccessPolicy
       Tags:
@@ -4094,20 +4027,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              orchToAuthKeyArn,
-            ]
-          NEXT_AUTH_SIGNING_KEY_ALIAS: !If
-            - UseNewAuthSigningKey
-            - !Ref OrchAuthSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          USE_NEW_AUTH_SIGNING_KEY: !If
-            - UseNewAuthSigningKey
-            - true
-            - false
+          AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
           ORCH_TO_AUTH_ENCRYPTION_KEY_PARAM: !If
             - UseAuthStub
             - !Sub /orch-stubs/${Environment}-auth-stub-auth-public-encryption-key
@@ -6871,27 +6791,13 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowOrchToAuthSigningKms
+          - Sid: AllowOrchToAuthSigningKey
             Effect: Allow
             Action:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  orchToAuthKeyArn,
-                ]
-          - Fn::If:
-              - ProvisionNewAuthSigningKey
-              - Sid: AllowNewAuthSigningKey
-                Effect: Allow
-                Action:
-                  - kms:Sign
-                  - kms:GetPublicKey
-                Resource:
-                  - !GetAtt OrchAuthSigningKmsKey.Arn
-              - !Ref AWS::NoValue
+              - !GetAtt OrchAuthSigningKmsKey.Arn
 
   BackChannelLogoutQueueWritePolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -8219,7 +8125,6 @@ Resources:
   #region Auth signing key pair
 
   OrchAuthSigningKmsKey:
-    Condition: ProvisionNewAuthSigningKey
     Type: AWS::KMS::Key
     Properties:
       Description: KMS signing key for authentication to Auth
@@ -8237,7 +8142,6 @@ Resources:
             Resource: "*"
 
   OrchAuthSigningKmsKeyAlias:
-    Condition: ProvisionNewAuthSigningKey
     Type: AWS::KMS::Alias
     Properties:
       AliasName: !Sub "alias/${Environment}-orch-auth-kms-key-alias"

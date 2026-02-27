@@ -94,13 +94,7 @@ public class JwksService {
 
     public JWK getPublicAuthSigningJwkWithOpaqueId() {
         LOG.info("Retrieving Auth public signing key");
-        return getPublicJWKWithKeyId(
-                configurationService.getOrchestrationToAuthenticationTokenSigningKeyAlias());
-    }
-
-    public JWK getNextPublicAuthSigningJwkWithOpaqueId() {
-        LOG.info("Retrieving next Auth public signing key");
-        return getPublicJWKWithKeyId(configurationService.getNextAuthSigningKeyAlias());
+        return getPublicJWKWithKeyId(configurationService.getAuthSigningKeyAlias());
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {

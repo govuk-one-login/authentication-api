@@ -22,8 +22,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
@@ -70,10 +68,8 @@ class AuthenticationTokenServiceTest {
     private static final URI ORCH_CALLBACK_URI = URI.create("https://orch.callback.uri/");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final UserInfo USER_INFO = new UserInfo(new Subject());
-    private static final String OLD_KEY_ALIAS = "old-token-key-alias";
-    private static final String OLD_KEY_ID = "old-token-key-id";
-    private static final String NEW_KEY_ALIAS = "new-token-key-alias";
-    private static final String NEW_KEY_ID = "old-token-key-id";
+    private static final String KEY_ALIAS = "token-key-alias";
+    private static final String KEY_ID = "token-key-id";
 
     private AuthenticationTokenService authenticationTokenService;
 
@@ -82,24 +78,18 @@ class AuthenticationTokenServiceTest {
         when(configurationService.getAuthenticationAuthCallbackURI()).thenReturn(ORCH_CALLBACK_URI);
         when(configurationService.getAuthenticationBackendURI()).thenReturn(AUTH_BACKEND_URI);
         when(configurationService.getOrchestrationClientId()).thenReturn(CLIENT_ID.getValue());
-        when(configurationService.getOrchestrationToAuthenticationTokenSigningKeyAlias())
-                .thenReturn(OLD_KEY_ALIAS);
-        when(configurationService.getNextAuthSigningKeyAlias()).thenReturn(NEW_KEY_ALIAS);
+        when(configurationService.getAuthSigningKeyAlias()).thenReturn(KEY_ALIAS);
 
-        when(kmsService.getPublicKey(GetPublicKeyRequest.builder().keyId(OLD_KEY_ALIAS).build()))
-                .thenReturn(GetPublicKeyResponse.builder().keyId(OLD_KEY_ID).build());
-        when(kmsService.getPublicKey(GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS).build()))
-                .thenReturn(GetPublicKeyResponse.builder().keyId(NEW_KEY_ID).build());
+        when(kmsService.getPublicKey(GetPublicKeyRequest.builder().keyId(KEY_ALIAS).build()))
+                .thenReturn(GetPublicKeyResponse.builder().keyId(KEY_ID).build());
 
         authenticationTokenService =
                 new AuthenticationTokenService(configurationService, kmsService);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldConstructTokenRequest(boolean signWithNewKey) throws JOSEException {
-        when(configurationService.isUseNewAuthSigningKey()).thenReturn(signWithNewKey);
-        signJWTWithKMS(signWithNewKey ? NEW_KEY_ID : OLD_KEY_ID);
+    @Test
+    void shouldConstructTokenRequest() throws JOSEException {
+        signJWTWithKMS(KEY_ID);
         TokenRequest tokenRequest =
                 authenticationTokenService.constructTokenRequest(AUTH_CODE.getValue());
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(AUTH_BACKEND_URI + "token"));
