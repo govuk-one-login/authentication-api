@@ -1,7 +1,7 @@
 openapi: "3.0.1"
 info:
   title: "auth-account-management-method-management-api"
-  version: 1.0.2
+  version: 1.1.0
   description: Auth Account Management API
 servers:
   - url: "https://localhost:8080/"
@@ -16,13 +16,59 @@ paths:
         uri: "${endpoint_modules.authenticate.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+      description: "Validates user credentials (email and password) for authentication. Optionally accepts post-authentication action context to indicate the user's intended next action after successful authentication."
+      summary: Authenticate user credentials
+      operationId: "authenticate"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthenticateRequest"
+            examples:
+              authenticate-request:
+                summary: Authenticate user with optional target action and action source
+                value:
+                  email: "user@example.gov.uk"
+                  password: "<PASSWORD>"
+                  postAuthAction: "UPDATE_EMAIL"
+                  actionSource: "ACCOUNT_MANAGEMENT"
+              authenticate-request-no-target-action:
+                summary: Authenticate user request with no target action for backwards compatability
+                value:
+                  email: "user@example.gov.uk"
+                  password: "<PASSWORD>"
+        required: true
       responses:
         "204":
           description: Successful Operation. The password is correct for this user.
         "400":
-          description: One of the required fields is missing.
+          description: Bad Request - Missing parameters or account does not exist.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/AccountDoesNotExist"
+              examples:
+                post-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                post-when-account-does-not-exist:
+                  value:
+                    code: 1010
+                    message: "An account with this email address does not exist"
         "401":
           description: This user does not have an account or the password is wrong.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimpleError"
+              examples:
+                post-when-invalid-credentials:
+                  value:
+                    code: 1002
+                    message: "Invalid email or password"
         "403":
           description: This user cannot authenticate because of a suspension.
           content:
@@ -208,7 +254,7 @@ paths:
                       priorityIdentifier: DEFAULT
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "<CREDENTIAL_VALUE>"
                       methodVerified: true
                 get-when-user-with-multiple-mfa-types-default-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method
@@ -223,7 +269,7 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "<CREDENTIAL_VALUE>"
                       methodVerified: true
         "400":
           description: Bad Request
@@ -331,7 +377,7 @@ paths:
                         "method":
                           {
                             "mfaMethodType": "AUTH_APP",
-                            "credential": "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444",
+                            "credential": "<CREDENTIAL_VALUE>",
                           },
                       },
                   }
@@ -370,7 +416,7 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "postAAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "post<CREDENTIAL_VALUE>"
                       methodVerified: true
         "400":
           description: Bad Request
@@ -535,7 +581,7 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "<CREDENTIAL_VALUE>"
                       methodVerified: true
                 put-when-user-with-multiple-mfa-types-default-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method after update
@@ -550,7 +596,7 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "<CREDENTIAL_VALUE>"
                       methodVerified: true
         "400":
           description: Bad Request
@@ -812,7 +858,7 @@ components:
         priorityIdentifier: DEFAULT
         method:
           mfaMethodType: AUTH_APP
-          credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+          credential: "<CREDENTIAL_VALUE>"
 
     MfaMethodUpdate:
       required:
@@ -843,7 +889,7 @@ components:
           priorityIdentifier: DEFAULT
           method:
             mfaMethodType: AUTH_APP
-            credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+            credential: "<CREDENTIAL_VALUE>"
 
     MfaMethodUpdateRequest:
       required:
@@ -857,7 +903,7 @@ components:
           priorityIdentifier: DEFAULT
           method:
             mfaMethodType: AUTH_APP
-            credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+            credential: "<CREDENTIAL_VALUE>"
 
     SimpleError:
       type: object
@@ -1092,6 +1138,14 @@ components:
           example:
             code: 1080
             message: "Default method already exists, new one cannot be created."
+    UserAccountSuspended:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1083]
     UserAccountBlocked:
       allOf:
         - $ref: "#/components/schemas/SimpleError"
@@ -1182,6 +1236,41 @@ components:
           example:
             code: 1089
             message: "Email address is denied"
+    AuthenticateRequest:
+      required:
+        - email
+        - password
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The user's email address
+          example: "user@example.gov.uk"
+        password:
+          type: string
+          description: The user's password
+          example: "<PASSWORD>"
+        postAuthAction:
+          type: string
+          enum:
+            - UPDATE_EMAIL
+            - UPDATE_PASSWORD
+            - DELETE_ACCOUNT
+          description: Optional field indicating the user's intended action
+          example: "UPDATE_EMAIL"
+        actionSource:
+          type: string
+          enum:
+            - ACCOUNT_MANAGEMENT
+            - ACCOUNT_COMPONENTS
+          description: Optional field indicating the source of the action
+          example: "ACCOUNT_MANAGEMENT"
+      example:
+        email: "user@example.gov.uk"
+        password: "<PASSWORD>"
+        postAuthAction: "UPDATE_EMAIL"
+        actionSource: "ACCOUNT_MANAGEMENT"
 
   securitySchemes:
     authorise-access-token:

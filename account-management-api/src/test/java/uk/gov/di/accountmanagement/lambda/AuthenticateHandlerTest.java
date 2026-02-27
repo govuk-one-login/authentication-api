@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.accountmanagement.entity.ActionSource;
+import uk.gov.di.accountmanagement.entity.PostAuthAction;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.*;
@@ -34,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -111,21 +114,55 @@ class AuthenticateHandlerTest {
                                 new Intervention(1L), new State(false, false, false, false)));
     }
 
-    @Test
-    void shouldReturn204IfLoginIsSuccessful() {
+    private static Stream<Arguments> postAuthActionAndSourceValues() {
+        var postAuthActions =
+                java.util.List.of(
+                        "not-a-valid-target-action",
+                        PostAuthAction.DELETE_ACCOUNT.getValue(),
+                        PostAuthAction.UPDATE_EMAIL.getValue(),
+                        PostAuthAction.UPDATE_PASSWORD.getValue());
+        var actionSources =
+                java.util.List.of(
+                        "not-a-valid-action-source",
+                        ActionSource.ACCOUNT_MANAGEMENT.getValue(),
+                        ActionSource.ACCOUNT_COMPONENTS.getValue());
+        return postAuthActions.stream()
+                .flatMap(
+                        target ->
+                                actionSources.stream().map(source -> Arguments.of(target, source)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("postAuthActionAndSourceValues")
+    void shouldReturn204IfLoginIsSuccessful(String postAuthAction, String actionSource) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\", \"post_auth_action\": \"%s\", \"action_source\": \"%s\" }",
+                        PASSWORD, EMAIL, postAuthAction, actionSource));
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
 
+        String expectedPostAuthAction =
+                "not-a-valid-target-action".equals(postAuthAction)
+                        ? AuditService.UNKNOWN
+                        : postAuthAction;
+        String expectedActionSource =
+                "not-a-valid-action-source".equals(actionSource)
+                        ? AuditService.UNKNOWN
+                        : actionSource;
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
                         auditContext.withSubjectId(clientSubjectId),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
+                        pair("post_auth_action", expectedPostAuthAction),
+                        pair("action_source", expectedActionSource));
     }
 
     @Test
@@ -147,7 +184,9 @@ class AuthenticateHandlerTest {
                                 .withClientSessionId("unknown")
                                 .withSubjectId(clientSubjectId)
                                 .withTxmaAuditEncoded(Optional.empty()),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
+                        pair("post_auth_action", AuditService.UNKNOWN),
+                        pair("action_source", AuditService.UNKNOWN));
     }
 
     @Test
@@ -289,7 +328,9 @@ class AuthenticateHandlerTest {
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
                         auditContext.withSubjectId(clientSubjectId),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
+                        pair("post_auth_action", AuditService.UNKNOWN),
+                        pair("action_source", AuditService.UNKNOWN));
     }
 
     @Test
