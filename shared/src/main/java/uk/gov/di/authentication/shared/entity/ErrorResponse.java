@@ -123,6 +123,7 @@ public enum ErrorResponse {
     PASSKEY_ALREADY_EXISTS(1093, "Passkey already exists"),
     INVALID_AAGUID(1094, "Invalid AAGUID format"),
     INVALID_CREDENTIAL(1095, "Invalid credential format"),
+    FAILED_TO_GET_PASSKEYS(1096, "Failed to get passkeys"),
     // Passkeys
     PASSKEY_ASSERTION_INVALID_PKC(1100, "Invalid passkey PKC object"),
     PASSKEY_ASSERTION_FAILED(1101, "Passkey assertion failed"),
