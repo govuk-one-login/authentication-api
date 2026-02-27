@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,6 +17,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.MfaResetType;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -27,6 +29,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -76,7 +79,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
@@ -101,6 +107,7 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
@@ -1205,5 +1212,94 @@ class VerifyCodeHandlerTest {
     private void withReauthTurnedOn() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+    }
+
+    @Nested
+    class ForcedMfaResetAuditEvent {
+
+        private static final MFAMethod INTERNATIONAL_SMS_METHOD =
+                new MFAMethod(DEFAULT_SMS_METHOD).withDestination(INTERNATIONAL_MOBILE_NUMBER);
+
+        @BeforeEach
+        void setUp() {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+            when(codeStorageService.getOtpCode(
+                            EMAIL.concat(INTERNATIONAL_SMS_METHOD.getDestination()), MFA_SMS))
+                    .thenReturn(Optional.of(CODE));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(INTERNATIONAL_SMS_METHOD)));
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
+            authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+        }
+
+        @ParameterizedTest
+        @MethodSource("includedJourneyTypes")
+        void shouldEmitMfaResetAuditEventForSmsSignInWithInternationalNumber(
+                JourneyType journeyType) {
+            var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
+
+            assertThat(result, hasStatus(204));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
+                            eq(AUDIT_CONTEXT.withPhoneNumber(INTERNATIONAL_MOBILE_NUMBER)),
+                            eq(pair(AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "7")),
+                            eq(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE,
+                                            MfaResetType.FORCED_INTERNATIONAL_NUMBERS)),
+                            eq(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                            JourneyType.ACCOUNT_RECOVERY)));
+        }
+
+        @Test
+        void shouldNotEmitMfaResetAuditEventWhenFeatureFlagDisabled() {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
+
+            var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.SIGN_IN);
+
+            assertThat(result, hasStatus(204));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+        }
+
+        @Test
+        void shouldNotEmitMfaResetAuditEventForDomesticNumber() {
+            when(codeStorageService.getOtpCode(
+                            EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
+                    .thenReturn(Optional.of(CODE));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+
+            var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.SIGN_IN);
+
+            assertThat(result, hasStatus(204));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+        }
+
+        @Test
+        void shouldNotEmitMfaResetAuditEventForAccountRecoveryJourney() {
+            var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.ACCOUNT_RECOVERY);
+
+            assertThat(result, hasStatus(204));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+        }
+
+        private static Stream<JourneyType> includedJourneyTypes() {
+            return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, REAUTHENTICATION);
+        }
     }
 }

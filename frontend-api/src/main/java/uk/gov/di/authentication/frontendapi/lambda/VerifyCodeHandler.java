@@ -10,6 +10,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -328,7 +329,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 journeyType,
                 auditContext,
                 maybeRpPairwiseId,
-                maybeRequestedSmsMfaMethod);
+                maybeRequestedSmsMfaMethod,
+                retrievedMfaMethods);
 
         return generateEmptySuccessApiGatewayResponse();
     }
@@ -483,7 +485,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId,
-            Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod,
+            List<MFAMethod> retrievedMfaMethods) {
         var authSession = userContext.getAuthSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
@@ -491,6 +494,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var clientId = authSession.getClientId();
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
+
+        ForcedMfaResetHelper.emitForcedMfaResetAuditEventIfRequired(
+                configurationService,
+                auditService,
+                journeyType,
+                retrievedMfaMethods,
+                maybeRequestedSmsMfaMethod,
+                auditContext);
 
         String emailAddress = authSession.getEmailAddress();
         String otpCodeIdentifier = emailAddress;
