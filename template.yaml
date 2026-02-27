@@ -142,36 +142,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  ProvisionNewDocAppSigningKey:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
-  PublishNextDocAppSigningKey:
-    !And [
-      !Condition ProvisionNewDocAppSigningKey,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
-  UseNewDocAppSigningKey:
-    !And [
-      !Condition ProvisionNewDocAppSigningKey,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
   ProvisionNewAuthSigningKey:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -253,7 +223,6 @@ Mappings:
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
       docAppClientId: orch-dev
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/055d799b-c648-4232-801b-c83aef0f2bd1
-      docAppSigningKeyArn: arn:aws:kms:eu-west-2:653994557586:key/3e5dd566-314a-4be8-8976-d8177824f959
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/258b15a8-6157-439e-8018-24c59b91c8c5
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37?
@@ -283,7 +252,6 @@ Mappings:
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
       docAppClientId: orch-build
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2603fe5-7d09-4279-a42d-e2363e11efb5
-      docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
@@ -313,7 +281,6 @@ Mappings:
       docAppAuthorisationUrl: https://www.review-b.staging.account.gov.uk/dca/oauth2/authorize
       docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/63ce28d6-5482-4886-933d-33cd27f469d3
-      docAppSigningKeyArn: arn:aws:kms:eu-west-2:758531536632:key/00051d8b-de72-4952-baab-3be6460ad844
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
@@ -345,7 +312,6 @@ Mappings:
       docAppAuthorisationUrl: https://www.review-b.integration.account.gov.uk/dca/oauth2/authorize
       docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/37aea309-c4a2-4ac7-8361-c1789f54df77
-      docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/031ece8b-a59a-4991-a2aa-98f486c69f60
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
@@ -375,7 +341,6 @@ Mappings:
       docAppAuthorisationUrl: https://www.review-b.account.gov.uk/dca/oauth2/authorize
       docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/ab10facb-aa4d-47b9-92bb-3974b9585fd4
-      docAppSigningKeyArn: arn:aws:kms:eu-west-2:172348255554:key/c6448889-ae6d-4db1-916c-9338a3c2bd1b
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
@@ -2130,12 +2095,6 @@ Resources:
               !Ref Environment,
               docAppClientId,
             ]
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppSigningKeyArn,
-            ]
           DOC_APP_BACKEND_URI:
             !FindInMap [
               EnvironmentConfiguration,
@@ -2201,14 +2160,7 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          USE_NEW_DOC_APP_SIGNING_KEY: !If
-            - UseNewDocAppSigningKey
-            - true
-            - false
-          NEXT_DOC_APP_SIGNING_KEY_ALIAS: !If
-            - PublishNextDocAppSigningKey
-            - !Ref OrchDocAppSigningKmsKeyAlias
-            - !Ref AWS::NoValue
+          DOC_APP_SIGNING_KEY_ALIAS: !Ref OrchDocAppSigningKmsKeyAlias
       Policies:
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref OrchDocAppCredentialTableWriteAccessPolicy
@@ -3505,12 +3457,6 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppSigningKeyArn,
-            ]
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
             - PublishNextExternalTokenSigningKeys
             - true
@@ -3535,15 +3481,7 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
-          PUBLISH_NEXT_DOC_APP_SIGNING_KEY: !If
-            - PublishNextDocAppSigningKey
-            - true
-            - false
-          NEXT_DOC_APP_SIGNING_KEY_ALIAS: !If
-            - PublishNextDocAppSigningKey
-            - !Ref OrchDocAppSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          PUBLISH_OLD_DOC_APP_SIGNING_KEY: false
+          DOC_APP_SIGNING_KEY_ALIAS: !Ref OrchDocAppSigningKmsKeyAlias
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
@@ -3995,20 +3933,7 @@ Resources:
                   docAppBackendUri,
                 ]
           DOC_APP_NEW_AUD_CLAIM_ENABLED: true
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppSigningKeyArn,
-            ]
-          NEXT_DOC_APP_SIGNING_KEY_ALIAS: !If
-            - PublishNextDocAppSigningKey
-            - !Ref OrchDocAppSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          USE_NEW_DOC_APP_SIGNING_KEY: !If
-            - UseNewDocAppSigningKey
-            - true
-            - false
+          DOC_APP_SIGNING_KEY_ALIAS: !Ref OrchDocAppSigningKmsKeyAlias
           DOMAIN_NAME:
             !FindInMap [
               EnvironmentConfiguration,
@@ -6820,21 +6745,7 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                docAppSigningKeyArn,
-              ]
-          - Fn::If:
-              - ProvisionNewDocAppSigningKey
-              - Sid: AllowNewDocAppSigningKey
-                Effect: Allow
-                Action:
-                  - kms:Sign
-                  - kms:GetPublicKey
-                Resource:
-                  - !GetAtt OrchDocAppSigningKmsKey.Arn
-              - !Ref AWS::NoValue
+              - !GetAtt OrchDocAppSigningKmsKey.Arn
 
   StorageTokenSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -8193,7 +8104,6 @@ Resources:
   #region DocApp signing key pair
 
   OrchDocAppSigningKmsKey:
-    Condition: ProvisionNewDocAppSigningKey
     Type: AWS::KMS::Key
     Properties:
       Description: KMS signing key for authentication to DocApp
@@ -8211,7 +8121,6 @@ Resources:
             Resource: "*"
 
   OrchDocAppSigningKmsKeyAlias:
-    Condition: ProvisionNewDocAppSigningKey
     Type: AWS::KMS::Alias
     Properties:
       AliasName: !Sub "alias/${Environment}-orch-docapp-auth-kms-key-alias"

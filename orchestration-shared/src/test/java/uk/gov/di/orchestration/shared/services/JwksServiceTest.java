@@ -80,12 +80,12 @@ class JwksServiceTest {
     @Test
     void shouldRetrieveNextPublicDocAppSigningKeyFromKmsAndParseToJwk() throws Exception {
         var keyAlias = "next-doc-app-key-alias";
-        when(configurationService.getNextDocAppTokenSigningKeyAlias()).thenReturn(keyAlias);
+        when(configurationService.getDocAppTokenSigningKeyAlias()).thenReturn(keyAlias);
 
         var publicKey = generateECKey().toPublicKey().getEncoded();
         mockKmsPublicKeyResponse(publicKey, keyAlias);
 
-        JWK publicKeyJwk = jwksService.getNextPublicDocAppSigningJwkWithOpaqueId();
+        JWK publicKeyJwk = jwksService.getPublicDocAppSigningJwkWithOpaqueId();
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(keyAlias)));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
