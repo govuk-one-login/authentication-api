@@ -44,6 +44,8 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_SUBJECT_TYPE = "SubjectType";
     public static final String ATTRIBUTE_RP_SECTOR_IDENTIFIER_HOST = "RpSectorIdentifierHost";
     public static final String ATTRIBUTE_PASSKEY_ASSERTION_REQUEST = "PasskeyAssertionRequest";
+    public static final String ATTRIBUTE_HAS_VERIFIED_PASSWORD = "HasVerifiedPassword";
+    public static final String ATTRIBUTE_HAS_VERIFIED_MFA = "HasVerifiedMfa";
 
     public enum AccountState {
         NEW,
@@ -87,6 +89,8 @@ public class AuthSessionItem {
     private String subjectType;
     private String rpSectorIdentifierHost;
     private String passkeyAssertionRequest;
+    private boolean hasVerifiedPassword;
+    private boolean hasVerifiedMfa;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -484,6 +488,34 @@ public class AuthSessionItem {
         return this;
     }
 
+    @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_PASSWORD)
+    public boolean getHasVerifiedPassword() {
+        return hasVerifiedPassword;
+    }
+
+    public void setHasVerifiedPassword(boolean hasVerifiedPassword) {
+        this.hasVerifiedPassword = hasVerifiedPassword;
+    }
+
+    public AuthSessionItem withHasVerifiedPassword(boolean hasVerifiedPassword) {
+        this.hasVerifiedPassword = hasVerifiedPassword;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_MFA)
+    public boolean getHasVerifiedMfa() {
+        return hasVerifiedMfa;
+    }
+
+    public void setHasVerifiedMfa(boolean hasVerifiedMfa) {
+        this.hasVerifiedMfa = hasVerifiedMfa;
+    }
+
+    public AuthSessionItem withHasVerifiedMfa(boolean hasVerifiedMfa) {
+        this.hasVerifiedMfa = hasVerifiedMfa;
+        return this;
+    }
+
     /**
      * Return a string representation of the instance that is safe to record in logs (e.g. does not
      * contain PII)
@@ -505,6 +537,10 @@ public class AuthSessionItem {
                 + internalCommonSubjectId
                 + "', upliftRequired = '"
                 + upliftRequired
+                + "', hasVerifiedPassword = '"
+                + hasVerifiedPassword
+                + "', hasVerifiedMfa = '"
+                + hasVerifiedMfa
                 + "'}}";
     }
 }

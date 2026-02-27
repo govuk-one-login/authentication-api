@@ -3,6 +3,7 @@ package uk.gov.di.authentication.userpermissions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -61,6 +62,42 @@ class UserActionsManagerTest {
     }
 
     @Nested
+    class CreatedPasswordOperations {
+        @Test
+        void passwordCreatedShouldSetHasVerifiedPasswordToTrue() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result = userActionsManager.createdPassword(null, permissionContext);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertTrue(capturedSession.getHasVerifiedPassword());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class CorrectPasswordReceivedOperations {
+        @Test
+        void correctPasswordReceivedShouldSetHasVerifiedPasswordToTrue() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result = userActionsManager.correctPasswordReceived(null, permissionContext);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertTrue(capturedSession.getHasVerifiedPassword());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
     class PasswordResetOperations {
 
         @Test
@@ -86,6 +123,21 @@ class UserActionsManagerTest {
                     .deleteBlockForEmail(
                             EMAIL,
                             CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.SIGN_IN);
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void passwordResetShouldSetHasVerifiedPasswordToTrue() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result = userActionsManager.passwordReset(null, permissionContext);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertTrue(capturedSession.getHasVerifiedPassword());
             assertTrue(result.isSuccess());
         }
     }
@@ -296,6 +348,42 @@ class UserActionsManagerTest {
     }
 
     @Nested
+    class CorrectSmsOtpReceived {
+        @Test
+        void correctSmsOtpReceivedShouldSetHasVerifiedMfaToTrue() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result = userActionsManager.correctSmsOtpReceived(null, permissionContext);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertTrue(capturedSession.getHasVerifiedMfa());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class CorrectAuthAppOtpReceived {
+        @Test
+        void correctAuthAppOtpReceivedShouldSetHasVerifiedMfaToTrue() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result = userActionsManager.correctAuthAppOtpReceived(null, permissionContext);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertTrue(capturedSession.getHasVerifiedMfa());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
     class NoOpMethods {
 
         @Test
@@ -308,13 +396,17 @@ class UserActionsManagerTest {
                             .incorrectEmailAddressReceived(journeyType, context)
                             .isSuccess());
             assertTrue(
+                    userActionsManager.sentEmailOtpNotification(journeyType, context).isSuccess());
+            assertTrue(
                     userActionsManager.incorrectEmailOtpReceived(journeyType, context).isSuccess());
             assertTrue(
                     userActionsManager.correctEmailOtpReceived(journeyType, context).isSuccess());
             assertTrue(
                     userActionsManager.incorrectPasswordReceived(journeyType, context).isSuccess());
+            assertTrue(userActionsManager.createdPassword(journeyType, context).isSuccess());
             assertTrue(
                     userActionsManager.correctPasswordReceived(journeyType, context).isSuccess());
+            assertTrue(userActionsManager.passwordReset(journeyType, context).isSuccess());
             assertTrue(userActionsManager.sentSmsOtpNotification(journeyType, context).isSuccess());
             assertTrue(
                     userActionsManager.incorrectSmsOtpReceived(journeyType, context).isSuccess());

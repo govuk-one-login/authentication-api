@@ -65,6 +65,12 @@ class UserActionsTest {
         }
 
         @Override
+        public Result<TrackingError, Void> createdPassword(
+                JourneyType journeyType, PermissionContext permissionContext) {
+            return Result.success(null);
+        }
+
+        @Override
         public Result<TrackingError, Void> correctPasswordReceived(
                 JourneyType journeyType, PermissionContext permissionContext) {
             return Result.success(null);

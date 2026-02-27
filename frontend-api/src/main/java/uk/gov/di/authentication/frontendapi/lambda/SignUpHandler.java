@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -23,6 +24,8 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -43,6 +46,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     private final AuditService auditService;
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
+    private final UserActionsManager userActionsManager;
 
     public SignUpHandler(
             ConfigurationService configurationService,
@@ -50,11 +54,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
             PasswordValidator passwordValidator,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            UserActionsManager userActionsManager) {
         super(SignupRequest.class, configurationService, authenticationService, authSessionService);
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
+        this.userActionsManager = userActionsManager;
     }
 
     public SignUpHandler() {
@@ -66,6 +72,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     @Override
@@ -145,6 +152,12 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             .withAccountState(AuthSessionItem.AccountState.NEW)
                             .withEmailAddress(request.getEmail())
                             .withInternalCommonSubjectId(internalCommonSubjectId.getValue()));
+
+            LOG.info("Setting hasVerifiedPassword to true");
+            var permissionContext =
+                    PermissionContext.builder().withAuthSessionItem(authSessionItem).build();
+            userActionsManager.createdPassword(JourneyType.REGISTRATION, permissionContext);
+
             LOG.info("Successfully processed request");
             return generateApiGatewayProxyResponse(200, "");
         } else {

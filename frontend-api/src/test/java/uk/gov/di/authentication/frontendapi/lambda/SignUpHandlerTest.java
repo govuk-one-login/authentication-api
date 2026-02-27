@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -71,6 +72,7 @@ class SignUpHandlerTest {
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String EMAIL = CommonTestVariables.EMAIL;
 
@@ -128,7 +130,8 @@ class SignUpHandlerTest {
                         auditService,
                         commonPasswordsService,
                         passwordValidator,
-                        authSessionService);
+                        authSessionService,
+                        userActionsManager);
     }
 
     @Test
@@ -319,6 +322,27 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldCallCreatedPasswordWhenSignUpIsSuccessful() {
+        // Arrange
+        when(authenticationService.userExists(EMAIL)).thenReturn(false);
+        when(authenticationService.signUp(
+                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
+                .thenReturn(user);
+        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
+        withValidAuthSession();
+        var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+        verify(userActionsManager)
+                .createdPassword(any(), argThat(pc -> pc.authSessionItem() != null));
     }
 
     private void withValidAuthSession() {

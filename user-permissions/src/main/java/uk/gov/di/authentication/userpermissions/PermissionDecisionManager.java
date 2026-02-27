@@ -2,8 +2,10 @@ package uk.gov.di.authentication.userpermissions;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -295,6 +297,27 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     permissionContext.internalSubjectIds(), permissionContext.rpPairwiseId(), null);
         }
         return Result.success(new Decision.Permitted(0));
+    }
+
+    @Override
+    public boolean canIssueAuthCode(AuthSessionItem authSession) {
+        if (!authSession.getHasVerifiedPassword()) {
+            return false;
+        }
+
+        if (authSession.getRequestedCredentialStrength() == CredentialTrustLevel.MEDIUM_LEVEL) {
+            if (!authSession.getHasVerifiedMfa()) {
+                return false;
+            }
+        }
+
+        if (authSession
+                .getAchievedCredentialStrength()
+                .isLowerThan(authSession.getRequestedCredentialStrength())) {
+            return false;
+        }
+
+        return true;
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {

@@ -203,10 +203,18 @@ public class StartHandler
                             configurationService.getHeadersCaseInsensitive());
             var reauthenticate =
                     reauthenticateHeader != null && reauthenticateHeader.equals("true");
+
             LOG.info(
                     "reauthenticateHeader: {} reauthenticate: {}",
                     reauthenticateHeader,
                     reauthenticate);
+
+            if (reauthenticate) {
+                LOG.info(
+                        "Reauthentication - Setting hasVerifiedPassword & hasVerifiedMfa to false");
+                authSession.setHasVerifiedPassword(false);
+                authSession.setHasVerifiedMfa(false);
+            }
 
             Optional<String> maybeInternalSubject =
                     Optional.ofNullable(authSession.getInternalCommonSubjectId());

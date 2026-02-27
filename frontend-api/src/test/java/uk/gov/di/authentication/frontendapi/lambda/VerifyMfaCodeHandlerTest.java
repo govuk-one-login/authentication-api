@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -52,6 +51,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -166,6 +166,7 @@ class VerifyMfaCodeHandlerTest {
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
 
     @RegisterExtension
@@ -213,6 +214,7 @@ class VerifyMfaCodeHandlerTest {
                         authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
+                        userActionsManager,
                         testUserHelper);
     }
 
@@ -231,14 +233,9 @@ class VerifyMfaCodeHandlerTest {
 
     @Nested
     class SuccessfulRequest {
-        private static Stream<CredentialTrustLevel> credentialTrustLevels() {
-            return Stream.of(CredentialTrustLevel.LOW_LEVEL, MEDIUM_LEVEL);
-        }
-
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequest(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequest()
+                throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -276,10 +273,8 @@ class VerifyMfaCodeHandlerTest {
                             PriorityIdentifier.DEFAULT);
         }
 
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void checkAuditEventStillEmittedWhenTICFHeaderNotProvided(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -306,10 +301,9 @@ class VerifyMfaCodeHandlerTest {
                             pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
         }
 
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulAuthAppCodePasswordResetRequest(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void shouldReturn204WhenSuccessfulAuthAppCodePasswordResetRequest()
+                throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -356,10 +350,8 @@ class VerifyMfaCodeHandlerTest {
                             PriorityIdentifier.DEFAULT);
         }
 
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequest(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequest() throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -404,10 +396,9 @@ class VerifyMfaCodeHandlerTest {
                             PriorityIdentifier.DEFAULT);
         }
 
-        @ParameterizedTest
-        @MethodSource("credentialTrustLevels")
-        void shouldReturn204WhenSuccessfulAuthAppCodeForAccountRecovery(
-                CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        @Test
+        void shouldReturn204WhenSuccessfulAuthAppCodeForAccountRecovery()
+                throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -1329,5 +1320,52 @@ class VerifyMfaCodeHandlerTest {
                 pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, CODE),
                 pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                 pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, expectedNotificationType));
+    }
+
+    @Test
+    void shouldCallCorrectSmsOtpReceivedWhenSmsCodeIsValid() throws Json.JsonException {
+        // Arrange
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(phoneNumberCodeProcessor));
+        when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        CODE,
+                        JourneyType.SIGN_IN,
+                        DEFAULT_SMS_METHOD.getDestination());
+
+        // Act
+        var result = makeCallWithCode(codeRequest);
+
+        // Assert
+        assertThat(result, hasStatus(204));
+        verify(userActionsManager)
+                .correctSmsOtpReceived(any(), argThat(pc -> pc.authSessionItem() != null));
+    }
+
+    @Test
+    void shouldCallCorrectAuthAppOtpReceivedWhenAuthAppCodeIsValid() throws Json.JsonException {
+        // Arrange
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, AUTH_APP_SECRET);
+
+        // Act
+        var result = makeCallWithCode(codeRequest);
+
+        // Assert
+        assertThat(result, hasStatus(204));
+        verify(userActionsManager)
+                .correctAuthAppOtpReceived(any(), argThat(pc -> pc.authSessionItem() != null));
     }
 }

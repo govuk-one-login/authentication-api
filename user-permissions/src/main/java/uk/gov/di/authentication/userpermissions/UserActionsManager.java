@@ -157,8 +157,18 @@ public class UserActionsManager implements UserActions {
     }
 
     @Override
+    public Result<TrackingError, Void> createdPassword(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedPassword(true);
+        getAuthSessionService().updateSession(updatedSession);
+        return Result.success(null);
+    }
+
+    @Override
     public Result<TrackingError, Void> correctPasswordReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedPassword(true);
+        getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }
 
@@ -168,9 +178,11 @@ public class UserActionsManager implements UserActions {
         getCodeStorageService().deleteIncorrectPasswordCount(permissionContext.emailAddress());
 
         String codeBlockedKeyPrefix = CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + journeyType;
-
         getCodeStorageService()
                 .deleteBlockForEmail(permissionContext.emailAddress(), codeBlockedKeyPrefix);
+
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedPassword(true);
+        getAuthSessionService().updateSession(updatedSession);
 
         return Result.success(null);
     }
@@ -190,6 +202,8 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctSmsOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }
 
@@ -202,6 +216,8 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }
 

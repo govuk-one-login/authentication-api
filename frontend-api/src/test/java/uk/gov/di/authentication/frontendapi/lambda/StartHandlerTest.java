@@ -895,4 +895,31 @@ class StartHandlerTest {
         verify(authSessionService)
                 .getUpdatedPreviousSessionOrCreateNew(Optional.empty(), SESSION_ID);
     }
+
+    @Test
+    void shouldResetHasVerifiedPasswordAndHasVerifiedMfaOnReauthJourney()
+            throws Json.JsonException {
+        // Arrange
+        var authSession =
+                new AuthSessionItem()
+                        .withSessionId(SESSION_ID)
+                        .withClientId(CLIENT_ID)
+                        .withInternalCommonSubjectId(TEST_SUBJECT_ID)
+                        .withHasVerifiedPassword(true)
+                        .withHasVerifiedMfa(true);
+        when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
+                .thenReturn(authSession);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+        assertFalse(authSession.getHasVerifiedPassword());
+        assertFalse(authSession.getHasVerifiedMfa());
+    }
 }

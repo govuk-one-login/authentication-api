@@ -63,6 +63,16 @@ public interface UserActions {
             JourneyType journeyType, PermissionContext permissionContext);
 
     /**
+     * Records that a password was created for the first time.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result indicating success or failure of the tracking operation
+     */
+    Result<TrackingError, Void> createdPassword(
+            JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
      * Records that a correct password was received.
      *
      * @param journeyType The type of authentication journey

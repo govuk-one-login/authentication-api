@@ -662,6 +662,11 @@ class ConfigurationServiceTest {
         assertFalse(configurationService.isForcedMFAResetAfterMFACheckEnabled());
     }
 
+    @Test
+    void isEnhancedAuthCodeProtectionEnabledShouldDefault() {
+        assertFalse(configurationService.isEnhancedAuthCodeProtectionEnabled());
+    }
+
     private static Stream<Arguments> commaSeparatedStringContains() {
         return Stream.of(
                 Arguments.of("1234", null, false),
