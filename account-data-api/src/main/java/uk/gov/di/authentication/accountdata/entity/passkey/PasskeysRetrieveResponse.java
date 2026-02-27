@@ -2,7 +2,6 @@ package uk.gov.di.authentication.accountdata.entity.passkey;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
@@ -22,18 +21,17 @@ public record PasskeysRetrieveResponse(
             @SerializedName("createdAt") @Expose String createdAt,
             @SerializedName("lastUsedAt") @Expose String lastUsedAt) {}
 
-    public static Result<Void, PasskeyResponse> from(Passkey passkey) {
-        return Result.success(
-                new PasskeyResponse(
-                        passkey.getCredentialId(),
-                        passkey.getCredential(),
-                        passkey.getPasskeyAaguid(),
-                        passkey.getPasskeyIsAttested(),
-                        passkey.getPasskeySignCount(),
-                        passkey.getPasskeyTransports(),
-                        passkey.getPasskeyBackupEligible(),
-                        passkey.getPasskeyBackedUp(),
-                        passkey.getCreated(),
-                        passkey.getLastUsed()));
+    public static PasskeyResponse from(Passkey passkey) {
+        return new PasskeyResponse(
+                passkey.getCredentialId(),
+                passkey.getCredential(),
+                passkey.getPasskeyAaguid(),
+                passkey.getPasskeyIsAttested(),
+                passkey.getPasskeySignCount(),
+                passkey.getPasskeyTransports(),
+                passkey.getPasskeyBackupEligible(),
+                passkey.getPasskeyBackedUp(),
+                passkey.getCreated(),
+                passkey.getLastUsed());
     }
 }
