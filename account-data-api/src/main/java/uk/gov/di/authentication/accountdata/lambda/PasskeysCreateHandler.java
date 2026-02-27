@@ -17,10 +17,10 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import java.util.UUID;
-
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason.INVALID_AAGUID;
-import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason.REQUEST_MISSING_PARAMS;
+import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason.INVALID_REQUEST_BODY;
+import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason.MISSING_SUBJECT_ID;
+import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.isAaguidValid;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -68,16 +68,20 @@ public class PasskeysCreateHandler
                 .fold(
                         failure ->
                                 switch (failure) {
-                                    case REQUEST_MISSING_PARAMS -> generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.REQUEST_MISSING_PARAMS);
+                                    case INVALID_REQUEST_BODY -> generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.INVALID_REQUEST_BODY);
+                                    case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.MISSING_SUBJECT_ID);
                                     case PASSKEY_EXISTS -> generateApiGatewayProxyErrorResponse(
                                             409, ErrorResponse.PASSKEY_ALREADY_EXISTS);
                                     case INVALID_AAGUID -> generateApiGatewayProxyErrorResponse(
                                             422, ErrorResponse.INVALID_AAGUID);
                                     case FAILED_TO_SAVE_PASSKEY -> generateApiGatewayProxyErrorResponse(
-                                            500, ErrorResponse.UNEXPECTED_ACCOUNT_DATA_API_ERROR);
+                                            500, ErrorResponse.INTERNAL_SERVER_ERROR);
                                 },
-                        passkeyCreateResult -> generateApiGatewayProxyResponse(201, ""));
+                        passkeyCreateResult ->
+                                generateApiGatewayProxyResponse(
+                                        201, "Passkey created successfully"));
     }
 
     private Result<PasskeysCreateHandlerFailureReason, PasskeysCreateContext> parseRequest(
@@ -87,13 +91,13 @@ public class PasskeysCreateHandler
             passkeysCreateRequest =
                     objectMapper.readValue(input.getBody(), PasskeysCreateRequest.class, true);
         } catch (Json.JsonException e) {
-            return Result.failure(REQUEST_MISSING_PARAMS);
+            return Result.failure(INVALID_REQUEST_BODY);
         }
 
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
         if (publicSubjectId == null || publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
-            return Result.failure(REQUEST_MISSING_PARAMS);
+            return Result.failure(MISSING_SUBJECT_ID);
         }
 
         return Result.success(new PasskeysCreateContext(publicSubjectId, passkeysCreateRequest));
@@ -127,20 +131,6 @@ public class PasskeysCreateHandler
                                     PasskeysCreateHandlerFailureReason.PASSKEY_EXISTS);
                         },
                 success -> Result.success(null));
-    }
-
-    private boolean isAaguidValid(String aaguid) {
-        if (aaguid == null || aaguid.trim().isEmpty()) {
-            return false;
-        }
-
-        try {
-            UUID.fromString(aaguid);
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-
-        return true;
     }
 
     private record PasskeysCreateContext(
