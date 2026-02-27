@@ -61,7 +61,7 @@ public class PasskeysUpdateHandler
         return result.fold(
                 failure ->
                         generateApiGatewayProxyErrorResponse(
-                                400, ErrorResponse.UNEXPECTED_ACCOUNT_DATA_API_ERROR),
+                                500, ErrorResponse.INTERNAL_SERVER_ERROR),
                 passkeyUpdateResult -> generateApiGatewayProxyResponse(204, ""));
     }
 
