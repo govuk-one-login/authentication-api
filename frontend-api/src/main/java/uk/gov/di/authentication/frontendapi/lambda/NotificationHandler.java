@@ -213,13 +213,20 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                     reference,
                     e);
 
-            if (e.getHttpResult() == 400
-                    && isPhoneNotification(request.getNotificationType())
-                    && e.getMessage() != null
-                    && e.getMessage().contains("team-only API key")) {
-                LOG.info(
-                        "Test number with team-only API key. Recording SMS send for lockout tracking.");
-                internationalSmsSendLimitService.recordSmsSent(request.getDestination(), reference);
+            if (e.getHttpResult() == 400) {
+                LOG.info("MVM error message: {}", e.getMessage());
+                LOG.info("MVM notification type: {}", request.getNotificationType());
+                var isPhoneNot = isPhoneNotification(request.getNotificationType());
+                LOG.info("MVM isPhoneNot: {}", isPhoneNot);
+                var messageTeamAPIKey =
+                        e.getMessage() != null && e.getMessage().contains("team-only API key");
+                LOG.info("MVM message is 'team-only API key': {}", isPhoneNot);
+                if (isPhoneNot && messageTeamAPIKey) {
+                    LOG.info(
+                            "Test number with team-only API key. Recording SMS send for lockout tracking.");
+                    internationalSmsSendLimitService.recordSmsSent(
+                            request.getDestination(), reference);
+                }
             }
 
             if (e.getHttpResult() == 429 && isPhoneNotification(request.getNotificationType())) {
