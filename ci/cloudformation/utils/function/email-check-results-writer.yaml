@@ -8,7 +8,14 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.EmailCheckResultsWriterHandler::handleRequest
-      Role: !GetAtt EmailCheckResultsWriterLambdaRole.Arn
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref EmailCheckResultsWriteAccessPolicy
+        - !Ref SourceCodeBucketReadAccessPolicy
+        - !Ref EmailCheckResultsSqsAccessPolicy
+        - !Ref EmailCheckResultsTableKmsAccessPolicy
+        - !Ref SqsQueueKmsAccessPolicy
+        - !Ref CloudWatchLogsKmsAccessPolicy
       LoggingConfig:
         LogGroup: !Ref EmailCheckResultsWriterLogGroup
       AutoPublishAlias: live
