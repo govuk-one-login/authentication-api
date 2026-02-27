@@ -19,10 +19,10 @@ import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.Map;
@@ -34,7 +34,7 @@ public class UserInfoService {
     private final DynamoIdentityService identityService;
     private final DynamoClientService dynamoClientService;
     private final DynamoDocAppCriService dynamoDocAppCriService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final ConfigurationService configurationService;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
@@ -43,13 +43,13 @@ public class UserInfoService {
             DynamoIdentityService identityService,
             DynamoClientService dynamoClientService,
             DynamoDocAppCriService dynamoDocAppCriService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             ConfigurationService configurationService,
             AuthenticationUserInfoStorageService userInfoStorageService) {
         this.identityService = identityService;
         this.dynamoClientService = dynamoClientService;
         this.dynamoDocAppCriService = dynamoDocAppCriService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.configurationService = configurationService;
         this.userInfoStorageService = userInfoStorageService;
     }
@@ -193,7 +193,7 @@ public class UserInfoService {
     }
 
     private void incrementClaimIssuedCounter(String claimName, String clientID) {
-        cloudwatchMetricsService.incrementCounter(
+        metrics.increment(
                 "ClaimIssued",
                 Map.of(
                         "Environment",

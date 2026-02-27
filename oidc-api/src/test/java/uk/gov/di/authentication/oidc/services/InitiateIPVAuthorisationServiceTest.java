@@ -39,9 +39,9 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
@@ -94,8 +94,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private final AuditService auditService = mock(AuditService.class);
     private final IPVAuthorisationService authorisationService =
             mock(IPVAuthorisationService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
             mock(CrossBrowserOrchestrationService.class);
     private InitiateIPVAuthorisationService initiateAuthorisationService;
@@ -130,7 +129,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         configService,
                         auditService,
                         authorisationService,
-                        cloudwatchMetricsService,
+                        metrics,
                         crossBrowserOrchestrationService,
                         tokenService);
 
@@ -169,7 +168,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         "Expected to throw exception");
 
         assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -231,8 +230,7 @@ public class InitiateIPVAuthorisationServiceTest {
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("clientLandingPageUrl", LANDING_PAGE_URL),
                         pair("rpPairwiseId", RP_PAIRWISE_ID));
-        verify(cloudwatchMetricsService)
-                .incrementCounter("IPVHandoff", Map.of("Environment", ENVIRONMENT));
+        verify(metrics).increment("IPVHandoff", Map.of("Environment", ENVIRONMENT));
     }
 
     @Test

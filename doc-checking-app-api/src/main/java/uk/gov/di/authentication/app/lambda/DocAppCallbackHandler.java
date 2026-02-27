@@ -30,12 +30,12 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -72,7 +72,7 @@ public class DocAppCallbackHandler
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final DynamoDocAppCriService dynamoDocAppCriService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final AuthFrontend authFrontend;
@@ -92,7 +92,7 @@ public class DocAppCallbackHandler
             AuditService auditService,
             DynamoDocAppCriService dynamoDocAppCriService,
             OrchAuthCodeService orchAuthCodeService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             AuthFrontend authFrontend,
             DocAppCriAPI docAppCriApi,
@@ -104,7 +104,7 @@ public class DocAppCallbackHandler
         this.auditService = auditService;
         this.dynamoDocAppCriService = dynamoDocAppCriService;
         this.orchAuthCodeService = orchAuthCodeService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.authFrontend = authFrontend;
         this.docAppCriApi = docAppCriApi;
@@ -127,7 +127,7 @@ public class DocAppCallbackHandler
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
         this.crossBrowserOrchestrationService =
                 new CrossBrowserOrchestrationService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
@@ -269,9 +269,8 @@ public class DocAppCallbackHandler
                                 Map.of(
                                         "Environment", configurationService.getEnvironment(),
                                         "Successful", Boolean.toString(true)));
-                cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
-                cloudwatchMetricsService.incrementCounter(
-                        "orchJourneyCompleted", Map.of("journeyType", "docapp"));
+                metrics.increment("DocAppCallback", dimensions);
+                metrics.increment("orchJourneyCompleted", Map.of("journeyType", "docapp"));
 
                 var authCode =
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
@@ -379,6 +378,6 @@ public class DocAppCallbackHandler
                                 "Successful", Boolean.toString(false),
                                 "Error", error));
 
-        cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
+        metrics.increment("DocAppCallback", dimensions);
     }
 }

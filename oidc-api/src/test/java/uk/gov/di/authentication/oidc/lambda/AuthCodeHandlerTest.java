@@ -49,9 +49,9 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -109,8 +109,7 @@ class AuthCodeHandlerTest {
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -177,7 +176,7 @@ class AuthCodeHandlerTest {
                         orchestrationAuthorizationService,
                         orchClientSessionService,
                         auditService,
-                        cloudwatchMetricsService,
+                        metrics,
                         configurationService,
                         dynamoClientService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
@@ -330,7 +329,7 @@ class AuthCodeHandlerTest {
                         "RequestedLevelOfConfidence",
                         "P0");
 
-        verify(cloudwatchMetricsService).incrementCounter("SignIn", dimensions);
+        verify(metrics).increment("SignIn", dimensions);
 
         assertAuthCodeSavedForAuthJourney();
     }
@@ -427,7 +426,7 @@ class AuthCodeHandlerTest {
                         "ClientName",
                         CLIENT_NAME);
 
-        verify(cloudwatchMetricsService).incrementCounter("SignIn", expectedDimensions);
+        verify(metrics).increment("SignIn", expectedDimensions);
 
         assertAuthCodeSavedForDocAppJourney();
     }

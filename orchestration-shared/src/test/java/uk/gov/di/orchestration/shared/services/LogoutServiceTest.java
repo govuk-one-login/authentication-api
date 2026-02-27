@@ -82,8 +82,7 @@ class LogoutServiceTest {
 
     private final APIGatewayProxyRequestEvent event = mock(APIGatewayProxyRequestEvent.class);
 
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final BackChannelLogoutService backChannelLogoutService =
             mock(BackChannelLogoutService.class);
 
@@ -161,7 +160,7 @@ class LogoutServiceTest {
                         dynamoClientService,
                         orchClientSessionService,
                         auditService,
-                        cloudwatchMetricsService,
+                        metrics,
                         backChannelLogoutService,
                         authFrontend,
                         new NowClock(Clock.systemUTC()));
@@ -212,7 +211,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -244,7 +243,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -276,7 +275,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -309,7 +308,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
 
@@ -329,7 +328,7 @@ class LogoutServiceTest {
                 Optional.of(audience.get()),
                 rpPairwiseId);
 
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -355,8 +354,7 @@ class LogoutServiceTest {
                         pair("logoutReason", "intervention"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -388,8 +386,7 @@ class LogoutServiceTest {
                         pair("logoutReason", "intervention"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -422,7 +419,7 @@ class LogoutServiceTest {
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
+        verify(metrics).incrementLogout(Optional.empty());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -512,7 +509,7 @@ class LogoutServiceTest {
                         argThat(withClientId("client-id-3")), eq("rp-pairwise-id-client-3"));
         verify(backChannelLogoutService, never())
                 .sendLogoutMessage(argThat(withClientId("client-id-4")), anyString());
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -549,7 +546,7 @@ class LogoutServiceTest {
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -633,7 +630,7 @@ class LogoutServiceTest {
                 dynamoClientService,
                 orchClientSessionService,
                 auditService,
-                cloudwatchMetricsService,
+                metrics,
                 backChannelLogoutService,
                 authFrontend,
                 new NowClock(clock));

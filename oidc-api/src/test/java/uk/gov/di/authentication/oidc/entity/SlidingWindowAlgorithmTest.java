@@ -2,7 +2,7 @@ package uk.gov.di.authentication.oidc.entity;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.services.ClientRateLimitDataService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -19,7 +19,7 @@ import static uk.gov.di.orchestration.sharedtest.helper.Constants.TEST_CLIENT_ID
 class SlidingWindowAlgorithmTest {
     private final ClientRateLimitDataService rateLimitDataService =
             mock(ClientRateLimitDataService.class);
-    private final CloudwatchMetricsService metrics = mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private static final LocalDateTime CURRENT_PERIOD = LocalDateTime.parse("2025-07-15T16:27");
     private static final LocalDateTime PREVIOUS_PERIOD = CURRENT_PERIOD.minusMinutes(1);
     private SlidingWindowAlgorithm slidingWindowAlgorithm;

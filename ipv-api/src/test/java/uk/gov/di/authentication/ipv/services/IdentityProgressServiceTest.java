@@ -7,9 +7,9 @@ import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.util.Map;
 import java.util.Optional;
@@ -25,8 +25,7 @@ class IdentityProgressServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final IdentityProgressService.Sleeper sleeper = millis -> {};
     private final AuditContext auditContext = mock(AuditContext.class);
     private IdentityProgressService identityProgressService;
@@ -40,7 +39,7 @@ class IdentityProgressServiceTest {
                         configurationService,
                         dynamoIdentityService,
                         auditService,
-                        cloudwatchMetricsService,
+                        metrics,
                         sleeper);
     }
 
@@ -121,8 +120,8 @@ class IdentityProgressServiceTest {
     }
 
     private void verifyCloudwatchMetricIncrements(IdentityProgressStatus status) {
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",

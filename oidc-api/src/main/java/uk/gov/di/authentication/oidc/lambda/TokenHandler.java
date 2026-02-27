@@ -37,11 +37,11 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodExcep
 import uk.gov.di.orchestration.shared.helpers.ApiResponse;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -90,7 +90,7 @@ public class TokenHandler
     private final OrchRefreshTokenService orchRefreshTokenService;
     private final TokenValidationService tokenValidationService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final AuditService auditService;
 
     public TokenHandler(
@@ -102,7 +102,7 @@ public class TokenHandler
             OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
             TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             AuditService auditService) {
         this.tokenService = tokenService;
         this.configurationService = configurationService;
@@ -112,7 +112,7 @@ public class TokenHandler
         this.orchRefreshTokenService = orchRefreshTokenService;
         this.tokenValidationService = tokenValidationService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.auditService = auditService;
     }
 
@@ -138,7 +138,7 @@ public class TokenHandler
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
                         new ClientSignatureValidationService(configurationService));
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
         this.auditService = new AuditService(configurationService);
     }
 
@@ -276,7 +276,7 @@ public class TokenHandler
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
                                 CLIENT.getValue(), clientRegistry.getClientID(),
                                 CLIENT_NAME.getValue(), clientRegistry.getClientName()));
-        cloudwatchMetricsService.incrementCounter(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
+        metrics.increment(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
 
         LOG.info("Successfully generated tokens");
         return ApiResponse.ok(tokenResponse);

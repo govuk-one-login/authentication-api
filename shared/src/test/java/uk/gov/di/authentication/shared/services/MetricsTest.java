@@ -30,7 +30,7 @@ import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
-class CloudwatchMetricsServiceTest {
+class MetricsTest {
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

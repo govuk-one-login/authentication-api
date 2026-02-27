@@ -21,12 +21,12 @@ import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
@@ -58,19 +58,19 @@ public class UserInfoHandler
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            Metrics metrics) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
     }
 
     public UserInfoHandler() {
@@ -84,7 +84,7 @@ public class UserInfoHandler
                         new DynamoIdentityService(configurationService),
                         new DynamoClientService(configurationService),
                         new DynamoDocAppCriService(configurationService),
-                        new CloudwatchMetricsService(),
+                        new Metrics(),
                         configurationService,
                         new AuthenticationUserInfoStorageService(configurationService));
         this.accessTokenService =
@@ -97,7 +97,7 @@ public class UserInfoHandler
                                 configurationService),
                         new OrchAccessTokenService(configurationService));
         this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
     }
 
     @Override
@@ -173,7 +173,7 @@ public class UserInfoHandler
                         Map.of(
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
                                 CLIENT.getValue(), accessTokenInfo.clientID()));
-        cloudwatchMetricsService.incrementCounter(USER_INFO_RETURNED.getValue(), dimensions);
+        metrics.increment(USER_INFO_RETURNED.getValue(), dimensions);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }

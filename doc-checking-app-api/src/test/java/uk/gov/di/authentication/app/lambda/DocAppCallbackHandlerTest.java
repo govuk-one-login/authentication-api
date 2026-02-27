@@ -39,10 +39,10 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -84,8 +84,7 @@ class DocAppCallbackHandlerTest {
     private final DocAppAuthorisationService responseService =
             mock(DocAppAuthorisationService.class);
     private final DocAppCriService tokenService = mock(DocAppCriService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -160,7 +159,7 @@ class DocAppCallbackHandlerTest {
                         auditService,
                         dynamoDocAppCriService,
                         orchAuthCodeService,
-                        cloudwatchMetricsService,
+                        metrics,
                         crossBrowserOrchestrationService,
                         authFrontend,
                         docAppCriApi,
@@ -220,8 +219,8 @@ class DocAppCallbackHandlerTest {
         verify(dynamoDocAppCriService)
                 .addDocAppCredential(
                         PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "DocAppCallback",
                         Map.of("Environment", ENVIRONMENT, "Successful", Boolean.toString(true)));
 
@@ -242,7 +241,7 @@ class DocAppCallbackHandlerTest {
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -263,7 +262,7 @@ class DocAppCallbackHandlerTest {
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -284,7 +283,7 @@ class DocAppCallbackHandlerTest {
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -328,8 +327,8 @@ class DocAppCallbackHandlerTest {
         verifyAuditServiceEvent(
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         verifyNoInteractions(dynamoDocAppCriService);
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",
@@ -377,8 +376,8 @@ class DocAppCallbackHandlerTest {
 
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",
@@ -433,8 +432,8 @@ class DocAppCallbackHandlerTest {
 
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",
@@ -489,8 +488,8 @@ class DocAppCallbackHandlerTest {
                         TxmaAuditUser.user()
                                 .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                 .withUserId(PAIRWISE_SUBJECT_ID.getValue()));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",
@@ -585,8 +584,8 @@ class DocAppCallbackHandlerTest {
 
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoDocAppCriService);
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "DocAppCallback",
                         Map.of(
                                 "Environment",

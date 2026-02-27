@@ -32,8 +32,7 @@ import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditabl
 class AccountInterventionServiceTest {
     private final ConfigurationService config = mock(ConfigurationService.class);
     private final HttpClient httpClient = mock(HttpClient.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final AuditService auditService = mock(AuditService.class);
 
     private static final String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
@@ -105,9 +104,7 @@ class AccountInterventionServiceTest {
             throws IOException, InterruptedException {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
-        var ais =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+        var ais = new AccountInterventionService(config, httpClient, metrics, auditService);
         var httpResponse = mock(HttpResponse.class);
         var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
 
@@ -128,8 +125,7 @@ class AccountInterventionServiceTest {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(config, httpClient, metrics, auditService);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -144,8 +140,8 @@ class AccountInterventionServiceTest {
         assertTrue(intervention.getReproveIdentity());
         assertFalse(intervention.getResetPassword());
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "AISResult",
                         Map.of(
                                 "blocked", "false",
@@ -160,8 +156,7 @@ class AccountInterventionServiceTest {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(config, httpClient, metrics, auditService);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -177,8 +172,8 @@ class AccountInterventionServiceTest {
         assertTrue(intervention.getReproveIdentity());
         assertFalse(intervention.getResetPassword());
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "AISResult",
                         Map.of(
                                 "blocked", "false",
@@ -193,9 +188,7 @@ class AccountInterventionServiceTest {
         when(config.isAccountInterventionServiceCallEnabled()).thenReturn(false);
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
-        var ais =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+        var ais = new AccountInterventionService(config, httpClient, metrics, auditService);
         AccountIntervention intervention = ais.getAccountIntervention(internalPairwiseSubjectId);
 
         verifyNoInteractions(httpClient);
@@ -216,8 +209,7 @@ class AccountInterventionServiceTest {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(config, httpClient, metrics, auditService);
 
         when(httpClient.send(any(), any())).thenThrow(new IOException("Test IO Exception"));
 
@@ -235,8 +227,7 @@ class AccountInterventionServiceTest {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(config, httpClient, metrics, auditService);
 
         when(httpClient.send(any(), any())).thenThrow(new IOException("Test IO Exception"));
 
@@ -244,8 +235,8 @@ class AccountInterventionServiceTest {
                 AccountInterventionException.class,
                 () -> accountInterventionService.getAccountIntervention(internalPairwiseSubjectId));
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "AISException", Map.of("Environment", ENVIRONMENT, "AbortOnError", "true"));
     }
 
@@ -257,8 +248,7 @@ class AccountInterventionServiceTest {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(config, httpClient, metrics, auditService);
         var httpResponse = mock(HttpResponse.class);
         var auditEventNameCaptor = ArgumentCaptor.forClass(AuditableEvent.class);
         var auditContextCaptor = ArgumentCaptor.forClass(AuditContext.class);
@@ -297,8 +287,7 @@ class AccountInterventionServiceTest {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(config, httpClient, metrics, auditService);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -319,8 +308,7 @@ class AccountInterventionServiceTest {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(config, httpClient, metrics, auditService);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
