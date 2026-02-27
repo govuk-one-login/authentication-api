@@ -213,6 +213,15 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                     reference,
                     e);
 
+            if (e.getHttpResult() == 400
+                    && isPhoneNotification(request.getNotificationType())
+                    && e.getMessage() != null
+                    && e.getMessage().contains("team-only API key")) {
+                LOG.info(
+                        "Test number with team-only API key. Recording SMS send for lockout tracking.");
+                internationalSmsSendLimitService.recordSmsSent(request.getDestination(), reference);
+            }
+
             if (e.getHttpResult() == 429 && isPhoneNotification(request.getNotificationType())) {
                 LOG.error("Notify response was a 429");
 
