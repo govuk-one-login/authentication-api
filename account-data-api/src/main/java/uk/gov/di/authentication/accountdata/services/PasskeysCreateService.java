@@ -31,38 +31,42 @@ public class PasskeysCreateService {
 
     public Result<PasskeysCreateServiceFailureReason, Void> createPasskey(
             PasskeysCreateRequest passkeysCreateRequest, String publicSubjectId) {
-        boolean passkeyCreated;
+
         var passkeyId = passkeysCreateRequest.passkeyId();
+        var created = LocalDateTime.now().toString();
+        var passkey =
+                new Passkey()
+                        .withPublicSubjectId(publicSubjectId)
+                        .withSortKey(buildSortKey(passkeyId))
+                        .withCredentialId(passkeyId)
+                        .withCreated(created)
+                        .withCredential(passkeysCreateRequest.credential())
+                        .withPasskeyAaguid(passkeysCreateRequest.aaguid())
+                        .withPasskeyIsAttested(passkeysCreateRequest.isAttested())
+                        .withPasskeySignCount(passkeysCreateRequest.signCount())
+                        .withPasskeyTransports(passkeysCreateRequest.transports())
+                        .withPasskeyBackupEligible(passkeysCreateRequest.isBackUpEligible())
+                        .withPasskeyBackedUp(passkeysCreateRequest.isBackedUp());
 
-        try {
-            var created = LocalDateTime.now().toString();
-            var passkey =
-                    new Passkey()
-                            .withPublicSubjectId(publicSubjectId)
-                            .withSortKey(buildSortKey(passkeyId))
-                            .withCredentialId(passkeyId)
-                            .withCreated(created)
-                            .withCredential(passkeysCreateRequest.credential())
-                            .withPasskeyAaguid(passkeysCreateRequest.aaguid())
-                            .withPasskeyIsAttested(passkeysCreateRequest.isAttested())
-                            .withPasskeySignCount(passkeysCreateRequest.signCount())
-                            .withPasskeyTransports(passkeysCreateRequest.transports())
-                            .withPasskeyBackupEligible(passkeysCreateRequest.isBackUpEligible())
-                            .withPasskeyBackedUp(passkeysCreateRequest.isBackedUp());
-            passkeyCreated = dynamoPasskeyService.savePasskeyIfUnique(passkey);
-        } catch (Exception e) {
-            LOG.error("Failed to save passkey", e);
-            return Result.failure(PasskeysCreateServiceFailureReason.FAILED_TO_SAVE_PASSKEY);
-        }
+        var result = dynamoPasskeyService.savePasskeyIfUnique(passkey);
 
-        if (!passkeyCreated) {
-            LOG.error(
-                    "Passkey with id {} already exists for user with subjectId {}",
-                    passkeyId,
-                    publicSubjectId);
-            return Result.failure(PasskeysCreateServiceFailureReason.PASSKEY_EXISTS);
-        }
-
-        return Result.success(null);
+        return result.fold(
+                failure ->
+                        switch (failure) {
+                            case PASSKEY_EXISTS -> {
+                                LOG.error(
+                                        "Passkey with id {} already exists for user with subjectId {}",
+                                        passkeyId,
+                                        publicSubjectId);
+                                yield Result.failure(
+                                        PasskeysCreateServiceFailureReason.PASSKEY_EXISTS);
+                            }
+                            case FAILED_TO_SAVE_PASSKEY -> {
+                                LOG.error("Failed to save passkey");
+                                yield Result.failure(
+                                        PasskeysCreateServiceFailureReason.FAILED_TO_SAVE_PASSKEY);
+                            }
+                        },
+                success -> Result.success(null));
     }
 }
