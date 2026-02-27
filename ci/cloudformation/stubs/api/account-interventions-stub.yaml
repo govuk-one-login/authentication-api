@@ -21,6 +21,16 @@ Resources:
                 DefaultValue: "",
               ]
             - !Ref AWS::NoValue
+          - !If
+            - AddOldAuthApiVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                oldAuthApiVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
+
       Auth:
         ResourcePolicy:
           CustomStatements:
@@ -46,6 +56,16 @@ Resources:
                           DefaultValue: "",
                         ]
                       - !Ref AWS::NoValue
+                    - !If
+                      - AddOldAuthApiVpcEndpointId
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          oldAuthApiVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+                      - !Ref AWS::NoValue
+
       AccessLogSetting:
         DestinationArn: !GetAtt AccountInterventionsStubApiAccessLogGroup.Arn
         Format:

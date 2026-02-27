@@ -12,6 +12,15 @@ Resources:
         Type: PRIVATE
         VPCEndpointIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+          - !If
+            - AddOldAuthApiVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                oldAuthApiVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
       Auth:
         ResourcePolicy:
           CustomStatements:
@@ -22,11 +31,21 @@ Resources:
             - Effect: Deny
               Action: "execute-api:Invoke"
               Principal: "*"
-              Resource: "execute-api:/*"
+              Resource:
+                - "execute-api:/*"
               Condition:
                 StringNotEquals:
                   aws:SourceVpce:
                     - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                    - !If
+                      - AddOldAuthApiVpcEndpointId
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          oldAuthApiVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+                      - !Ref AWS::NoValue
       AccessLogSetting:
         DestinationArn: !GetAtt TicfCriStubApiAccessLogGroup.Arn
         Format:
