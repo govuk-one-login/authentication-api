@@ -21,7 +21,7 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_AUTH_TIME = "AuthTime";
     public static final String ATTRIBUTE_PROCESSING_IDENTITY_ATTEMPTS =
             "ProcessingIdentityAttempts";
-    public static final String ATTRIBUTE_CLIENT_SESSIONS = "ClientSessions";
+    public static final String ATTRIBUTE_CLIENT_SESSIONS = "clientSessions";
 
     public enum AccountState {
         NEW,
@@ -213,6 +213,7 @@ public class OrchSessionItem {
         return processingIdentityAttempts;
     }
 
+    @DynamoDbAttribute(ATTRIBUTE_CLIENT_SESSIONS)
     public List<String> getClientSessions() {
         return clientSessions;
     }
