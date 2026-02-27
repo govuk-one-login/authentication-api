@@ -12,18 +12,18 @@ import java.time.LocalDateTime;
 
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.buildSortKey;
 
-public class PasskeysCreateService {
+public class PasskeysService {
 
-    private static final Logger LOG = LogManager.getLogger(PasskeysCreateService.class);
+    private static final Logger LOG = LogManager.getLogger(PasskeysService.class);
     private final DynamoPasskeyService dynamoPasskeyService;
     private final ConfigurationService configurationService;
 
-    public PasskeysCreateService(ConfigurationService configurationService) {
+    public PasskeysService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.dynamoPasskeyService = new DynamoPasskeyService(configurationService);
     }
 
-    public PasskeysCreateService(
+    public PasskeysService(
             ConfigurationService configurationService, DynamoPasskeyService dynamoPasskeyService) {
         this.configurationService = configurationService;
         this.dynamoPasskeyService = dynamoPasskeyService;

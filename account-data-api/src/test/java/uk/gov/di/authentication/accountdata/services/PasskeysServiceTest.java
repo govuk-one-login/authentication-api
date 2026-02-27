@@ -22,17 +22,17 @@ import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.P
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.TEST_AAGUID;
 
-class PasskeysCreateServiceTest {
+class PasskeysServiceTest {
 
     private final DynamoPasskeyService dynamoPasskeyService = mock(DynamoPasskeyService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
-    private PasskeysCreateService passkeysCreateService;
+    private PasskeysService passkeysService;
 
     @BeforeEach
     void setUp() {
-        passkeysCreateService =
-                new PasskeysCreateService(configurationService, dynamoPasskeyService);
+        passkeysService =
+                new PasskeysService(configurationService, dynamoPasskeyService);
     }
 
     @Nested
@@ -56,7 +56,7 @@ class PasskeysCreateServiceTest {
 
             // When
             var result =
-                    passkeysCreateService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
+                    passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
 
             // Then
             assertThat(result.isSuccess(), equalTo(true));
@@ -85,7 +85,7 @@ class PasskeysCreateServiceTest {
 
             // When
             var result =
-                    passkeysCreateService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
+                    passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
 
             // Then
             assertThat(result.isFailure(), equalTo(true));
@@ -115,7 +115,7 @@ class PasskeysCreateServiceTest {
 
             // When
             var result =
-                    passkeysCreateService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
+                    passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
 
             // Then
             assertThat(result.isFailure(), equalTo(true));
