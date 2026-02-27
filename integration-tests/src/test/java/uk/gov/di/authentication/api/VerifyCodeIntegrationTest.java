@@ -38,14 +38,17 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_SMS_METHOD;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -517,5 +520,96 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     private void setUpTestWithSignUp(String sessionId) {
         setUpTestWithoutSignUp(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password");
+    }
+
+    @Test
+    void shouldEmitMfaResetAuditEventForSmsSignInWithInternationalNumber() {
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+        authSessionExtension.addInternalCommonSubjectIdToSession(
+                this.sessionId, internalCommonSubjectId);
+        setUpTestWithoutSignUp(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
+        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+
+        handler =
+                new VerifyCodeHandler(
+                        forcedMfaResetEnabledConfigurationService(), redisConnectionService);
+
+        var code =
+                redis.generateAndSaveMfaCode(
+                        EMAIL_ADDRESS.concat(INTERNATIONAL_MOBILE_NUMBER), 900);
+        var codeRequest =
+                new VerifyCodeRequest(NotificationType.MFA_SMS, code, JourneyType.SIGN_IN, null);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_MFA_RESET_REQUESTED));
+    }
+
+    @Test
+    void shouldNotEmitMfaResetAuditEventForSmsWithDomesticNumber() {
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+        authSessionExtension.addInternalCommonSubjectIdToSession(
+                this.sessionId, internalCommonSubjectId);
+        setUpTestWithoutSignUp(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
+        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+
+        handler =
+                new VerifyCodeHandler(
+                        forcedMfaResetEnabledConfigurationService(), redisConnectionService);
+
+        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
+        var codeRequest =
+                new VerifyCodeRequest(NotificationType.MFA_SMS, code, JourneyType.SIGN_IN, null);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
+    }
+
+    private ConfigurationService forcedMfaResetEnabledConfigurationService() {
+        return new IntegrationTestConfigurationService(
+                notificationsQueue,
+                tokenSigner,
+                docAppPrivateKeyJwtSigner,
+                configurationParameters) {
+            @Override
+            public String getTxmaAuditQueueUrl() {
+                return txmaAuditQueue.getQueueUrl();
+            }
+
+            @Override
+            public boolean supportReauthSignoutEnabled() {
+                return true;
+            }
+
+            @Override
+            public boolean isAuthenticationAttemptsServiceEnabled() {
+                return true;
+            }
+
+            @Override
+            public boolean isForcedMFAResetAfterMFACheckEnabled() {
+                return true;
+            }
+        };
     }
 }
