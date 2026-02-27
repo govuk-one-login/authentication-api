@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeyServiceUpdateFailureReason.PASSKEY_NOT_FOUND;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId;
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.buildPasskeyForUser;
 
@@ -172,23 +173,26 @@ class DynamoPasskeyServiceIntegrationTest {
         @Test
         void shouldUpdatePasskeyForUser() {
             // Given
-            dynamoPasskeyService.savePasskeyIfUnique(
-                    buildGenericPasskeyForUserWithSubjectId(
-                            CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID));
+            var passkeyBeforeUpdate =
+                    buildGenericPasskeyForUserWithSubjectId(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(passkeyBeforeUpdate);
 
             String lastUsedTime = LocalDateTime.now().plusHours(1).toString();
+            var updatedSignCount = passkeyBeforeUpdate.getPasskeySignCount() + 1;
 
             // When
             var updateResult =
                     dynamoPasskeyService.updatePasskey(
                             CommonTestVariables.PUBLIC_SUBJECT_ID,
                             PRIMARY_PASSKEY_ID,
-                            lastUsedTime);
+                            lastUsedTime,
+                            updatedSignCount);
 
             // Then
             assertTrue(updateResult.isSuccess());
             var returnedPasskey = updateResult.getSuccess();
             assertEquals(lastUsedTime, returnedPasskey.getLastUsed());
+            assertEquals(updatedSignCount, returnedPasskey.getPasskeySignCount());
             assertEquals(PRIMARY_PASSKEY_ID, returnedPasskey.getCredentialId());
 
             var passkeysInDatabase =
@@ -197,24 +201,29 @@ class DynamoPasskeyServiceIntegrationTest {
             Passkey updatedPasskey = passkeysInDatabase.get(0);
             assertThat(updatedPasskey.getCredentialId(), equalTo(PRIMARY_PASSKEY_ID));
             assertThat(updatedPasskey.getLastUsed(), equalTo(lastUsedTime));
+            assertEquals(updatedSignCount, updatedPasskey.getPasskeySignCount());
         }
 
         @Test
         void shouldUpdateCorrectPasskeyWhenMultiplePasskeysHaveTheSameId() {
             // Given
-            dynamoPasskeyService.savePasskeyIfUnique(
-                    buildGenericPasskeyForUserWithSubjectId(
-                            CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID));
+            var passkeyBeforeUpdate =
+                    buildGenericPasskeyForUserWithSubjectId(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(passkeyBeforeUpdate);
             // Save passkey with same credentialId for another user
             dynamoPasskeyService.savePasskeyIfUnique(
                     buildGenericPasskeyForUserWithSubjectId(
                             CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID));
 
             var lastUsedTime = LocalDateTime.now().plusHours(1).toString();
+            var updatedSignCount = passkeyBeforeUpdate.getPasskeySignCount() + 1;
 
             // When
             dynamoPasskeyService.updatePasskey(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID, lastUsedTime);
+                    CommonTestVariables.PUBLIC_SUBJECT_ID,
+                    PRIMARY_PASSKEY_ID,
+                    lastUsedTime,
+                    updatedSignCount);
 
             // Then
             var initialUsersPasskey =
@@ -227,24 +236,29 @@ class DynamoPasskeyServiceIntegrationTest {
                             .get(0);
 
             assertThat(initialUsersPasskey.getLastUsed(), equalTo(lastUsedTime));
-            assertThat(otherUsersPasskey.getLastUsed(), equalTo(null));
+            assertEquals(updatedSignCount, initialUsersPasskey.getPasskeySignCount());
+            assertNull(otherUsersPasskey.getLastUsed());
+            assertEquals(1, otherUsersPasskey.getPasskeySignCount());
         }
 
         @Test
         void shouldReturnFailureIfPasskeyDoesNotExist() {
             // Given
-            dynamoPasskeyService.savePasskeyIfUnique(
+            var passkeyBeforeUpdate =
                     buildGenericPasskeyForUserWithSubjectId(
-                            CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID));
+                            CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(passkeyBeforeUpdate);
 
             String lastUsedTime = LocalDateTime.now().plusHours(1).toString();
+            int updatedSignCount = passkeyBeforeUpdate.getPasskeySignCount() + 1;
 
             // When
             var updateResult =
                     dynamoPasskeyService.updatePasskey(
                             CommonTestVariables.PUBLIC_SUBJECT_ID,
                             "someOtherPasskeyId",
-                            lastUsedTime);
+                            lastUsedTime,
+                            updatedSignCount);
 
             // Then
             assertFalse(updateResult.isSuccess());
@@ -254,8 +268,11 @@ class DynamoPasskeyServiceIntegrationTest {
             var passkeysInDatabase =
                     dynamoPasskeyService.getPasskeysForUser(CommonTestVariables.PUBLIC_SUBJECT_ID);
             assertEquals(1, passkeysInDatabase.size());
-            Passkey updatedPasskey = passkeysInDatabase.get(0);
-            assertNull(updatedPasskey.getLastUsed());
+            Passkey passkeyInDatabase = passkeysInDatabase.get(0);
+            assertNull(passkeyInDatabase.getLastUsed());
+            assertEquals(
+                    passkeyBeforeUpdate.getPasskeySignCount(),
+                    passkeyInDatabase.getPasskeySignCount());
         }
     }
 

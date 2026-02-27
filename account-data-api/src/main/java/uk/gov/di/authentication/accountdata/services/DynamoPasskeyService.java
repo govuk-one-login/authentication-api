@@ -33,11 +33,11 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
     }
 
     public Result<PasskeyServiceUpdateFailureReason, Passkey> updatePasskey(
-            String publicSubjectId, String passkeyId, String lastUsed) {
+            String publicSubjectId, String passkeyId, String lastUsed, int signCount) {
         return getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId)
                 .map(
                         passkey -> {
-                            passkey.setLastUsed(lastUsed);
+                            passkey.withLastUsed(lastUsed).withPasskeySignCount(signCount);
                             update(passkey);
                             return Result.<PasskeyServiceUpdateFailureReason, Passkey>success(
                                     passkey);
