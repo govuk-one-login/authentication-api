@@ -3,6 +3,8 @@ package uk.gov.di.authentication.accountdata.services;
 import uk.gov.di.authentication.accountdata.constants.AccountDataConstants;
 import uk.gov.di.authentication.accountdata.entity.Authenticator;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeyServiceUpdateFailureReason;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.BaseDynamoService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -30,13 +32,18 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
         return putIfUnique(passkey, Authenticator.ATTRIBUTE_SORT_KEY);
     }
 
-    public void updatePasskey(String publicSubjectId, String passkeyId, String lastUsed) {
-        getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId)
-                .ifPresent(
-                        pk -> {
-                            pk.setLastUsed(lastUsed);
-                            update(pk);
-                        });
+    public Result<PasskeyServiceUpdateFailureReason, Passkey> updatePasskey(
+            String publicSubjectId, String passkeyId, String lastUsed) {
+        return getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId)
+                .map(
+                        passkey -> {
+                            passkey.setLastUsed(lastUsed);
+                            update(passkey);
+                            return Result.<PasskeyServiceUpdateFailureReason, Passkey>success(
+                                    passkey);
+                        })
+                .orElseGet(
+                        () -> Result.failure(PasskeyServiceUpdateFailureReason.PASSKEY_NOT_FOUND));
     }
 
     public void deletePasskey(String publicSubjectId, String passkeyId) {

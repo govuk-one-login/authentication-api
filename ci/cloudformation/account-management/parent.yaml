@@ -63,7 +63,7 @@ Parameters:
     Default: 1
 
 Conditions:
-  AddHomeApiVpcEndpointId:
+   :
     Fn::Not:
       - Fn::Equals:
           - Fn::Length:
