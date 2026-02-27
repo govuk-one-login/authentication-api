@@ -1,0 +1,49 @@
+Resources:
+  InternationalSendCountDeleteLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-international-send-count-delete-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.InternationalSendCountDeleteHandler::handleRequest
+      Role: !GetAtt InternationalSendCountDeleteLambdaRole.Arn
+      ReservedConcurrentExecutions: 1
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref InternationalSendCountDeleteLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-AWSServicesEndpointSecurityGroupId"
+        SubnetIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-international-send-count-delete-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  InternationalSendCountDeleteLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-international-send-count-delete-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - logRetentionDays
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  InternationalSendCountDeleteLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref InternationalSendCountDeleteLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn

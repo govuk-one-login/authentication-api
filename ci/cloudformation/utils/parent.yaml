@@ -144,6 +144,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c4d54754-4c7f-47d2-b54f-4868342b3660
+      internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a3297748-71d5-49d5-9e04-672ac9c470bd
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
       s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
       sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
@@ -175,6 +176,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
+      internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1f27239b-10fe-42cb-9506-626d40880443
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
       s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
       sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
@@ -206,6 +208,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e3d591b4-d295-4041-b8f0-f5eb71742014
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ab3306cf-843a-423d-96f8-4c88e3fa1906
+      internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7aad276-068b-4c6d-ab87-973cb70b92ad
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9d378f4a-de27-486a-93a4-56515d9ab372
       s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
       sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6e26328c-9121-4247-a5a3-6ac3f28fca3f
@@ -237,6 +240,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/2e7ec5d4-f4b7-4342-a5d6-15952fd9111b
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/348c86dd-4507-4472-ab33-ee7448ce8959
+      internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ef0a54ec-1a99-4f8a-b52a-83b69c209550
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
       s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
       sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
@@ -268,6 +272,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/db350f01-bce4-4da8-9323-e70267569bd8
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2c3850f1-c841-487c-8236-746f01ff707d
+      internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/29a0ed62-d58d-4361-8f5d-8f2580848d03
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c6826c50-04a2-450a-95c5-0e1309b74d0e
       s3EncryptionKey: arn:aws:kms:eu-west-2:761723964695:alias/aws/s3
       sqsEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
@@ -299,6 +304,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/9c0cc476-e831-4ebf-81e6-c619e6b795e8
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed0ff55f-0ab2-463e-9c76-56be7052a436
+      internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/8dd5e3c6-8c95-41ff-825a-c6d65191945d
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c289d5e1-1fd7-4629-9f3d-c059aabed970
       s3EncryptionKey: arn:aws:kms:eu-west-2:758531536632:alias/aws/s3
       sqsEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
@@ -330,6 +336,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/85164499-9392-458c-8596-b5a810ca90f6
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
+      internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3fd823db-5980-4853-bd9b-ed674ea8719e
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       s3EncryptionKey: arn:aws:kms:eu-west-2:761723964695:alias/aws/s3
       sqsEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
@@ -361,6 +368,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/9c0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/ac0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/bc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6269785d-3811-487d-af5a-a732d318c6ca
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/cc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
       s3EncryptionKey: arn:aws:kms:eu-west-2:172348255554:alias/aws/s3
       sqsEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/dc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
@@ -682,6 +690,30 @@ Resources:
       Roles:
         - !Ref EmailCheckResultsWriterLambdaRole
 
+  # Policy for international_sms_send_count table access (Scan, BatchWriteItem)
+  InternationalSmsSendCountAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: InternationalSmsSendCountAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:Scan
+              - dynamodb:BatchWriteItem
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-international-sms-send-count"
+                - EnvironmentName:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+      Roles:
+        - !Ref InternationalSendCountDeleteLambdaRole
+
   # ============================================================================
   # S3 Access Policies
   # ============================================================================
@@ -993,6 +1025,25 @@ Resources:
         - !Ref BulkUserEmailAudienceLoaderLambdaRole
         - !Ref BulkUserEmailSendLambdaRole
 
+  # Policy for international_sms_send_count table KMS encryption key access
+  InternationalSmsSendCountTableKmsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: InternationalSmsSendCountTableKmsAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - internationalSmsSendCountTableEncryptionKey
+      Roles:
+        - !Ref InternationalSendCountDeleteLambdaRole
+
   # Policy for SQS queue KMS encryption key access
   SqsQueueKmsAccessPolicy:
     Type: AWS::IAM::Policy
@@ -1081,6 +1132,7 @@ Resources:
         - !Ref BulkUserEmailSendLambdaRole
         - !Ref CommonPasswordsUpdateLambdaRole
         - !Ref EmailCheckResultsWriterLambdaRole
+        - !Ref InternationalSendCountDeleteLambdaRole
         - !Ref MfaMethodAnalysisLambdaRole
 
   # Policy for CloudWatch Logs KMS encryption key access for conditional bulk test user roles
@@ -1350,6 +1402,36 @@ Resources:
         - Key: Name
           Value: !Sub
             - "${EnvironmentName}-mfa-method-analysis-lambda-role"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  # 9. International Send Count Delete Lambda Role (VPC-enabled)
+  InternationalSendCountDeleteLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - "${EnvironmentName}-international-send-count-delete-lambda-role"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${EnvironmentName}-international-send-count-delete-lambda-role"
             - EnvironmentName:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
         - Key: Environment
