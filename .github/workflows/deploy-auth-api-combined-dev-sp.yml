@@ -1,5 +1,5 @@
-name: "DEV: Build and deploy API"
-run-name: "DEV: Build and deploy ${{ inputs.api_name }} API to ${{ inputs.environment }}"
+name: "SP - DEV: Build and deploy API modules"
+run-name: "Build and deploy ${{ inputs.api_name }} API to ${{ inputs.environment }}"
 
 on:
   workflow_dispatch:
@@ -9,10 +9,10 @@ on:
         type: choice
         required: true
         options:
-          - account-data-api
-          - account-management-api
-          - auth-int-ext-api
-          - stubs-api
+          - account-data
+          - account-management
+          - auth-int-ext
+          - stubs
           - utils
       environment:
         description: "Environment to run against"
@@ -51,7 +51,7 @@ jobs:
       - name: Set up AWS creds
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
-          role-to-assume: ${{ inputs.api_name == 'account-data-api' && secrets.GH_ACTIONS_AD_ROLE_ARN || inputs.api_name == 'account-management-api' && secrets.GH_ACTIONS_AM_ROLE_ARN || inputs.api_name == 'auth-int-ext-api' && secrets.GH_ACTIONS_ROLE_ARN || inputs.api_name == 'stubs-api' && secrets.GH_ACTIONS_ROLE_ARN_STUBS_API || inputs.api_name == 'utils' && secrets.GH_ACTIONS_UT_ROLE_ARN }}
+          role-to-assume: ${{ inputs.api_name == 'account-data' && secrets.GH_ACTIONS_AD_ROLE_ARN || inputs.api_name == 'account-management' && secrets.GH_ACTIONS_AM_ROLE_ARN || inputs.api_name == 'auth-int-ext' && secrets.GH_ACTIONS_ROLE_ARN || inputs.api_name == 'stubs' && secrets.GH_ACTIONS_ROLE_ARN_STUBS_API || inputs.api_name == 'utils' && secrets.GH_ACTIONS_UT_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up JDK 17
@@ -68,7 +68,7 @@ jobs:
           cache-read-only: false
 
       - name: Gradle build
-        run: ${{ inputs.api_name == 'account-data-api' && './gradlew --no-daemon --parallel :account-data-api:buildZip' || inputs.api_name == 'account-management-api' && './gradlew --no-daemon --parallel :account-management-api:buildZip' || inputs.api_name == 'auth-int-ext-api' && './gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip :delivery-receipts-api:buildZip' || inputs.api_name == 'stubs-api' && './gradlew --no-daemon --parallel :ticf-cri-stub:buildZip :interventions-api-stub:buildZip' || inputs.api_name == 'utils' && './gradlew --no-daemon --parallel :utils:buildZip :test-services-api:buildZip' }}
+        run: ${{ inputs.api_name == 'account-data' && './gradlew --no-daemon --parallel :account-data-api:buildZip' || inputs.api_name == 'account-management' && './gradlew --no-daemon --parallel :account-management-api:buildZip' || inputs.api_name == 'auth-int-ext' && './gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip :delivery-receipts-api:buildZip' || inputs.api_name == 'stubs' && './gradlew --no-daemon --parallel :ticf-cri-stub:buildZip :interventions-api-stub:buildZip' || inputs.api_name == 'utils' && './gradlew --no-daemon --parallel :utils:buildZip :test-services-api:buildZip' }}
 
       - name: Install Rain
         env:
@@ -83,12 +83,12 @@ jobs:
       - name: Generate template
         run: "./scripts/merge-templates.sh"
         env:
-          TEMPLATE_SOURCE_DIR: ${{ inputs.api_name == 'account-data-api' && 'ci/cloudformation/account-data' || inputs.api_name == 'account-management-api' && 'ci/cloudformation/account-management' || inputs.api_name == 'auth-int-ext-api' && 'ci/cloudformation/auth' || inputs.api_name == 'stubs-api' && 'ci/cloudformation/stubs' || inputs.api_name == 'utils' && 'ci/cloudformation/utils' }}
-          TEMPLATE_FILE: ${{ inputs.api_name == 'account-data-api' && 'ad-template.yaml' || inputs.api_name == 'account-management-api' && 'am-template.yaml' || inputs.api_name == 'auth-int-ext-api' && 'auth-template.yaml' || inputs.api_name == 'stubs-api' && 'stubs-template.yaml' || inputs.api_name == 'utils' && 'utils-template.yaml' }}
+          TEMPLATE_SOURCE_DIR: ${{ inputs.api_name == 'account-data' && 'ci/cloudformation/account-data' || inputs.api_name == 'account-management' && 'ci/cloudformation/account-management' || inputs.api_name == 'auth-int-ext' && 'ci/cloudformation/auth' || inputs.api_name == 'stubs' && 'ci/cloudformation/stubs' || inputs.api_name == 'utils' && 'ci/cloudformation/utils' }}
+          TEMPLATE_FILE: ${{ inputs.api_name == 'account-data' && 'ad-template.yaml' || inputs.api_name == 'account-management' && 'am-template.yaml' || inputs.api_name == 'auth-int-ext' && 'auth-template.yaml' || inputs.api_name == 'stubs' && 'stubs-template.yaml' || inputs.api_name == 'utils' && 'utils-template.yaml' }}
 
       - name: SAM build
         run: |
-          TEMPLATE_FILE="${{ inputs.api_name == 'account-data-api' && 'ad-template.yaml' || inputs.api_name == 'account-management-api' && 'am-template.yaml' || inputs.api_name == 'auth-int-ext-api' && 'auth-template.yaml' || inputs.api_name == 'stubs-api' && 'stubs-template.yaml' || inputs.api_name == 'utils' && 'utils-template.yaml' }}"
+          TEMPLATE_FILE="${{ inputs.api_name == 'account-data' && 'ad-template.yaml' || inputs.api_name == 'account-management' && 'am-template.yaml' || inputs.api_name == 'auth-int-ext' && 'auth-template.yaml' || inputs.api_name == 'stubs' && 'stubs-template.yaml' || inputs.api_name == 'utils' && 'utils-template.yaml' }}"
           sam validate --lint -t $TEMPLATE_FILE
           sam build --parallel -t $TEMPLATE_FILE
 
@@ -107,7 +107,7 @@ jobs:
       - name: Deploy SAM app
         uses: govuk-one-login/devplatform-upload-action@fda75612a1b0e5a8c84ae7c44a23340e50e5bbde # v3.11.0
         with:
-          artifact-bucket-name: ${{ inputs.api_name == 'account-data-api' && secrets.ARTIFACT_SOURCE_AD_BUCKET_NAME || inputs.api_name == 'account-management-api' && secrets.ARTIFACT_SOURCE_AM_BUCKET_NAME || inputs.api_name == 'auth-int-ext-api' && secrets.ARTIFACT_SOURCE_BUCKET_NAME || inputs.api_name == 'stubs-api' && secrets.ARTIFACT_BUCKET_STUBS_API || inputs.api_name == 'utils' && secrets.ARTIFACT_SOURCE_UT_BUCKET_NAME }}
+          artifact-bucket-name: ${{ inputs.api_name == 'account-data' && secrets.ARTIFACT_SOURCE_AD_BUCKET_NAME || inputs.api_name == 'account-management' && secrets.ARTIFACT_SOURCE_AM_BUCKET_NAME || inputs.api_name == 'auth-int-ext' && secrets.ARTIFACT_SOURCE_BUCKET_NAME || inputs.api_name == 'stubs' && secrets.ARTIFACT_BUCKET_STUBS_API || inputs.api_name == 'utils' && secrets.ARTIFACT_SOURCE_UT_BUCKET_NAME }}
           signing-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
           working-directory: .aws-sam/build
           version: ${{ steps.version_info.outputs.version }}

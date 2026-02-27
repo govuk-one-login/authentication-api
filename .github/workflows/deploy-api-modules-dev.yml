@@ -1,4 +1,4 @@
-name: "DEV: Build and deploy API modules"
+name: "TF - DEV: Build and deploy API modules"
 env:
   AWS_REGION: eu-west-2
   DEPLOYER_ROLE: arn:aws:iam::706615647326:role/deployers/dev-github-actions-publish-to-s3-for-code-signing
