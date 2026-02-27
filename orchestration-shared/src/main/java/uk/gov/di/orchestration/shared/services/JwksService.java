@@ -72,8 +72,8 @@ public class JwksService {
                 configurationService.getNextExternalTokenSigningKeyRsaAliasV2());
     }
 
-    public JWK getNextPublicDocAppSigningJwkWithOpaqueId() {
-        LOG.info("Retrieving next Doc App public key");
+    public JWK getPublicDocAppSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Doc App public key");
         return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
     }
 

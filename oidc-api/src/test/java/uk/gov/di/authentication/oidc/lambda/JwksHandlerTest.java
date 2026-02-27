@@ -41,7 +41,7 @@ class JwksHandlerTest {
         var tokenSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
-        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -61,7 +61,7 @@ class JwksHandlerTest {
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
         when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaTokenSigningKey);
-        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -78,7 +78,7 @@ class JwksHandlerTest {
         var opaqueSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
-        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -105,7 +105,7 @@ class JwksHandlerTest {
         var opaqueSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
-        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
         assertThat(response, hasHeader("Cache-Control", "max-age=86400"));
@@ -124,7 +124,7 @@ class JwksHandlerTest {
         var newTokenSigningKeyV2 = generateECKey();
 
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
-        when(jwksService.getNextPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
         when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newTokenSigningKey);
         when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newTokenSigningKeyV2);
 
