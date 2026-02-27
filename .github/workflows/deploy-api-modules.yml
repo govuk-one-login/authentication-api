@@ -112,11 +112,9 @@ jobs:
           - delivery-receipts-api
           - doc-checking-app-api
           - frontend-api
-          - interventions-api-stub
           - ipv-api
           - oidc-api
           - test-services-api
-          - ticf-cri-stub
           - utils
     permissions:
       id-token: write
@@ -155,12 +153,8 @@ jobs:
             terraform_directory_name: auth-external-api
           - module_name: delivery-receipts-api
             terraform_directory_name: delivery-receipts
-          - module_name: interventions-api-stub
-            terraform_directory_name: interventions-api-stub
           - module_name: test-services-api
             terraform_directory_name: test-services
-          - module_name: ticf-cri-stub
-            terraform_directory_name: ticf-cri-stub
           - module_name: utils
             terraform_directory_name: utils
     permissions:

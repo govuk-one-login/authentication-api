@@ -20,11 +20,9 @@ Options:
     -h, --help                  display this help message.
 
     -a, --account-management    deploy the account-management API. (default: true)
-    --ticf-stub                 deploy the TICF CRI stub. (default: true)
     -d, --delivery-receipts     deploy the delivery receipts API. (default: false)
     -u, --utils                 deploy the utils API. (default: false)
     -s, --shared                deploy the shared Terraform configuration. (default: true)
-    -i, --interventions         deploy the account interventions API stub. (default: true)
     -t, --test-services         deploy the test services API. (default: false)
 
 Arguments:
@@ -38,13 +36,11 @@ O_CLEAN=""  # -c, --clean
 O_SHELL=0   # --shell
 O_REFRESH=0 # -r, --refresh-only
 
-T_ACCOUNT_MANAGEMENT=0     # -a, --account-management
-T_TICF_CRI_STUB=0          # --ticf-stub
-T_DELIVERY_RECEIPTS=0      # -d, --delivery-receipts
-T_UTILS=0                  # -u, --utils
-T_SHARED=0                 # -s, --shared
-T_INTERVENTIONS_API_STUB=0 # -i, --interventions, --interventions-stub
-T_TEST_SERVICE=0           # -t, --test-services
+T_ACCOUNT_MANAGEMENT=0 # -a, --account-management
+T_DELIVERY_RECEIPTS=0  # -d, --delivery-receipts
+T_UTILS=0              # -u, --utils
+T_SHARED=0             # -s, --shared
+T_TEST_SERVICE=0       # -t, --test-services
 
 POSITIONAL=()
 NUMBER_PICKED=0
@@ -62,13 +58,11 @@ while (($#)); do
     -r | --refresh-only) O_REFRESH=1 ;;
 
     -a | --account-management) T_ACCOUNT_MANAGEMENT=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
-    --ticf-stub) T_TICF_CRI_STUB=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -d | --delivery-receipts) T_DELIVERY_RECEIPTS=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -u | --utils) T_UTILS=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -s | --shared) T_SHARED=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
-    -i | --interventions | --interventions-stub) T_INTERVENTIONS_API_STUB=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -t | --test-services) T_TEST_SERVICE=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
-    --all) T_ACCOUNT_MANAGEMENT=1 T_TICF_CRI_STUB=1 T_DELIVERY_RECEIPTS=1 T_UTILS=1 T_SHARED=1 T_INTERVENTIONS_API_STUB=1 T_TEST_SERVICE=1 NUMBER_PICKED=-1 ;;
+    --all) T_ACCOUNT_MANAGEMENT=1 T_DELIVERY_RECEIPTS=1 T_UTILS=1 T_SHARED=1 T_TEST_SERVICE=1 NUMBER_PICKED=-1 ;;
 
     -h | --help)
       usage
@@ -110,9 +104,7 @@ fi
 if [[ ${NUMBER_PICKED} -eq 0 ]]; then
   O_BUILD=1
   T_ACCOUNT_MANAGEMENT=1
-  T_TICF_CRI_STUB=1
   T_SHARED=1
-  T_INTERVENTIONS_API_STUB=1
 fi
 
 if [[ ${O_BUILD} -eq 1 ]]; then
@@ -161,14 +153,6 @@ function run_terraform() {
 
 if [[ ${T_SHARED} -eq 1 ]]; then
   run_terraform "shared"
-fi
-
-if [[ ${T_INTERVENTIONS_API_STUB} -eq 1 ]]; then
-  run_terraform "interventions-api-stub"
-fi
-
-if [[ ${T_TICF_CRI_STUB} -eq 1 ]]; then
-  run_terraform "ticf-cri-stub"
 fi
 
 if [[ ${T_ACCOUNT_MANAGEMENT} -eq 1 ]]; then

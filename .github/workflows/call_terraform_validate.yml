@@ -13,11 +13,9 @@ jobs:
           - account-management
           - auth-external-api
           - delivery-receipts
-          - interventions-api-stub
           - oidc
           - shared
           - test-services
-          - ticf-cri-stub
           - utils
     steps:
       - name: Check out repository code
