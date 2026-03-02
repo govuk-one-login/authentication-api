@@ -47,3 +47,6 @@ utils-template.yaml
 .amazonq/
 
 specs-and-prompts/
+
+# Kiro files
+.kiro/
