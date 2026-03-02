@@ -119,8 +119,6 @@ public enum ErrorResponse {
             1092, "User is indefinitely blocked from sending SMS to international numbers"),
     UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error"),
     // Account_Data
-    @Deprecated
-    UNEXPECTED_ACCOUNT_DATA_API_ERROR(1092, "Account Data API encountered an unexpected error"),
     PASSKEY_ALREADY_EXISTS(4090, "Passkey already exists"),
     INVALID_REQUEST_BODY(4000, "Invalid request body"),
     MISSING_SUBJECT_ID(4001, "Missing subject id"),
