@@ -597,20 +597,16 @@ data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_doc
     resources = ["*"]
   }
 
-  dynamic "statement" {
-    # This Dynamic statement is only applied in Lower enviorment for AM acceptance-tests
-    for_each = !contains(["integration", "production"], var.environment) ? [1] : []
-    content {
-      actions = [
-        "dynamodb:DeleteItem"
-      ]
-      effect = "Allow"
-      principals {
-        identifiers = [var.auth_new_account_id]
-        type        = "AWS"
-      }
-      resources = ["*"]
+  statement {
+    actions = [
+      "dynamodb:DeleteItem"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.auth_new_account_id]
+      type        = "AWS"
     }
+    resources = ["*"]
   }
 
   dynamic "statement" {
@@ -878,20 +874,16 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
     resources = ["*"]
   }
 
-  dynamic "statement" {
-    # This Dynamic statement is only applied in Lower enviorment for AM acceptance-tests
-    for_each = !contains(["integration", "production"], var.environment) ? [1] : []
-    content {
-      actions = [
-        "dynamodb:DeleteItem"
-      ]
-      effect = "Allow"
-      principals {
-        identifiers = [var.auth_new_account_id]
-        type        = "AWS"
-      }
-      resources = ["*"]
+  statement {
+    actions = [
+      "dynamodb:DeleteItem"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.auth_new_account_id]
+      type        = "AWS"
     }
+    resources = ["*"]
   }
 
   dynamic "statement" {
