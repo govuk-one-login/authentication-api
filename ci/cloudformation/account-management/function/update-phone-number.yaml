@@ -66,13 +66,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  UpdatePhoneNumberFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt UpdatePhoneNumberFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   UpdatePhoneNumberFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -131,7 +124,7 @@ Resources:
               EnvironmentConfiguration,
               !Ref Environment,
               lambdaLogAlarmThreshold,
-              DefaultValue: 5,
+              DefaultValue: 10,
             ]
           Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           RunbookLink:
@@ -158,87 +151,6 @@ Resources:
           !Ref Environment,
           lambdaLogAlarmThreshold,
           DefaultValue: 5,
-        ]
-
-  UpdatePhoneNumberFunctionErrorRateCloudwatchAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions: !If
-        - UseAlarmActions
-        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
-        - []
-      AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-update-phone-number-lambda. ${RunbookLink}"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          ErrorRateThreshold:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              lambdaLogAlarmErrorRateThreshold,
-              DefaultValue: 10,
-            ]
-          RunbookLink:
-            !FindInMap [
-              LambdaConfiguration,
-              "update-phone-number",
-              RunbookLink,
-              DefaultValue: "",
-            ]
-      AlarmName: !Sub
-        - ${Env}-update-phone-number-error-rate-alarm
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      DatapointsToAlarm: 1
-      EvaluationPeriods: 1
-      Metrics:
-        - Id: e1
-          Label: "Error Rate"
-          ReturnData: true
-          Expression: (m2/m1)*100
-        - Id: m1
-          ReturnData: false
-          MetricStat:
-            Metric:
-              Namespace: AWS/Lambda
-              MetricName: Invocations
-              Dimensions:
-                - Name: FunctionName
-                  Value: !Sub
-                    - ${Env}-update-phone-number-lambda
-                    - Env:
-                        !If [
-                          UseSubEnvironment,
-                          !Ref SubEnvironment,
-                          !Ref Environment,
-                        ]
-            Period: 60
-            Stat: Sum
-            Unit: Count
-        - Id: m2
-          ReturnData: false
-          MetricStat:
-            Metric:
-              Namespace: AWS/Lambda
-              MetricName: Errors
-              Dimensions:
-                - Name: FunctionName
-                  Value: !Sub
-                    - ${Env}-update-phone-number-lambda
-                    - Env:
-                        !If [
-                          UseSubEnvironment,
-                          !Ref SubEnvironment,
-                          !Ref Environment,
-                        ]
-            Period: 60
-            Stat: Sum
-            Unit: Count
-      Threshold:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          lambdaLogAlarmErrorRateThreshold,
-          DefaultValue: 10,
         ]
 
   UpdatePhoneNumberFunctionSubscriptionFilter:

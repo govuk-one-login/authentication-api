@@ -83,13 +83,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  AuthenticateFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt AuthenticateFunction.Arn
-      Principal: apigateway.amazonaws.com
-
   AuthenticateFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -148,7 +141,7 @@ Resources:
               EnvironmentConfiguration,
               !Ref Environment,
               lambdaLogAlarmThreshold,
-              DefaultValue: 5,
+              DefaultValue: 10,
             ]
           Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           RunbookLink:
@@ -175,87 +168,6 @@ Resources:
           !Ref Environment,
           lambdaLogAlarmThreshold,
           DefaultValue: 5,
-        ]
-
-  AuthenticateFunctionErrorRateCloudwatchAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions: !If
-        - UseAlarmActions
-        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
-        - []
-      AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-authenticate-lambda. ${RunbookLink}"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          ErrorRateThreshold:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              lambdaLogAlarmErrorRateThreshold,
-              DefaultValue: 10,
-            ]
-          RunbookLink:
-            !FindInMap [
-              LambdaConfiguration,
-              "authenticate",
-              RunbookLink,
-              DefaultValue: "",
-            ]
-      AlarmName: !Sub
-        - ${Env}-authenticate-error-rate-alarm
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      DatapointsToAlarm: 1
-      EvaluationPeriods: 1
-      Metrics:
-        - Id: e1
-          Label: "Error Rate"
-          ReturnData: true
-          Expression: (m2/m1)*100
-        - Id: m1
-          ReturnData: false
-          MetricStat:
-            Metric:
-              Namespace: AWS/Lambda
-              MetricName: Invocations
-              Dimensions:
-                - Name: FunctionName
-                  Value: !Sub
-                    - ${Env}-authenticate-lambda
-                    - Env:
-                        !If [
-                          UseSubEnvironment,
-                          !Ref SubEnvironment,
-                          !Ref Environment,
-                        ]
-            Period: 60
-            Stat: Sum
-            Unit: Count
-        - Id: m2
-          ReturnData: false
-          MetricStat:
-            Metric:
-              Namespace: AWS/Lambda
-              MetricName: Errors
-              Dimensions:
-                - Name: FunctionName
-                  Value: !Sub
-                    - ${Env}-authenticate-lambda
-                    - Env:
-                        !If [
-                          UseSubEnvironment,
-                          !Ref SubEnvironment,
-                          !Ref Environment,
-                        ]
-            Period: 60
-            Stat: Sum
-            Unit: Count
-      Threshold:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          lambdaLogAlarmErrorRateThreshold,
-          DefaultValue: 10,
         ]
 
   AuthenticateFunctionSubscriptionFilter:
