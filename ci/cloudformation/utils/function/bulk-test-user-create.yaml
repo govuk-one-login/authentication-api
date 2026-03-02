@@ -9,7 +9,14 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.BulkTestUserCreateHandler::handleRequest
-      Role: !GetAtt BulkTestUserCreateLambdaRole.Arn
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref DynamoCredentialReadWriteAccessPolicy
+        - !Ref BulkTestUserBucketReadAccessPolicy
+        - !Ref SourceCodeBucketReadAccessPolicy
+        - !Ref S3BucketKmsAccessPolicyForBulkTestUsers
+        - !Ref CloudWatchLogsKmsAccessPolicyForBulkTestUsers
       AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref BulkTestUserCreateLogGroup

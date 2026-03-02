@@ -8,7 +8,12 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.AccountMetricPublishHandler::handleRequest
-      Role: !GetAtt AccountMetricsLambdaRole.Arn
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoCredentialReadAccessPolicy
+        - !Ref SourceCodeBucketReadAccessPolicy
+        - !Ref CloudWatchLogsKmsAccessPolicy
       AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref AccountMetricsLogGroup

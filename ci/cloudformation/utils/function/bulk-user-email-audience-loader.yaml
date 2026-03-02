@@ -9,7 +9,14 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderHandler::handleRequest
-      Role: !GetAtt BulkUserEmailAudienceLoaderLambdaRole.Arn
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoCredentialReadAccessPolicy
+        - !Ref DynamoBulkEmailTablesAccessPolicy
+        - !Ref SourceCodeBucketReadAccessPolicy
+        - !Ref EmailCheckResultsTableKmsAccessPolicy
+        - !Ref CloudWatchLogsKmsAccessPolicy
       AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref BulkUserEmailAudienceLoaderLogGroup
