@@ -61,18 +61,14 @@ public class PasskeysUpdateHandler
 
         LOG.info("PasskeysUpdateHandler called");
 
-        // TODO add validation
-        String publicSubjectId = getPublicSubjectId(input);
-        String passkeyId = getPasskeyId(input);
-
-        return validateUpdateRequest(input)
+        return parseUpdateRequest(input)
                 .flatMap(
-                        request ->
+                        requestContext ->
                                 passkeysService.updatePasskey(
-                                        publicSubjectId,
-                                        passkeyId,
-                                        request.lastUsedAt(),
-                                        request.signCount()))
+                                        requestContext.publicSubjectId,
+                                        requestContext.passkeyId,
+                                        requestContext.request.lastUsedAt(),
+                                        requestContext.request.signCount()))
                 .fold(
                         this::mapFailureReasonToErrorResponse,
                         result -> generateApiGatewayProxyResponse(204, ""));
@@ -88,18 +84,17 @@ public class PasskeysUpdateHandler
                     404, ErrorResponse.PASSKEY_NOT_FOUND);
             case FAILED_TO_UPDATE_PASSKEY -> generateApiGatewayProxyErrorResponse(
                     500, ErrorResponse.INTERNAL_SERVER_ERROR);
+            case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.MISSING_SUBJECT_ID);
+            case MISSING_PASSKEY_ID -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.MISSING_PASSKEY_ID);
         };
     }
 
-    private String getPublicSubjectId(APIGatewayProxyRequestEvent input) {
-        return input.getPathParameters().get("publicSubjectId");
-    }
+    private record PasskeysUpdateContext(
+            String publicSubjectId, String passkeyId, PasskeysUpdateRequest request) {}
 
-    private String getPasskeyId(APIGatewayProxyRequestEvent input) {
-        return input.getPathParameters().get("passkeyId");
-    }
-
-    public Result<PasskeysUpdateFailureReason, PasskeysUpdateRequest> validateUpdateRequest(
+    public Result<PasskeysUpdateFailureReason, PasskeysUpdateContext> parseUpdateRequest(
             APIGatewayProxyRequestEvent input) {
         PasskeysUpdateRequest passkeysUpdateRequest;
         try {
@@ -110,6 +105,20 @@ public class PasskeysUpdateHandler
             return Result.failure(PasskeysUpdateFailureReason.PARSING_PASSKEY_UPDATE_REQUEST_ERROR);
         }
 
-        return Result.success(passkeysUpdateRequest);
+        var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+
+        if (publicSubjectId == null || publicSubjectId.isEmpty()) {
+            LOG.error("Request does not include public subject id");
+            return Result.failure(PasskeysUpdateFailureReason.MISSING_SUBJECT_ID);
+        }
+        var passkeyId = input.getPathParameters().get("passkeyId");
+
+        if (passkeyId == null || passkeyId.isEmpty()) {
+            LOG.error("Request does not include passkey id");
+            return Result.failure(PasskeysUpdateFailureReason.MISSING_PASSKEY_ID);
+        }
+
+        return Result.success(
+                new PasskeysUpdateContext(publicSubjectId, passkeyId, passkeysUpdateRequest));
     }
 }

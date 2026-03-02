@@ -113,31 +113,64 @@ class PasskeysUpdateHandlerTest {
         @MethodSource("invalidRequestBodies")
         void shouldReturn400WhenRequestBodyIsInvalid(String invalidRequestBody) {
             var request =
-                    new APIGatewayProxyRequestEvent()
+                    baseApiProxyRequest()
                             .withPathParameters(
                                     Map.of(
                                             "publicSubjectId",
                                             PUBLIC_SUBJECT_ID,
                                             "passkeyId",
                                             PASSKEY_ID))
-                            .withHeaders(VALID_HEADERS)
-                            .withBody(invalidRequestBody)
-                            .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+                            .withBody(invalidRequestBody);
             var result = handler.handleRequest(request, context);
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
         }
+
+        @Test
+        void shouldReturn400WhenRequestIsMissingPublicSubjectId() {
+            var requestBody =
+                    "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(signCount, lastUsedAt);
+            var pathParamsWithoutPublicSubject = Map.ofEntries(Map.entry("passkeyId", PASSKEY_ID));
+            var request =
+                    baseApiProxyRequest()
+                            .withPathParameters(pathParamsWithoutPublicSubject)
+                            .withBody(requestBody);
+            var result = handler.handleRequest(request, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.MISSING_SUBJECT_ID));
+        }
+
+        @Test
+        void shouldReturn400WhenRequestIsMissingPasskeyId() {
+            var requestBody =
+                    "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(signCount, lastUsedAt);
+            var pathParamsWithoutPublicSubject =
+                    Map.ofEntries(Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID));
+            var request =
+                    baseApiProxyRequest()
+                            .withPathParameters(pathParamsWithoutPublicSubject)
+                            .withBody(requestBody);
+            var result = handler.handleRequest(request, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.MISSING_PASSKEY_ID));
+        }
     }
 
     private APIGatewayProxyRequestEvent passkeysUpdateRequest(
             int signCount, String lastUsed, String publicSubjectId, String passkeyId) {
-        return new APIGatewayProxyRequestEvent()
+        return baseApiProxyRequest()
                 .withPathParameters(
                         Map.of("publicSubjectId", publicSubjectId, "passkeyId", passkeyId))
-                .withHeaders(VALID_HEADERS)
                 .withBody(
-                        "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(signCount, lastUsed))
+                        "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(signCount, lastUsed));
+    }
+
+    private APIGatewayProxyRequestEvent baseApiProxyRequest() {
+        return new APIGatewayProxyRequestEvent()
+                .withHeaders(VALID_HEADERS)
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 }
