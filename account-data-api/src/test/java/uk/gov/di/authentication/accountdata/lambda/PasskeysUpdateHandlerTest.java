@@ -39,8 +39,8 @@ class PasskeysUpdateHandlerTest {
     private final PasskeysService passkeysService = mock(PasskeysService.class);
 
     private PasskeysUpdateHandler handler;
-    private static final int signCount = 2;
-    private static final Instant lastUsedAt = Instant.now(); // TODO use correct type
+    private static final int SIGN_COUNT = 2;
+    private static final String LAST_USED_AT = Instant.now().toString();
     private static final String PASSKEY_ID = "some-passkey-id";
 
     @BeforeEach
@@ -56,14 +56,13 @@ class PasskeysUpdateHandlerTest {
         void shouldReturn204ForValidRequest() {
             // Given
             var request =
-                    passkeysUpdateRequest(
-                            signCount, lastUsedAt.toString(), PUBLIC_SUBJECT_ID, PASSKEY_ID);
+                    passkeysUpdateRequest(SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PASSKEY_ID);
             when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
                     .thenReturn(Result.success(new Passkey()));
             var result = handler.handleRequest(request, context);
 
             verify(passkeysService)
-                    .updatePasskey(PUBLIC_SUBJECT_ID, PASSKEY_ID, lastUsedAt.toString(), signCount);
+                    .updatePasskey(PUBLIC_SUBJECT_ID, PASSKEY_ID, LAST_USED_AT, SIGN_COUNT);
             assertThat(result, hasStatus(204));
         }
     }
@@ -73,8 +72,7 @@ class PasskeysUpdateHandlerTest {
         @Test
         void shouldReturn404WhenPasskeyDoesNotExist() {
             var request =
-                    passkeysUpdateRequest(
-                            signCount, lastUsedAt.toString(), PUBLIC_SUBJECT_ID, PASSKEY_ID);
+                    passkeysUpdateRequest(SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PASSKEY_ID);
             when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
                     .thenReturn(Result.failure(PasskeysUpdateFailureReason.PASSKEY_NOT_FOUND));
             var result = handler.handleRequest(request, context);
@@ -86,8 +84,7 @@ class PasskeysUpdateHandlerTest {
         @Test
         void shouldReturn500WhenDatabaseOperationFails() {
             var request =
-                    passkeysUpdateRequest(
-                            signCount, lastUsedAt.toString(), PUBLIC_SUBJECT_ID, PASSKEY_ID);
+                    passkeysUpdateRequest(SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PASSKEY_ID);
             when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
                     .thenReturn(
                             Result.failure(PasskeysUpdateFailureReason.FAILED_TO_UPDATE_PASSKEY));
@@ -98,15 +95,20 @@ class PasskeysUpdateHandlerTest {
         }
 
         private static Stream<String> invalidRequestBodies() {
+            var validTimestamp = "2026-03-02T16:01:45";
             return Stream.of(
                     "invalidBody",
                     //                    sign_count instead of signCount
-                    "{\"sign_count\":5,\"lastUsedAt\":\"some timestamp\"}",
+                    "{\"sign_count\":5,\"lastUsedAt\":\"%s\"}".formatted(validTimestamp),
                     //                    missing signCount
-                    "{\"lastUsedAt\":\"some timestamp\"}",
+                    "{\"lastUsedAt\":\"%s\"}".formatted(validTimestamp),
                     //                    missing lastUsedAt
                     "{\"signCount\":5}",
-                    "{\"signCount\":\"not an int\",\"lastUsedAt\":\"some timestamp\"}");
+                    // invalid sign count type
+                    "{\"signCount\":\"not an int\",\"lastUsedAt\":\"%s\"}"
+                            .formatted(validTimestamp),
+                    // invalid time date format
+                    "{\"signCount\":1,\"lastUsedAt\":\"not-a-timestamp\"}");
         }
 
         @ParameterizedTest
@@ -130,7 +132,7 @@ class PasskeysUpdateHandlerTest {
         @Test
         void shouldReturn400WhenRequestIsMissingPublicSubjectId() {
             var requestBody =
-                    "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(signCount, lastUsedAt);
+                    "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(SIGN_COUNT, LAST_USED_AT);
             var pathParamsWithoutPublicSubject = Map.ofEntries(Map.entry("passkeyId", PASSKEY_ID));
             var request =
                     baseApiProxyRequest()
@@ -145,7 +147,7 @@ class PasskeysUpdateHandlerTest {
         @Test
         void shouldReturn400WhenRequestIsMissingPasskeyId() {
             var requestBody =
-                    "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(signCount, lastUsedAt);
+                    "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(SIGN_COUNT, LAST_USED_AT);
             var pathParamsWithoutPublicSubject =
                     Map.ofEntries(Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID));
             var request =

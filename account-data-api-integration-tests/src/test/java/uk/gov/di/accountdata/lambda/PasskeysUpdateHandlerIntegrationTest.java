@@ -108,14 +108,7 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         // Then
         assertEquals(404, response.getStatusCode());
 
-        var savedPasskeysForUser = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
-        assertEquals(1, savedPasskeysForUser.size());
-        var savedPasskey = savedPasskeysForUser.get(0);
-
-        // assert passkey not updated
-        assertEquals(PRIMARY_PASSKEY_ID, savedPasskey.getCredentialId());
-        assertEquals(EXISTING_PASSKEY.getPasskeySignCount(), savedPasskey.getPasskeySignCount());
-        assertEquals(EXISTING_PASSKEY.getLastUsed(), savedPasskey.getLastUsed());
+        assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
     }
 
     @Test
@@ -138,13 +131,49 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         // Then
         assertEquals(400, response.getStatusCode());
 
-        var savedPasskeysForUser = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
+        assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
+    }
+
+    @Test
+    void shouldReturn400IfInvalidTimestamp() {
+        // Given
+        var lastUsedAt = "not a timestamp";
+        var updatedSignCount = 4;
+
+        var requestBody =
+                """
+                    {
+                        "signCount": %d,
+                        "lastUsedAt": "%s"
+                    }"""
+                        .formatted(updatedSignCount, lastUsedAt);
+
+        // When
+        var response =
+                makeRequest(
+                        Optional.of(requestBody),
+                        new HashMap<String, String>(),
+                        Collections.emptyMap(),
+                        Map.of(
+                                "publicSubjectId",
+                                PUBLIC_SUBJECT_ID,
+                                "passkeyId",
+                                PRIMARY_PASSKEY_ID));
+
+        // Then
+        assertEquals(400, response.getStatusCode());
+
+        assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
+    }
+
+    private void assertSavedPasskeyUnchanged(String publicSubjectId, Passkey existingPasskey) {
+        var savedPasskeysForUser = dynamoPasskeyService.getPasskeysForUser(publicSubjectId);
         assertEquals(1, savedPasskeysForUser.size());
         var savedPasskey = savedPasskeysForUser.get(0);
 
         // assert passkey not updated
-        assertEquals(PRIMARY_PASSKEY_ID, savedPasskey.getCredentialId());
-        assertEquals(EXISTING_PASSKEY.getPasskeySignCount(), savedPasskey.getPasskeySignCount());
-        assertEquals(EXISTING_PASSKEY.getLastUsed(), savedPasskey.getLastUsed());
+        assertEquals(existingPasskey.getCredentialId(), savedPasskey.getCredentialId());
+        assertEquals(existingPasskey.getPasskeySignCount(), savedPasskey.getPasskeySignCount());
+        assertEquals(existingPasskey.getLastUsed(), savedPasskey.getLastUsed());
     }
 }

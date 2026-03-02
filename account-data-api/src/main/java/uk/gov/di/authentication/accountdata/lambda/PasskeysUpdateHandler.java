@@ -16,6 +16,9 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.time.DateTimeException;
+import java.time.Instant;
+
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -100,8 +103,11 @@ public class PasskeysUpdateHandler
         try {
             passkeysUpdateRequest =
                     objectMapper.readValue(input.getBody(), PasskeysUpdateRequest.class, true);
-
+            Instant.parse(passkeysUpdateRequest.lastUsedAt());
         } catch (Json.JsonException e) {
+            return Result.failure(PasskeysUpdateFailureReason.PARSING_PASSKEY_UPDATE_REQUEST_ERROR);
+        } catch (DateTimeException e) {
+            LOG.warn("last used at time is not a valid timestamp");
             return Result.failure(PasskeysUpdateFailureReason.PARSING_PASSKEY_UPDATE_REQUEST_ERROR);
         }
 
