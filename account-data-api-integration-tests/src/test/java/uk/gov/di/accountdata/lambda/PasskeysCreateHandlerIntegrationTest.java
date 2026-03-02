@@ -76,6 +76,7 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
             // Then
             assertThat(response.getStatusCode(), equalTo(201));
+            assertThat(response.getBody(), equalTo("Passkey created successfully"));
 
             var savedPasskeysForUser = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
             var savedPasskey = savedPasskeysForUser.get(0);
@@ -89,7 +90,7 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     class Error {
 
         @Test
-        void shouldReturn400IfMissingParams() throws Json.JsonException {
+        void shouldReturn400IfInvalidRequestBody() throws Json.JsonException {
             // Given
             Map<String, String> headers = new HashMap<>();
 
@@ -115,7 +116,7 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
             // Then
             assertThat(response.getStatusCode(), equalTo(400));
-            assertThat(response, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
         }
 
         @Test

@@ -119,10 +119,15 @@ public enum ErrorResponse {
             1092, "User is indefinitely blocked from sending SMS to international numbers"),
     UNEXPECTED_INTERNAL_API_ERROR(1071, "Internal API encountered an unexpected error"),
     // Account_Data
+    @Deprecated
     UNEXPECTED_ACCOUNT_DATA_API_ERROR(1092, "Account Data API encountered an unexpected error"),
-    PASSKEY_ALREADY_EXISTS(1093, "Passkey already exists"),
-    INVALID_AAGUID(1094, "Invalid AAGUID format"),
-    INVALID_CREDENTIAL(1095, "Invalid credential format"),
+    PASSKEY_ALREADY_EXISTS(4090, "Passkey already exists"),
+    INVALID_REQUEST_BODY(4000, "Invalid request body"),
+    MISSING_SUBJECT_ID(4001, "Missing subject id"),
+    INVALID_CREDENTIAL(4220, "Invalid credential format"),
+    INVALID_AAGUID(4221, "Invalid AAGUID format"),
+    INVALID_ATTESTATION_SIGNATURE(4222, "Invalid attestation signature"),
+    INTERNAL_SERVER_ERROR(5000, "Internal server error"),
     // Passkeys
     PASSKEY_ASSERTION_INVALID_PKC(1100, "Invalid passkey PKC object"),
     PASSKEY_ASSERTION_FAILED(1101, "Passkey assertion failed"),

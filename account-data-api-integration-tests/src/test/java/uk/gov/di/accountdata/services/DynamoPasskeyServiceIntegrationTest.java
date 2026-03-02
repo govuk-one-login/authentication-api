@@ -4,8 +4,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.DynamoPasskeyServiceFailureReason;
 import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticatorExtension;
 
@@ -50,7 +52,7 @@ class DynamoPasskeyServiceIntegrationTest {
             var passkeySavedResult = dynamoPasskeyService.savePasskeyIfUnique(passkeyToSave);
 
             // Then
-            assertThat(passkeySavedResult, equalTo(true));
+            assertThat(passkeySavedResult, equalTo(Result.success(null)));
 
             var savedPasskeys =
                     dynamoPasskeyService.getPasskeysForUser(CommonTestVariables.PUBLIC_SUBJECT_ID);
@@ -92,7 +94,8 @@ class DynamoPasskeyServiceIntegrationTest {
             var result = dynamoPasskeyService.savePasskeyIfUnique(duplicatePasskey);
 
             // Then
-            assertThat(result, equalTo(false));
+            assertThat(
+                    result.getFailure(), equalTo(DynamoPasskeyServiceFailureReason.PASSKEY_EXISTS));
         }
     }
 

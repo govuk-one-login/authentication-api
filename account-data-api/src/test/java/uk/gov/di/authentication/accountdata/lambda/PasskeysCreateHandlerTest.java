@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -75,6 +76,7 @@ class PasskeysCreateHandlerTest {
 
             // Then
             assertThat(result, hasStatus(201));
+            assertThat(result.getBody(), equalTo("Passkey created successfully"));
         }
     }
 
@@ -104,7 +106,7 @@ class PasskeysCreateHandlerTest {
 
             // Then
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
         }
 
         @Test
@@ -130,7 +132,7 @@ class PasskeysCreateHandlerTest {
 
             // Then
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            assertThat(result, hasJsonBody(ErrorResponse.MISSING_SUBJECT_ID));
         }
 
         @Test
@@ -161,7 +163,7 @@ class PasskeysCreateHandlerTest {
 
             // Then
             assertThat(result, hasStatus(500));
-            assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_ACCOUNT_DATA_API_ERROR));
+            assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
         }
 
         @Test
