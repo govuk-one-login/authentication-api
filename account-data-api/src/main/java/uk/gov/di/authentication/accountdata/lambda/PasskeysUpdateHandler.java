@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysUpdateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
+import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -25,20 +26,25 @@ public class PasskeysUpdateHandler
     private static final Logger LOG = LogManager.getLogger(PasskeysUpdateHandler.class);
     private final ConfigurationService configurationService;
     protected final SerializationService objectMapper;
+    private final PasskeysService passkeysService;
 
     public PasskeysUpdateHandler() {
         this(ConfigurationService.getInstance());
     }
 
     public PasskeysUpdateHandler(
-            ConfigurationService configurationService, SerializationService serializationService) {
+            ConfigurationService configurationService,
+            SerializationService serializationService,
+            PasskeysService passkeysService) {
         this.configurationService = configurationService;
         this.objectMapper = serializationService;
+        this.passkeysService = passkeysService;
     }
 
     public PasskeysUpdateHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.objectMapper = SerializationService.getInstance();
+        this.passkeysService = new PasskeysService(configurationService);
     }
 
     @Override
@@ -55,6 +61,10 @@ public class PasskeysUpdateHandler
 
         LOG.info("PasskeysUpdateHandler called");
 
+        // TODO add validation
+        String publicSubjectId = getPublicSubjectId(input);
+        String passkeyId = getPasskeyId(input);
+
         Result<PasskeysUpdateFailureReason, PasskeysUpdateRequest> result =
                 validateUpdateRequest(input);
 
@@ -62,7 +72,22 @@ public class PasskeysUpdateHandler
                 failure ->
                         generateApiGatewayProxyErrorResponse(
                                 500, ErrorResponse.INTERNAL_SERVER_ERROR),
-                passkeyUpdateResult -> generateApiGatewayProxyResponse(204, ""));
+                passkeyUpdateResult -> {
+                    passkeysService.updatePasskey(
+                            publicSubjectId,
+                            passkeyId,
+                            passkeyUpdateResult.lastUsedAt(),
+                            passkeyUpdateResult.signCount());
+                    return generateApiGatewayProxyResponse(204, "");
+                });
+    }
+
+    private String getPublicSubjectId(APIGatewayProxyRequestEvent input) {
+        return input.getPathParameters().get("publicSubjectId");
+    }
+
+    private String getPasskeyId(APIGatewayProxyRequestEvent input) {
+        return input.getPathParameters().get("passkeyId");
     }
 
     public Result<PasskeysUpdateFailureReason, PasskeysUpdateRequest> validateUpdateRequest(

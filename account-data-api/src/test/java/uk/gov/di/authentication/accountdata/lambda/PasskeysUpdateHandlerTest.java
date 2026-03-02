@@ -5,17 +5,26 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
+import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.time.Instant;
+import java.util.Map;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -25,19 +34,34 @@ class PasskeysUpdateHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final PasskeysService passkeysService = mock(PasskeysService.class);
 
     private PasskeysUpdateHandler handler;
+    private static final int signCount = 2;
+    private static final Instant lastUsedAt = Instant.now(); // TODO use correct type
+    private static final String PASSKEY_ID = "some-passkey-id";
 
     @BeforeEach
     void setUp() {
-        handler = new PasskeysUpdateHandler(configurationService);
+        handler =
+                new PasskeysUpdateHandler(
+                        configurationService, SerializationService.getInstance(), passkeysService);
     }
 
     @Nested
     class Success {
         @Test
         void shouldReturn204ForValidRequest() {
-            var result = handler.handleRequest(passkeysUpdateRequest(), context);
+            // Given
+            var request =
+                    passkeysUpdateRequest(
+                            signCount, lastUsedAt.toString(), PUBLIC_SUBJECT_ID, PASSKEY_ID);
+            when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
+                    .thenReturn(Result.success(new Passkey()));
+            var result = handler.handleRequest(request, context);
+
+            verify(passkeysService)
+                    .updatePasskey(PUBLIC_SUBJECT_ID, PASSKEY_ID, lastUsedAt.toString(), signCount);
             assertThat(result, hasStatus(204));
         }
     }
@@ -47,21 +71,30 @@ class PasskeysUpdateHandlerTest {
         @Test
         void shouldReturn500WhenReadValueFails() throws Json.JsonException {
             var objectMapperMock = mock(SerializationService.class);
-            handler = new PasskeysUpdateHandler(configurationService, objectMapperMock);
+            handler =
+                    new PasskeysUpdateHandler(
+                            configurationService, objectMapperMock, passkeysService);
             when(objectMapperMock.readValue(any(), any(), anyBoolean()))
                     .thenThrow(new Json.JsonException("json-exception"));
 
-            var result = handler.handleRequest(passkeysUpdateRequest(), context);
+            var request =
+                    passkeysUpdateRequest(
+                            signCount, lastUsedAt.toString(), PUBLIC_SUBJECT_ID, PASSKEY_ID);
+            var result = handler.handleRequest(request, context);
 
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
         }
     }
 
-    private APIGatewayProxyRequestEvent passkeysUpdateRequest() {
+    private APIGatewayProxyRequestEvent passkeysUpdateRequest(
+            int signCount, String lastUsed, String publicSubjectId, String passkeyId) {
         return new APIGatewayProxyRequestEvent()
+                .withPathParameters(
+                        Map.of("publicSubjectId", publicSubjectId, "passkeyId", passkeyId))
                 .withHeaders(VALID_HEADERS)
-                .withBody("{}")
+                .withBody(
+                        "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(signCount, lastUsed))
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 }
