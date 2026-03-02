@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem.AccountState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetMfaState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.Intervention;
 import uk.gov.di.authentication.shared.entity.State;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -40,6 +39,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -474,7 +474,10 @@ class AccountInterventionsHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(
-                result, hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.SESSION_ID_MISSING)));
+                result,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                InternalApiErrorResponse.SESSION_ID_MISSING)));
     }
 
     @Test
@@ -488,7 +491,9 @@ class AccountInterventionsHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.REQUEST_MISSING_PARAMS)));
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                InternalApiErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -501,7 +506,9 @@ class AccountInterventionsHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
     }
 
     @ParameterizedTest

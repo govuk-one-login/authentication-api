@@ -13,8 +13,6 @@ import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
-import uk.gov.di.authentication.shared.testinterface.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -39,6 +37,8 @@ import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.testinterface.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -197,7 +197,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         if (!userContext.getAuthSession().validateSession(request.getEmail())) {
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.SESSION_ID_MISSING);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.SESSION_ID_MISSING);
         }
 
         if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
@@ -521,7 +522,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType) {
         return switch (notificationType) {
             case VERIFY_EMAIL -> InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_SENT;
-            case VERIFY_PHONE_NUMBER -> InternalApiErrorResponse.TOO_MANY_PHONE_VERIFICATION_CODES_SENT;
+            case VERIFY_PHONE_NUMBER -> InternalApiErrorResponse
+                    .TOO_MANY_PHONE_VERIFICATION_CODES_SENT;
             case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
                     .TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT;
             default -> {
@@ -534,7 +536,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private ErrorResponse getErrorResponseForMaxCodeRequests(NotificationType notificationType) {
         return switch (notificationType) {
             case VERIFY_EMAIL -> InternalApiErrorResponse.BLOCKED_FOR_EMAIL_VERIFICATION_CODES;
-            case VERIFY_PHONE_NUMBER -> InternalApiErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES;
+            case VERIFY_PHONE_NUMBER -> InternalApiErrorResponse
+                    .BLOCKED_FOR_PHONE_VERIFICATION_CODES;
             case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
                     .BLOCKED_FOR_EMAIL_CODES_FOR_MFA_RESET;
             default -> {

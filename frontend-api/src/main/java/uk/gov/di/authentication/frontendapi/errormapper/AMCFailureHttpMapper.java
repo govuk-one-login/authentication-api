@@ -5,7 +5,6 @@ import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
 import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
-import uk.gov.di.authentication.shared.testinterface.ErrorResponse;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 
@@ -19,7 +18,8 @@ public class AMCFailureHttpMapper {
                     400, InternalApiErrorResponse.AMC_JWT_ENCODING_ERROR);
             case TRANSCODING_ERROR -> new ErrorResponseWithStatus(
                     400, InternalApiErrorResponse.AMC_TRANSCODING_ERROR);
-            case SIGNING_ERROR -> new ErrorResponseWithStatus(500, InternalApiErrorResponse.AMC_SIGNING_ERROR);
+            case SIGNING_ERROR -> new ErrorResponseWithStatus(
+                    500, InternalApiErrorResponse.AMC_SIGNING_ERROR);
             case ENCRYPTION_ERROR -> new ErrorResponseWithStatus(
                     500, InternalApiErrorResponse.AMC_ENCRYPTION_ERROR);
             case UNKNOWN_JWT_SIGNING_ERROR -> new ErrorResponseWithStatus(

@@ -17,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -30,6 +29,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
@@ -116,7 +116,8 @@ public class StartHandler
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
         if (sessionIdOpt.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.SESSION_ID_MISSING);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.SESSION_ID_MISSING);
         }
 
         var sessionId = sessionIdOpt.get();
@@ -141,7 +142,8 @@ public class StartHandler
         try {
             startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
         boolean isUserAuthenticatedWithValidProfile;

@@ -9,11 +9,11 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 
 import java.util.Optional;
 
@@ -101,7 +101,8 @@ class FinishPasskeyAssertionHandlerTest {
 
             // Then
             assertThat(response, hasStatus(500));
-            assertThat(response, hasJsonBody(InternalApiErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+            assertThat(
+                    response, hasJsonBody(InternalApiErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
         }
 
         @Test
@@ -116,7 +117,8 @@ class FinishPasskeyAssertionHandlerTest {
 
             // Then
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(InternalApiErrorResponse.PASSKEY_ASSERTION_INVALID_PKC));
+            assertThat(
+                    response, hasJsonBody(InternalApiErrorResponse.PASSKEY_ASSERTION_INVALID_PKC));
         }
 
         @Test

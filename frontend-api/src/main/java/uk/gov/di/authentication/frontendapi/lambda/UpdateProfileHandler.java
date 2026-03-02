@@ -134,7 +134,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             LOG.error(
                     "Encountered unexpected error while processing session: {}",
                     userContext.getAuthSession().getSessionId());
-            return generateErrorResponse(InternalApiErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
+            return generateErrorResponse(
+                    InternalApiErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
         }
 
         auditService.submitAuditEvent(auditableEvent, auditContext);

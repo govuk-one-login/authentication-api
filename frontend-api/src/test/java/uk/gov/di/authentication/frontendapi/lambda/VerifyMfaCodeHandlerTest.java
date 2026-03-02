@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -639,7 +638,10 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
+                    .thenReturn(
+                            Optional.of(
+                                    InternalApiErrorResponse
+                                            .TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
             when(mfaMethodsService.getMfaMethods(any()))
                     .thenReturn(
                             Result.success(
@@ -657,7 +659,9 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
+            assertThat(
+                    result,
+                    hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             if (journeyType.equals(REAUTHENTICATION)) {
                 verify(codeStorageService, never())
@@ -695,7 +699,10 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
+                    .thenReturn(
+                            Optional.of(
+                                    InternalApiErrorResponse
+                                            .TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
             when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                     .thenReturn(true);
             when(mfaMethodsService.getMfaMethods(any()))
@@ -723,7 +730,9 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
+            assertThat(
+                    result,
+                    hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verify(codeStorageService, never())
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -750,7 +759,8 @@ class VerifyMfaCodeHandlerTest {
                             ? null
                             : AUTH_APP_SECRET;
             when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+                    .thenReturn(
+                            Optional.of(InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
             when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
@@ -1211,7 +1221,8 @@ class VerifyMfaCodeHandlerTest {
                                     expectedFailureReason));
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            assertThat(
+                    result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
         }
     }
 

@@ -44,8 +44,8 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
-import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.testinterface.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -197,7 +197,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
             auditService.submitAuditEvent(AUTH_NO_ACCOUNT_WITH_EMAIL, auditContext);
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.ACCT_DOES_NOT_EXIST);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.ACCT_DOES_NOT_EXIST);
         }
 
         UserProfile userProfile = userProfileMaybe.get();
@@ -411,7 +412,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             mfaMethodResponses,
                             isPasswordChangeRequired));
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -485,7 +487,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     500, InternalApiErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
-        return generateApiGatewayProxyErrorResponse(401, InternalApiErrorResponse.INVALID_LOGIN_CREDS);
+        return generateApiGatewayProxyErrorResponse(
+                401, InternalApiErrorResponse.INVALID_LOGIN_CREDS);
     }
 
     private Optional<ErrorResponse> checkMfaCodeBlocks(
@@ -504,7 +507,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return Optional.of(InternalApiErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         } else if (canSendSmsOtpDecision instanceof Decision.IndefinitelyLockedOut) {
             LOG.info("User is indefinitely blocked from requesting OTP codes");
-            return Optional.of(InternalApiErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
+            return Optional.of(
+                    InternalApiErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
         } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
             return Optional.of(InternalApiErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }

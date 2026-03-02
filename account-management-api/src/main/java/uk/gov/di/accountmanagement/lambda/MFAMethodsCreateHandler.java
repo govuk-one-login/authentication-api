@@ -143,7 +143,8 @@ public class MFAMethodsCreateHandler
         if (subject == null) {
             LOG.error("Subject missing from request prevents request being handled.");
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, AccountManagementErrorResponse.REQUEST_MISSING_PARAMS));
+                    generateApiGatewayProxyErrorResponse(
+                            400, AccountManagementErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
         Optional<UserProfile> maybeUserProfile =

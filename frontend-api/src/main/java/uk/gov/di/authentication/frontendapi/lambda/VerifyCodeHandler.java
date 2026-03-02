@@ -255,7 +255,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         authSession.getEmailAddress(),
                         configurationService);
 
-        if (errorResponse.stream().anyMatch(InternalApiErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
+        if (errorResponse.stream()
+                .anyMatch(InternalApiErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
             return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
         }
 
@@ -448,7 +449,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return Map.ofEntries(
                         entry(
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                                InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED),
+                                InternalApiErrorResponse
+                                        .TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED),
                         entry(VERIFY_EMAIL, InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED),
                         entry(
                                 RESET_PASSWORD_WITH_CODE,

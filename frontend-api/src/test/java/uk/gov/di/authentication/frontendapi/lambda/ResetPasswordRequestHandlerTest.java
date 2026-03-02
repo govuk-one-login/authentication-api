@@ -16,7 +16,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -482,7 +481,9 @@ class ResetPasswordRequestHandlerTest {
             var result = handler.handleRequest(validEvent, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
+            assertThat(
+                    result,
+                    hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
             verifyNoInteractions(awsSqsClient);
         }
 

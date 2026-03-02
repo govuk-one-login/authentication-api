@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.frontendapi.errormapper;
 
-import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.testinterface.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 public class TrackingErrorMapper {

@@ -481,7 +481,9 @@ class CheckReAuthUserHandlerTest {
                         signedInState.name(),
                         userSubmittedEmail.name(),
                         expectedStatusCode,
-                        expectedErrorResponse != null ? expectedInternalApiErrorResponse.name() : "SUCCESS");
+                        expectedErrorResponse != null
+                                ? expectedInternalApiErrorResponse.name()
+                                : "SUCCESS");
             }
 
             void setupMocks(
@@ -599,7 +601,8 @@ class CheckReAuthUserHandlerTest {
 
                     if (shouldExpectLockout) {
                         expectedStatusCode = 400;
-                        expectedErrorResponse = InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS;
+                        expectedErrorResponse =
+                                InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS;
                         auditVerifier =
                                 auditSvc -> {
                                     verify(auditSvc, never())

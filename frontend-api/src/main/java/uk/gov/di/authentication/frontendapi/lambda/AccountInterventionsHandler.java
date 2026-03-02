@@ -14,7 +14,6 @@ import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.State;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -201,7 +200,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         } catch (UnsuccessfulAccountInterventionsResponseException e) {
             return handleErrorForAIS(e);
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 

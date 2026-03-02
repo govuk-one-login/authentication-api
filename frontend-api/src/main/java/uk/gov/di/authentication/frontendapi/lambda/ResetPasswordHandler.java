@@ -170,7 +170,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
         if (Objects.nonNull(userCredentials.getPassword())) {
             if (verifyPassword(userCredentials.getPassword(), request.password())) {
-                return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.NEW_PW_MATCHES_OLD);
+                return generateApiGatewayProxyErrorResponse(
+                        400, InternalApiErrorResponse.NEW_PW_MATCHES_OLD);
             }
         } else {
             LOG.info("Resetting password for migrated user");

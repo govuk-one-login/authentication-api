@@ -13,7 +13,6 @@ import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -172,7 +171,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                     200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
         } catch (JsonException ex) {
             LOG.warn("Exception generating authcode. Returning 1001: ", ex);
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -47,6 +46,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
@@ -219,7 +219,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     input, codeRequest, userContext, subjectID, maybeRpPairwiseId, userProfile);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown", e);
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -567,11 +568,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         entry(
                                 InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED,
                                 AUTH_CODE_MAX_RETRIES_REACHED),
-                        entry(InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED, AUTH_INVALID_CODE_SENT),
+                        entry(
+                                InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED,
+                                AUTH_INVALID_CODE_SENT),
                         entry(
                                 InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED,
                                 AUTH_CODE_MAX_RETRIES_REACHED),
-                        entry(InternalApiErrorResponse.INVALID_PHONE_CODE_ENTERED, AUTH_INVALID_CODE_SENT));
+                        entry(
+                                InternalApiErrorResponse.INVALID_PHONE_CODE_ENTERED,
+                                AUTH_INVALID_CODE_SENT));
 
         return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
     }

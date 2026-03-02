@@ -235,7 +235,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
 
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 

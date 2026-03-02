@@ -1377,7 +1377,9 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(InternalApiErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
+        assertThat(
+                result,
+                hasJsonBody(InternalApiErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
 
         var permissionContextCaptor = ArgumentCaptor.forClass(PermissionContext.class);
         verify(permissionDecisionManager)

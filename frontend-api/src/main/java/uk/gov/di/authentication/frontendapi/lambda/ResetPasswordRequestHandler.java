@@ -155,7 +155,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         try {
             if (Objects.isNull(userContext.getAuthSession().getEmailAddress())
                     || !userContext.getAuthSession().validateSession(request.getEmail())) {
-                return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.SESSION_ID_MISSING);
+                return generateApiGatewayProxyErrorResponse(
+                        400, InternalApiErrorResponse.SESSION_ID_MISSING);
             }
 
             var permissionContext =
@@ -270,7 +271,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         500, InternalApiErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> {
                     LOG.error("Could not find user profile for reset password request");
-                    yield generateApiGatewayProxyErrorResponse(404, InternalApiErrorResponse.USER_NOT_FOUND);
+                    yield generateApiGatewayProxyErrorResponse(
+                            404, InternalApiErrorResponse.USER_NOT_FOUND);
                 }
                 case UNKNOWN_MFA_IDENTIFIER -> {
                     yield generateApiGatewayProxyErrorResponse(
@@ -309,7 +311,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                     ? getLastDigitsOfPhoneNumber(defaultMfaPhoneNumber)
                                     : null));
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(
+                    400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 

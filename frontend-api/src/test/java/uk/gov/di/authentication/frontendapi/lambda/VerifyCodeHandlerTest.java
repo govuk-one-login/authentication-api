@@ -475,7 +475,9 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
+        assertThat(
+                result,
+                hasJsonBody(InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(authenticationAttemptsService);
@@ -489,7 +491,9 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, RESET_PASSWORD_WITH_CODE.name());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
+        assertThat(
+                result,
+                hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(authenticationAttemptsService);
@@ -546,7 +550,9 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
+        assertThat(
+                result,
+                hasJsonBody(InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
         verify(codeStorageService)
                 .saveBlockedForEmail(EMAIL, codeBlockedKeyPrefix, LOCKOUT_DURATION);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -803,7 +809,9 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         if (journeyType != REAUTHENTICATION) {
-            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
+            assertThat(
+                    result,
+                    hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         } else {
             assertThat(result, hasJsonBody(InternalApiErrorResponse.INVALID_MFA_CODE_ENTERED));
         }
@@ -847,7 +855,9 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(INVALID_CODE, RESET_PASSWORD_WITH_CODE.toString());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
+        assertThat(
+                result,
+                hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         EMAIL,
@@ -1100,7 +1110,8 @@ class VerifyCodeHandlerTest {
                                     expectedFailureReason));
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            assertThat(
+                    result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
         }
     }
 
