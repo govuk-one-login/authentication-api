@@ -65,21 +65,30 @@ public class PasskeysUpdateHandler
         String publicSubjectId = getPublicSubjectId(input);
         String passkeyId = getPasskeyId(input);
 
-        Result<PasskeysUpdateFailureReason, PasskeysUpdateRequest> result =
-                validateUpdateRequest(input);
+        return validateUpdateRequest(input)
+                .flatMap(
+                        request ->
+                                passkeysService.updatePasskey(
+                                        publicSubjectId,
+                                        passkeyId,
+                                        request.lastUsedAt(),
+                                        request.signCount()))
+                .fold(
+                        this::mapFailureReasonToErrorResponse,
+                        result -> generateApiGatewayProxyResponse(204, ""));
+    }
 
-        return result.fold(
-                failure ->
-                        generateApiGatewayProxyErrorResponse(
-                                500, ErrorResponse.INTERNAL_SERVER_ERROR),
-                passkeyUpdateResult -> {
-                    passkeysService.updatePasskey(
-                            publicSubjectId,
-                            passkeyId,
-                            passkeyUpdateResult.lastUsedAt(),
-                            passkeyUpdateResult.signCount());
-                    return generateApiGatewayProxyResponse(204, "");
-                });
+    private APIGatewayProxyResponseEvent mapFailureReasonToErrorResponse(
+            PasskeysUpdateFailureReason failureReason) {
+        LOG.warn("Failed to update passkey for reason: {} ", failureReason.getValue());
+        return switch (failureReason) {
+            case PARSING_PASSKEY_UPDATE_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.INVALID_REQUEST_BODY);
+            case PASSKEY_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
+                    404, ErrorResponse.PASSKEY_NOT_FOUND);
+            case FAILED_TO_UPDATE_PASSKEY -> generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.INTERNAL_SERVER_ERROR);
+        };
     }
 
     private String getPublicSubjectId(APIGatewayProxyRequestEvent input) {

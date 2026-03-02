@@ -5,20 +5,22 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -69,21 +71,62 @@ class PasskeysUpdateHandlerTest {
     @Nested
     class Error {
         @Test
-        void shouldReturn500WhenReadValueFails() throws Json.JsonException {
-            var objectMapperMock = mock(SerializationService.class);
-            handler =
-                    new PasskeysUpdateHandler(
-                            configurationService, objectMapperMock, passkeysService);
-            when(objectMapperMock.readValue(any(), any(), anyBoolean()))
-                    .thenThrow(new Json.JsonException("json-exception"));
-
+        void shouldReturn404WhenPasskeyDoesNotExist() {
             var request =
                     passkeysUpdateRequest(
                             signCount, lastUsedAt.toString(), PUBLIC_SUBJECT_ID, PASSKEY_ID);
+            when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
+                    .thenReturn(Result.failure(PasskeysUpdateFailureReason.PASSKEY_NOT_FOUND));
+            var result = handler.handleRequest(request, context);
+
+            assertThat(result, hasStatus(404));
+            assertThat(result, hasJsonBody(ErrorResponse.PASSKEY_NOT_FOUND));
+        }
+
+        @Test
+        void shouldReturn500WhenDatabaseOperationFails() {
+            var request =
+                    passkeysUpdateRequest(
+                            signCount, lastUsedAt.toString(), PUBLIC_SUBJECT_ID, PASSKEY_ID);
+            when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
+                    .thenReturn(
+                            Result.failure(PasskeysUpdateFailureReason.FAILED_TO_UPDATE_PASSKEY));
             var result = handler.handleRequest(request, context);
 
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
+        }
+
+        private static Stream<String> invalidRequestBodies() {
+            return Stream.of(
+                    "invalidBody",
+                    //                    sign_count instead of signCount
+                    "{\"sign_count\":5,\"lastUsedAt\":\"some timestamp\"}",
+                    //                    missing signCount
+                    "{\"lastUsedAt\":\"some timestamp\"}",
+                    //                    missing lastUsedAt
+                    "{\"signCount\":5}",
+                    "{\"signCount\":\"not an int\",\"lastUsedAt\":\"some timestamp\"}");
+        }
+
+        @ParameterizedTest
+        @MethodSource("invalidRequestBodies")
+        void shouldReturn400WhenRequestBodyIsInvalid(String invalidRequestBody) {
+            var request =
+                    new APIGatewayProxyRequestEvent()
+                            .withPathParameters(
+                                    Map.of(
+                                            "publicSubjectId",
+                                            PUBLIC_SUBJECT_ID,
+                                            "passkeyId",
+                                            PASSKEY_ID))
+                            .withHeaders(VALID_HEADERS)
+                            .withBody(invalidRequestBody)
+                            .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+            var result = handler.handleRequest(request, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
         }
     }
 
