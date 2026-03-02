@@ -943,6 +943,58 @@ Resources:
                       !Ref Environment,
                     ]
 
+  # Policy for international_sms_send_count table scan and delete access
+  InternationalSendCountDeleteDynamoAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing permissions for the international send count delete lambda"
+      Path: !Sub
+        - /${Env}/utils/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowScanAndDeleteInternationalSendCount
+            Effect: Allow
+            Action:
+              - dynamodb:Scan
+              - dynamodb:BatchWriteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-international-sms-send-count
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToKms
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+              - kms:DescribeKey
+              - kms:CreateGrant
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    internationalSmsSendCountTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    internationalSmsSendCountTableEncryptionKey,
+                  ]
+
   # Policy for email_check_results table write access (PutItem)
   EmailCheckResultsWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
