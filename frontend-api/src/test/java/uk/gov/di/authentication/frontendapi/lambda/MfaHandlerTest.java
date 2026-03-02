@@ -61,11 +61,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.TOO_MANY_MFA_OTPS_SENT;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.TOO_MANY_MFA_OTPS_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
@@ -590,7 +590,7 @@ class MfaHandlerTest {
 
         verify(sqsClient, never()).send(any());
         verify(codeStorageService, never()).saveOtpCode(any(), any(), anyLong(), any());
-        assertThat(result, hasJsonBody(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE));
     }
 
     @Test

@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
+import uk.gov.di.authentication.shared.testinterface.AccountManagementErrorResponse;
 
 import java.util.Map;
 import java.util.Optional;
@@ -142,7 +143,7 @@ public class MFAMethodsCreateHandler
         if (subject == null) {
             LOG.error("Subject missing from request prevents request being handled.");
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS));
+                    generateApiGatewayProxyErrorResponse(400, AccountManagementErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
         Optional<UserProfile> maybeUserProfile =

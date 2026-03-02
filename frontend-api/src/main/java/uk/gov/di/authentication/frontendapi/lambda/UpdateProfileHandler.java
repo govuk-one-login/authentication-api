@@ -103,7 +103,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");
             return generateErrorResponse(
-                    ErrorResponse.SESSION_ID_MISSING,
+                    InternalApiErrorResponse.SESSION_ID_MISSING,
                     auditContextWithOnlyClientSessionId(
                             userContext.getClientSessionId(), userContext.getTxmaAuditEncoded()));
         }
@@ -134,7 +134,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             LOG.error(
                     "Encountered unexpected error while processing session: {}",
                     userContext.getAuthSession().getSessionId());
-            return generateErrorResponse(ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
+            return generateErrorResponse(InternalApiErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
         }
 
         auditService.submitAuditEvent(auditableEvent, auditContext);

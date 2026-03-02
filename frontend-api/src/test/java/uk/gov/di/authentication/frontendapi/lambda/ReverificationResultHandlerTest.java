@@ -51,9 +51,9 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.IPV_STATE_MISMATCH;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.REVERIFICATION_RESULT_GET_ERROR;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNSUCCESSFUL_IPV_TOKEN_RESPONSE;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.IPV_STATE_MISMATCH;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.REVERIFICATION_RESULT_GET_ERROR;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.UNSUCCESSFUL_IPV_TOKEN_RESPONSE;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
@@ -578,7 +578,7 @@ class ReverificationResultHandlerTest {
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
         tokenHTTPResponse.setContent(tokenResponseContent);
 
-        return TokenErrorResponse.parse(tokenHTTPResponse);
+        return TokenInternalApiErrorResponse.parse(tokenHTTPResponse);
     }
 
     private APIGatewayProxyRequestEvent apiRequestEventWithEmail(

@@ -15,7 +15,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -181,7 +181,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED)));
+                equalTo(Optional.of(InternalApiErrorResponse.INVALID_PHONE_CODE_ENTERED)));
     }
 
     @Test
@@ -196,7 +196,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED)));
+                equalTo(Optional.of(InternalApiErrorResponse.INVALID_MFA_CODE_ENTERED)));
     }
 
     @ParameterizedTest
@@ -231,7 +231,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
+                equalTo(Optional.of(InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
     }
 
     @Test
@@ -245,7 +245,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED)));
+                equalTo(Optional.of(InternalApiErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED)));
     }
 
     @Test
@@ -259,7 +259,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED)));
+                equalTo(Optional.of(InternalApiErrorResponse.INVALID_MFA_CODE_ENTERED)));
     }
 
     @ParameterizedTest
@@ -276,7 +276,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
+                equalTo(Optional.of(InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
     }
 
     // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -308,7 +308,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
+                equalTo(Optional.of(InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
     }
 
     @Test
@@ -585,7 +585,7 @@ class PhoneNumberCodeProcessorTest {
 
             var response = phoneNumberCodeProcessor.validateCode();
             assertTrue(response.isPresent());
-            assertEquals(ErrorResponse.INVALID_PHONE_CODE_ENTERED, response.get());
+            assertEquals(InternalApiErrorResponse.INVALID_PHONE_CODE_ENTERED, response.get());
             verify(codeStorageService, never()).getOtpCode(anyString(), any());
         }
     }

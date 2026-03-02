@@ -15,7 +15,7 @@ import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapp
 import uk.gov.di.authentication.frontendapi.errormapper.TrackingErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -48,7 +48,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.USER_NOT_FOUND;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -222,10 +222,10 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
             LOG.warn("Account is unable to reauth due to too many failed attempts");
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         } else if (!(canReceiveEmailAddressDecision instanceof Decision.Permitted)) {
             return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
+                    500, InternalApiErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         if (!isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId) {
@@ -336,10 +336,10 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
             LOG.warn("Account is unable to reauth due to too many failed attempts");
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         } else if (!(canReceiveEmailAddressDecision instanceof Decision.Permitted)) {
             return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
+                    500, InternalApiErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         return generateApiGatewayProxyErrorResponse(404, USER_NOT_FOUND);

@@ -114,7 +114,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                         AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ACCT_WITH_EMAIL_EXISTS);
+                        400, InternalApiErrorResponse.ACCT_WITH_EMAIL_EXISTS);
             }
             var user =
                     authenticationService.signUp(

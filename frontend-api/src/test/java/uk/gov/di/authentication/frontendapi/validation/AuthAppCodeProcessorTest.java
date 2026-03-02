@@ -12,7 +12,7 @@ import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -241,7 +241,7 @@ class AuthAppCodeProcessorTest {
                 codeRequestType);
 
         assertEquals(
-                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
+                Optional.of(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
                 authAppCodeProcessor.validateCode());
     }
 
@@ -270,7 +270,7 @@ class AuthAppCodeProcessorTest {
                         mockMfaMethodsService);
 
         assertEquals(
-                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
+                Optional.of(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
                 authAppCodeProcessor.validateCode());
     }
 
@@ -282,7 +282,7 @@ class AuthAppCodeProcessorTest {
                         MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret));
 
         assertEquals(
-                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
+                Optional.of(InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
                 authAppCodeProcessor.validateCode());
     }
 
@@ -293,7 +293,7 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "000000", journeyType));
 
         assertEquals(
-                Optional.of(ErrorResponse.AUTH_APP_METHOD_NOT_FOUND),
+                Optional.of(InternalApiErrorResponse.AUTH_APP_METHOD_NOT_FOUND),
                 authAppCodeProcessor.validateCode());
     }
 
@@ -308,7 +308,7 @@ class AuthAppCodeProcessorTest {
 
         assertThat(
                 authAppCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.INVALID_AUTH_APP_SECRET)));
+                equalTo(Optional.of(InternalApiErrorResponse.INVALID_AUTH_APP_SECRET)));
     }
 
     @ParameterizedTest
@@ -319,7 +319,7 @@ class AuthAppCodeProcessorTest {
                         MFAMethodType.AUTH_APP, "111111", journeyType, authAppSecret));
 
         assertEquals(
-                Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
+                Optional.of(InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
                 authAppCodeProcessor.validateCode());
     }
 
@@ -330,7 +330,7 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "", journeyType, authAppSecret));
 
         assertEquals(
-                Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
+                Optional.of(InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
                 authAppCodeProcessor.validateCode());
     }
 
@@ -342,7 +342,7 @@ class AuthAppCodeProcessorTest {
                         MFAMethodType.AUTH_APP, "999999999999", journeyType, authAppSecret));
 
         assertEquals(
-                Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
+                Optional.of(InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
                 authAppCodeProcessor.validateCode());
     }
 

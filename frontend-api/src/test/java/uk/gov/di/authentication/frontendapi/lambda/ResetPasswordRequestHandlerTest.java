@@ -444,7 +444,7 @@ class ResetPasswordRequestHandlerTest {
             var result = handler.handleRequest(validEvent, context);
 
             assertEquals(404, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.USER_NOT_FOUND));
         }
 
         @Test
@@ -462,7 +462,7 @@ class ResetPasswordRequestHandlerTest {
             var result = handler.handleRequest(validEvent, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
             verifyNoInteractions(awsSqsClient);
         }
 
@@ -482,7 +482,7 @@ class ResetPasswordRequestHandlerTest {
             var result = handler.handleRequest(validEvent, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
             verifyNoInteractions(awsSqsClient);
         }
 
@@ -507,7 +507,7 @@ class ResetPasswordRequestHandlerTest {
             var result = handler.handleRequest(validEvent, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_PW_RESET_REQUESTS));
             verifyNoInteractions(awsSqsClient);
         }
 
@@ -545,7 +545,7 @@ class ResetPasswordRequestHandlerTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
             verifyNoInteractions(awsSqsClient);
         }
 
@@ -566,7 +566,7 @@ class ResetPasswordRequestHandlerTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_PW_RESET_REQUESTS));
             verifyNoInteractions(awsSqsClient);
         }
 
@@ -587,7 +587,7 @@ class ResetPasswordRequestHandlerTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
             verifyNoInteractions(awsSqsClient);
         }
 
@@ -632,7 +632,7 @@ class ResetPasswordRequestHandlerTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
             verifyNoInteractions(awsSqsClient);
         }
 
@@ -645,7 +645,7 @@ class ResetPasswordRequestHandlerTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
-            assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.SESSION_ID_MISSING));
             verifyNoInteractions(awsSqsClient);
         }
     }

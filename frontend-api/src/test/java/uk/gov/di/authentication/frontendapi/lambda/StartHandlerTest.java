@@ -22,7 +22,7 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -548,7 +548,7 @@ class StartHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.SESSION_ID_MISSING));
     }
 
     @Test
@@ -563,7 +563,7 @@ class StartHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.INVALID_CLIENT_SESSION_ID));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.INVALID_CLIENT_SESSION_ID));
     }
 
     @Test
@@ -572,7 +572,7 @@ class StartHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
     }
 
     @Test

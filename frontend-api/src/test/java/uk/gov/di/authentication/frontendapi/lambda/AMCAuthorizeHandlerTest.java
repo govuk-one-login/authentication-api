@@ -121,7 +121,7 @@ class AMCAuthorizeHandlerTest {
                         event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertTrue(result.getBody().contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
+        assertTrue(result.getBody().contains(InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
     }
 
     @ParameterizedTest

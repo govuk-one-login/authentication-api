@@ -23,7 +23,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem.AccountState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetMfaState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.Intervention;
 import uk.gov.di.authentication.shared.entity.State;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -474,7 +474,7 @@ class AccountInterventionsHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(
-                result, hasBody(objectMapper.writeValueAsString(ErrorResponse.SESSION_ID_MISSING)));
+                result, hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.SESSION_ID_MISSING)));
     }
 
     @Test
@@ -488,7 +488,7 @@ class AccountInterventionsHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -501,7 +501,7 @@ class AccountInterventionsHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
+                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
     }
 
     @ParameterizedTest
@@ -640,11 +640,11 @@ class AccountInterventionsHandlerTest {
 
     private static Stream<Arguments> httpErrorCodesAndAssociatedResponses() {
         return Stream.of(
-                Arguments.of(429, ErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED),
-                Arguments.of(500, ErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR),
-                Arguments.of(502, ErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY),
-                Arguments.of(504, ErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT),
-                Arguments.of(404, ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR));
+                Arguments.of(429, InternalApiErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED),
+                Arguments.of(500, InternalApiErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR),
+                Arguments.of(502, InternalApiErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY),
+                Arguments.of(504, InternalApiErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT),
+                Arguments.of(404, InternalApiErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR));
     }
 
     private APIGatewayProxyRequestEvent apiRequestEventWithEmail() {

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -111,7 +111,7 @@ class StartPasskeyAssertionHandlerTest {
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.EMAIL_ADDRESS_EMPTY));
         }
 
         @Test
@@ -121,7 +121,7 @@ class StartPasskeyAssertionHandlerTest {
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.EMAIL_ADDRESS_EMPTY));
         }
 
         @Test
@@ -133,7 +133,7 @@ class StartPasskeyAssertionHandlerTest {
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.USER_NOT_FOUND));
         }
     }
 
@@ -154,7 +154,7 @@ class StartPasskeyAssertionHandlerTest {
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
             assertThat(result, hasStatus(500));
-            assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
         }
 
         @Test
@@ -170,7 +170,7 @@ class StartPasskeyAssertionHandlerTest {
             var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
 
             assertThat(result, hasStatus(500));
-            assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
             verify(authSessionService, never()).updateSession(any());
         }
     }

@@ -7,7 +7,8 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -119,7 +120,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
         if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
             LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
+            return Optional.of(InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
         }
 
         // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -128,7 +129,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         notificationType.getMfaMethodType(), journeyType);
         if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
+            return Optional.of(InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
         }
 
         boolean isTestClient = testUserHelper.isTestJourney(userContext);

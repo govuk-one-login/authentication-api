@@ -12,7 +12,7 @@ import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -77,11 +77,11 @@ public class FinishPasskeyAssertionHandler
                 failure ->
                         switch (failure) {
                             case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+                                    500, InternalApiErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
                             case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
+                                    400, InternalApiErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
                             case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
+                                    401, InternalApiErrorResponse.PASSKEY_ASSERTION_FAILED);
                         },
                 assertionResult -> generateApiGatewayProxyResponse(200, ""));
 

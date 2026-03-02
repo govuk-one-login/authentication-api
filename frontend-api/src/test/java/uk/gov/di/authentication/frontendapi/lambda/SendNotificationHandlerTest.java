@@ -1060,7 +1060,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertThat(result, hasStatus(400));
-                assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.INVALID_PHONE_NUMBER));
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(auditService);
             }
@@ -1106,7 +1106,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(codeStorageService);
                 verifyNoInteractions(auditService);
@@ -1125,7 +1125,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
 
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(auditService);
@@ -1145,7 +1145,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.PHONE_NUMBER_MISSING));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.PHONE_NUMBER_MISSING));
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(auditService);
             }
@@ -1163,7 +1163,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertThat(result, hasStatus(400));
-                assertThat(result, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.INVALID_NOTIFICATION_TYPE));
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(auditService);
             }
@@ -1185,7 +1185,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_SENT));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_SENT));
                 verify(codeStorageService)
                         .saveBlockedForEmail(
                                 EMAIL,
@@ -1217,7 +1217,7 @@ class SendNotificationHandlerTest {
 
                 assertEquals(400, result.getStatusCode());
                 assertThat(
-                        result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT));
+                        result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT));
                 verify(codeStorageService)
                         .saveBlockedForEmail(
                                 EMAIL,
@@ -1254,7 +1254,7 @@ class SendNotificationHandlerTest {
 
                 assertEquals(400, result.getStatusCode());
                 assertThat(
-                        result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_VERIFICATION_CODES_SENT));
+                        result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_PHONE_VERIFICATION_CODES_SENT));
                 verify(codeStorageService)
                         .saveBlockedForEmail(
                                 EMAIL,
@@ -1288,7 +1288,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_EMAIL_VERIFICATION_CODES));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.BLOCKED_FOR_EMAIL_VERIFICATION_CODES));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(AUTH_EMAIL_INVALID_CODE_REQUEST, auditContext);
@@ -1315,7 +1315,7 @@ class SendNotificationHandlerTest {
 
                 assertEquals(400, result.getStatusCode());
                 assertThat(
-                        result, hasJsonBody(ErrorResponse.BLOCKED_FOR_EMAIL_CODES_FOR_MFA_RESET));
+                        result, hasJsonBody(InternalApiErrorResponse.BLOCKED_FOR_EMAIL_CODES_FOR_MFA_RESET));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(
@@ -1342,7 +1342,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES));
 
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
@@ -1376,7 +1376,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES));
             }
 
             @Test
@@ -1396,7 +1396,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(AUTH_EMAIL_INVALID_CODE_REQUEST, auditContext);
@@ -1423,7 +1423,7 @@ class SendNotificationHandlerTest {
                 assertEquals(400, result.getStatusCode());
                 assertThat(
                         result,
-                        hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
+                        hasJsonBody(InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(
@@ -1446,7 +1446,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(AUTH_PHONE_INVALID_CODE_REQUEST, auditContext);
@@ -1472,7 +1472,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
+                assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
             }
 
             @Test
@@ -1491,7 +1491,7 @@ class SendNotificationHandlerTest {
                 assertThat(result, hasStatus(400));
                 assertThat(
                         result,
-                        hasJsonBody(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
+                        hasJsonBody(InternalApiErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
                 verifyNoInteractions(emailSqsClient);
             }
         }

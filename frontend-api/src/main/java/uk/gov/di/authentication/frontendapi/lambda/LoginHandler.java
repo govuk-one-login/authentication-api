@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -45,6 +44,8 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.ErrorResponse;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -196,7 +197,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
             auditService.submitAuditEvent(AUTH_NO_ACCOUNT_WITH_EMAIL, auditContext);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
+            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.ACCT_DOES_NOT_EXIST);
         }
 
         UserProfile userProfile = userProfileMaybe.get();
@@ -247,7 +248,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             reauthFailureReason.getValue()));
 
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         }
 
         if (decision instanceof Decision.TemporarilyLockedOut) {
@@ -261,12 +262,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     pair(NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN, incorrectPasswordCount));
 
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
         }
 
         if (!(decision instanceof Decision.Permitted)) {
             return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
+                    500, InternalApiErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         if (!credentialsAreValid(request, userProfile)) {
@@ -360,11 +361,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (retrieveMfaMethods.isFailure()) {
             return switch (retrieveMfaMethods.getFailure()) {
                 case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
+                        500, InternalApiErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.ACCT_DOES_NOT_EXIST);
+                        500, InternalApiErrorResponse.ACCT_DOES_NOT_EXIST);
                 case UNKNOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.INVALID_MFA_METHOD);
+                        500, InternalApiErrorResponse.INVALID_MFA_METHOD);
             };
         }
 
@@ -373,7 +374,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (maybeMfaMethodResponses.isFailure()) {
             LOG.error(maybeMfaMethodResponses.getFailure());
             return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
+                    500, InternalApiErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
         }
 
         var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
@@ -410,7 +411,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             mfaMethodResponses,
                             isPasswordChangeRequired));
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -462,7 +463,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             reauthFailureReason.getValue()));
 
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         }
 
         if (decision instanceof Decision.TemporarilyLockedOut) {
@@ -476,15 +477,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             configurationService.getMaxPasswordRetries()));
 
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
         }
 
         if (!(decision instanceof Decision.Permitted)) {
             return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
+                    500, InternalApiErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
-        return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_LOGIN_CREDS);
+        return generateApiGatewayProxyErrorResponse(401, InternalApiErrorResponse.INVALID_LOGIN_CREDS);
     }
 
     private Optional<ErrorResponse> checkMfaCodeBlocks(
@@ -500,12 +501,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         Decision canSendSmsOtpDecision = canSendSmsOtpResult.getSuccess();
         if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut) {
             LOG.info("User is blocked from requesting any OTP codes");
-            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+            return Optional.of(InternalApiErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         } else if (canSendSmsOtpDecision instanceof Decision.IndefinitelyLockedOut) {
             LOG.info("User is indefinitely blocked from requesting OTP codes");
-            return Optional.of(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
+            return Optional.of(InternalApiErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
         } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
-            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
+            return Optional.of(InternalApiErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         var canVerifyMfaOtpResult =
@@ -519,9 +520,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         Decision canVerifyMfaOtpDecision = canVerifyMfaOtpResult.getSuccess();
         if (canVerifyMfaOtpDecision instanceof Decision.TemporarilyLockedOut) {
             LOG.info("User is blocked from entering any OTP codes");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+            return Optional.of(InternalApiErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
         } else if (!(canVerifyMfaOtpDecision instanceof Decision.Permitted)) {
-            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
+            return Optional.of(InternalApiErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         return Optional.empty();

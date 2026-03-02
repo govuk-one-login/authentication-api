@@ -211,7 +211,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(404, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.USER_NOT_FOUND));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -244,7 +244,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
     @Test
@@ -268,7 +268,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
     @Test
@@ -287,7 +287,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(500, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.STORAGE_LAYER_ERROR));
     }
 
     @Test
@@ -303,7 +303,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(404, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.USER_NOT_FOUND));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -330,7 +330,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(404, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.USER_NOT_FOUND));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -360,7 +360,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(404, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.USER_NOT_FOUND));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -404,7 +404,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(500, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.STORAGE_LAYER_ERROR));
     }
 
     @Test
@@ -430,7 +430,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
     @TestFactory
@@ -481,7 +481,7 @@ class CheckReAuthUserHandlerTest {
                         signedInState.name(),
                         userSubmittedEmail.name(),
                         expectedStatusCode,
-                        expectedErrorResponse != null ? expectedErrorResponse.name() : "SUCCESS");
+                        expectedErrorResponse != null ? expectedInternalApiErrorResponse.name() : "SUCCESS");
             }
 
             void setupMocks(
@@ -599,7 +599,7 @@ class CheckReAuthUserHandlerTest {
 
                     if (shouldExpectLockout) {
                         expectedStatusCode = 400;
-                        expectedErrorResponse = ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS;
+                        expectedErrorResponse = InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS;
                         auditVerifier =
                                 auditSvc -> {
                                     verify(auditSvc, never())
@@ -637,7 +637,7 @@ class CheckReAuthUserHandlerTest {
                                                                 "incorrect_email"));
                     } else if (differentEmailSubmitted) {
                         expectedStatusCode = 404;
-                        expectedErrorResponse = ErrorResponse.USER_NOT_FOUND;
+                        expectedErrorResponse = InternalApiErrorResponse.USER_NOT_FOUND;
                     } else {
                         expectedStatusCode = 200;
                         expectedErrorResponse = null;

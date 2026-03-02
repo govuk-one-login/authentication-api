@@ -22,7 +22,7 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CountType;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -233,7 +233,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
             verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
@@ -356,7 +356,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
             verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
@@ -438,7 +438,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
             verify(auditService, times(1))
                     .submitAuditEvent(
@@ -498,7 +498,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
             verify(auditService, times(1))
                     .submitAuditEvent(

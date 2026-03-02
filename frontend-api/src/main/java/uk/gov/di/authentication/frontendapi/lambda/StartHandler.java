@@ -17,7 +17,7 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -116,7 +116,7 @@ public class StartHandler
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
         if (sessionIdOpt.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
+            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.SESSION_ID_MISSING);
         }
 
         var sessionId = sessionIdOpt.get();
@@ -132,7 +132,7 @@ public class StartHandler
                         configurationService.getHeadersCaseInsensitive());
         if (clientSessionIdOpt.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.INVALID_CLIENT_SESSION_ID);
+                    400, InternalApiErrorResponse.INVALID_CLIENT_SESSION_ID);
         }
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionIdOpt.get());
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionIdOpt.get());
@@ -141,7 +141,7 @@ public class StartHandler
         try {
             startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
         boolean isUserAuthenticatedWithValidProfile;

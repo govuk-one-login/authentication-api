@@ -165,7 +165,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 configurationService.getMaxPasswordRetries()));
 
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+                        400, InternalApiErrorResponse.ACCT_TEMPORARILY_LOCKED);
             }
 
             AuditableEvent auditableEvent;
@@ -235,7 +235,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
 
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 

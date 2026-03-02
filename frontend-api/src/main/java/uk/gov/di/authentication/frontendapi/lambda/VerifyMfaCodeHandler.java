@@ -20,7 +20,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -70,7 +70,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
@@ -206,12 +206,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (userProfileMissingForReauthenticationJourney(userProfile, journeyType))
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+                    400, InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
                 journeyType, userProfile, auditContext, maybeRpPairwiseId))
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
 
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
@@ -219,7 +219,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     input, codeRequest, userContext, subjectID, maybeRpPairwiseId, userProfile);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown", e);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -319,7 +319,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (Objects.isNull(mfaCodeProcessor)) {
             LOG.info("No MFA code validator found for this MFA method type");
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.INVALID_NOTIFICATION_TYPE);
+                    400, InternalApiErrorResponse.INVALID_NOTIFICATION_TYPE);
         }
 
         if (JourneyType.PASSWORD_RESET_MFA.equals(codeRequest.getJourneyType())) {
@@ -360,14 +360,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var errorResponseMaybe = mfaCodeProcessor.validateCode();
         if (errorResponseMaybe.isPresent()) {
             var errorResponse = errorResponseMaybe.get();
-            if (errorResponse.equals(ErrorResponse.INVALID_AUTH_APP_SECRET)) {
+            if (errorResponse.equals(InternalApiErrorResponse.INVALID_AUTH_APP_SECRET)) {
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.INVALID_AUTH_APP_SECRET);
+                        400, InternalApiErrorResponse.INVALID_AUTH_APP_SECRET);
             }
 
-            if (errorResponse.equals(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)
+            if (errorResponse.equals(InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)
                     || errorResponse.equals(
-                            ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED)) {
+                            InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED)) {
                 blockCodeForSessionAndResetCountIfBlockDoesNotExist(
                         userContext.getAuthSession().getEmailAddress(),
                         codeRequest.getMfaMethodType(),
@@ -410,7 +410,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 auditContext,
                 maybeRpPairwiseId)) {
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         }
 
         return errorResponseMaybe
@@ -565,13 +565,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         Map<ErrorResponse, FrontendAuditableEvent> map =
                 Map.ofEntries(
                         entry(
-                                ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED,
+                                InternalApiErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED,
                                 AUTH_CODE_MAX_RETRIES_REACHED),
-                        entry(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED, AUTH_INVALID_CODE_SENT),
+                        entry(InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED, AUTH_INVALID_CODE_SENT),
                         entry(
-                                ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED,
+                                InternalApiErrorResponse.TOO_MANY_PHONE_CODES_ENTERED,
                                 AUTH_CODE_MAX_RETRIES_REACHED),
-                        entry(ErrorResponse.INVALID_PHONE_CODE_ENTERED, AUTH_INVALID_CODE_SENT));
+                        entry(InternalApiErrorResponse.INVALID_PHONE_CODE_ENTERED, AUTH_INVALID_CODE_SENT));
 
         return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
     }
@@ -606,7 +606,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private static boolean isInvalidReauthAuthAppAttempt(
             ErrorResponse errorResponse, VerifyMfaCodeRequest codeRequest) {
-        return errorResponse == ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED
+        return errorResponse == InternalApiErrorResponse.INVALID_AUTH_APP_CODE_ENTERED
                 && codeRequest.getJourneyType() == REAUTHENTICATION;
     }
 

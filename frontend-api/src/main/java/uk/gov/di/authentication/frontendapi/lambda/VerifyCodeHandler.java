@@ -61,7 +61,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
+import static uk.gov.di.authentication.shared.entity.InternalApiErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -187,13 +187,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         if (journeyType == JourneyType.REAUTHENTICATION
                 && (userProfile == null || subjectId == null)) {
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+                    400, InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
 
         if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
                 journeyType, subjectId, auditContext, maybeRpPairwiseId))
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                    400, InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
 
         if (isCodeBlockedForSession(authSession, codeBlockedKeyPrefix)) {
             ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
@@ -221,7 +221,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             } else if (failure
                     == UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP) {
                 return generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
+                        500, InternalApiErrorResponse.AUTH_APP_MFA_ID_ERROR);
             } else {
                 String message =
                         String.format(
@@ -229,7 +229,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                 failure);
                 LOG.error(message);
                 return generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
+                        500, InternalApiErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
             }
         } else {
             retrievedMfaMethods = retrieveMfaMethods.getSuccess();
@@ -255,7 +255,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         authSession.getEmailAddress(),
                         configurationService);
 
-        if (errorResponse.stream().anyMatch(ErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
+        if (errorResponse.stream().anyMatch(InternalApiErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
             return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
         }
 
@@ -275,7 +275,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             if (userHasExceededAllowedAttemptsForReauthenticationJourney(
                     journeyType, subjectId, auditContext, maybeRpPairwiseId)) {
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+                        400, InternalApiErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
             }
             return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
         }
@@ -298,26 +298,26 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             if (isCodeBlockedForSession(
                     authSession, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+                        400, InternalApiErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
             }
             if (deprecatedMfaCodeRequestType != null
                     && isCodeBlockedForSession(
                             authSession,
                             CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+                        400, InternalApiErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
             }
 
             if (isCodeBlockedForSession(
                     authSession, CODE_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+                        400, InternalApiErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
             }
             if (deprecatedMfaCodeRequestType != null
                     && isCodeBlockedForSession(
                             authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+                        400, InternalApiErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
             }
         }
 
@@ -448,12 +448,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return Map.ofEntries(
                         entry(
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                                ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED),
-                        entry(VERIFY_EMAIL, ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED),
+                                InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED),
+                        entry(VERIFY_EMAIL, InternalApiErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED),
                         entry(
                                 RESET_PASSWORD_WITH_CODE,
-                                ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED),
-                        entry(MFA_SMS, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED))
+                                InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED),
+                        entry(MFA_SMS, InternalApiErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED))
                 .get(codeRequest.notificationType());
     }
 

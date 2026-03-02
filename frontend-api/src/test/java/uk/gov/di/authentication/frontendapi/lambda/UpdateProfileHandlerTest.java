@@ -194,7 +194,7 @@ class UpdateProfileHandlerTest {
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
         verify(authenticationService, never())
                 .updatePhoneNumber(eq(EMAIL), eq(CommonTestVariables.UK_MOBILE_NUMBER));
         verify(auditService)

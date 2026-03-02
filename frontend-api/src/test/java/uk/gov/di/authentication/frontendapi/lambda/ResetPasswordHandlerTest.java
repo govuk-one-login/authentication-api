@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -148,7 +148,7 @@ class ResetPasswordHandlerTest {
 
     @BeforeEach
     void setUp() {
-        doReturn(Optional.of(ErrorResponse.INVALID_PW_CHARS))
+        doReturn(Optional.of(InternalApiErrorResponse.INVALID_PW_CHARS))
                 .when(passwordValidator)
                 .validate("password");
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -640,7 +640,7 @@ class ResetPasswordHandlerTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
             verifyNoInteractions(auditService);
             verifyNoInteractions(accountModifiersService);
         }
@@ -652,7 +652,7 @@ class ResetPasswordHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.INVALID_PW_CHARS));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.INVALID_PW_CHARS));
             verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
             verifyNoInteractions(auditService);
             verifyNoInteractions(accountModifiersService);
@@ -668,7 +668,7 @@ class ResetPasswordHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.NEW_PW_MATCHES_OLD));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.NEW_PW_MATCHES_OLD));
             verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
             verifyNoInteractions(accountModifiersService);
             verifyNoInteractions(sqsClient);
@@ -686,7 +686,7 @@ class ResetPasswordHandlerTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.SESSION_ID_MISSING));
             verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
             verifyNoInteractions(auditService);
             verifyNoInteractions(accountModifiersService);

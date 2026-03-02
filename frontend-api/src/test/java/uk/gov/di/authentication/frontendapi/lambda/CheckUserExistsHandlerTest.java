@@ -19,7 +19,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -621,7 +621,7 @@ class CheckUserExistsHandlerTest {
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.ACCT_TEMPORARILY_LOCKED));
             verify(authSessionService, times(1)).updateSession(any(AuthSessionItem.class));
             verify(auditService)
                     .submitAuditEvent(
@@ -662,7 +662,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(auditService);
     }
 
@@ -673,7 +673,7 @@ class CheckUserExistsHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(auditService);
     }
 
@@ -684,7 +684,7 @@ class CheckUserExistsHandlerTest {
         var result = handler.handleRequest(userExistsRequest("joe.bloggs"), context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.INVALID_EMAIL_FORMAT));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.INVALID_EMAIL_FORMAT));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL,
@@ -698,7 +698,7 @@ class CheckUserExistsHandlerTest {
         var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.SESSION_ID_MISSING));
     }
 
     private void authSessionExists() {
@@ -767,11 +767,11 @@ class CheckUserExistsHandlerTest {
                     Arguments.of(
                             DecisionError.STORAGE_SERVICE_ERROR,
                             500,
-                            ErrorResponse.STORAGE_LAYER_ERROR),
+                            InternalApiErrorResponse.STORAGE_LAYER_ERROR),
                     Arguments.of(
                             DecisionError.INVALID_USER_CONTEXT,
                             400,
-                            ErrorResponse.REQUEST_MISSING_PARAMS));
+                            InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
         @ParameterizedTest
@@ -793,7 +793,7 @@ class CheckUserExistsHandlerTest {
             return Stream.of(
                     Arguments.of(
                             DecisionError.STORAGE_SERVICE_ERROR,
-                            ErrorResponse.STORAGE_LAYER_ERROR));
+                            InternalApiErrorResponse.STORAGE_LAYER_ERROR));
         }
 
         @ParameterizedTest
@@ -809,7 +809,7 @@ class CheckUserExistsHandlerTest {
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(500));
-            assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
+            assertThat(result, hasJsonBody(InternalApiErrorResponse.STORAGE_LAYER_ERROR));
         }
     }
 }

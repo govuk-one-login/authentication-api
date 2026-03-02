@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.testinterface.AccountDataErrorResponse;
 
 import java.util.UUID;
 
@@ -71,7 +72,7 @@ public class PasskeysCreateHandler
                                     case REQUEST_MISSING_PARAMS -> generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.REQUEST_MISSING_PARAMS);
                                     case PASSKEY_EXISTS -> generateApiGatewayProxyErrorResponse(
-                                            409, ErrorResponse.PASSKEY_ALREADY_EXISTS);
+                                            409, AccountDataErrorResponse.PASSKEY_ALREADY_EXISTS);
                                     case INVALID_AAGUID -> generateApiGatewayProxyErrorResponse(
                                             422, ErrorResponse.INVALID_AAGUID);
                                     case FAILED_TO_SAVE_PASSKEY -> generateApiGatewayProxyErrorResponse(

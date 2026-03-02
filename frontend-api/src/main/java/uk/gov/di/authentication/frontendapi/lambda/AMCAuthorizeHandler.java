@@ -78,7 +78,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
 
         if (userProfile == null) {
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+                    400, InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
 
         Result<JwtFailureReason, String> result =
@@ -97,7 +97,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                                 200, new AMCAuthorizeResponse(success));
                     } catch (Json.JsonException e) {
                         return generateApiGatewayProxyErrorResponse(
-                                500, ErrorResponse.SERIALIZATION_ERROR);
+                                500, InternalApiErrorResponse.SERIALIZATION_ERROR);
                     }
                 });
     }

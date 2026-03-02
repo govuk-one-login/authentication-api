@@ -120,7 +120,7 @@ class SignUpHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(user.getUserProfile()).thenReturn(userProfile);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        doReturn(Optional.of(ErrorResponse.INVALID_PW_LENGTH))
+        doReturn(Optional.of(InternalApiErrorResponse.INVALID_PW_LENGTH))
                 .when(passwordValidator)
                 .validate("pwd");
         handler =
@@ -235,7 +235,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.SESSION_ID_MISSING));
 
         verifyNoInteractions(auditService);
     }
@@ -248,7 +248,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.REQUEST_MISSING_PARAMS));
 
         verifyNoInteractions(auditService);
     }
@@ -262,7 +262,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PW_LENGTH));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.INVALID_PW_LENGTH));
 
         verifyNoInteractions(auditService);
     }
@@ -281,7 +281,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ACCT_WITH_EMAIL_EXISTS));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.ACCT_WITH_EMAIL_EXISTS));
 
         verify(auditService)
                 .submitAuditEvent(AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, AUDIT_CONTEXT);
@@ -320,7 +320,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+        assertThat(result, hasJsonBody(InternalApiErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(auditService);
     }
 

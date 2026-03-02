@@ -12,7 +12,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CountType;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -148,7 +148,7 @@ class AuthenticationAuthCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -163,7 +163,7 @@ class AuthenticationAuthCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -178,7 +178,7 @@ class AuthenticationAuthCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -197,7 +197,7 @@ class AuthenticationAuthCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -210,7 +210,7 @@ class AuthenticationAuthCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
+                hasBody(objectMapper.writeValueAsString(InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
     }
 
     @Test
@@ -428,7 +428,7 @@ class AuthenticationAuthCodeHandlerTest {
                 result,
                 hasBody(
                         objectMapper.writeValueAsString(
-                                ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR)));
+                                InternalApiErrorResponse.UNEXPECTED_INTERNAL_API_ERROR)));
         verify(dynamoAuthCodeService, never())
                 .saveAuthCode(any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(), any());
     }

@@ -97,7 +97,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 LOG.info(
                         "Error message: Email from session does not have a user profile required to extract Subject ID");
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+                        400, InternalApiErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
             }
 
             var authSession = userContext.getAuthSession();
@@ -108,7 +108,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
 
                 if (configurationService.isEnhancedAuthCodeProtectionEnabled()) {
                     return generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+                            500, InternalApiErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
                 } else {
                     LOG.info(
                             "Enhanced auth code protection disabled: Did not block issuing auth code");
@@ -172,7 +172,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                     200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
         } catch (JsonException ex) {
             LOG.warn("Exception generating authcode. Returning 1001: ", ex);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

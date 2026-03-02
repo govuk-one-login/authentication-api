@@ -1,7 +1,8 @@
 package uk.gov.di.authentication.frontendapi.errormapper;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.InternalApiErrorResponse;
+import uk.gov.di.authentication.shared.testinterface.ErrorResponse;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;

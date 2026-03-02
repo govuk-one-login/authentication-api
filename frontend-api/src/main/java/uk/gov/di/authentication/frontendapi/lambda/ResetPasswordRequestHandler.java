@@ -155,7 +155,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         try {
             if (Objects.isNull(userContext.getAuthSession().getEmailAddress())
                     || !userContext.getAuthSession().validateSession(request.getEmail())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
+                return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.SESSION_ID_MISSING);
             }
 
             var permissionContext =
@@ -267,14 +267,14 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         if (retrieveMfaMethods.isFailure()) {
             return switch (retrieveMfaMethods.getFailure()) {
                 case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
+                        500, InternalApiErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> {
                     LOG.error("Could not find user profile for reset password request");
-                    yield generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
+                    yield generateApiGatewayProxyErrorResponse(404, InternalApiErrorResponse.USER_NOT_FOUND);
                 }
                 case UNKNOWN_MFA_IDENTIFIER -> {
                     yield generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.INVALID_MFA_METHOD);
+                            500, InternalApiErrorResponse.INVALID_MFA_METHOD);
                 }
             };
         }
@@ -294,7 +294,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         if (maybeMfaMethodResponses.isFailure()) {
             LOG.error(maybeMfaMethodResponses.getFailure());
             return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
+                    500, InternalApiErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
         }
 
         var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
@@ -309,7 +309,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                     ? getLastDigitsOfPhoneNumber(defaultMfaPhoneNumber)
                                     : null));
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+            return generateApiGatewayProxyErrorResponse(400, InternalApiErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -356,8 +356,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     JourneyType.PASSWORD_RESET, permissionContext);
             var errorResponse =
                     lockedOut.isFirstTimeLimit()
-                            ? ErrorResponse.TOO_MANY_PW_RESET_REQUESTS
-                            : ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
+                            ? InternalApiErrorResponse.TOO_MANY_PW_RESET_REQUESTS
+                            : InternalApiErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
             return Result.failure(generateApiGatewayProxyErrorResponse(400, errorResponse));
         }
         return Result.success(null);
@@ -383,12 +383,12 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             if (lockedOut.forbiddenReason() == ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST) {
                 LOG.info("Code is blocked for email as user has requested too many OTPs");
-                return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+                return Optional.of(InternalApiErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
             } else if (lockedOut.forbiddenReason()
                     == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
                 return lockedOut.isFirstTimeLimit()
-                        ? Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS)
-                        : Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+                        ? Optional.of(InternalApiErrorResponse.TOO_MANY_PW_RESET_REQUESTS)
+                        : Optional.of(InternalApiErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
             }
         }
 
@@ -399,7 +399,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         if (canVerifyResult.isSuccess()
                 && canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
             LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
+            return Optional.of(InternalApiErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
         }
 
         return Optional.empty();
