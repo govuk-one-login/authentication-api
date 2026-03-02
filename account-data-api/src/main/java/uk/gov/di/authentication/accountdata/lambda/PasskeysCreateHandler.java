@@ -8,8 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
-import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason;
-import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -17,9 +16,9 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason.INVALID_AAGUID;
-import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason.INVALID_REQUEST_BODY;
-import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateHandlerFailureReason.MISSING_SUBJECT_ID;
+import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.INVALID_AAGUID;
+import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.INVALID_REQUEST_BODY;
+import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.MISSING_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.isAaguidValid;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -84,7 +83,7 @@ public class PasskeysCreateHandler
                                         201, "Passkey created successfully"));
     }
 
-    private Result<PasskeysCreateHandlerFailureReason, PasskeysCreateContext> parseRequest(
+    private Result<PasskeysCreateFailureReason, PasskeysCreateContext> parseRequest(
             APIGatewayProxyRequestEvent input) {
         PasskeysCreateRequest passkeysCreateRequest;
         try {
@@ -103,7 +102,7 @@ public class PasskeysCreateHandler
         return Result.success(new PasskeysCreateContext(publicSubjectId, passkeysCreateRequest));
     }
 
-    private Result<PasskeysCreateHandlerFailureReason, PasskeysCreateContext> validateRequest(
+    private Result<PasskeysCreateFailureReason, PasskeysCreateContext> validateRequest(
             PasskeysCreateContext context) {
         var passkeysCreateRequest = context.passkeysCreateRequest();
 
@@ -114,23 +113,11 @@ public class PasskeysCreateHandler
         return Result.success(context);
     }
 
-    private Result<PasskeysCreateHandlerFailureReason, Void> createPasskey(
-            PasskeysCreateContext context) {
+    private Result<PasskeysCreateFailureReason, Void> createPasskey(PasskeysCreateContext context) {
         var passkeysCreateRequest = context.passkeysCreateRequest();
         var publicSubjectId = context.publicSubjectId();
 
-        Result<PasskeysCreateServiceFailureReason, Void> result =
-                passkeysService.createPasskey(passkeysCreateRequest, publicSubjectId);
-
-        return result.fold(
-                failure ->
-                        switch (failure) {
-                            case FAILED_TO_SAVE_PASSKEY -> Result.failure(
-                                    PasskeysCreateHandlerFailureReason.FAILED_TO_SAVE_PASSKEY);
-                            case PASSKEY_EXISTS -> Result.failure(
-                                    PasskeysCreateHandlerFailureReason.PASSKEY_EXISTS);
-                        },
-                success -> Result.success(null));
+        return passkeysService.createPasskey(passkeysCreateRequest, publicSubjectId);
     }
 
     private record PasskeysCreateContext(

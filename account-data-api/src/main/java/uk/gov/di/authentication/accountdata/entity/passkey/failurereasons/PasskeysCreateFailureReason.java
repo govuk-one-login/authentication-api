@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.accountdata.entity.passkey.failurereasons;
 
-public enum PasskeysCreateHandlerFailureReason {
+public enum PasskeysCreateFailureReason {
     FAILED_TO_SAVE_PASSKEY("failed_to_save_passkey"),
     PASSKEY_EXISTS("passkey_exists"),
     INVALID_AAGUID("invalid_aaguid"),
@@ -9,7 +9,7 @@ public enum PasskeysCreateHandlerFailureReason {
 
     private final String value;
 
-    PasskeysCreateHandlerFailureReason(String value) {
+    PasskeysCreateFailureReason(String value) {
         this.value = value;
     }
 

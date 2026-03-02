@@ -3,7 +3,7 @@ package uk.gov.di.authentication.accountdata.services;
 import uk.gov.di.authentication.accountdata.constants.AccountDataConstants;
 import uk.gov.di.authentication.accountdata.entity.Authenticator;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
-import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.DynamoPasskeyServiceFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.BaseDynamoService;
@@ -29,14 +29,14 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
         return get(publicSubjectId, buildSortKey(passkeyId));
     }
 
-    public Result<DynamoPasskeyServiceFailureReason, Void> savePasskeyIfUnique(Passkey passkey) {
+    public Result<PasskeysCreateFailureReason, Void> savePasskeyIfUnique(Passkey passkey) {
         try {
             var passkeySaved = putIfUnique(passkey, Authenticator.ATTRIBUTE_SORT_KEY);
             return passkeySaved
                     ? Result.success(null)
-                    : Result.failure(DynamoPasskeyServiceFailureReason.PASSKEY_EXISTS);
+                    : Result.failure(PasskeysCreateFailureReason.PASSKEY_EXISTS);
         } catch (Exception e) {
-            return Result.failure(DynamoPasskeyServiceFailureReason.FAILED_TO_SAVE_PASSKEY);
+            return Result.failure(PasskeysCreateFailureReason.FAILED_TO_SAVE_PASSKEY);
         }
     }
 
