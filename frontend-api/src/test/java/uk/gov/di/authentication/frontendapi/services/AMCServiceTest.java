@@ -30,6 +30,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.kms.model.KmsException;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
@@ -47,13 +50,16 @@ import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -64,6 +70,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 
 class AMCServiceTest {
@@ -74,14 +83,11 @@ class AMCServiceTest {
     private static final String AUTH_TO_AUTH_AUDIENCE = "https://api.manage.account.gov.uk";
     private static final String AUTH_TO_AMC_AUDIENCE = "https://amc.account.gov.uk";
     private static final String AUTH_TO_AMC_PRIVATE_AUDIENCE = "https://amc.account.gov.uk";
-    private static final String CLIENT_ID = "test-client-id";
-    private static final String SESSION_ID = "test-session-id";
     private static final String RESPONSE_TYPE = "code";
     private static final String REDIRECT_URI = "https://example.com/callback";
     private static final String AMC_CLIENT_ID = "amc-client-id";
     private static final String AMC_AUTHORIZE_URI = "https://amc.account.gov.uk/authorize";
     private static final URI TOKEN_ENDPOINT_URI = URI.create("https://amc.account.gov.uk/token");
-    private static final String EMAIL = "test@example.com";
     private static final String JOURNEY_ID = "test-journey-id";
     private static final String PUBLIC_SUBJECT = "test-public-subject";
     private static final String ACCESS_TOKEN_KEY_ALIAS = "test-key-alias";
@@ -90,24 +96,26 @@ class AMCServiceTest {
     private static final RSAPublicKey TEST_PUBLIC_KEY = (RSAPublicKey) TEST_KEY_PAIR.getPublic();
     private static final RSAPrivateKey TEST_PRIVATE_KEY =
             (RSAPrivateKey) TEST_KEY_PAIR.getPrivate();
-    private static final AuthSessionItem authSessionItem = mock(AuthSessionItem.class);
+    private AuthSessionItem authSessionItem;
     private static final String AUTH_CODE = "1234";
 
     // Ensure 0 milliseconds for JWT compatibility
-    private static final Date NOW =
-            Date.from(
-                    Instant.now().plus(20 * 365, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS));
-    private static final long SESSION_EXPIRY = 300L;
+    private static final Instant NOW_INSTANT = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+    private static final Date NOW = Date.from(NOW_INSTANT);
+    private static final Long CLIENT_ASSERTION_LIFETIME = 5L;
+    private static final Date JWT_EXPIRY =
+            Date.from(NOW_INSTANT.plus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES));
+    private static final NowHelper.NowClock NOW_CLOCK =
+            new NowHelper.NowClock(Clock.fixed(NOW_INSTANT, ZoneOffset.UTC));
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final NowHelper.NowClock nowClock = mock(NowHelper.NowClock.class);
     private final JwtService jwtService = mock(JwtService.class);
     private ECKey accessTokenKey;
     private ECKey compositeJWTKey;
 
     @BeforeEach
     void setup() throws Exception {
-        amcService = new AMCService(configurationService, nowClock, jwtService);
+        amcService = new AMCService(configurationService, NOW_CLOCK, jwtService);
         accessTokenKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         compositeJWTKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         mockJwtSigning(
@@ -115,6 +123,25 @@ class AMCServiceTest {
                         ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
                         COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
         mockJwtEncryption();
+        authSessionItem =
+                new AuthSessionItem()
+                        .withClientId(CLIENT_ID)
+                        .withSessionId(SESSION_ID)
+                        .withEmailAddress(EMAIL);
+        mockConfigurationService();
+    }
+
+    private void mockConfigurationService() {
+        when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
+        when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
+        when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
+        when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
+                .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
+        when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
+                .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
+        when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
+        when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
+        when(configurationService.getAMCAuthorizeURI()).thenReturn(URI.create(AMC_AUTHORIZE_URI));
     }
 
     @Nested
@@ -124,10 +151,6 @@ class AMCServiceTest {
         void shouldBuildAuthorizationUrlWithValidJWT() throws Exception {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -141,31 +164,45 @@ class AMCServiceTest {
             String authorizationUrl = result.getSuccess();
             assertTrue(authorizationUrl.startsWith(AMC_AUTHORIZE_URI));
 
-            AuthorizationRequest authRequest = AuthorizationRequest.parse(authorizationUrl);
-            EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
-            encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
-            SignedJWT compositeJWT = encryptedJWT.getPayload().toSignedJWT();
+            SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(authorizationUrl);
 
             assertTrue(compositeJWT.verify(new ECDSAVerifier(compositeJWTKey.toECPublicKey())));
 
             JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
-            assertCompositeJWTClaims(compositeClaims, expiryDate);
+            assertCompositeJWTClaims(compositeClaims);
 
             var accessTokenValue = (String) compositeClaims.getClaim("access_token");
             SignedJWT accessTokenJWT = SignedJWT.parse(accessTokenValue);
             assertTrue(accessTokenJWT.verify(new ECDSAVerifier(accessTokenKey.toECPublicKey())));
 
             JWTClaimsSet accessTokenClaims = accessTokenJWT.getJWTClaimsSet();
-            assertAccessTokenClaims(accessTokenClaims, expiryDate);
+            assertAccessTokenClaims(accessTokenClaims);
+        }
+
+        @Test
+        void shouldHandleMultipleScopes() throws Exception {
+            when(configurationService.getAuthToAMCPublicEncryptionKey())
+                    .thenReturn(constructTestPublicKey());
+
+            Result<JwtFailureReason, String> result =
+                    amcService.buildAuthorizationUrl(
+                            INTERNAL_PAIRWISE_ID,
+                            new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
+                            authSessionItem,
+                            JOURNEY_ID,
+                            PUBLIC_SUBJECT);
+
+            assertTrue(result.isSuccess());
+            SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(result.getSuccess());
+            JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
+
+            assertEquals(
+                    List.of(AMCScope.ACCOUNT_DELETE.getValue(), AMCScope.ACCOUNT_DELETE.getValue()),
+                    compositeClaims.getClaim("scope"));
         }
 
         @Test
         void shouldReturnFailureWhenKmsSigningFails() {
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenThrow(
                             new JwtServiceException(
@@ -186,10 +223,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnFailureWhenSignatureTranscodingFails() {
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenThrow(
@@ -208,155 +241,33 @@ class AMCServiceTest {
             assertEquals(JwtFailureReason.TRANSCODING_ERROR, result.getFailure());
         }
 
-        @Test
-        void shouldReturnEncryptionErrorWhenJoseExceptionOccursDuringEncryption() {
-            when(configurationService.getAuthToAMCPublicEncryptionKey())
-                    .thenReturn(constructTestPublicKey());
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-            when(jwtService.encryptJWT(any(), any()))
-                    .thenThrow(
+        private static Stream<Arguments> jwtServiceErrorsToJwtFailureReason() {
+            return Stream.of(
+                    Arguments.of(
                             new JwtServiceException(
                                     "Encryption failed",
-                                    new com.nimbusds.jose.JOSEException("Encryption error")));
-
-            AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, jwtService);
-
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.ENCRYPTION_ERROR, result.getFailure());
-        }
-
-        @Test
-        void shouldReturnUnknownEncryptionErrorForUnknownExceptionDuringEncryption() {
-            when(configurationService.getAuthToAMCPublicEncryptionKey())
-                    .thenReturn(constructTestPublicKey());
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-            when(jwtService.encryptJWT(any(), any()))
-                    .thenThrow(new JwtServiceException("Unknown encryption error"));
-
-            AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, jwtService);
-
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR, result.getFailure());
-        }
-
-        @Test
-        void shouldReturnJwtEncodingErrorWhenParseExceptionOccursDuringEncryption() {
-            when(configurationService.getAuthToAMCPublicEncryptionKey())
-                    .thenReturn(constructTestPublicKey());
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-            when(jwtService.encryptJWT(any(), any()))
-                    .thenThrow(
+                                    new com.nimbusds.jose.JOSEException("Encryption error")),
+                            JwtFailureReason.ENCRYPTION_ERROR),
+                    Arguments.of(
+                            new JwtServiceException("Unknown encryption error"),
+                            JwtFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR),
+                    Arguments.of(
                             new JwtServiceException(
-                                    "Parse error", new java.text.ParseException("Invalid", 0)));
-
-            AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, jwtService);
-
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+                                    "Parse error", new java.text.ParseException("Invalid", 0)),
+                            JwtFailureReason.JWT_ENCODING_ERROR));
         }
 
-        @Test
-        void shouldReturnJwtConstructionErrorForUnknownExceptionCause() {
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-            when(jwtService.signJWT(any(), any()))
-                    .thenThrow(new JwtServiceException("Unknown error"));
-
-            AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, jwtService);
-
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR, result.getFailure());
-        }
-
-        @Test
-        void shouldHandleMultipleScopes() throws Exception {
+        @ParameterizedTest
+        @MethodSource("jwtServiceErrorsToJwtFailureReason")
+        void shouldMapJwtServiceExceptionsToJwtFailureReason(
+                Exception encryptionException, JwtFailureReason expectedFailureReason) {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
-            Result<JwtFailureReason, String> result =
-                    amcService.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isSuccess());
-            AuthorizationRequest authRequest = AuthorizationRequest.parse(result.getSuccess());
-            EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
-            encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
-            SignedJWT compositeJWT = encryptedJWT.getPayload().toSignedJWT();
-            JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
-
-            assertEquals(
-                    List.of(AMCScope.ACCOUNT_DELETE.getValue(), AMCScope.ACCOUNT_DELETE.getValue()),
-                    compositeClaims.getClaim("scope"));
-        }
-
-        @Test
-        void shouldReturnJwtEncodingErrorWhenParseExceptionOccurs() {
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
-            when(jwtService.signJWT(any(), any()))
-                    .thenThrow(
-                            new JwtServiceException(
-                                    "Parse error", new java.text.ParseException("Invalid", 0)));
+            when(jwtService.encryptJWT(any(), any())).thenThrow(encryptionException);
 
             AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, nowClock, jwtService);
+                    new AMCService(configurationService, NOW_CLOCK, jwtService);
 
             Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
@@ -367,17 +278,45 @@ class AMCServiceTest {
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+            assertEquals(expectedFailureReason, result.getFailure());
+        }
+
+        private static Stream<Arguments> signingErrorsToJwtFailureReasons() {
+            return Stream.of(
+                    Arguments.of(
+                            new JwtServiceException("Unknown error"),
+                            JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR),
+                    Arguments.of(
+                            new JwtServiceException(
+                                    "Parse error", new java.text.ParseException("Invalid", 0)),
+                            JwtFailureReason.JWT_ENCODING_ERROR));
+        }
+
+        @ParameterizedTest
+        @MethodSource("signingErrorsToJwtFailureReasons")
+        void shouldMapJwtSigningErrorsToJwtFailureReason(
+                Exception signingException, JwtFailureReason expectedFailureReason) {
+            when(jwtService.signJWT(any(), any())).thenThrow(signingException);
+
+            AMCService serviceWithMockJwt =
+                    new AMCService(configurationService, NOW_CLOCK, jwtService);
+
+            Result<JwtFailureReason, String> result =
+                    serviceWithMockJwt.buildAuthorizationUrl(
+                            INTERNAL_PAIRWISE_ID,
+                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                            authSessionItem,
+                            JOURNEY_ID,
+                            PUBLIC_SUBJECT);
+
+            assertTrue(result.isFailure());
+            assertEquals(expectedFailureReason, result.getFailure());
         }
 
         @Test
         void shouldReturnJwtEncodingErrorWhenPublicKeyParsingFails() {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn("invalid-pem-key");
-            Date expiryDate = new Date(NOW.getTime() + (SESSION_EXPIRY * 1000));
-            mockConfigurationService(expiryDate);
-            mockAuthSessionItem();
-            when(authSessionItem.getEmailAddress()).thenReturn(EMAIL);
 
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
@@ -391,29 +330,7 @@ class AMCServiceTest {
             assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
         }
 
-        private void mockConfigurationService(Date expiryDate) {
-            when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
-            when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
-            when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
-            when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
-            when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
-                    .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
-            when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
-                    .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
-            when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
-            when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
-            when(configurationService.getAMCAuthorizeURI())
-                    .thenReturn(URI.create(AMC_AUTHORIZE_URI));
-            when(nowClock.now()).thenReturn(NOW);
-            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
-        }
-
-        private void mockAuthSessionItem() {
-            when(authSessionItem.getClientId()).thenReturn(CLIENT_ID);
-            when(authSessionItem.getSessionId()).thenReturn(SESSION_ID);
-        }
-
-        private void assertCompositeJWTClaims(JWTClaimsSet compositeClaims, Date expiryDate) {
+        private void assertCompositeJWTClaims(JWTClaimsSet compositeClaims) {
             assertAll(
                     "Composite JWT Claims",
                     () -> assertEquals(AUTH_ISSUER_CLAIM, compositeClaims.getIssuer()),
@@ -435,13 +352,19 @@ class AMCServiceTest {
                                     JOURNEY_ID,
                                     compositeClaims.getClaim("govuk_signin_journey_id")),
                     () -> assertEquals(PUBLIC_SUBJECT, compositeClaims.getClaim("public_sub")),
-                    () -> assertEquals(NOW, compositeClaims.getIssueTime()),
-                    () -> assertEquals(NOW, compositeClaims.getNotBeforeTime()),
-                    () -> assertEquals(expiryDate, compositeClaims.getExpirationTime()),
+                    () -> assertEquals(NOW.toInstant(), compositeClaims.getIssueTime().toInstant()),
+                    () ->
+                            assertEquals(
+                                    NOW.toInstant(),
+                                    compositeClaims.getNotBeforeTime().toInstant()),
+                    () ->
+                            assertEquals(
+                                    JWT_EXPIRY.toInstant(),
+                                    compositeClaims.getExpirationTime().toInstant()),
                     () -> assertDoesNotThrow(() -> UUID.fromString(compositeClaims.getJWTID())));
         }
 
-        private void assertAccessTokenClaims(JWTClaimsSet accessTokenClaims, Date expiryDate) {
+        private void assertAccessTokenClaims(JWTClaimsSet accessTokenClaims) {
             assertAll(
                     "Access Token Claims",
                     () -> assertEquals(AUTH_ISSUER_CLAIM, accessTokenClaims.getIssuer()),
@@ -456,15 +379,30 @@ class AMCServiceTest {
                                     accessTokenClaims.getClaim("scope")),
                     () -> assertEquals(AMC_CLIENT_ID, accessTokenClaims.getClaim("client_id")),
                     () -> assertEquals(SESSION_ID, accessTokenClaims.getClaim("sid")),
-                    () -> assertEquals(NOW, accessTokenClaims.getIssueTime()),
-                    () -> assertEquals(NOW, accessTokenClaims.getNotBeforeTime()),
-                    () -> assertEquals(expiryDate, accessTokenClaims.getExpirationTime()),
+                    () ->
+                            assertEquals(
+                                    NOW.toInstant(), accessTokenClaims.getIssueTime().toInstant()),
+                    () ->
+                            assertEquals(
+                                    NOW.toInstant(),
+                                    accessTokenClaims.getNotBeforeTime().toInstant()),
+                    () ->
+                            assertEquals(
+                                    JWT_EXPIRY.toInstant(),
+                                    accessTokenClaims.getExpirationTime().toInstant()),
                     () -> assertDoesNotThrow(() -> UUID.fromString(accessTokenClaims.getJWTID())));
         }
 
         private static String constructTestPublicKey() {
             var encodedKey = Base64.getMimeEncoder().encodeToString(TEST_PUBLIC_KEY.getEncoded());
             return "-----BEGIN PUBLIC KEY-----\n" + encodedKey + "\n-----END PUBLIC KEY-----\n";
+        }
+
+        private SignedJWT extractSignedJwtFromAuthUrl(String authorizationUrl) throws Exception {
+            AuthorizationRequest authRequest = AuthorizationRequest.parse(authorizationUrl);
+            EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
+            encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_KEY));
+            return encryptedJWT.getPayload().toSignedJWT();
         }
     }
 
@@ -479,10 +417,6 @@ class AMCServiceTest {
             when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
             when(configurationService.getAuthToAMCPrivateAudience())
                     .thenReturn(AUTH_TO_AMC_PRIVATE_AUDIENCE);
-            when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
-            when(nowClock.now()).thenReturn(NOW);
-            when(nowClock.nowPlus(SESSION_EXPIRY, ChronoUnit.SECONDS))
-                    .thenReturn(Date.from(Instant.ofEpochSecond(NOW.getTime() + (3600 * 1000))));
             when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
             when(configurationService.getAMCTokenEndpointURI()).thenReturn(TOKEN_ENDPOINT_URI);
             signingKeyPair =
@@ -496,9 +430,6 @@ class AMCServiceTest {
         void shouldBuildTokenRequest() throws ParseException, JOSEException {
             when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                     .thenReturn(signingKeyPair.getKeyID());
-            when(nowClock.now()).thenReturn(NOW);
-            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
-            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
 
             mockJwtSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
 
@@ -522,9 +453,9 @@ class AMCServiceTest {
             assertEquals(AMC_CLIENT_ID, claims.getSubject());
             assertEquals(List.of(AUTH_TO_AMC_AUDIENCE), claims.getAudience());
             assertInstanceOf(String.class, claims.getJWTID());
-            assertEquals(NOW, claims.getIssueTime());
-            assertEquals(NOW, claims.getNotBeforeTime());
-            assertEquals(expiryDate, claims.getExpirationTime());
+            assertEquals(NOW.toInstant(), claims.getIssueTime().toInstant());
+            assertEquals(NOW.toInstant(), claims.getNotBeforeTime().toInstant());
+            assertEquals(JWT_EXPIRY.toInstant(), claims.getExpirationTime().toInstant());
         }
 
         @Test
@@ -532,9 +463,6 @@ class AMCServiceTest {
             var invalidKeyAlias = "invalid-key-alias";
             when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
                     .thenReturn(invalidKeyAlias);
-            when(nowClock.now()).thenReturn(NOW);
-            Date expiryDate = new Date(NOW.getTime() + (5L * 1000));
-            when(nowClock.nowPlus(5L, ChronoUnit.MINUTES)).thenReturn(expiryDate);
 
             when(jwtService.signJWT(any(JWTClaimsSet.class), eq(invalidKeyAlias)))
                     .thenThrow(
@@ -552,13 +480,20 @@ class AMCServiceTest {
     @Nested
     @DisplayName("Journey Outcome Tests")
     class JourneyOutcomeTests {
+        private UserInfoRequest userInfoRequest;
+        private HTTPRequest httpRequestFromUserInfoRequest;
+
+        @BeforeEach
+        void setup() {
+            userInfoRequest = mock(UserInfoRequest.class);
+            httpRequestFromUserInfoRequest = mock(HTTPRequest.class);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequestFromUserInfoRequest);
+        }
+
         @Test
         void shouldSendAJourneyOutcomeRequest() throws IOException {
-            var userInfoRequest = mock(UserInfoRequest.class);
-            var httpRequest = mock(HTTPRequest.class);
-            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
             var response = new HTTPResponse(200);
-            when(httpRequest.send()).thenReturn(response);
+            when(httpRequestFromUserInfoRequest.send()).thenReturn(response);
 
             var result = amcService.requestJourneyOutcome(userInfoRequest);
 
@@ -567,11 +502,8 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnAnErrorForAnUnsuccessfulRequest() throws IOException {
-            var userInfoRequest = mock(UserInfoRequest.class);
-            var httpRequest = mock(HTTPRequest.class);
-            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
             var response = new HTTPResponse(400);
-            when(httpRequest.send()).thenReturn(response);
+            when(httpRequestFromUserInfoRequest.send()).thenReturn(response);
 
             var result = amcService.requestJourneyOutcome(userInfoRequest);
 
@@ -582,10 +514,7 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnAnErrorForAnIOException() throws IOException {
-            var userInfoRequest = mock(UserInfoRequest.class);
-            var httpRequest = mock(HTTPRequest.class);
-            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
-            when(httpRequest.send()).thenThrow(new IOException("Uh oh"));
+            when(httpRequestFromUserInfoRequest.send()).thenThrow(new IOException("Uh oh"));
 
             var result = amcService.requestJourneyOutcome(userInfoRequest);
 
