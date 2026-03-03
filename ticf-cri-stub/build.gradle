@@ -15,7 +15,8 @@ dependencies {
             libs.gson
 
     testImplementation libs.bundles.test,
-            libs.bundles.awsLambda
+            libs.bundles.awsLambda,
+            project(":shared-test")
 
     testRuntimeOnly libs.bundles.testRuntime
 }

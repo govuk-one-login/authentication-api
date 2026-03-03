@@ -4,6 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -16,6 +18,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 public class TICFCRIStubHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
+    private static final Logger LOG = LogManager.getLogger(TICFCRIStubHandler.class);
     private final Json objectMapper = SerializationService.getInstance();
 
     @Override
@@ -23,6 +26,15 @@ public class TICFCRIStubHandler
             APIGatewayProxyRequestEvent input, Context context) {
         try {
             var request = objectMapper.readValue(input.getBody(), InternalTICFCRIRequest.class);
+            LOG.info(
+                    "TICF Request - govukSigninJourneyId: {}, vtr: {}, authenticated: {}, accountState: {}, resetPasswordState: {}, resetMfaState: {}, mfaMethodType: {}",
+                    request.govukSigninJourneyId(),
+                    request.vtr(),
+                    request.authenticated(),
+                    request.accountState(),
+                    request.resetPasswordState(),
+                    request.resetMfaState(),
+                    request.mfaMethodType());
         } catch (Json.JsonException e) {
             throw new RuntimeException(e);
         }
