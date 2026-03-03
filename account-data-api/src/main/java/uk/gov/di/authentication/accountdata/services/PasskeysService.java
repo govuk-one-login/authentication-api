@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -12,18 +13,18 @@ import java.time.LocalDateTime;
 
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.buildSortKey;
 
-public class PasskeysCreateService {
+public class PasskeysService {
 
-    private static final Logger LOG = LogManager.getLogger(PasskeysCreateService.class);
+    private static final Logger LOG = LogManager.getLogger(PasskeysService.class);
     private final DynamoPasskeyService dynamoPasskeyService;
     private final ConfigurationService configurationService;
 
-    public PasskeysCreateService(ConfigurationService configurationService) {
+    public PasskeysService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.dynamoPasskeyService = new DynamoPasskeyService(configurationService);
     }
 
-    public PasskeysCreateService(
+    public PasskeysService(
             ConfigurationService configurationService, DynamoPasskeyService dynamoPasskeyService) {
         this.configurationService = configurationService;
         this.dynamoPasskeyService = dynamoPasskeyService;
@@ -68,5 +69,16 @@ public class PasskeysCreateService {
                             }
                         },
                 success -> Result.success(null));
+    }
+
+    public Result<PasskeysUpdateFailureReason, Passkey> updatePasskey(
+            String publicSubjectId, String passkeyId, String lastUsedTime, int updatedSignCount) {
+        try {
+            return dynamoPasskeyService.updatePasskey(
+                    publicSubjectId, passkeyId, lastUsedTime, updatedSignCount);
+        } catch (Exception e) {
+            LOG.error("Failed to update passkey", e);
+            return Result.failure(PasskeysUpdateFailureReason.FAILED_TO_UPDATE_PASSKEY);
+        }
     }
 }

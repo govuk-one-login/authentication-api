@@ -124,6 +124,8 @@ public enum ErrorResponse {
     PASSKEY_ALREADY_EXISTS(4090, "Passkey already exists"),
     INVALID_REQUEST_BODY(4000, "Invalid request body"),
     MISSING_SUBJECT_ID(4001, "Missing subject id"),
+    MISSING_PASSKEY_ID(4002, "Missing passkey id"),
+    PASSKEY_NOT_FOUND(4040, "Passkey not found"),
     INVALID_CREDENTIAL(4220, "Invalid credential format"),
     INVALID_AAGUID(4221, "Invalid AAGUID format"),
     INVALID_ATTESTATION_SIGNATURE(4222, "Invalid attestation signature"),
