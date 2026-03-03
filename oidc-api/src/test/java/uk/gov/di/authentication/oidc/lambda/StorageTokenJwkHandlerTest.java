@@ -9,6 +9,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 
 import java.util.List;
@@ -23,6 +24,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 
 class StorageTokenJwkHandlerTest {
 
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
     private final JwksService jwksService = mock(JwksService.class);
     private StorageTokenJwkHandler handler;
@@ -33,7 +35,7 @@ class StorageTokenJwkHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new StorageTokenJwkHandler(jwksService);
+        handler = new StorageTokenJwkHandler(configurationService, jwksService);
         when(jwksService.getPublicStorageTokenJwkWithOpaqueId()).thenReturn(storageTokenSigningKey);
     }
 
@@ -43,6 +45,24 @@ class StorageTokenJwkHandlerTest {
         var result = handler.handleRequest(event, context);
 
         var expectedJWKSet = new JWKSet(List.of(storageTokenSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+    }
+
+    @Test
+    void shouldReturnTwoStorageTokenJwksWhenPublishNextStorageTokenEnabled() throws JOSEException {
+        when(configurationService.isPublishNextStorageTokenSigningKeyEnabled()).thenReturn(true);
+        ECKey nextStorageTokenSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        when(jwksService.getNextPublicStorageTokenJwkWithOpaqueId())
+                .thenReturn(nextStorageTokenSigningKey);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet =
+                new JWKSet(List.of(storageTokenSigningKey, nextStorageTokenSigningKey));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));

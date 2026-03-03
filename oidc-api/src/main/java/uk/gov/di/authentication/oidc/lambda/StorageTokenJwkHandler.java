@@ -27,13 +27,17 @@ public class StorageTokenJwkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final JwksService jwksService;
+    private final ConfigurationService configurationService;
     private static final Logger LOG = LogManager.getLogger(StorageTokenJwkHandler.class);
 
-    public StorageTokenJwkHandler(JwksService jwksService) {
+    public StorageTokenJwkHandler(
+            ConfigurationService configurationService, JwksService jwksService) {
+        this.configurationService = configurationService;
         this.jwksService = jwksService;
     }
 
     public StorageTokenJwkHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.jwksService =
                 new JwksService(
                         configurationService, new KmsConnectionService(configurationService));
@@ -60,6 +64,10 @@ public class StorageTokenJwkHandler
             List<JWK> signingKeys = new ArrayList<>();
 
             signingKeys.add(jwksService.getPublicStorageTokenJwkWithOpaqueId());
+
+            if (configurationService.isPublishNextStorageTokenSigningKeyEnabled()) {
+                signingKeys.add(jwksService.getNextPublicStorageTokenJwkWithOpaqueId());
+            }
 
             JWKSet jwkSet = new JWKSet(signingKeys);
 
