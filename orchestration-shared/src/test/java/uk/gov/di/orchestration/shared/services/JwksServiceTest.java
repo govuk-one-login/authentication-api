@@ -77,21 +77,6 @@ class JwksServiceTest {
         assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
     }
 
-    @Test
-    void shouldRetrieveNextPublicDocAppSigningKeyFromKmsAndParseToJwk() throws Exception {
-        var keyAlias = "next-doc-app-key-alias";
-        when(configurationService.getNextDocAppTokenSigningKeyAlias()).thenReturn(keyAlias);
-
-        var publicKey = generateECKey().toPublicKey().getEncoded();
-        mockKmsPublicKeyResponse(publicKey, keyAlias);
-
-        JWK publicKeyJwk = jwksService.getNextPublicDocAppSigningJwkWithOpaqueId();
-
-        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(keyAlias)));
-        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
-        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
-    }
-
     private void mockKmsPublicKeyResponse(byte[] publicKey, String alias) {
         mockKmsPublicKeyResponse(publicKey, SigningAlgorithmSpec.ECDSA_SHA_256, alias);
     }
