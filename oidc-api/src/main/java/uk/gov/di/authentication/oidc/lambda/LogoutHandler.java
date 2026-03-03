@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.LogoutRequest;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
@@ -24,6 +25,7 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segme
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
@@ -103,5 +105,7 @@ public class LogoutHandler
         attachSessionIdToLogs(sessionId);
         attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
+        var persistentSessionId = PersistentIdHelper.extractPersistentIdFromHeaders(headers);
+        attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
     }
 }
