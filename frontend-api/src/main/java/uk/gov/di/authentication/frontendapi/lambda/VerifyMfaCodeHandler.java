@@ -509,14 +509,19 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .withVerifiedMfaMethodType(codeRequest.getMfaMethodType())
                         .withAchievedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
 
-        if (isForcedMfaResetRequired && ForcedMfaResetHelper.isInitiatedJourney(journeyType)) {
-            ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
-                    configurationService,
-                    auditService,
-                    cloudwatchMetricsService,
-                    journeyType,
-                    activeMfaMethod,
-                    auditContext);
+        if (isForcedMfaResetRequired) {
+            if (ForcedMfaResetHelper.isCompletedJourney(journeyType)) {
+                ForcedMfaResetHelper.emitCompletedMetric(
+                        configurationService, cloudwatchMetricsService);
+            } else if (ForcedMfaResetHelper.isInitiatedJourney(journeyType)) {
+                ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
+                        configurationService,
+                        auditService,
+                        cloudwatchMetricsService,
+                        journeyType,
+                        activeMfaMethod,
+                        auditContext);
+            }
         }
 
         var clientId = authSession.getClientId();

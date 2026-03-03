@@ -1198,7 +1198,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldNotEmitMfaResetAuditEventForAccountRecoveryWithInternationalNumber() {
+    void shouldNotEmitMfaResetRequestedAuditEventForAccountRecoveryWithInternationalNumber() {
         userStore.setAccountVerified(EMAIL_ADDRESS);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
 

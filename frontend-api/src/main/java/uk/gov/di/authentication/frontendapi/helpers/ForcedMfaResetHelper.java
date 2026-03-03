@@ -24,7 +24,9 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.PASSWORD_RESET_MFA;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
@@ -46,6 +48,10 @@ public class ForcedMfaResetHelper {
         return (journeyType == SIGN_IN
                 || journeyType == REAUTHENTICATION
                 || journeyType == PASSWORD_RESET_MFA);
+    }
+
+    public static boolean isCompletedJourney(JourneyType journeyType) {
+        return journeyType == ACCOUNT_RECOVERY;
     }
 
     public static void emitRequestedAuditEventAndMetric(
@@ -75,7 +81,7 @@ public class ForcedMfaResetHelper {
                 pair(
                         AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE,
                         MfaResetType.FORCED_INTERNATIONAL_NUMBERS),
-                pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_RECOVERY));
+                pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY));
 
         emitMetric(FORCED_MFA_RESET_INITIATED, configurationService, cloudwatchMetricsService);
 
@@ -83,6 +89,14 @@ public class ForcedMfaResetHelper {
                 "User has international phone number on account, initiating forced MFA reset. JourneyType: {}, CountryCode (for active method): {}.",
                 journeyType,
                 countryCode);
+    }
+
+    public static void emitCompletedMetric(
+            ConfigurationService configurationService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
+        emitMetric(FORCED_MFA_RESET_COMPLETED, configurationService, cloudwatchMetricsService);
+
+        LOG.info("User had international phone number on account, MFA reset completed.");
     }
 
     private static void emitMetric(

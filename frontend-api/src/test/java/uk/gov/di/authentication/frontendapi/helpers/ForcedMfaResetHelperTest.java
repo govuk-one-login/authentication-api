@@ -50,8 +50,7 @@ class ForcedMfaResetHelperTest {
     private final AuditContext auditContext = AuditContext.emptyAuditContext();
 
     @Nested
-    class IsMfaResetRequiredTest {
-
+    class IsMfaResetRequired {
         @Test
         void shouldReturnTrueWhenFeatureFlagEnabledAndInternationalNumber() {
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
@@ -99,8 +98,7 @@ class ForcedMfaResetHelperTest {
     }
 
     @Nested
-    class IsInitiatedJourneyTest {
-
+    class IsInitiatedJourney {
         static Stream<JourneyType> validJourneyTypes() {
             return Stream.of(
                     JourneyType.SIGN_IN,
@@ -125,7 +123,7 @@ class ForcedMfaResetHelperTest {
     }
 
     @Nested
-    class EmitRequestedAuditEventAndMetricTest {
+    class EmitRequestedAuditEventAndMetric {
         private static final String TEST_ENVIRONMENT = "test-environment";
 
         @BeforeEach
