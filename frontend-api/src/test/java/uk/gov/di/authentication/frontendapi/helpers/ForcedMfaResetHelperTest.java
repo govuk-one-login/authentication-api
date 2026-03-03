@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -11,9 +12,11 @@ import uk.gov.di.authentication.frontendapi.entity.MfaResetType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -26,26 +29,77 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 
 class ForcedMfaResetHelperTest {
 
-    private static final MFAMethod INTERNATIONAL_SMS_METHOD =
+    private static final MFAMethod DEFAULT_INTERNATIONAL_SMS_METHOD =
             new MFAMethod(DEFAULT_SMS_METHOD).withDestination(INTERNATIONAL_MOBILE_NUMBER);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final AuditContext auditContext = AuditContext.emptyAuditContext();
 
     @Nested
-    class IsInitiatedTest {
+    class IsMfaResetRequiredTest {
 
-        private static final List<MFAMethod> INTERNATIONAL_SMS_METHODS =
-                List.of(INTERNATIONAL_SMS_METHOD);
-        private static final List<MFAMethod> UK_SMS_METHODS = List.of(DEFAULT_SMS_METHOD);
+        @Test
+        void shouldReturnTrueWhenFeatureFlagEnabledAndInternationalNumber() {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            List<MFAMethod> mfaMethods = List.of(DEFAULT_INTERNATIONAL_SMS_METHOD);
+
+            assertTrue(ForcedMfaResetHelper.isMfaResetRequired(configurationService, mfaMethods));
+        }
+
+        @Test
+        void shouldReturnTrueWhenFeatureFlagEnabledAndMultipleMfaMethodsWithInternationalNumber() {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            MFAMethod backupInternationalSmsMethod =
+                    new MFAMethod(BACKUP_SMS_METHOD).withDestination(INTERNATIONAL_MOBILE_NUMBER);
+            List<MFAMethod> mfaMethods = List.of(DEFAULT_SMS_METHOD, backupInternationalSmsMethod);
+
+            assertTrue(ForcedMfaResetHelper.isMfaResetRequired(configurationService, mfaMethods));
+        }
+
+        @Test
+        void shouldReturnFalseWhenFeatureFlagDisabled() {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
+
+            List<MFAMethod> mfaMethods = List.of(DEFAULT_INTERNATIONAL_SMS_METHOD);
+
+            assertFalse(ForcedMfaResetHelper.isMfaResetRequired(configurationService, mfaMethods));
+        }
+
+        @Test
+        void shouldReturnFalseWhenPhoneNumberIsDomestic() {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            List<MFAMethod> mfaMethods = List.of(DEFAULT_SMS_METHOD);
+
+            assertFalse(ForcedMfaResetHelper.isMfaResetRequired(configurationService, mfaMethods));
+        }
+
+        @Test
+        void shouldReturnFalseWhenMfaMethodsListIsEmpty() {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            assertFalse(ForcedMfaResetHelper.isMfaResetRequired(configurationService, List.of()));
+        }
+    }
+
+    @Nested
+    class IsInitiatedJourneyTest {
 
         static Stream<JourneyType> validJourneyTypes() {
             return Stream.of(
@@ -56,30 +110,8 @@ class ForcedMfaResetHelperTest {
 
         @ParameterizedTest
         @MethodSource("validJourneyTypes")
-        void shouldReturnTrueWhenAllConditionsMet(JourneyType journeyType) {
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
-
-            assertTrue(
-                    ForcedMfaResetHelper.isInitiated(
-                            configurationService, INTERNATIONAL_SMS_METHODS, journeyType));
-        }
-
-        @Test
-        void shouldReturnFalseWhenFeatureFlagDisabled() {
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
-
-            assertFalse(
-                    ForcedMfaResetHelper.isInitiated(
-                            configurationService, INTERNATIONAL_SMS_METHODS, JourneyType.SIGN_IN));
-        }
-
-        @Test
-        void shouldReturnFalseWhenPhoneNumberIsDomestic() {
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
-
-            assertFalse(
-                    ForcedMfaResetHelper.isInitiated(
-                            configurationService, UK_SMS_METHODS, JourneyType.SIGN_IN));
+        void shouldReturnTrueForValidJourneyType(JourneyType journeyType) {
+            assertTrue(ForcedMfaResetHelper.isInitiatedJourney(journeyType));
         }
 
         @ParameterizedTest
@@ -87,34 +119,28 @@ class ForcedMfaResetHelperTest {
                 value = JourneyType.class,
                 names = {"SIGN_IN", "REAUTHENTICATION", "PASSWORD_RESET_MFA"},
                 mode = EnumSource.Mode.EXCLUDE)
-        void shouldReturnFalseForInvalidJourneyTypes(JourneyType journeyType) {
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
-
-            assertFalse(
-                    ForcedMfaResetHelper.isInitiated(
-                            configurationService, INTERNATIONAL_SMS_METHODS, journeyType));
-        }
-
-        @Test
-        void shouldReturnFalseWhenMfaMethodsListIsEmpty() {
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
-
-            assertFalse(
-                    ForcedMfaResetHelper.isInitiated(
-                            configurationService, List.of(), JourneyType.SIGN_IN));
+        void shouldReturnFalseForInvalidJourneyType(JourneyType journeyType) {
+            assertFalse(ForcedMfaResetHelper.isInitiatedJourney(journeyType));
         }
     }
 
     @Nested
-    class EmitRequestedAuditEventTest {
+    class EmitRequestedAuditEventAndMetricTest {
+        private static final String TEST_ENVIRONMENT = "test-environment";
+
+        @BeforeEach
+        void setup() {
+            when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
+        }
+
         @Test
         void shouldEmitAuditEventWithExpectedInternationalNumberMetadata() {
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
-
-            ForcedMfaResetHelper.emitRequestedAuditEvent(
+            ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
+                    configurationService,
                     auditService,
+                    cloudwatchMetricsService,
                     JourneyType.SIGN_IN,
-                    Optional.of(INTERNATIONAL_SMS_METHOD),
+                    Optional.of(DEFAULT_INTERNATIONAL_SMS_METHOD),
                     auditContext);
 
             verify(auditService)
@@ -134,10 +160,10 @@ class ForcedMfaResetHelperTest {
 
         @Test
         void shouldEmitAuditEventWithUnknownPhoneWhenActiveMfaMethodIsNotSms() {
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
-
-            ForcedMfaResetHelper.emitRequestedAuditEvent(
+            ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
+                    configurationService,
                     auditService,
+                    cloudwatchMetricsService,
                     JourneyType.SIGN_IN,
                     Optional.of(DEFAULT_AUTH_APP_METHOD),
                     auditContext);
@@ -162,10 +188,13 @@ class ForcedMfaResetHelperTest {
 
         @Test
         void shouldEmitAuditEventWithUnknownPhoneWhenActiveMfaMethodIsEmpty() {
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
-
-            ForcedMfaResetHelper.emitRequestedAuditEvent(
-                    auditService, JourneyType.SIGN_IN, Optional.empty(), auditContext);
+            ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
+                    configurationService,
+                    auditService,
+                    cloudwatchMetricsService,
+                    JourneyType.SIGN_IN,
+                    Optional.empty(),
+                    auditContext);
 
             verify(auditService)
                     .submitAuditEvent(
@@ -183,6 +212,26 @@ class ForcedMfaResetHelperTest {
                                     pair(
                                             AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
                                             JourneyType.ACCOUNT_RECOVERY)));
+        }
+
+        @Test
+        void shouldIncrementMetric() {
+            ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
+                    configurationService,
+                    auditService,
+                    cloudwatchMetricsService,
+                    JourneyType.SIGN_IN,
+                    Optional.of(DEFAULT_INTERNATIONAL_SMS_METHOD),
+                    auditContext);
+
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            FORCED_MFA_RESET_INITIATED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    MFA_RESET_TYPE.getValue(),
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
         }
     }
 }

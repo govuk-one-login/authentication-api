@@ -5,20 +5,26 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetType;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.hasInternationalPhoneNumber;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
 import static uk.gov.di.authentication.shared.entity.JourneyType.PASSWORD_RESET_MFA;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
@@ -30,19 +36,22 @@ public class ForcedMfaResetHelper {
 
     private ForcedMfaResetHelper() {}
 
-    public static boolean isInitiated(
-            ConfigurationService configurationService,
-            List<MFAMethod> mfaMethods,
-            JourneyType journeyType) {
+    public static boolean isMfaResetRequired(
+            ConfigurationService configurationService, List<MFAMethod> mfaMethods) {
         return configurationService.isForcedMFAResetAfterMFACheckEnabled()
-                && hasInternationalPhoneNumber(mfaMethods)
-                && (journeyType == SIGN_IN
-                        || journeyType == REAUTHENTICATION
-                        || journeyType == PASSWORD_RESET_MFA);
+                && hasInternationalPhoneNumber(mfaMethods);
     }
 
-    public static void emitRequestedAuditEvent(
+    public static boolean isInitiatedJourney(JourneyType journeyType) {
+        return (journeyType == SIGN_IN
+                || journeyType == REAUTHENTICATION
+                || journeyType == PASSWORD_RESET_MFA);
+    }
+
+    public static void emitRequestedAuditEventAndMetric(
+            ConfigurationService configurationService,
             AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService,
             JourneyType journeyType,
             Optional<MFAMethod> activeMfaMethod,
             AuditContext auditContext) {
@@ -68,9 +77,24 @@ public class ForcedMfaResetHelper {
                         MfaResetType.FORCED_INTERNATIONAL_NUMBERS),
                 pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_RECOVERY));
 
+        emitMetric(FORCED_MFA_RESET_INITIATED, configurationService, cloudwatchMetricsService);
+
         LOG.info(
-                "User has international phone number on account, forced MFA reset requested. JourneyType: {}, CountryCode (for active method): {}.",
+                "User has international phone number on account, initiating forced MFA reset. JourneyType: {}, CountryCode (for active method): {}.",
                 journeyType,
                 countryCode);
+    }
+
+    private static void emitMetric(
+            CloudwatchMetrics metricName,
+            ConfigurationService configurationService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
+        cloudwatchMetricsService.incrementCounter(
+                metricName.getValue(),
+                Map.of(
+                        ENVIRONMENT.getValue(),
+                        configurationService.getEnvironment(),
+                        MFA_RESET_TYPE.getValue(),
+                        MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
     }
 }
