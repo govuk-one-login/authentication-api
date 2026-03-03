@@ -99,6 +99,15 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
     private HttpResponse<String> sendRequest(InternalTICFCRIRequest internalTICFCRIRequest)
             throws IOException, InterruptedException {
         var externalRequest = ExternalTICFCRIRequest.fromInternalRequest(internalTICFCRIRequest);
+        LOG.info(
+                "TICF Request - govukSigninJourneyId: {}, vtr: {}, authenticated: {}, initialRegistration: {}, passwordReset: {}, mfaReset: {}, mfaMethod: {}",
+                externalRequest.govukSigninJourneyId(),
+                externalRequest.vtr(),
+                externalRequest.authenticated(),
+                externalRequest.initialRegistration(),
+                externalRequest.passwordReset(),
+                externalRequest.mfaReset(),
+                externalRequest.mfaMethod());
         var body = serialisationService.writeValueAsStringNoNulls(externalRequest);
         var timeoutInMilliseconds =
                 Duration.ofMillis(configurationService.getTicfCriServiceCallTimeout());
