@@ -51,7 +51,8 @@ class DynamoPasskeyServiceIntegrationTest {
                             1,
                             CommonTestVariables.PASSKEY_TRANSPORTS,
                             true,
-                            false);
+                            false,
+                            true);
 
             var expectedSortKey = "PASSKEY#" + PRIMARY_PASSKEY_ID;
 
@@ -121,7 +122,8 @@ class DynamoPasskeyServiceIntegrationTest {
                             0,
                             CommonTestVariables.PASSKEY_TRANSPORTS,
                             true,
-                            false));
+                            false,
+                            true));
             dynamoPasskeyService.savePasskeyIfUnique(
                     buildGenericPasskeyForUserWithSubjectId(
                             CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,

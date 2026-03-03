@@ -16,6 +16,7 @@ public class Passkey extends Authenticator<Passkey> {
     public static final String ATTRIBUTE_PASSKEY_TRANSPORTS = "PasskeyTransports";
     public static final String ATTRIBUTE_PASSKEY_BACKUP_ELIGIBLE = "PasskeyBackupEligible";
     public static final String ATTRIBUTE_PASSKEY_BACKED_UP = "PasskeyBackedUp";
+    public static final String ATTRIBUTE_PASSKEY_IS_RESIDENT_KEY = "PasskeyIsResidentKey";
 
     private String passkeyAaguid;
     private boolean passkeyIsAttested;
@@ -23,6 +24,7 @@ public class Passkey extends Authenticator<Passkey> {
     private List<String> passkeyTransports;
     private boolean passkeyBackupEligible;
     private boolean passkeyBackedUp;
+    private boolean passkeyIsResidentKey;
 
     @Override
     protected Passkey self() {
@@ -115,6 +117,20 @@ public class Passkey extends Authenticator<Passkey> {
 
     public Passkey withPasskeyBackedUp(boolean passkeyBackedUp) {
         this.passkeyBackedUp = passkeyBackedUp;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PASSKEY_IS_RESIDENT_KEY)
+    public boolean getPasskeyIsResidentKey() {
+        return passkeyIsResidentKey;
+    }
+
+    public void setPasskeyIsResidentKey(boolean passkeyIsResidentKey) {
+        this.passkeyIsResidentKey = passkeyIsResidentKey;
+    }
+
+    public Passkey withPasskeyIsResidentKey(boolean passkeyIsResidentKey) {
+        this.passkeyIsResidentKey = passkeyIsResidentKey;
         return this;
     }
 }

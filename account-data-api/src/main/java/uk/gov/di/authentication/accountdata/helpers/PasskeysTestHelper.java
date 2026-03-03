@@ -20,7 +20,8 @@ public class PasskeysTestHelper {
                 1,
                 CommonTestVariables.PASSKEY_TRANSPORTS,
                 true,
-                false);
+                false,
+                true);
     }
 
     public static Passkey buildPasskeyForUser(
@@ -32,7 +33,8 @@ public class PasskeysTestHelper {
             int signCount,
             List<String> transports,
             boolean backupEligible,
-            boolean backedUp) {
+            boolean backedUp,
+            boolean isResidentKey) {
         var created = LocalDateTime.now().toString();
         return new Passkey()
                 .withPublicSubjectId(publicSubjectId)
@@ -45,6 +47,7 @@ public class PasskeysTestHelper {
                 .withPasskeySignCount(signCount)
                 .withPasskeyTransports(transports)
                 .withPasskeyBackupEligible(backupEligible)
-                .withPasskeyBackedUp(backedUp);
+                .withPasskeyBackedUp(backedUp)
+                .withPasskeyIsResidentKey(isResidentKey);
     }
 }
