@@ -430,6 +430,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("PUBLISH_NEXT_STORAGE_TOKEN_SIGNING_KEY");
     }
 
+    public boolean isUseNewStorageTokenSigningKey() {
+        return getFlagOrFalse("USE_NEXT_STORAGE_TOKEN_SIGNING_KEY");
+    }
+
     public Optional<String> getIPVCapacity() {
         try {
             var request =
