@@ -5,7 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
 import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -150,9 +150,7 @@ class PasskeysCreateHandlerTest {
                             false,
                             false);
             when(passkeysService.createPasskey(any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
-                    .thenReturn(
-                            Result.failure(
-                                    PasskeysCreateServiceFailureReason.FAILED_TO_SAVE_PASSKEY));
+                    .thenReturn(Result.failure(PasskeysCreateFailureReason.FAILED_TO_SAVE_PASSKEY));
 
             // When
             var result =
@@ -180,7 +178,7 @@ class PasskeysCreateHandlerTest {
                             false,
                             false);
             when(passkeysService.createPasskey(any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
-                    .thenReturn(Result.failure(PasskeysCreateServiceFailureReason.PASSKEY_EXISTS));
+                    .thenReturn(Result.failure(PasskeysCreateFailureReason.PASSKEY_EXISTS));
 
             // When
             var result =

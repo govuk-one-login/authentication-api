@@ -4,12 +4,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
-import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.buildSortKey;
 
@@ -30,7 +32,7 @@ public class PasskeysService {
         this.dynamoPasskeyService = dynamoPasskeyService;
     }
 
-    public Result<PasskeysCreateServiceFailureReason, Void> createPasskey(
+    public Result<PasskeysCreateFailureReason, Void> createPasskey(
             PasskeysCreateRequest passkeysCreateRequest, String publicSubjectId) {
 
         var passkeyId = passkeysCreateRequest.passkeyId();
@@ -47,7 +49,8 @@ public class PasskeysService {
                         .withPasskeySignCount(passkeysCreateRequest.signCount())
                         .withPasskeyTransports(passkeysCreateRequest.transports())
                         .withPasskeyBackupEligible(passkeysCreateRequest.isBackUpEligible())
-                        .withPasskeyBackedUp(passkeysCreateRequest.isBackedUp());
+                        .withPasskeyBackedUp(passkeysCreateRequest.isBackedUp())
+                        .withPasskeyIsResidentKey(passkeysCreateRequest.isResidentKey());
 
         var result = dynamoPasskeyService.savePasskeyIfUnique(passkey);
 
@@ -59,14 +62,13 @@ public class PasskeysService {
                                         "Passkey with id {} already exists for user with subjectId {}",
                                         passkeyId,
                                         publicSubjectId);
-                                yield Result.failure(
-                                        PasskeysCreateServiceFailureReason.PASSKEY_EXISTS);
+                                yield result;
                             }
                             case FAILED_TO_SAVE_PASSKEY -> {
                                 LOG.error("Failed to save passkey");
-                                yield Result.failure(
-                                        PasskeysCreateServiceFailureReason.FAILED_TO_SAVE_PASSKEY);
+                                yield result;
                             }
+                            default -> result;
                         },
                 success -> Result.success(null));
     }
@@ -79,6 +81,17 @@ public class PasskeysService {
         } catch (Exception e) {
             LOG.error("Failed to update passkey", e);
             return Result.failure(PasskeysUpdateFailureReason.FAILED_TO_UPDATE_PASSKEY);
+        }
+    }
+
+    public Result<PasskeysRetrieveFailureReasons, List<Passkey>> retrievePasskeys(
+            String publicSubjectId) {
+        try {
+            var passkeysForUser = dynamoPasskeyService.getPasskeysForUser(publicSubjectId);
+            return Result.success(passkeysForUser);
+        } catch (Exception e) {
+            LOG.error("Failed to retrieve passkeys", e);
+            return Result.failure(PasskeysRetrieveFailureReasons.FAILED_TO_GET_PASSKEYS);
         }
     }
 }

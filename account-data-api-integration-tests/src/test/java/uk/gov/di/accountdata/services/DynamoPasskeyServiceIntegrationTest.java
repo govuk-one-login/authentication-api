@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
-import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.DynamoPasskeyServiceFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
 import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -51,7 +51,8 @@ class DynamoPasskeyServiceIntegrationTest {
                             1,
                             CommonTestVariables.PASSKEY_TRANSPORTS,
                             true,
-                            false);
+                            false,
+                            true);
 
             var expectedSortKey = "PASSKEY#" + PRIMARY_PASSKEY_ID;
 
@@ -98,8 +99,7 @@ class DynamoPasskeyServiceIntegrationTest {
             var result = dynamoPasskeyService.savePasskeyIfUnique(duplicatePasskey);
 
             // Then
-            assertThat(
-                    result.getFailure(), equalTo(DynamoPasskeyServiceFailureReason.PASSKEY_EXISTS));
+            assertThat(result.getFailure(), equalTo(PasskeysCreateFailureReason.PASSKEY_EXISTS));
         }
     }
 
@@ -122,7 +122,8 @@ class DynamoPasskeyServiceIntegrationTest {
                             0,
                             CommonTestVariables.PASSKEY_TRANSPORTS,
                             true,
-                            false));
+                            false,
+                            true));
             dynamoPasskeyService.savePasskeyIfUnique(
                     buildGenericPasskeyForUserWithSubjectId(
                             CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,

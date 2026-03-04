@@ -370,6 +370,8 @@ Resources:
               - dynamodb:BatchGetItem
               - dynamodb:DescribeTable
               - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
             Resource:
               - !Sub
                 - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator

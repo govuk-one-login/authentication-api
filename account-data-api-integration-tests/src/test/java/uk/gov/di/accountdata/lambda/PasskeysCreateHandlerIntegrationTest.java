@@ -1,7 +1,6 @@
 package uk.gov.di.accountdata.lambda;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.accountdata.lambda.PasskeysCreateHandler;
@@ -45,142 +44,134 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         handler = new PasskeysCreateHandler(TEST_CONFIGURATION_SERVICE);
     }
 
-    @Nested
-    class Success {
+    @Test
+    void shouldCreatePasskey() throws Json.JsonException {
+        // Given
+        Map<String, String> headers = new HashMap<>();
 
-        @Test
-        void shouldCreatePasskey() throws Json.JsonException {
-            // Given
-            Map<String, String> headers = new HashMap<>();
+        var requestBody =
+                buildPasskeysCreateRequestBody(
+                        CREDENTIAL,
+                        PRIMARY_PASSKEY_ID,
+                        TEST_AAGUID,
+                        false,
+                        0,
+                        PASSKEY_TRANSPORTS,
+                        false,
+                        false,
+                        false);
+        var expectedSortKey = format("PASSKEY#%s", PRIMARY_PASSKEY_ID);
 
-            var requestBody =
-                    buildPasskeysCreateRequestBody(
-                            CREDENTIAL,
-                            PRIMARY_PASSKEY_ID,
-                            TEST_AAGUID,
-                            false,
-                            0,
-                            PASSKEY_TRANSPORTS,
-                            false,
-                            false,
-                            false);
-            var expectedSortKey = format("PASSKEY#%s", PRIMARY_PASSKEY_ID);
+        // When
+        var response =
+                makeRequest(
+                        Optional.of(requestBody),
+                        headers,
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
 
-            // When
-            var response =
-                    makeRequest(
-                            Optional.of(requestBody),
-                            headers,
-                            Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+        // Then
+        assertThat(response.getStatusCode(), equalTo(201));
+        assertThat(response.getBody(), equalTo("Passkey created successfully"));
 
-            // Then
-            assertThat(response.getStatusCode(), equalTo(201));
-            assertThat(response.getBody(), equalTo("Passkey created successfully"));
+        var savedPasskeysForUser = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
+        var savedPasskey = savedPasskeysForUser.get(0);
 
-            var savedPasskeysForUser = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
-            var savedPasskey = savedPasskeysForUser.get(0);
-
-            assertThat(savedPasskey.getCredentialId(), equalTo(PRIMARY_PASSKEY_ID));
-            assertThat(savedPasskey.getSortKey(), equalTo(expectedSortKey));
-        }
+        assertThat(savedPasskey.getCredentialId(), equalTo(PRIMARY_PASSKEY_ID));
+        assertThat(savedPasskey.getSortKey(), equalTo(expectedSortKey));
     }
 
-    @Nested
-    class Error {
+    @Test
+    void shouldReturn400IfInvalidRequestBody() throws Json.JsonException {
+        // Given
+        Map<String, String> headers = new HashMap<>();
 
-        @Test
-        void shouldReturn400IfInvalidRequestBody() throws Json.JsonException {
-            // Given
-            Map<String, String> headers = new HashMap<>();
+        var requestBodyWithNullCredential =
+                buildPasskeysCreateRequestBody(
+                        null,
+                        PRIMARY_PASSKEY_ID,
+                        TEST_AAGUID,
+                        false,
+                        0,
+                        PASSKEY_TRANSPORTS,
+                        false,
+                        false,
+                        false);
 
-            var requestBodyWithNullCredential =
-                    buildPasskeysCreateRequestBody(
-                            null,
-                            PRIMARY_PASSKEY_ID,
-                            TEST_AAGUID,
-                            false,
-                            0,
-                            PASSKEY_TRANSPORTS,
-                            false,
-                            false,
-                            false);
+        // When
+        var response =
+                makeRequest(
+                        Optional.of(requestBodyWithNullCredential),
+                        headers,
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
 
-            // When
-            var response =
-                    makeRequest(
-                            Optional.of(requestBodyWithNullCredential),
-                            headers,
-                            Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+        // Then
+        assertThat(response.getStatusCode(), equalTo(400));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
+    }
 
-            // Then
-            assertThat(response.getStatusCode(), equalTo(400));
-            assertThat(response, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
-        }
+    @Test
+    void shouldReturn409IfPasskeyExists() throws Json.JsonException {
+        // Given
+        Map<String, String> headers = new HashMap<>();
 
-        @Test
-        void shouldReturn409IfPasskeyExists() throws Json.JsonException {
-            // Given
-            Map<String, String> headers = new HashMap<>();
+        dynamoPasskeyService.savePasskeyIfUnique(
+                buildGenericPasskeyForUserWithSubjectId(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID));
 
-            dynamoPasskeyService.savePasskeyIfUnique(
-                    buildGenericPasskeyForUserWithSubjectId(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID));
+        var requestBodyWithDuplicatePasskeyId =
+                buildPasskeysCreateRequestBody(
+                        CREDENTIAL,
+                        PRIMARY_PASSKEY_ID,
+                        TEST_AAGUID,
+                        false,
+                        0,
+                        PASSKEY_TRANSPORTS,
+                        false,
+                        false,
+                        false);
 
-            var requestBodyWithDuplicatePasskeyId =
-                    buildPasskeysCreateRequestBody(
-                            CREDENTIAL,
-                            PRIMARY_PASSKEY_ID,
-                            TEST_AAGUID,
-                            false,
-                            0,
-                            PASSKEY_TRANSPORTS,
-                            false,
-                            false,
-                            false);
+        // When
+        var response =
+                makeRequest(
+                        Optional.of(requestBodyWithDuplicatePasskeyId),
+                        headers,
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
 
-            // When
-            var response =
-                    makeRequest(
-                            Optional.of(requestBodyWithDuplicatePasskeyId),
-                            headers,
-                            Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+        // Then
+        assertThat(response.getStatusCode(), equalTo(409));
+        assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ALREADY_EXISTS));
+    }
 
-            // Then
-            assertThat(response.getStatusCode(), equalTo(409));
-            assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ALREADY_EXISTS));
-        }
+    @Test
+    void shouldReturn422IfInvalidAaguid() throws Json.JsonException {
+        // Given
+        Map<String, String> headers = new HashMap<>();
 
-        @Test
-        void shouldReturn422IfInvalidAaguid() throws Json.JsonException {
-            // Given
-            Map<String, String> headers = new HashMap<>();
+        var requestBodyWithInvalidAaguid =
+                buildPasskeysCreateRequestBody(
+                        CREDENTIAL,
+                        PRIMARY_PASSKEY_ID,
+                        "some-invalid-aaguid",
+                        false,
+                        0,
+                        PASSKEY_TRANSPORTS,
+                        false,
+                        false,
+                        false);
 
-            var requestBodyWithInvalidAaguid =
-                    buildPasskeysCreateRequestBody(
-                            CREDENTIAL,
-                            PRIMARY_PASSKEY_ID,
-                            "some-invalid-aaguid",
-                            false,
-                            0,
-                            PASSKEY_TRANSPORTS,
-                            false,
-                            false,
-                            false);
+        // When
+        var response =
+                makeRequest(
+                        Optional.of(requestBodyWithInvalidAaguid),
+                        headers,
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
 
-            // When
-            var response =
-                    makeRequest(
-                            Optional.of(requestBodyWithInvalidAaguid),
-                            headers,
-                            Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
-
-            // Then
-            assertThat(response.getStatusCode(), equalTo(422));
-            assertThat(response, hasJsonBody(ErrorResponse.INVALID_AAGUID));
-        }
+        // Then
+        assertThat(response.getStatusCode(), equalTo(422));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_AAGUID));
     }
 
     private String buildPasskeysCreateRequestBody(

@@ -5,9 +5,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
-import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.DynamoPasskeyServiceFailureReason;
-import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateServiceFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
+import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
+import uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -41,89 +43,94 @@ class PasskeysServiceTest {
     }
 
     @Nested
-    class Success {
+    class CreatePasskey {
 
-        @Test
-        void shouldCreatePasskeyGivenValidRequest() {
-            // Given
-            when(persistentService.savePasskeyIfUnique(any())).thenReturn(Result.success(null));
-            var passkeysCreateRequest =
-                    buildPasskeysCreateRequest(
-                            CREDENTIAL,
-                            PRIMARY_PASSKEY_ID,
-                            TEST_AAGUID,
-                            false,
-                            0,
-                            PASSKEY_TRANSPORTS,
-                            false,
-                            false,
-                            false);
+        @Nested
+        class Success {
 
-            // When
-            var result = passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
+            @Test
+            void shouldCreatePasskeyGivenValidRequest() {
+                // Given
+                when(persistentService.savePasskeyIfUnique(any())).thenReturn(Result.success(null));
+                var passkeysCreateRequest =
+                        buildPasskeysCreateRequest(
+                                CREDENTIAL,
+                                PRIMARY_PASSKEY_ID,
+                                TEST_AAGUID,
+                                false,
+                                0,
+                                PASSKEY_TRANSPORTS,
+                                false,
+                                false,
+                                false);
 
-            // Then
-            assertThat(result.isSuccess(), equalTo(true));
-        }
-    }
+                // When
+                var result =
+                        passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
 
-    @Nested
-    class Failure {
-
-        @Test
-        void shouldReturnPasskeyExistsIfPasskeyWithCredentialIdExistsForSubjectId() {
-            // Given
-            when(persistentService.savePasskeyIfUnique(any()))
-                    .thenReturn(Result.failure(DynamoPasskeyServiceFailureReason.PASSKEY_EXISTS));
-            var passkeysCreateRequest =
-                    buildPasskeysCreateRequest(
-                            CREDENTIAL,
-                            PRIMARY_PASSKEY_ID,
-                            TEST_AAGUID,
-                            false,
-                            0,
-                            PASSKEY_TRANSPORTS,
-                            false,
-                            false,
-                            false);
-
-            // When
-            var result = passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
-
-            // Then
-            assertThat(result.isFailure(), equalTo(true));
-            assertThat(
-                    result.getFailure(),
-                    equalTo(PasskeysCreateServiceFailureReason.PASSKEY_EXISTS));
+                // Then
+                assertThat(result.isSuccess(), equalTo(true));
+            }
         }
 
-        @Test
-        void shouldReturnFailedToSavePasskeyIfFailedToSavePasskey() {
-            // Given
-            when(persistentService.savePasskeyIfUnique(any()))
-                    .thenReturn(
-                            Result.failure(
-                                    DynamoPasskeyServiceFailureReason.FAILED_TO_SAVE_PASSKEY));
-            var passkeysCreateRequest =
-                    buildPasskeysCreateRequest(
-                            CREDENTIAL,
-                            PRIMARY_PASSKEY_ID,
-                            TEST_AAGUID,
-                            false,
-                            0,
-                            PASSKEY_TRANSPORTS,
-                            false,
-                            false,
-                            false);
+        @Nested
+        class Failure {
 
-            // When
-            var result = passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
+            @Test
+            void shouldReturnPasskeyExistsIfPasskeyWithCredentialIdExistsForSubjectId() {
+                // Given
+                when(persistentService.savePasskeyIfUnique(any()))
+                        .thenReturn(Result.failure(PasskeysCreateFailureReason.PASSKEY_EXISTS));
+                var passkeysCreateRequest =
+                        buildPasskeysCreateRequest(
+                                CREDENTIAL,
+                                PRIMARY_PASSKEY_ID,
+                                TEST_AAGUID,
+                                false,
+                                0,
+                                PASSKEY_TRANSPORTS,
+                                false,
+                                false,
+                                false);
 
-            // Then
-            assertThat(result.isFailure(), equalTo(true));
-            assertThat(
-                    result.getFailure(),
-                    equalTo(PasskeysCreateServiceFailureReason.FAILED_TO_SAVE_PASSKEY));
+                // When
+                var result =
+                        passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
+
+                // Then
+                assertThat(result.isFailure(), equalTo(true));
+                assertThat(
+                        result.getFailure(), equalTo(PasskeysCreateFailureReason.PASSKEY_EXISTS));
+            }
+
+            @Test
+            void shouldReturnFailedToSavePasskeyIfFailedToSavePasskey() {
+                // Given
+                when(persistentService.savePasskeyIfUnique(any()))
+                        .thenReturn(
+                                Result.failure(PasskeysCreateFailureReason.FAILED_TO_SAVE_PASSKEY));
+                var passkeysCreateRequest =
+                        buildPasskeysCreateRequest(
+                                CREDENTIAL,
+                                PRIMARY_PASSKEY_ID,
+                                TEST_AAGUID,
+                                false,
+                                0,
+                                PASSKEY_TRANSPORTS,
+                                false,
+                                false,
+                                false);
+
+                // When
+                var result =
+                        passkeysService.createPasskey(passkeysCreateRequest, PUBLIC_SUBJECT_ID);
+
+                // Then
+                assertThat(result.isFailure(), equalTo(true));
+                assertThat(
+                        result.getFailure(),
+                        equalTo(PasskeysCreateFailureReason.FAILED_TO_SAVE_PASSKEY));
+            }
         }
     }
 
@@ -187,6 +194,58 @@ class PasskeysServiceTest {
             assertThat(
                     result.getFailure(),
                     equalTo(PasskeysUpdateFailureReason.FAILED_TO_UPDATE_PASSKEY));
+        }
+    }
+
+    @Nested
+    class RetrievePasskeys {
+
+        @Nested
+        class Success {
+
+            @Test
+            void shouldRetrievePasskeys() {
+                // Given
+                var returnedPasskeys =
+                        List.of(
+                                PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
+                                        CommonTestVariables.PUBLIC_SUBJECT_ID,
+                                        CommonTestVariables.PRIMARY_PASSKEY_ID),
+                                PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
+                                        CommonTestVariables.PUBLIC_SUBJECT_ID,
+                                        CommonTestVariables.SECONDARY_PASSKEY_ID));
+                when(persistentService.getPasskeysForUser(CommonTestVariables.PUBLIC_SUBJECT_ID))
+                        .thenReturn(returnedPasskeys);
+
+                // When
+                var result =
+                        passkeysService.retrievePasskeys(CommonTestVariables.PUBLIC_SUBJECT_ID);
+
+                // Then
+                assertTrue(result.isSuccess());
+                assertThat(result.getSuccess(), equalTo(returnedPasskeys));
+            }
+        }
+
+        @Nested
+        class Failure {
+
+            @Test
+            void shouldReturnFailedToGetPasskeysIfExceptionThrown() {
+                // Given
+                when(persistentService.getPasskeysForUser(CommonTestVariables.PUBLIC_SUBJECT_ID))
+                        .thenThrow(RuntimeException.class);
+
+                // When
+                var result =
+                        passkeysService.retrievePasskeys(CommonTestVariables.PUBLIC_SUBJECT_ID);
+
+                // Then
+                assertTrue(result.isFailure());
+                assertThat(
+                        result.getFailure(),
+                        equalTo(PasskeysRetrieveFailureReasons.FAILED_TO_GET_PASSKEYS));
+            }
         }
     }
 
