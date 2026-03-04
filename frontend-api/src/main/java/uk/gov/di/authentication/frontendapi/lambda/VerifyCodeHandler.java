@@ -10,6 +10,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -55,6 +56,7 @@ import java.util.Optional;
 
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
+import static uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper.isInitiated;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
@@ -62,6 +64,9 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
+import static uk.gov.di.authentication.shared.entity.JourneyType.PASSWORD_RESET_MFA;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
+import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -184,8 +189,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
 
-        if (journeyType == JourneyType.REAUTHENTICATION
-                && (userProfile == null || subjectId == null)) {
+        if (journeyType == REAUTHENTICATION && (userProfile == null || subjectId == null)) {
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
@@ -288,12 +292,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         if (notificationType.equals(RESET_PASSWORD_WITH_CODE)) {
             var mfaCodeRequestType =
                     CodeRequestType.getCodeRequestType(
-                            CodeRequestType.SupportedCodeType.MFA, JourneyType.PASSWORD_RESET_MFA);
+                            CodeRequestType.SupportedCodeType.MFA, PASSWORD_RESET_MFA);
             // TODO remove temporary ZDD measure to reference existing deprecated keys when
             //  expired
             var deprecatedMfaCodeRequestType =
                     CodeRequestType.getDeprecatedCodeRequestTypeString(
-                            MFAMethodType.SMS, JourneyType.PASSWORD_RESET_MFA);
+                            MFAMethodType.SMS, PASSWORD_RESET_MFA);
 
             if (isCodeBlockedForSession(
                     authSession, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
@@ -328,7 +332,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 journeyType,
                 auditContext,
                 maybeRpPairwiseId,
-                maybeRequestedSmsMfaMethod);
+                maybeRequestedSmsMfaMethod,
+                retrievedMfaMethods);
 
         return generateEmptySuccessApiGatewayResponse();
     }
@@ -338,7 +343,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId) {
-        return journeyType == JourneyType.REAUTHENTICATION
+        return journeyType == REAUTHENTICATION
                 && checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
                         journeyType, subjectId, auditContext, maybeRpPairwiseId);
     }
@@ -372,7 +377,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthSessionItem authSession,
             AuditContext auditContext,
             Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
-        if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
+        if (journeyType == REAUTHENTICATION && notificationType == MFA_SMS) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 authenticationAttemptsService.createOrIncrementCount(
                         subjectId,
@@ -381,7 +386,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                         ChronoUnit.SECONDS)
                                 .toInstant()
                                 .getEpochSecond(),
-                        JourneyType.REAUTHENTICATION,
+                        REAUTHENTICATION,
                         CountType.ENTER_MFA_CODE);
             }
         } else {
@@ -400,17 +405,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId) {
-        if (journeyType == JourneyType.REAUTHENTICATION
+        if (journeyType == REAUTHENTICATION
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var countsByJourney =
                     maybeRpPairwiseId.isEmpty()
                             ? authenticationAttemptsService.getCountsByJourney(
-                                    subjectId, JourneyType.REAUTHENTICATION)
+                                    subjectId, REAUTHENTICATION)
                             : authenticationAttemptsService
                                     .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId,
-                                            maybeRpPairwiseId.get(),
-                                            JourneyType.REAUTHENTICATION);
+                                            subjectId, maybeRpPairwiseId.get(), REAUTHENTICATION);
 
             var countTypesWhereBlocked =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
@@ -483,7 +486,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId,
-            Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod,
+            List<MFAMethod> retrievedMfaMethods) {
         var authSession = userContext.getAuthSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
@@ -491,6 +495,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var clientId = authSession.getClientId();
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
+
+        if (isInitiated(configurationService, retrievedMfaMethods, journeyType)) {
+            ForcedMfaResetHelper.emitRequestedAuditEvent(
+                    auditService, journeyType, maybeRequestedSmsMfaMethod, auditContext);
+        }
 
         String emailAddress = authSession.getEmailAddress();
         String otpCodeIdentifier = emailAddress;
@@ -568,18 +577,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             AuthSessionItem authSession,
             Optional<String> maybeRpPairwiseId) {
-        if (journeyType == JourneyType.REAUTHENTICATION
+        if (journeyType == REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
                     maybeRpPairwiseId.isPresent()
                             ? authenticationAttemptsService
                                     .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId,
-                                            maybeRpPairwiseId.get(),
-                                            JourneyType.REAUTHENTICATION)
+                                            subjectId, maybeRpPairwiseId.get(), REAUTHENTICATION)
                             : authenticationAttemptsService.getCountsByJourney(
-                                    subjectId, JourneyType.REAUTHENTICATION);
+                                    subjectId, REAUTHENTICATION);
             var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
             authSessionService.updateSession(updatedAuthSession);
         }
@@ -590,7 +597,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 .forEach(
                         countType ->
                                 authenticationAttemptsService.deleteCount(
-                                        identifier, JourneyType.REAUTHENTICATION, countType));
+                                        identifier, REAUTHENTICATION, countType));
     }
 
     private AuditService.MetadataPair[] metadataPairs(
@@ -630,7 +637,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     TOO_MANY_INVALID_PW_RESET_CODES_ENTERED,
                     TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED:
                 if (!configurationService.supportReauthSignoutEnabled()
-                        || journeyType != JourneyType.REAUTHENTICATION) {
+                        || journeyType != REAUTHENTICATION) {
                     blockCodeForSession(authSession, codeBlockedKeyPrefix);
                 }
                 resetIncorrectMfaCodeAttemptsCount(authSession);
@@ -698,7 +705,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             journeyType =
                     switch (notificationType) {
                         case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> JourneyType.ACCOUNT_RECOVERY;
-                        case MFA_SMS -> JourneyType.SIGN_IN;
+                        case MFA_SMS -> SIGN_IN;
                         case RESET_PASSWORD_WITH_CODE -> JourneyType.PASSWORD_RESET;
                         default -> JourneyType.REGISTRATION;
                     };
