@@ -178,11 +178,7 @@ paths:
         timeoutInMillis: 29000
   /v1/mfa-methods/{publicSubjectId}:
     parameters:
-      - name: publicSubjectId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/PublicSubjectId"
     get:
       security:
         - authorise-access-token: []
@@ -319,11 +315,7 @@ paths:
       description: Creates an mfa method. A new MFA Method cannot be created as DEFAULT, it must be BACKUP and promoted at a later stage
       operationId: "mfa-method-create"
       parameters:
-        - name: publicSubjectId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/PublicSubjectId"
       requestBody:
         content:
           application/json:
@@ -469,11 +461,7 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: publicSubjectId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/PublicSubjectId"
     put:
       security:
         - authorise-access-token: []
@@ -674,11 +662,7 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: publicSubjectId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/PublicSubjectId"
       responses:
         "204":
           description: MFA Method Deleted
@@ -1206,3 +1190,12 @@ components:
         authorizerCredentials:
           Fn::GetAtt: [ApiGatewayAuthorizerRole, Arn]
         authorizerResultTtlInSeconds: 0
+
+  parameters:
+    PublicSubjectId:
+      name: publicSubjectId
+      in: path
+      description: Public Subject ID
+      required: true
+      schema:
+        type: string
