@@ -82,6 +82,11 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getStorageTokenSigningKeyAlias());
     }
 
+    public JWK getNextPublicStorageTokenJwkWithOpaqueId() {
+        LOG.info("Retrieving next storage token public key");
+        return getPublicJWKWithKeyId(configurationService.getNextStorageTokenSigningKeyAlias());
+    }
+
     public JWK getPublicIpvTokenJwkWithOpaqueId() {
         LOG.info("Retrieving IPV token public key");
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
