@@ -95,6 +95,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
@@ -747,7 +748,9 @@ class VerifyMfaCodeHandlerTest {
                                     ENVIRONMENT.getValue(),
                                     configurationService.getEnvironment(),
                                     MFA_RESET_TYPE.getValue(),
-                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString(),
+                                    MFA_METHOD_TYPE.getValue(),
+                                    MFAMethodType.SMS.getValue()));
             verify(auditService, never())
                     .submitAuditEvent(
                             eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
@@ -781,7 +784,9 @@ class VerifyMfaCodeHandlerTest {
                                     ENVIRONMENT.getValue(),
                                     configurationService.getEnvironment(),
                                     MFA_RESET_TYPE.getValue(),
-                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString(),
+                                    MFA_METHOD_TYPE.getValue(),
+                                    MFAMethodType.AUTH_APP.getValue()));
             verify(auditService, never())
                     .submitAuditEvent(
                             eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),

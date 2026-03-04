@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -30,7 +31,9 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_SMS_METHOD;
@@ -230,6 +233,35 @@ class ForcedMfaResetHelperTest {
                                     configurationService.getEnvironment(),
                                     MFA_RESET_TYPE.getValue(),
                                     MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
+        }
+    }
+
+    @Nested
+    class EmitCompletedMetric {
+        private static final String TEST_ENVIRONMENT = "test-environment";
+
+        @BeforeEach
+        void setup() {
+            when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
+        }
+
+        @Test
+        void shouldIncrementMetric() {
+            MFAMethodType newMfaMethodType = MFAMethodType.SMS;
+
+            ForcedMfaResetHelper.emitCompletedMetric(
+                    configurationService, cloudwatchMetricsService, newMfaMethodType);
+
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            FORCED_MFA_RESET_COMPLETED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    MFA_RESET_TYPE.getValue(),
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString(),
+                                    MFA_METHOD_TYPE.getValue(),
+                                    newMfaMethodType.getValue()));
         }
     }
 }

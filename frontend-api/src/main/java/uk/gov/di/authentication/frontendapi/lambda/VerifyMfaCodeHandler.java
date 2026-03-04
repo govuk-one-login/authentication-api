@@ -512,7 +512,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (isForcedMfaResetRequired) {
             if (ForcedMfaResetHelper.isCompletedJourney(journeyType)) {
                 ForcedMfaResetHelper.emitCompletedMetric(
-                        configurationService, cloudwatchMetricsService);
+                        configurationService,
+                        cloudwatchMetricsService,
+                        codeRequest.getMfaMethodType());
             } else if (ForcedMfaResetHelper.isInitiatedJourney(journeyType)) {
                 ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
                         configurationService,
