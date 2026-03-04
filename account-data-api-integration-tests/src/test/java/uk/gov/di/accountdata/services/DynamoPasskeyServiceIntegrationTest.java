@@ -21,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason.PASSKEY_NOT_FOUND;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.CREDENTIAL;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PASSKEY_AAGUID;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PASSKEY_TRANSPORTS;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId;
@@ -43,13 +46,13 @@ class DynamoPasskeyServiceIntegrationTest {
             // Given
             var passkeyToSave =
                     buildPasskeyForUser(
-                            CommonTestVariables.PUBLIC_SUBJECT_ID,
-                            CommonTestVariables.CREDENTIAL,
+                            PUBLIC_SUBJECT_ID,
+                            CREDENTIAL,
                             PRIMARY_PASSKEY_ID,
-                            CommonTestVariables.PASSKEY_AAGUID,
+                            PASSKEY_AAGUID,
                             true,
                             1,
-                            CommonTestVariables.PASSKEY_TRANSPORTS,
+                            PASSKEY_TRANSPORTS,
                             true,
                             false,
                             true);
@@ -70,18 +73,15 @@ class DynamoPasskeyServiceIntegrationTest {
 
             assertThat(savedPasskey.getType(), equalTo("PASSKEY"));
             assertThat(savedPasskey.getSortKey(), equalTo(expectedSortKey));
-            assertThat(savedPasskey.getCredential(), equalTo(CommonTestVariables.CREDENTIAL));
+            assertThat(savedPasskey.getCredential(), equalTo(CREDENTIAL));
             assertThat(
                     savedPasskey.getPublicSubjectId(),
                     equalTo(CommonTestVariables.PUBLIC_SUBJECT_ID));
             assertThat(savedPasskey.getCredentialId(), equalTo(PRIMARY_PASSKEY_ID));
-            assertThat(
-                    savedPasskey.getPasskeyAaguid(), equalTo(CommonTestVariables.PASSKEY_AAGUID));
+            assertThat(savedPasskey.getPasskeyAaguid(), equalTo(PASSKEY_AAGUID));
             assertThat(savedPasskey.getPasskeyIsAttested(), equalTo(true));
             assertThat(savedPasskey.getPasskeySignCount(), equalTo(1));
-            assertThat(
-                    savedPasskey.getPasskeyTransports(),
-                    equalTo(CommonTestVariables.PASSKEY_TRANSPORTS));
+            assertThat(savedPasskey.getPasskeyTransports(), equalTo(PASSKEY_TRANSPORTS));
             assertThat(savedPasskey.getPasskeyBackupEligible(), equalTo(true));
             assertThat(savedPasskey.getPasskeyBackedUp(), equalTo(false));
             assertThat(savedPasskey.getLastUsed(), equalTo(null));
@@ -115,12 +115,12 @@ class DynamoPasskeyServiceIntegrationTest {
             dynamoPasskeyService.savePasskeyIfUnique(
                     buildPasskeyForUser(
                             CommonTestVariables.PUBLIC_SUBJECT_ID,
-                            CommonTestVariables.CREDENTIAL,
+                            CREDENTIAL,
                             CommonTestVariables.SECONDARY_PASSKEY_ID,
-                            CommonTestVariables.PASSKEY_AAGUID,
+                            PASSKEY_AAGUID,
                             false,
                             0,
-                            CommonTestVariables.PASSKEY_TRANSPORTS,
+                            PASSKEY_TRANSPORTS,
                             true,
                             false,
                             true));

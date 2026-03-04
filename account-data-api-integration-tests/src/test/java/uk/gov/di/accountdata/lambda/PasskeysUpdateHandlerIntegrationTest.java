@@ -10,14 +10,17 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticatorExtension;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.LAST_USED_AT;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.SIGN_COUNT;
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId;
 
 class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -31,8 +34,11 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     private static final Passkey EXISTING_PASSKEY =
             buildGenericPasskeyForUserWithSubjectId(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID)
-                    .withPasskeySignCount(1)
-                    .withLastUsed(Instant.now().minusSeconds(30).toString());
+                    .withPasskeySignCount(SIGN_COUNT)
+                    .withLastUsed(LAST_USED_AT);
+    private static final int UPDATED_SIGN_COUNT = SIGN_COUNT + 1;
+    private static final String UPDATED_LAST_USED_AT =
+            Instant.parse(LAST_USED_AT).plus(1, ChronoUnit.MINUTES).toString();
 
     @BeforeEach
     void setUp() {
@@ -43,16 +49,13 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     @Test
     void shouldUpdateAPasskey() {
         // Given
-        var lastUsedAt = Instant.now().toString();
-        var updatedSignCount = 4;
-
         var requestBody =
                 """
                     {
                         "signCount": %d,
                         "lastUsedAt": "%s"
                     }"""
-                        .formatted(updatedSignCount, lastUsedAt);
+                        .formatted(UPDATED_SIGN_COUNT, UPDATED_LAST_USED_AT);
 
         // When
         var response =
@@ -74,15 +77,13 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var savedPasskey = savedPasskeysForUser.get(0);
 
         assertEquals(PRIMARY_PASSKEY_ID, savedPasskey.getCredentialId());
-        assertEquals(updatedSignCount, savedPasskey.getPasskeySignCount());
-        assertEquals(lastUsedAt, savedPasskey.getLastUsed());
+        assertEquals(UPDATED_SIGN_COUNT, savedPasskey.getPasskeySignCount());
+        assertEquals(UPDATED_LAST_USED_AT, savedPasskey.getLastUsed());
     }
 
     @Test
     void shouldReturn404ForPasskeyNotFound() {
         // Given
-        var lastUsedAt = Instant.now().toString();
-        var updatedSignCount = 4;
         var requestPasskeyId = "a different passkey";
 
         var requestBody =
@@ -91,7 +92,7 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         "signCount": %d,
                         "lastUsedAt": "%s"
                     }"""
-                        .formatted(updatedSignCount, lastUsedAt);
+                        .formatted(UPDATED_SIGN_COUNT, UPDATED_LAST_USED_AT);
 
         // When
         var response =
@@ -137,8 +138,7 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     @Test
     void shouldReturn400IfInvalidTimestamp() {
         // Given
-        var lastUsedAt = "not a timestamp";
-        var updatedSignCount = 4;
+        var invalidLastUsedAt = "not a timestamp";
 
         var requestBody =
                 """
@@ -146,7 +146,7 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         "signCount": %d,
                         "lastUsedAt": "%s"
                     }"""
-                        .formatted(updatedSignCount, lastUsedAt);
+                        .formatted(UPDATED_SIGN_COUNT, invalidLastUsedAt);
 
         // When
         var response =

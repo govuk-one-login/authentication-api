@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -25,6 +24,9 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.LAST_USED_AT;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.SIGN_COUNT;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
@@ -39,9 +41,6 @@ class PasskeysUpdateHandlerTest {
     private final PasskeysService passkeysService = mock(PasskeysService.class);
 
     private PasskeysUpdateHandler handler;
-    private static final int SIGN_COUNT = 2;
-    private static final String LAST_USED_AT = Instant.now().toString();
-    private static final String PASSKEY_ID = "some-passkey-id";
 
     @BeforeEach
     void setUp() {
@@ -56,13 +55,17 @@ class PasskeysUpdateHandlerTest {
         void shouldReturn204ForValidRequest() {
             // Given
             var request =
-                    passkeysUpdateRequest(SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PASSKEY_ID);
+                    passkeysUpdateRequest(
+                            SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
             when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
                     .thenReturn(Result.success(new Passkey()));
+
+            // When
             var result = handler.handleRequest(request, context);
 
+            // Then
             verify(passkeysService)
-                    .updatePasskey(PUBLIC_SUBJECT_ID, PASSKEY_ID, LAST_USED_AT, SIGN_COUNT);
+                    .updatePasskey(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID, LAST_USED_AT, SIGN_COUNT);
             assertThat(result, hasStatus(204));
         }
     }
@@ -71,25 +74,34 @@ class PasskeysUpdateHandlerTest {
     class Error {
         @Test
         void shouldReturn404WhenPasskeyDoesNotExist() {
+            // Given
             var request =
-                    passkeysUpdateRequest(SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PASSKEY_ID);
+                    passkeysUpdateRequest(
+                            SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
             when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
                     .thenReturn(Result.failure(PasskeysUpdateFailureReason.PASSKEY_NOT_FOUND));
+
+            // When
             var result = handler.handleRequest(request, context);
 
+            // Then
             assertThat(result, hasStatus(404));
             assertThat(result, hasJsonBody(ErrorResponse.PASSKEY_NOT_FOUND));
         }
 
         @Test
         void shouldReturn500WhenDatabaseOperationFails() {
+            // Given
             var request =
-                    passkeysUpdateRequest(SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PASSKEY_ID);
+                    passkeysUpdateRequest(
+                            SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
             when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
                     .thenReturn(
                             Result.failure(PasskeysUpdateFailureReason.FAILED_TO_UPDATE_PASSKEY));
+            // When
             var result = handler.handleRequest(request, context);
 
+            // Then
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
         }
@@ -114,38 +126,46 @@ class PasskeysUpdateHandlerTest {
         @ParameterizedTest
         @MethodSource("invalidRequestBodies")
         void shouldReturn400WhenRequestBodyIsInvalid(String invalidRequestBody) {
+            // Given
             var request =
                     baseApiProxyRequest()
                             .withPathParameters(
-                                    Map.of(
-                                            "publicSubjectId",
-                                            PUBLIC_SUBJECT_ID,
-                                            "passkeyId",
-                                            PASSKEY_ID))
+                                    Map.ofEntries(
+                                            Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID),
+                                            Map.entry("passkeyId", PRIMARY_PASSKEY_ID)))
                             .withBody(invalidRequestBody);
+
+            // When
             var result = handler.handleRequest(request, context);
 
+            // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
         }
 
         @Test
         void shouldReturn400WhenRequestIsMissingPublicSubjectId() {
+            // Given
             var requestBody =
                     "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(SIGN_COUNT, LAST_USED_AT);
-            var pathParamsWithoutPublicSubject = Map.ofEntries(Map.entry("passkeyId", PASSKEY_ID));
+            var pathParamsWithoutPublicSubject =
+                    Map.ofEntries(Map.entry("passkeyId", PRIMARY_PASSKEY_ID));
             var request =
                     baseApiProxyRequest()
                             .withPathParameters(pathParamsWithoutPublicSubject)
                             .withBody(requestBody);
+
+            // When
             var result = handler.handleRequest(request, context);
 
+            // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.MISSING_SUBJECT_ID));
         }
 
         @Test
         void shouldReturn400WhenRequestIsMissingPasskeyId() {
+            // Given
             var requestBody =
                     "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(SIGN_COUNT, LAST_USED_AT);
             var pathParamsWithoutPublicSubject =
@@ -154,8 +174,11 @@ class PasskeysUpdateHandlerTest {
                     baseApiProxyRequest()
                             .withPathParameters(pathParamsWithoutPublicSubject)
                             .withBody(requestBody);
+
+            // When
             var result = handler.handleRequest(request, context);
 
+            // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.MISSING_PASSKEY_ID));
         }
