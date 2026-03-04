@@ -24,14 +24,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.CREDENTIAL;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PASSKEY_TRANSPORTS;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.TEST_AAGUID;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.contextWithSourceIp;
 
 class PasskeysCreateHandlerTest {
 
@@ -272,8 +272,7 @@ class PasskeysCreateHandlerTest {
             String requestBody, Map<String, String> pathParams) {
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(pathParams)
-                .withHeaders(VALID_HEADERS)
                 .withBody(requestBody)
-                .withRequestContext(contextWithSourceIp(CommonTestVariables.IP_ADDRESS));
+                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 }

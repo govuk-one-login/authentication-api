@@ -33,7 +33,6 @@ dependencies {
 
     testImplementation libs.bundles.test,
             libs.awsLambdaTests,
-            project(":shared-test"),
             libs.bundles.awsLambda,
             libs.awsSqs,
             libs.awsS3,

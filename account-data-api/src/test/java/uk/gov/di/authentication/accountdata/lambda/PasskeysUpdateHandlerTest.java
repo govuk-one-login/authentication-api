@@ -24,15 +24,14 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.LAST_USED_AT;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.SIGN_COUNT;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.contextWithSourceIp;
 
 class PasskeysUpdateHandlerTest {
 
@@ -195,7 +194,6 @@ class PasskeysUpdateHandlerTest {
 
     private APIGatewayProxyRequestEvent baseApiProxyRequest() {
         return new APIGatewayProxyRequestEvent()
-                .withHeaders(VALID_HEADERS)
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 }
