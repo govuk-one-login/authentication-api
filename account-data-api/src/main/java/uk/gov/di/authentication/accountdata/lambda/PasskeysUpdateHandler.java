@@ -77,7 +77,7 @@ public class PasskeysUpdateHandler
                         result -> generateApiGatewayProxyResponse(204, ""));
     }
 
-    public Result<PasskeysUpdateFailureReason, PasskeysUpdateContext> parseUpdateRequest(
+    private Result<PasskeysUpdateFailureReason, PasskeysUpdateContext> parseUpdateRequest(
             APIGatewayProxyRequestEvent input) {
         PasskeysUpdateRequest passkeysUpdateRequest;
         try {
