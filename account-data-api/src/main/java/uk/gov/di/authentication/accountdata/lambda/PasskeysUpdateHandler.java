@@ -83,19 +83,16 @@ public class PasskeysUpdateHandler
         return switch (failureReason) {
             case PARSING_PASSKEY_UPDATE_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.INVALID_REQUEST_BODY);
-            case PASSKEY_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
-                    404, ErrorResponse.PASSKEY_NOT_FOUND);
-            case FAILED_TO_UPDATE_PASSKEY -> generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.INTERNAL_SERVER_ERROR);
             case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.MISSING_SUBJECT_ID);
             case MISSING_PASSKEY_ID -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.MISSING_PASSKEY_ID);
+            case PASSKEY_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
+                    404, ErrorResponse.PASSKEY_NOT_FOUND);
+            case FAILED_TO_UPDATE_PASSKEY -> generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.INTERNAL_SERVER_ERROR);
         };
     }
-
-    private record PasskeysUpdateContext(
-            String publicSubjectId, String passkeyId, PasskeysUpdateRequest request) {}
 
     public Result<PasskeysUpdateFailureReason, PasskeysUpdateContext> parseUpdateRequest(
             APIGatewayProxyRequestEvent input) {
@@ -127,4 +124,7 @@ public class PasskeysUpdateHandler
         return Result.success(
                 new PasskeysUpdateContext(publicSubjectId, passkeyId, passkeysUpdateRequest));
     }
+
+    private record PasskeysUpdateContext(
+            String publicSubjectId, String passkeyId, PasskeysUpdateRequest request) {}
 }
