@@ -391,15 +391,6 @@ jobs:
           --add-host "subscriber.internal:host-gateway"
         ports:
           - 45678:45678
-      redis:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb' || '' }}
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
       dynamodb:
         image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
         options: >-
