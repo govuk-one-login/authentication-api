@@ -289,8 +289,6 @@ Mappings:
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
       lockoutDuration: 7200
       otpCodeTtlDuration: 900
-      lambdaMaxConcurrency: 10
-      lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -323,8 +321,6 @@ Mappings:
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
       lockoutDuration: 7200
       otpCodeTtlDuration: 900
-      lambdaMaxConcurrency: 10
-      lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -357,8 +353,6 @@ Mappings:
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
       lockoutDuration: 7200
       otpCodeTtlDuration: 120
-      lambdaMaxConcurrency: 10
-      lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -393,7 +387,6 @@ Mappings:
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "No"
-      lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
       UseAlarmActions: "No"
