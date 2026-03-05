@@ -20,11 +20,10 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.contextWithSourceIp;
 
 class PasskeysRetrieveHandlerTest {
 
@@ -103,7 +102,6 @@ class PasskeysRetrieveHandlerTest {
     private APIGatewayProxyRequestEvent passkeysRetrieveRequest(Map<String, String> pathParams) {
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(pathParams)
-                .withHeaders(VALID_HEADERS)
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 }
