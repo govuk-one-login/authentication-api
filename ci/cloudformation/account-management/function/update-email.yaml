@@ -162,3 +162,58 @@ Resources:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Ref UpdateEmailFunctionLogGroup
+
+  UpdateEmailFunctionScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Condition: NotSubEnvironment
+    DependsOn: UpdateEmailFunctionAliasactive
+    Properties:
+      MinCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMinConcurrency,
+          DefaultValue: 0,
+        ]
+      MaxCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMaxConcurrency,
+          DefaultValue: 5,
+        ]
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency"
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt UpdateEmailFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+
+  UpdateEmailFunctionAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Condition: NotSubEnvironment
+    DependsOn: UpdateEmailFunctionScalableTarget
+    Properties:
+      PolicyName: !Sub
+        - "LambdaProvisionedConcurrency:${Env}-update-email-lambda"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyType: TargetTrackingScaling
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt UpdateEmailFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
+        TargetValue:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaAutoscalingTargetValue,
+            DefaultValue: "0.6",
+          ]
