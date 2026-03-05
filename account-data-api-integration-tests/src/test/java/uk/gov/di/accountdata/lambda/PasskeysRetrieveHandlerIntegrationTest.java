@@ -3,6 +3,7 @@ package uk.gov.di.accountdata.lambda;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.accountdata.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.accountdata.extensions.AuthenticatorExtension;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysRetrieveResponse;
@@ -10,7 +11,7 @@ import uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper;
 import uk.gov.di.authentication.accountdata.lambda.PasskeysRetrieveHandler;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,8 +29,8 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class PasskeysRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    DynamoPasskeyService dynamoPasskeyService =
-            new DynamoPasskeyService(TEST_CONFIGURATION_SERVICE);
+    private final ConfigurationService configurationService = ConfigurationService.getInstance();
+    DynamoPasskeyService dynamoPasskeyService = new DynamoPasskeyService(configurationService);
 
     @RegisterExtension
     protected static final AuthenticatorExtension authenticatorExtension =
@@ -37,7 +38,7 @@ class PasskeysRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @BeforeEach
     void setUp() {
-        handler = new PasskeysRetrieveHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new PasskeysRetrieveHandler(configurationService);
     }
 
     @Test

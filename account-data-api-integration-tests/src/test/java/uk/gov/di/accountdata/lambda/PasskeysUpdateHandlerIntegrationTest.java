@@ -3,11 +3,12 @@ package uk.gov.di.accountdata.lambda;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.accountdata.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.accountdata.extensions.AuthenticatorExtension;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.lambda.PasskeysUpdateHandler;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
-import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,7 +27,7 @@ import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.bu
 class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     DynamoPasskeyService dynamoPasskeyService =
-            new DynamoPasskeyService(TEST_CONFIGURATION_SERVICE);
+            new DynamoPasskeyService(ConfigurationService.getInstance());
 
     @RegisterExtension
     protected static final AuthenticatorExtension authenticatorExtension =
@@ -42,7 +43,7 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @BeforeEach
     void setUp() {
-        handler = new PasskeysUpdateHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new PasskeysUpdateHandler(ConfigurationService.getInstance());
         dynamoPasskeyService.savePasskeyIfUnique(EXISTING_PASSKEY);
     }
 

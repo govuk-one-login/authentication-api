@@ -3,13 +3,13 @@ package uk.gov.di.accountdata.lambda;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.accountdata.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.accountdata.extensions.AuthenticatorExtension;
 import uk.gov.di.authentication.accountdata.lambda.PasskeysCreateHandler;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,18 +30,16 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    DynamoPasskeyService dynamoPasskeyService =
-            new DynamoPasskeyService(TEST_CONFIGURATION_SERVICE);
+    private final ConfigurationService configurationService = ConfigurationService.getInstance();
+    DynamoPasskeyService dynamoPasskeyService = new DynamoPasskeyService(configurationService);
 
     @RegisterExtension
     protected static final AuthenticatorExtension authenticatorExtension =
             new AuthenticatorExtension();
 
-    private final Json objectMapper = SerializationService.getInstance();
-
     @BeforeEach
     void setUp() {
-        handler = new PasskeysCreateHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new PasskeysCreateHandler(configurationService);
     }
 
     @Test
