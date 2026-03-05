@@ -1,6 +1,7 @@
 package uk.gov.di.accountdata.lambda;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountdata.basetest.ApiGatewayHandlerIntegrationTest;
@@ -47,124 +48,132 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         dynamoPasskeyService.savePasskeyIfUnique(EXISTING_PASSKEY);
     }
 
-    @Test
-    void shouldUpdateAPasskey() {
-        // Given
-        var requestBody =
-                """
-                    {
-                        "signCount": %d,
-                        "lastUsedAt": "%s"
-                    }"""
-                        .formatted(UPDATED_SIGN_COUNT, UPDATED_LAST_USED_AT);
+    @Nested
+    class Success {
 
-        // When
-        var response =
-                makeRequest(
-                        Optional.of(requestBody),
-                        new HashMap<String, String>(),
-                        Collections.emptyMap(),
-                        Map.of(
-                                "publicSubjectId",
-                                PUBLIC_SUBJECT_ID,
-                                "passkeyId",
-                                PRIMARY_PASSKEY_ID));
+        @Test
+        void shouldUpdateAPasskey() {
+            // Given
+            var requestBody =
+                    """
+                            {
+                                "signCount": %d,
+                                "lastUsedAt": "%s"
+                            }"""
+                            .formatted(UPDATED_SIGN_COUNT, UPDATED_LAST_USED_AT);
 
-        // Then
-        assertEquals(204, response.getStatusCode());
-        assertEquals("", response.getBody());
+            // When
+            var response =
+                    makeRequest(
+                            Optional.of(requestBody),
+                            new HashMap<String, String>(),
+                            Collections.emptyMap(),
+                            Map.of(
+                                    "publicSubjectId",
+                                    PUBLIC_SUBJECT_ID,
+                                    "passkeyId",
+                                    PRIMARY_PASSKEY_ID));
 
-        var savedPasskeysForUser = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
-        var savedPasskey = savedPasskeysForUser.get(0);
+            // Then
+            assertEquals(204, response.getStatusCode());
+            assertEquals("", response.getBody());
 
-        assertEquals(PRIMARY_PASSKEY_ID, savedPasskey.getCredentialId());
-        assertEquals(UPDATED_SIGN_COUNT, savedPasskey.getPasskeySignCount());
-        assertEquals(UPDATED_LAST_USED_AT, savedPasskey.getLastUsed());
+            var savedPasskeysForUser = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
+            var savedPasskey = savedPasskeysForUser.get(0);
+
+            assertEquals(PRIMARY_PASSKEY_ID, savedPasskey.getCredentialId());
+            assertEquals(UPDATED_SIGN_COUNT, savedPasskey.getPasskeySignCount());
+            assertEquals(UPDATED_LAST_USED_AT, savedPasskey.getLastUsed());
+        }
     }
 
-    @Test
-    void shouldReturn404ForPasskeyNotFound() {
-        // Given
-        var requestPasskeyId = "a different passkey";
+    @Nested
+    class Error {
 
-        var requestBody =
-                """
-                    {
-                        "signCount": %d,
-                        "lastUsedAt": "%s"
-                    }"""
-                        .formatted(UPDATED_SIGN_COUNT, UPDATED_LAST_USED_AT);
+        @Test
+        void shouldReturn404ForPasskeyNotFound() {
+            // Given
+            var requestPasskeyId = "a different passkey";
 
-        // When
-        var response =
-                makeRequest(
-                        Optional.of(requestBody),
-                        new HashMap<String, String>(),
-                        Collections.emptyMap(),
-                        Map.of(
-                                "publicSubjectId",
-                                PUBLIC_SUBJECT_ID,
-                                "passkeyId",
-                                requestPasskeyId));
+            var requestBody =
+                    """
+                            {
+                                "signCount": %d,
+                                "lastUsedAt": "%s"
+                            }"""
+                            .formatted(UPDATED_SIGN_COUNT, UPDATED_LAST_USED_AT);
 
-        // Then
-        assertEquals(404, response.getStatusCode());
+            // When
+            var response =
+                    makeRequest(
+                            Optional.of(requestBody),
+                            new HashMap<String, String>(),
+                            Collections.emptyMap(),
+                            Map.of(
+                                    "publicSubjectId",
+                                    PUBLIC_SUBJECT_ID,
+                                    "passkeyId",
+                                    requestPasskeyId));
 
-        assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
-    }
+            // Then
+            assertEquals(404, response.getStatusCode());
 
-    @Test
-    void shouldReturn400IfInvalidRequestBody() {
-        // Given
-        var requestBody = "{\"foo\": \"bar\"}";
+            assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
+        }
 
-        // When
-        var response =
-                makeRequest(
-                        Optional.of(requestBody),
-                        new HashMap<String, String>(),
-                        Collections.emptyMap(),
-                        Map.of(
-                                "publicSubjectId",
-                                PUBLIC_SUBJECT_ID,
-                                "passkeyId",
-                                PRIMARY_PASSKEY_ID));
+        @Test
+        void shouldReturn400IfInvalidRequestBody() {
+            // Given
+            var requestBody = "{\"foo\": \"bar\"}";
 
-        // Then
-        assertEquals(400, response.getStatusCode());
+            // When
+            var response =
+                    makeRequest(
+                            Optional.of(requestBody),
+                            new HashMap<String, String>(),
+                            Collections.emptyMap(),
+                            Map.of(
+                                    "publicSubjectId",
+                                    PUBLIC_SUBJECT_ID,
+                                    "passkeyId",
+                                    PRIMARY_PASSKEY_ID));
 
-        assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
-    }
+            // Then
+            assertEquals(400, response.getStatusCode());
 
-    @Test
-    void shouldReturn400IfInvalidTimestamp() {
-        // Given
-        var invalidLastUsedAt = "not a timestamp";
+            assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
+        }
 
-        var requestBody =
-                """
-                    {
-                        "signCount": %d,
-                        "lastUsedAt": "%s"
-                    }"""
-                        .formatted(UPDATED_SIGN_COUNT, invalidLastUsedAt);
+        @Test
+        void shouldReturn400IfInvalidTimestamp() {
+            // Given
+            var invalidLastUsedAt = "not a timestamp";
 
-        // When
-        var response =
-                makeRequest(
-                        Optional.of(requestBody),
-                        new HashMap<String, String>(),
-                        Collections.emptyMap(),
-                        Map.of(
-                                "publicSubjectId",
-                                PUBLIC_SUBJECT_ID,
-                                "passkeyId",
-                                PRIMARY_PASSKEY_ID));
+            var requestBody =
+                    """
+                            {
+                                "signCount": %d,
+                                "lastUsedAt": "%s"
+                            }"""
+                            .formatted(UPDATED_SIGN_COUNT, invalidLastUsedAt);
 
-        // Then
-        assertEquals(400, response.getStatusCode());
+            // When
+            var response =
+                    makeRequest(
+                            Optional.of(requestBody),
+                            new HashMap<String, String>(),
+                            Collections.emptyMap(),
+                            Map.of(
+                                    "publicSubjectId",
+                                    PUBLIC_SUBJECT_ID,
+                                    "passkeyId",
+                                    PRIMARY_PASSKEY_ID));
 
-        assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
+            // Then
+            assertEquals(400, response.getStatusCode());
+
+            assertSavedPasskeyUnchanged(PUBLIC_SUBJECT_ID, EXISTING_PASSKEY);
+        }
     }
 
     private void assertSavedPasskeyUnchanged(String publicSubjectId, Passkey existingPasskey) {

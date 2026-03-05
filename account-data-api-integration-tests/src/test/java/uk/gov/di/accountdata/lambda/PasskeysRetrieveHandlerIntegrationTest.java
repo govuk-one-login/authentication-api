@@ -1,6 +1,7 @@
 package uk.gov.di.accountdata.lambda;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountdata.basetest.ApiGatewayHandlerIntegrationTest;
@@ -41,77 +42,83 @@ class PasskeysRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         handler = new PasskeysRetrieveHandler(configurationService);
     }
 
-    @Test
-    void shouldRetrievePasskeys() {
-        // Given
-        Map<String, String> headers = new HashMap<>();
-        Passkey userPrimaryPasskey =
-                PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
-                        PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
-        Passkey userSecondaryPasskey =
-                PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
-                        PUBLIC_SUBJECT_ID, SECONDARY_PASSKEY_ID);
-        Passkey anotherUserPasskey =
-                PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
-                        ANOTHER_PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
-        dynamoPasskeyService.savePasskeyIfUnique(userPrimaryPasskey);
-        dynamoPasskeyService.savePasskeyIfUnique(userSecondaryPasskey);
-        dynamoPasskeyService.savePasskeyIfUnique(anotherUserPasskey);
+    @Nested
+    class Success {
+        @Test
+        void shouldRetrievePasskeys() {
+            // Given
+            Map<String, String> headers = new HashMap<>();
+            Passkey userPrimaryPasskey =
+                    PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
+                            PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+            Passkey userSecondaryPasskey =
+                    PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
+                            PUBLIC_SUBJECT_ID, SECONDARY_PASSKEY_ID);
+            Passkey anotherUserPasskey =
+                    PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
+                            ANOTHER_PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(userPrimaryPasskey);
+            dynamoPasskeyService.savePasskeyIfUnique(userSecondaryPasskey);
+            dynamoPasskeyService.savePasskeyIfUnique(anotherUserPasskey);
 
-        var expectedResponse =
-                new PasskeysRetrieveResponse(
-                        List.of(
-                                PasskeysRetrieveResponse.from(userPrimaryPasskey),
-                                PasskeysRetrieveResponse.from(userSecondaryPasskey)));
+            var expectedResponse =
+                    new PasskeysRetrieveResponse(
+                            List.of(
+                                    PasskeysRetrieveResponse.from(userPrimaryPasskey),
+                                    PasskeysRetrieveResponse.from(userSecondaryPasskey)));
 
-        // When
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        headers,
-                        Collections.emptyMap(),
-                        Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+            // When
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            headers,
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
 
-        // Then
-        assertThat(response.getStatusCode(), equalTo(200));
-        assertThat(response, hasJsonBody(expectedResponse));
+            // Then
+            assertThat(response.getStatusCode(), equalTo(200));
+            assertThat(response, hasJsonBody(expectedResponse));
+        }
+
+        @Test
+        void shouldReturnEmptyListIfNoPasskeys() {
+            // Given
+            Map<String, String> headers = new HashMap<>();
+
+            var expectedResponse = new PasskeysRetrieveResponse(Collections.emptyList());
+
+            // When
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            headers,
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(200));
+            assertThat(response, hasJsonBody(expectedResponse));
+        }
     }
 
-    @Test
-    void shouldReturnEmptyListIfNoPasskeys() {
-        // Given
-        Map<String, String> headers = new HashMap<>();
+    @Nested
+    class Error {
+        @Test
+        void shouldReturn400IfMissingSubjectId() {
+            // Given
+            Map<String, String> headers = new HashMap<>();
 
-        var expectedResponse = new PasskeysRetrieveResponse(Collections.emptyList());
+            // When
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            headers,
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", ""));
 
-        // When
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        headers,
-                        Collections.emptyMap(),
-                        Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
-
-        // Then
-        assertThat(response.getStatusCode(), equalTo(200));
-        assertThat(response, hasJsonBody(expectedResponse));
-    }
-
-    @Test
-    void shouldReturn400IfMissingSubjectId() {
-        // Given
-        Map<String, String> headers = new HashMap<>();
-
-        // When
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        headers,
-                        Collections.emptyMap(),
-                        Map.of("publicSubjectId", ""));
-
-        // Then
-        assertThat(response.getStatusCode(), equalTo(400));
-        assertThat(response, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            // Then
+            assertThat(response.getStatusCode(), equalTo(400));
+            assertThat(response, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+        }
     }
 }
