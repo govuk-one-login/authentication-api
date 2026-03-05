@@ -740,10 +740,10 @@ paths:
   /v1/accounts/{publicSubjectId}/authenticators/passkeys:
     parameters:
       - $ref: "#/components/parameters/PublicSubjectId"
-      - $ref: "#/components/parameters/AccountDataApiAccessToken"
     get:
       security:
         - authorise-access-token: []
+        - x-account-data-api-access-token: []
       #      x-amazon-apigateway-integration:
       #        type: "aws_proxy"
       #        httpMethod: "POST"
@@ -765,10 +765,10 @@ paths:
     parameters:
       - $ref: "#/components/parameters/PublicSubjectId"
       - $ref: "#/components/parameters/PasskeyId"
-      - $ref: "#/components/parameters/AccountDataApiAccessToken"
     delete:
       security:
         - authorise-access-token: []
+        - x-account-data-api-access-token: []
       #      x-amazon-apigateway-integration:
       #        type: "aws_proxy"
       #        httpMethod: "POST"
@@ -1242,9 +1242,13 @@ components:
         authorizerCredentials:
           Fn::GetAtt: [ApiGatewayAuthorizerRole, Arn]
         authorizerResultTtlInSeconds: 0
+    x-account-data-api-access-token:
+      type: "apiKey"
+      name: X-ADAPI-AccessToken
+      in: header
+      description: The Account Data API access token
 
   parameters:
-    # Path parameters
     PublicSubjectId:
       name: publicSubjectId
       in: path
@@ -1257,14 +1261,5 @@ components:
       in: path
       description: Passkey ID
       required: true
-      schema:
-        type: string
-
-    # Headers
-    AccountDataApiAccessToken:
-      name: X-ADAPI-AccessToken
-      in: header
-      required: true
-      description: The Account Data API access token
       schema:
         type: string
