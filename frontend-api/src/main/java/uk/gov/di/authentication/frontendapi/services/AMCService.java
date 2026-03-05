@@ -147,7 +147,9 @@ public class AMCService {
                                             .claim(
                                                     "client_id",
                                                     configurationService.getAMCClientId())
-                                            .audience(configurationService.getAuthToAMCAudience())
+                                            .audience(
+                                                    configurationService
+                                                            .getAuthToAMCPublicAudience())
                                             .claim("response_type", "code")
                                             .claim(
                                                     "redirect_uri",

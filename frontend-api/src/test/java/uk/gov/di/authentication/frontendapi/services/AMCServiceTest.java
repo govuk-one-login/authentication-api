@@ -81,7 +81,7 @@ class AMCServiceTest {
             "urn:fdc:gov.uk:2022:xH7hrtJCgdi2NEF7TXcOC6SMz8DohdoLo9hWqQMWPRk";
     private static final String AUTH_ISSUER_CLAIM = "https://signin.account.gov.uk/";
     private static final String AUTH_TO_AUTH_AUDIENCE = "https://api.manage.account.gov.uk";
-    private static final String AUTH_TO_AMC_AUDIENCE = "https://amc.account.gov.uk";
+    private static final String AUTH_TO_AMC_PUBLIC_AUDIENCE = "https://amc.account.gov.uk";
     private static final String AUTH_TO_AMC_PRIVATE_AUDIENCE = "https://amc.account.gov.uk";
     private static final String RESPONSE_TYPE = "code";
     private static final String REDIRECT_URI = "https://example.com/callback";
@@ -134,7 +134,8 @@ class AMCServiceTest {
     private void mockConfigurationService() {
         when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
         when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
-        when(configurationService.getAuthToAMCAudience()).thenReturn(AUTH_TO_AMC_AUDIENCE);
+        when(configurationService.getAuthToAMCPublicAudience())
+                .thenReturn(AUTH_TO_AMC_PUBLIC_AUDIENCE);
         when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
                 .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
         when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
@@ -336,7 +337,8 @@ class AMCServiceTest {
                     () -> assertEquals(AUTH_ISSUER_CLAIM, compositeClaims.getIssuer()),
                     () ->
                             assertEquals(
-                                    List.of(AUTH_TO_AMC_AUDIENCE), compositeClaims.getAudience()),
+                                    List.of(AUTH_TO_AMC_PUBLIC_AUDIENCE),
+                                    compositeClaims.getAudience()),
                     () -> assertEquals(AMC_CLIENT_ID, compositeClaims.getClaim("client_id")),
                     () -> assertEquals(RESPONSE_TYPE, compositeClaims.getClaim("response_type")),
                     () -> assertEquals(REDIRECT_URI, compositeClaims.getClaim("redirect_uri")),
@@ -451,7 +453,7 @@ class AMCServiceTest {
 
             assertEquals(AMC_CLIENT_ID, claims.getIssuer());
             assertEquals(AMC_CLIENT_ID, claims.getSubject());
-            assertEquals(List.of(AUTH_TO_AMC_AUDIENCE), claims.getAudience());
+            assertEquals(List.of(AUTH_TO_AMC_PUBLIC_AUDIENCE), claims.getAudience());
             assertInstanceOf(String.class, claims.getJWTID());
             assertEquals(NOW.toInstant(), claims.getIssueTime().toInstant());
             assertEquals(NOW.toInstant(), claims.getNotBeforeTime().toInstant());
