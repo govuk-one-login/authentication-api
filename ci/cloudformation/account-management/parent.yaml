@@ -554,7 +554,7 @@ Mappings:
       HomeApiVpcEndpointId: ["vpce-0d7972874707185a0", "vpce-08bfce415b33dc8f6"]
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
-      lambdaMinConcurrency: 0
+      lambdaMinConcurrency: 3
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutDuration: 7200
       otpCodeTtlDuration: 900
