@@ -24,7 +24,6 @@ dependencies {
 
     testImplementation project(":shared"), noXray
     testImplementation project(":account-data-api"), noXray
-    testImplementation project(":shared-test"), noXray
     testImplementation libs.jetbrainsKotlin
     testImplementation libs.jacksonDatabind
     testImplementation libs.jsonAssertJ
