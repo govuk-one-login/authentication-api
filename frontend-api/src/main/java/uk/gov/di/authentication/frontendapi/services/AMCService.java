@@ -37,9 +37,7 @@ import java.net.URI;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 import static java.util.Collections.singletonList;
@@ -93,15 +91,14 @@ public class AMCService {
 
     private Result<JwtFailureReason, BearerAccessToken> createAccessToken(
             String internalPairwiseSubject,
-            AMCScope[] scope,
+            AMCScope scope,
             AuthSessionItem authSessionItem,
             Date issueTime,
             Date expiryDate) {
-        List<String> scopeValues = Arrays.stream(scope).map(AMCScope::getValue).toList();
 
         var claims =
                 new JWTClaimsSet.Builder()
-                        .claim("scope", scopeValues)
+                        .claim("scope", scope.getValue())
                         .issuer(configurationService.getAuthIssuerClaim())
                         .audience(configurationService.getAuthToAMAPIAudience())
                         .expirationTime(expiryDate)
@@ -117,22 +114,19 @@ public class AMCService {
                         claims,
                         configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
                 .map(
-                        signedJWT -> {
-                            Scope oauthScope = new Scope(scopeValues.toArray(new String[0]));
-                            return new BearerAccessToken(
-                                    signedJWT.serialize(),
-                                    configurationService.getSessionExpiry(),
-                                    oauthScope);
-                        });
+                        signedJWT ->
+                                new BearerAccessToken(
+                                        signedJWT.serialize(),
+                                        configurationService.getSessionExpiry(),
+                                        new Scope(scope.getValue())));
     }
 
     private Result<JwtFailureReason, EncryptedJWT> createCompositeJWT(
             String internalPairwiseSubject,
-            AMCScope[] scope,
+            AMCScope scope,
             AuthSessionItem authSessionItem,
             String clientSessionId,
             String publicSubject) {
-        List<String> scopeValues = Arrays.stream(scope).map(AMCScope::getValue).toList();
         Date issueTime = nowClock.now();
         // TODO: Check this value
         Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
@@ -154,7 +148,7 @@ public class AMCService {
                                             .claim(
                                                     "redirect_uri",
                                                     configurationService.getAMCRedirectURI())
-                                            .claim("scope", scopeValues)
+                                            .claim("scope", scope.getValue())
                                             .claim("state", new State().getValue())
                                             .jwtID(UUID.randomUUID().toString())
                                             .issueTime(issueTime)
@@ -191,7 +185,7 @@ public class AMCService {
 
     public Result<JwtFailureReason, String> buildAuthorizationUrl(
             String internalPairwiseSubject,
-            AMCScope[] scope,
+            AMCScope scope,
             AuthSessionItem authSessionItem,
             String clientSessionId,
             String publicSubject) {

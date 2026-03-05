@@ -156,7 +156,7 @@ class AMCServiceTest {
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                            AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
                             JOURNEY_ID,
                             PUBLIC_SUBJECT);
@@ -181,28 +181,6 @@ class AMCServiceTest {
         }
 
         @Test
-        void shouldHandleMultipleScopes() throws Exception {
-            when(configurationService.getAuthToAMCPublicEncryptionKey())
-                    .thenReturn(constructTestPublicKey());
-
-            Result<JwtFailureReason, String> result =
-                    amcService.buildAuthorizationUrl(
-                            INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE, AMCScope.ACCOUNT_DELETE},
-                            authSessionItem,
-                            JOURNEY_ID,
-                            PUBLIC_SUBJECT);
-
-            assertTrue(result.isSuccess());
-            SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(result.getSuccess());
-            JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
-
-            assertEquals(
-                    List.of(AMCScope.ACCOUNT_DELETE.getValue(), AMCScope.ACCOUNT_DELETE.getValue()),
-                    compositeClaims.getClaim("scope"));
-        }
-
-        @Test
         void shouldReturnFailureWhenKmsSigningFails() {
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenThrow(
@@ -213,7 +191,7 @@ class AMCServiceTest {
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                            AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
                             JOURNEY_ID,
                             PUBLIC_SUBJECT);
@@ -233,7 +211,7 @@ class AMCServiceTest {
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                            AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
                             JOURNEY_ID,
                             PUBLIC_SUBJECT);
@@ -273,7 +251,7 @@ class AMCServiceTest {
             Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                            AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
                             JOURNEY_ID,
                             PUBLIC_SUBJECT);
@@ -305,7 +283,7 @@ class AMCServiceTest {
             Result<JwtFailureReason, String> result =
                     serviceWithMockJwt.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                            AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
                             JOURNEY_ID,
                             PUBLIC_SUBJECT);
@@ -322,7 +300,7 @@ class AMCServiceTest {
             Result<JwtFailureReason, String> result =
                     amcService.buildAuthorizationUrl(
                             INTERNAL_PAIRWISE_ID,
-                            new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                            AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
                             JOURNEY_ID,
                             PUBLIC_SUBJECT);
@@ -344,7 +322,7 @@ class AMCServiceTest {
                     () -> assertEquals(REDIRECT_URI, compositeClaims.getClaim("redirect_uri")),
                     () ->
                             assertEquals(
-                                    List.of(AMCScope.ACCOUNT_DELETE.getValue()),
+                                    AMCScope.ACCOUNT_DELETE.getValue(),
                                     compositeClaims.getClaim("scope")),
                     () -> assertDoesNotThrow(() -> compositeClaims.getClaim("state")),
                     () -> assertEquals(INTERNAL_PAIRWISE_ID, compositeClaims.getSubject()),
@@ -377,7 +355,7 @@ class AMCServiceTest {
                                     accessTokenClaims.getAudience()),
                     () ->
                             assertEquals(
-                                    List.of(AMCScope.ACCOUNT_DELETE.getValue()),
+                                    AMCScope.ACCOUNT_DELETE.getValue(),
                                     accessTokenClaims.getClaim("scope")),
                     () -> assertEquals(AMC_CLIENT_ID, accessTokenClaims.getClaim("client_id")),
                     () -> assertEquals(SESSION_ID, accessTokenClaims.getClaim("sid")),
