@@ -125,7 +125,6 @@ public class AMCService {
             String internalPairwiseSubject,
             AMCScope scope,
             AuthSessionItem authSessionItem,
-            String clientSessionId,
             String publicSubject) {
         Date issueTime = nowClock.now();
         // TODO: Check this value
@@ -156,7 +155,6 @@ public class AMCService {
                                             .expirationTime(expiryDate)
                                             .subject(internalPairwiseSubject)
                                             .claim("email", authSessionItem.getEmailAddress())
-                                            .claim("govuk_signin_journey_id", clientSessionId)
                                             .claim("public_sub", publicSubject)
                                             .claim("access_token", accessToken.getValue())
                                             .build();
@@ -187,15 +185,9 @@ public class AMCService {
             String internalPairwiseSubject,
             AMCScope scope,
             AuthSessionItem authSessionItem,
-            String clientSessionId,
             String publicSubject) {
         LOG.info("Building AMC authorization URL");
-        return createCompositeJWT(
-                        internalPairwiseSubject,
-                        scope,
-                        authSessionItem,
-                        clientSessionId,
-                        publicSubject)
+        return createCompositeJWT(internalPairwiseSubject, scope, authSessionItem, publicSubject)
                 .map(
                         requestJWT -> {
                             AuthorizationRequest authRequest =

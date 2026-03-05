@@ -86,7 +86,6 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         authSessionItem.getInternalCommonSubjectId(),
                         AMCScope.ACCOUNT_DELETE,
                         authSessionItem,
-                        userContext.getClientSessionId(),
                         userProfile.getPublicSubjectID());
 
         return result.fold(

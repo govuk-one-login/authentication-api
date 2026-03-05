@@ -88,7 +88,6 @@ class AMCServiceTest {
     private static final String AMC_CLIENT_ID = "amc-client-id";
     private static final String AMC_AUTHORIZE_URI = "https://amc.account.gov.uk/authorize";
     private static final URI TOKEN_ENDPOINT_URI = URI.create("https://amc.account.gov.uk/token");
-    private static final String JOURNEY_ID = "test-journey-id";
     private static final String PUBLIC_SUBJECT = "test-public-subject";
     private static final String ACCESS_TOKEN_KEY_ALIAS = "test-key-alias";
     private static final String COMPOSITE_JWT_KEY_ALIAS = "auth-to-amc-test-key-alias";
@@ -158,7 +157,6 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            JOURNEY_ID,
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isSuccess());
@@ -193,7 +191,6 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            JOURNEY_ID,
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
@@ -213,7 +210,6 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            JOURNEY_ID,
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
@@ -253,7 +249,6 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            JOURNEY_ID,
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
@@ -285,7 +280,6 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            JOURNEY_ID,
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
@@ -302,7 +296,6 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            JOURNEY_ID,
                             PUBLIC_SUBJECT);
 
             assertTrue(result.isFailure());
@@ -327,10 +320,6 @@ class AMCServiceTest {
                     () -> assertDoesNotThrow(() -> compositeClaims.getClaim("state")),
                     () -> assertEquals(INTERNAL_PAIRWISE_ID, compositeClaims.getSubject()),
                     () -> assertEquals(EMAIL, compositeClaims.getClaim("email")),
-                    () ->
-                            assertEquals(
-                                    JOURNEY_ID,
-                                    compositeClaims.getClaim("govuk_signin_journey_id")),
                     () -> assertEquals(PUBLIC_SUBJECT, compositeClaims.getClaim("public_sub")),
                     () -> assertEquals(NOW.toInstant(), compositeClaims.getIssueTime().toInstant()),
                     () ->

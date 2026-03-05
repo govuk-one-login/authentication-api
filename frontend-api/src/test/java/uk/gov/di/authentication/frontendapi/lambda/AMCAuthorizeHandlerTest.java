@@ -83,7 +83,6 @@ class AMCAuthorizeHandlerTest {
                         eq(INTERNAL_COMMON_SUBJECT_ID),
                         eq(AMCScope.ACCOUNT_DELETE),
                         eq(authSession),
-                        eq(CLIENT_SESSION_ID),
                         eq(PUBLIC_SUBJECT_ID)))
                 .thenReturn(Result.success(expectedUrl));
 
@@ -103,7 +102,6 @@ class AMCAuthorizeHandlerTest {
                         INTERNAL_COMMON_SUBJECT_ID,
                         AMCScope.ACCOUNT_DELETE,
                         authSession,
-                        CLIENT_SESSION_ID,
                         PUBLIC_SUBJECT_ID);
     }
 
@@ -129,7 +127,7 @@ class AMCAuthorizeHandlerTest {
     void shouldHandleAllFailureReasons(JwtFailureReason failureReason) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(amcService.buildAuthorizationUrl(anyString(), any(), any(), anyString(), anyString()))
+        when(amcService.buildAuthorizationUrl(anyString(), any(), any(), anyString()))
                 .thenReturn(Result.failure(failureReason));
 
         var event =
