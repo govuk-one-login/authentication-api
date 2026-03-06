@@ -6,7 +6,7 @@ access_token_jwks_url = "https://oidc.integration.account.gov.uk/.well-known/jwk
 
 # Sizing
 redis_node_size        = "cache.t2.small"
-lambda_min_concurrency = 1
+lambda_min_concurrency = 0
 
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
