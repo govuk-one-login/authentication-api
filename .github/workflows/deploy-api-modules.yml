@@ -107,7 +107,6 @@ jobs:
       matrix:
         module:
           - account-management-api
-          - auth-external-api
           - client-registry-api
           - delivery-receipts-api
           - doc-checking-app-api
@@ -151,8 +150,6 @@ jobs:
         include:
           - module_name: account-management-api
             terraform_directory_name: account-management
-          - module_name: auth-external-api
-            terraform_directory_name: auth-external-api
           - module_name: delivery-receipts-api
             terraform_directory_name: delivery-receipts
           - module_name: interventions-api-stub
