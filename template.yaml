@@ -96,11 +96,7 @@ Conditions:
     ]
   UseSingleFactorAccountDeletion: !Equals [dev, !Ref Environment]
   UseSyncWaitForSpot:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-    ]
+    !Or [!Equals [build, !Ref Environment], !Equals [staging, !Ref Environment]]
   ProvisionNewExternalTokenSigningKeys:
     !Or [
       !Equals [dev, !Ref Environment],
