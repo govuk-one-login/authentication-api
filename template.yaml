@@ -103,8 +103,6 @@ Conditions:
     ]
   ProvisionNewExternalTokenSigningKeys:
     !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
     ]
@@ -112,8 +110,6 @@ Conditions:
     !And [
       !Condition ProvisionNewExternalTokenSigningKeys,
       !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
         !Equals [staging, !Ref Environment],
         !Equals [integration, !Ref Environment],
       ],
