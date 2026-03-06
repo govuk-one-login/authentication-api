@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.ipv.api;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.lambda.IPVCapacityHandler;

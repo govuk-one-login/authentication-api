@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.ipv.api;
 
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -37,7 +37,6 @@ import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
-import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
@@ -46,6 +45,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 
 public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
+    public static final String TXMA_AUDIT_ENCODED_HEADER = "txma-audit-encoded";
     public static final String SESSION_ID = "some-session-id";
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
