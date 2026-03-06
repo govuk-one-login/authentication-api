@@ -5,7 +5,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetType;
-import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -23,6 +22,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
@@ -83,7 +83,13 @@ public class ForcedMfaResetHelper {
                         MfaResetType.FORCED_INTERNATIONAL_NUMBERS),
                 pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY));
 
-        emitMetric(FORCED_MFA_RESET_INITIATED, configurationService, cloudwatchMetricsService);
+        cloudwatchMetricsService.incrementCounter(
+                FORCED_MFA_RESET_INITIATED.getValue(),
+                Map.of(
+                        ENVIRONMENT.getValue(),
+                        configurationService.getEnvironment(),
+                        MFA_RESET_TYPE.getValue(),
+                        MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
 
         LOG.info(
                 "User has international phone number on account, initiating forced MFA reset. JourneyType: {}, CountryCode (for active method): {}.",
@@ -93,22 +99,20 @@ public class ForcedMfaResetHelper {
 
     public static void emitCompletedMetric(
             ConfigurationService configurationService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
-        emitMetric(FORCED_MFA_RESET_COMPLETED, configurationService, cloudwatchMetricsService);
-
-        LOG.info("User had international phone number on account, MFA reset completed.");
-    }
-
-    private static void emitMetric(
-            CloudwatchMetrics metricName,
-            ConfigurationService configurationService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            MFAMethodType newMfaMethodType) {
         cloudwatchMetricsService.incrementCounter(
-                metricName.getValue(),
+                FORCED_MFA_RESET_COMPLETED.getValue(),
                 Map.of(
                         ENVIRONMENT.getValue(),
                         configurationService.getEnvironment(),
                         MFA_RESET_TYPE.getValue(),
-                        MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
+                        MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString(),
+                        MFA_METHOD_TYPE.getValue(),
+                        newMfaMethodType.getValue()));
+
+        LOG.info(
+                "User had international phone number on account, MFA reset completed. New MFA method type is: {}",
+                newMfaMethodType);
     }
 }
