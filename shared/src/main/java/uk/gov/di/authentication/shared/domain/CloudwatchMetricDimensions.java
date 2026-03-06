@@ -21,7 +21,8 @@ public enum CloudwatchMetricDimensions {
     SMS_DESTINATION_TYPE("SmsDestinationType"),
     LOG_GROUP("LogGroup"),
     SERVICE_TYPE("ServiceType"),
-    SERVICE_NAME("ServiceName");
+    SERVICE_NAME("ServiceName"),
+    MFA_RESET_TYPE("MfaResetType");
 
     private String value;
 

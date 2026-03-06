@@ -95,6 +95,9 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
@@ -576,7 +579,7 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Nested
-    class ForcedMfaResetAuditEvent {
+    class ForcedMfaResetEvents {
 
         private static final MFAMethod DEFAULT_INTERNATIONAL_SMS_METHOD =
                 new MFAMethod(DEFAULT_SMS_METHOD).withDestination(INTERNATIONAL_MOBILE_NUMBER);
@@ -595,7 +598,8 @@ class VerifyMfaCodeHandlerTest {
         }
 
         @Test
-        void shouldNotEmitMfaResetAuditEventWhenFeatureFlagDisabled() throws Json.JsonException {
+        void shouldNotEmitAnyMfaResetAuditEventOrMetricWhenFeatureFlagDisabled()
+                throws Json.JsonException {
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
 
             makeCallWithCode(
@@ -605,15 +609,12 @@ class VerifyMfaCodeHandlerTest {
                             JourneyType.SIGN_IN,
                             INTERNATIONAL_MOBILE_NUMBER));
 
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
+            verifyNoMfaResetAuditEventsOrMetricsEmitted();
         }
 
         @Test
-        void shouldNotEmitMfaResetAuditEventForDomesticNumber() throws Json.JsonException {
+        void shouldNotEmitAnyMfaResetAuditEventOrMetricForDomesticNumber()
+                throws Json.JsonException {
             when(mfaMethodsService.getMfaMethods(EMAIL))
                     .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
 
@@ -624,40 +625,35 @@ class VerifyMfaCodeHandlerTest {
                             JourneyType.SIGN_IN,
                             DEFAULT_SMS_METHOD.getDestination()));
 
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
+            verifyNoMfaResetAuditEventsOrMetricsEmitted();
         }
 
-        @ParameterizedTest
-        @EnumSource(
-                value = JourneyType.class,
-                names = {"ACCOUNT_RECOVERY", "REGISTRATION"})
-        void shouldNotEmitMfaResetAuditEventForExcludedJourneyTypes(JourneyType journeyType)
+        @Test
+        void shouldNotEmitAnyMfaResetAuditEventOrMetricWhenMfaMethodsRetrievalFails()
                 throws Json.JsonException {
-            if (journeyType == REGISTRATION) {
-                authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
-            }
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(
+                            Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
 
-            makeCallWithCode(
-                    new VerifyMfaCodeRequest(
-                            MFAMethodType.SMS, CODE, journeyType, INTERNATIONAL_MOBILE_NUMBER));
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.SMS,
+                                    CODE,
+                                    JourneyType.SIGN_IN,
+                                    INTERNATIONAL_MOBILE_NUMBER));
 
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
+            assertThat(result, hasStatus(204));
+            verifyNoMfaResetAuditEventsOrMetricsEmitted();
         }
 
         @ParameterizedTest
         @EnumSource(
                 value = JourneyType.class,
                 names = {"SIGN_IN", "REAUTHENTICATION", "PASSWORD_RESET_MFA"})
-        void shouldEmitMfaResetAuditEventForSmsUserWithInternationalNumber(JourneyType journeyType)
-                throws Json.JsonException {
+        void
+                shouldEmitRequestedAuditEventAndMetricButNotCompletedMetricForSmsUserWithInternationalNumber(
+                        JourneyType journeyType) throws Json.JsonException {
             makeCallWithCode(
                     new VerifyMfaCodeRequest(
                             MFAMethodType.SMS, CODE, journeyType, INTERNATIONAL_MOBILE_NUMBER));
@@ -675,11 +671,22 @@ class VerifyMfaCodeHandlerTest {
                                     pair(
                                             AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
                                             JourneyType.ACCOUNT_RECOVERY)));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            FORCED_MFA_RESET_INITIATED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    MFA_RESET_TYPE.getValue(),
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_COMPLETED.getValue()), any());
         }
 
         @Test
-        void shouldEmitMfaResetAuditEventWithUnknownPhoneForAuthAppUser()
-                throws Json.JsonException {
+        void
+                shouldEmitRequestedAuditEventAndMetricButNotCompletedMetricForAuthAppUserWithUnknownPhone()
+                        throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -710,29 +717,122 @@ class VerifyMfaCodeHandlerTest {
                                     pair(
                                             AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
                                             JourneyType.ACCOUNT_RECOVERY)));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            FORCED_MFA_RESET_INITIATED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    MFA_RESET_TYPE.getValue(),
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_COMPLETED.getValue()), any());
         }
 
         @Test
-        void shouldNotEmitMfaResetAuditEventWhenMfaMethodsRetrievalFails()
-                throws Json.JsonException {
-            when(mfaMethodsService.getMfaMethods(EMAIL))
-                    .thenReturn(
-                            Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
+        void
+                shouldEmitCompletedMetricButNotRequestedAuditEventOrMetricForAccountRecoveryWithInternationalNumber()
+                        throws Json.JsonException {
+            makeCallWithCode(
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CODE,
+                            ACCOUNT_RECOVERY,
+                            INTERNATIONAL_MOBILE_NUMBER));
 
-            var result =
-                    makeCallWithCode(
-                            new VerifyMfaCodeRequest(
-                                    MFAMethodType.SMS,
-                                    CODE,
-                                    JourneyType.SIGN_IN,
-                                    INTERNATIONAL_MOBILE_NUMBER));
-
-            assertThat(result, hasStatus(204));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            FORCED_MFA_RESET_COMPLETED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    MFA_RESET_TYPE.getValue(),
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
             verify(auditService, never())
                     .submitAuditEvent(
                             eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
                             any(AuditContext.class),
                             any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_INITIATED.getValue()), any());
+        }
+
+        @Test
+        void shouldEmitCompletedMetricForAuthAppAccountRecoveryWithInternationalSmsBackup()
+                throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(
+                                            DEFAULT_AUTH_APP_METHOD,
+                                            BACKUP_INTERNATIONAL_SMS_METHOD)));
+
+            makeCallWithCode(
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.AUTH_APP, CODE, ACCOUNT_RECOVERY, AUTH_APP_SECRET));
+
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            FORCED_MFA_RESET_COMPLETED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    MFA_RESET_TYPE.getValue(),
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_INITIATED.getValue()), any());
+        }
+
+        @Test
+        void shouldNotEmitAnyMfaResetAuditEventOrMetricForAuthAppUserWithNoSmsMethod()
+                throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+
+            makeCallWithCode(
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, AUTH_APP_SECRET));
+
+            verifyNoMfaResetAuditEventsOrMetricsEmitted();
+        }
+
+        @Test
+        void shouldNotEmitCompletedAuditEventOrMetricForDomesticNumberOnAccountRecovery()
+                throws Json.JsonException {
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+
+            makeCallWithCode(
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CODE,
+                            ACCOUNT_RECOVERY,
+                            DEFAULT_SMS_METHOD.getDestination()));
+
+            verifyNoMfaResetAuditEventsOrMetricsEmitted();
+        }
+
+        private void verifyNoMfaResetAuditEventsOrMetricsEmitted() {
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_INITIATED.getValue()), any());
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_COMPLETED.getValue()), any());
         }
     }
 

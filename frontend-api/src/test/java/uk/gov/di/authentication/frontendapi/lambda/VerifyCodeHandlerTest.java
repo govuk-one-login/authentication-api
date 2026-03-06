@@ -86,6 +86,8 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
@@ -1216,7 +1218,7 @@ class VerifyCodeHandlerTest {
     }
 
     @Nested
-    class ForcedMfaResetAuditEvent {
+    class ForcedMfaResetRequestedAuditEventAndMetric {
 
         private static final MFAMethod INTERNATIONAL_SMS_METHOD =
                 new MFAMethod(DEFAULT_SMS_METHOD).withDestination(INTERNATIONAL_MOBILE_NUMBER);
@@ -1234,7 +1236,7 @@ class VerifyCodeHandlerTest {
         }
 
         @Test
-        void shouldNotEmitMfaResetAuditEventWhenFeatureFlagDisabled() {
+        void shouldNotEmitMfaResetAuditEventOrMetricWhenFeatureFlagDisabled() {
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
 
             var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.SIGN_IN);
@@ -1245,10 +1247,12 @@ class VerifyCodeHandlerTest {
                             eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
                             any(AuditContext.class),
                             any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_INITIATED.getValue()), any());
         }
 
         @Test
-        void shouldNotEmitMfaResetAuditEventForDomesticNumber() {
+        void shouldNotEmitMfaResetAuditEventOrMetricForDomesticNumber() {
             when(codeStorageService.getOtpCode(
                             EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
                     .thenReturn(Optional.of(CODE));
@@ -1263,10 +1267,12 @@ class VerifyCodeHandlerTest {
                             eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
                             any(AuditContext.class),
                             any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_INITIATED.getValue()), any());
         }
 
         @Test
-        void shouldNotEmitMfaResetAuditEventForAccountRecoveryJourney() {
+        void shouldNotEmitMfaResetAuditEventOrMetricForAccountRecoveryJourney() {
             var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.ACCOUNT_RECOVERY);
 
             assertThat(result, hasStatus(204));
@@ -1275,13 +1281,15 @@ class VerifyCodeHandlerTest {
                             eq(FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED),
                             any(AuditContext.class),
                             any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(FORCED_MFA_RESET_INITIATED.getValue()), any());
         }
 
         @ParameterizedTest
         @EnumSource(
                 value = JourneyType.class,
                 names = {"SIGN_IN", "REAUTHENTICATION", "PASSWORD_RESET_MFA"})
-        void shouldEmitMfaResetAuditEventForSmsUserWithInternationalNumber(
+        void shouldEmitMfaResetAuditEventAndMetricForSmsUserWithInternationalNumber(
                 JourneyType journeyType) {
             var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
 
@@ -1299,6 +1307,14 @@ class VerifyCodeHandlerTest {
                                     pair(
                                             AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
                                             JourneyType.ACCOUNT_RECOVERY)));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            FORCED_MFA_RESET_INITIATED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    MFA_RESET_TYPE.getValue(),
+                                    MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
         }
     }
 }

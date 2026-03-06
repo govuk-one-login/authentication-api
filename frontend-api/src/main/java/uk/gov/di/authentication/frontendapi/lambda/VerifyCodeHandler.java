@@ -56,7 +56,6 @@ import java.util.Optional;
 
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper.isInitiated;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
@@ -496,9 +495,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 
-        if (isInitiated(configurationService, retrievedMfaMethods, journeyType)) {
-            ForcedMfaResetHelper.emitRequestedAuditEvent(
-                    auditService, journeyType, maybeRequestedSmsMfaMethod, auditContext);
+        if (ForcedMfaResetHelper.isMfaResetRequired(configurationService, retrievedMfaMethods)
+                && ForcedMfaResetHelper.isInitiatedJourney(journeyType)) {
+            ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
+                    configurationService,
+                    auditService,
+                    cloudwatchMetricsService,
+                    journeyType,
+                    maybeRequestedSmsMfaMethod,
+                    auditContext);
         }
 
         String emailAddress = authSession.getEmailAddress();

@@ -64,7 +64,6 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
-import static uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper.isInitiated;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -329,11 +328,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     userContext, authSessionService, authenticationService, configurationService);
         }
 
-        boolean isForcedMfaResetInitiated;
+        boolean isForcedMfaResetRequired;
         Optional<MFAMethod> activeMfaMethod = Optional.empty();
         var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
         if (retrieveMfaMethods.isFailure()) {
-            isForcedMfaResetInitiated = false;
+            isForcedMfaResetRequired = false;
             LOG.error(
                     "Failed to receive the users MFA methods because {}. Ignoring for audit events, this does not affect the journey",
                     retrieveMfaMethods.getFailure());
@@ -359,11 +358,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                             : mfaMethod -> true)
                             .findFirst();
 
-            isForcedMfaResetInitiated =
-                    isInitiated(
-                            configurationService,
-                            retrievedMfaMethods,
-                            codeRequest.getJourneyType());
+            isForcedMfaResetRequired =
+                    ForcedMfaResetHelper.isMfaResetRequired(
+                            configurationService, retrievedMfaMethods);
         }
         final Optional<MFAMethod> finalActiveMfaMethod = activeMfaMethod;
 
@@ -433,7 +430,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         authSession,
                                         finalActiveMfaMethod,
                                         auditContext,
-                                        isForcedMfaResetInitiated));
+                                        isForcedMfaResetRequired));
     }
 
     private void auditSuccess(
@@ -472,7 +469,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthSessionItem authSession,
             Optional<MFAMethod> activeMfaMethod,
             AuditContext auditContext,
-            boolean isForcedMfaResetInitiated) {
+            boolean isForcedMfaResetRequired) {
         var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
         MFAMethodType mfaMethodType = null;
         PriorityIdentifier priorityIdentifier = null;
@@ -512,9 +509,19 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .withVerifiedMfaMethodType(codeRequest.getMfaMethodType())
                         .withAchievedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
 
-        if (isForcedMfaResetInitiated) {
-            ForcedMfaResetHelper.emitRequestedAuditEvent(
-                    auditService, journeyType, activeMfaMethod, auditContext);
+        if (isForcedMfaResetRequired) {
+            if (ForcedMfaResetHelper.isCompletedJourney(journeyType)) {
+                ForcedMfaResetHelper.emitCompletedMetric(
+                        configurationService, cloudwatchMetricsService);
+            } else if (ForcedMfaResetHelper.isInitiatedJourney(journeyType)) {
+                ForcedMfaResetHelper.emitRequestedAuditEventAndMetric(
+                        configurationService,
+                        auditService,
+                        cloudwatchMetricsService,
+                        journeyType,
+                        activeMfaMethod,
+                        auditContext);
+            }
         }
 
         var clientId = authSession.getClientId();

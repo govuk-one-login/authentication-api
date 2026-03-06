@@ -28,7 +28,9 @@ public enum CloudwatchMetrics {
     EMAIL_NOTIFICATION_ERROR("EmailNotificationError"),
     SMS_LIMIT_EXCEEDED("SmsLimitExceeded"),
     INTERNATIONAL_SMS_SENT("InternationalSmsSent"),
-    DOMESTIC_SMS_SENT("DomesticSmsSent");
+    DOMESTIC_SMS_SENT("DomesticSmsSent"),
+    FORCED_MFA_RESET_INITIATED("ForcedMfaResetInitiated"),
+    FORCED_MFA_RESET_COMPLETED("ForcedMfaResetCompleted");
 
     private String value;
 
