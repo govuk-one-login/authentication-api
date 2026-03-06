@@ -66,7 +66,7 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Run Build
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck -x buildZip -x distZip -x distTar --build-cache
 
   style-checks:
     runs-on: ubuntu-latest
@@ -139,7 +139,7 @@ jobs:
         if: needs.check-changed-files.outputs.java_changed == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x account-data-api-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x account-data-api-integration-tests:test -x spotlessApply -x spotlessCheck --build-cache
 
       - name: Cache Unit Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -236,7 +236,7 @@ jobs:
       - name: Run Integration Tests
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
-          ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp --build-cache
 
       - name: Cache Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -322,7 +322,7 @@ jobs:
       - name: Run Account Management Integration Tests
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
-          ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp --build-cache
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
@@ -333,7 +333,7 @@ jobs:
       - name: Run Delivery Receipts Integration Tests
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
-          ./gradlew :delivery-receipts-integration-tests:test :delivery-receipts-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :delivery-receipts-integration-tests:test :delivery-receipts-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp --build-cache
 
       - name: Cache Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -439,7 +439,7 @@ jobs:
       - name: Run Account Data Api Integration Tests
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
-          ./gradlew :account-data-api-integration-tests:test :account-data-api-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :account-data-api-integration-tests:test :account-data-api-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp --build-cache
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
@@ -524,4 +524,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew testCodeCoverageReport sonar -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew testCodeCoverageReport sonar -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck --build-cache
