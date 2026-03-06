@@ -38,7 +38,7 @@ class CommonPasswordsS3ToDynamoIntegrationTest extends HandlerIntegrationTest<S3
     private static final String S3_ENDPOINT =
             Optional.ofNullable(System.getenv().get("LOCALSTACK_ENDPOINT"))
                     .orElse("http://localhost:45678");
-    private static final S3Event testS3Event =
+    private static final S3Event TEST_S3_EVENT =
             S3TestEventHelper.generateS3TestEvent(
                     REGION, "ObjectCreated:Put", COMMON_PASSWORDS_BUCKET, TEST_FILE_NAME);
 
@@ -65,7 +65,7 @@ class CommonPasswordsS3ToDynamoIntegrationTest extends HandlerIntegrationTest<S3
 
     @Test
     void movedS3TextIntoDynamoWhenTriggered() throws Exception {
-        handler.handleRequest(testS3Event, mock(Context.class));
+        handler.handleRequest(TEST_S3_EVENT, mock(Context.class));
 
         List<String> testPasswords = getTestFilePasswords();
 
