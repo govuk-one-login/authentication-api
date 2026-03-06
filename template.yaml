@@ -185,7 +185,11 @@ Conditions:
         !Equals [staging, !Ref Environment],
       ],
     ]
-
+  UseNewStorageTokenSigningKey:
+    !And [
+      !Condition PublishNextStorageTokenSigningKey,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
 Mappings:
   EnvironmentConfiguration:
     dev:
@@ -3169,6 +3173,14 @@ Resources:
               !Ref Environment,
               storageTokenKeyArn,
             ]
+          NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !If
+            - PublishNextStorageTokenSigningKey
+            - !Ref OrchStorageTokenSigningKmsKeyAlias
+            - !Ref AWS::NoValue
+          USE_NEXT_STORAGE_TOKEN_SIGNING_KEY: !If
+            - UseNewStorageTokenSigningKey
+            - true
+            - false
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED: !If
