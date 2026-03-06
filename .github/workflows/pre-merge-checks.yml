@@ -531,6 +531,8 @@ jobs:
       - run-unit-tests
       - run-integration-tests
       - run-account-management-and-delivery-receipts-tests
+      - run-account-data-api-integration-tests
+      - run-ipv-api-integration-tests
       - check-changed-files
     if: github.event_name != 'merge_group'
     steps:

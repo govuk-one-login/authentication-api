@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.ipv.api;
 
 import com.google.gson.internal.LinkedTreeMap;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -27,7 +27,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
-import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
+import uk.gov.di.ipv.testsupport.helpers.SpotQueueAssertionHelper;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -81,7 +81,7 @@ import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSF
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
-import static uk.gov.di.authentication.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
+import static uk.gov.di.ipv.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;

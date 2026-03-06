@@ -10,7 +10,8 @@ dependencies {
     testImplementation libs.bundles.nimbus,
             libs.bundles.test,
             libs.bundles.awsLambda,
-            libs.bundles.lettuce
+            libs.bundles.apache,
+            libs.gson
 
     testImplementation project(":ipv-api"), noXray
     testImplementation project(":orchestration-shared-test"), noXray
@@ -27,10 +28,9 @@ test {
     environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
-    environment "HEADERS_CASE_INSENSITIVE", "true"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
-    environment "REDIS_KEY", "session"
-    environment "TRACING_ENABLED", "false"
+    environment "OIDC_API_BASE_URL", "http://localhost"
+    environment "SQS_ENDPOINT", "http://localhost:45678"
 
     testLogging {
         showStandardStreams = false
