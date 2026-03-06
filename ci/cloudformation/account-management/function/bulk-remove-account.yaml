@@ -123,7 +123,7 @@ Resources:
     Properties:
       AlarmActions: !If
         - UseAlarmActions
-        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
         - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-bulk-remove-account-lambda function. https://govukverify.atlassian.net/wiki/x/HIHpRQE"
@@ -159,7 +159,7 @@ Resources:
     Properties:
       AlarmActions: !If
         - UseAlarmActions
-        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
         - "Lambda error rate of 25% has been reached in the ${Env}-bulk-remove-account-lambda. https://govukverify.atlassian.net/wiki/x/HIHpRQE"
