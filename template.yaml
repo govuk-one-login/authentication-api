@@ -1873,7 +1873,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          USE_NEW_TOKEN_SIGNING_KEYS: false
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -2285,7 +2284,6 @@ Resources:
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
-          USE_NEW_TOKEN_SIGNING_KEYS: false
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true

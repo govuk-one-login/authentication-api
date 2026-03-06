@@ -398,10 +398,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .contains(getEnvironment());
     }
 
-    public boolean isUseNewTokenSigningKeysEnabled() {
-        return getFlagOrFalse("USE_NEW_TOKEN_SIGNING_KEYS");
-    }
-
     public boolean isUseNewV2TokenSigningKeysEnabled() {
         return getFlagOrFalse("USE_NEW_V2_TOKEN_SIGNING_KEYS");
     }

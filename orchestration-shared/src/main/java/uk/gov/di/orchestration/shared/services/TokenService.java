@@ -391,11 +391,6 @@ public class TokenService {
                     algorithm == JWSAlgorithm.ES256
                             ? configService.getNextExternalTokenSigningKeyAliasV2()
                             : configService.getNextExternalTokenSigningKeyRsaAliasV2();
-        } else if (configService.isUseNewTokenSigningKeysEnabled()) {
-            alias =
-                    algorithm == JWSAlgorithm.ES256
-                            ? configService.getNextExternalTokenSigningKeyAlias()
-                            : configService.getNextExternalTokenSigningKeyRsaAlias();
         } else {
             alias =
                     algorithm == JWSAlgorithm.ES256
