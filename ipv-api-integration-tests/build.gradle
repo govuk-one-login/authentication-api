@@ -1,0 +1,56 @@
+plugins {
+    id "java"
+    id "jacoco"
+}
+
+group = "uk.gov.di"
+version = "unspecified"
+
+dependencies {
+    testImplementation libs.bundles.nimbus,
+            libs.bundles.test,
+            libs.bundles.awsLambda,
+            libs.bundles.lettuce
+
+    testImplementation project(":ipv-api"), noXray
+    testImplementation project(":orchestration-shared-test"), noXray
+    testImplementation project(":orchestration-shared"), noXray
+
+    testRuntimeOnly libs.bundles.testRuntime
+}
+
+test {
+    useJUnitPlatform()
+
+    environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
+    environment "AWS_REGION", "eu-west-2"
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
+    environment "DYNAMO_ENDPOINT", "http://localhost:8000"
+    environment "ENVIRONMENT", "local"
+    environment "HEADERS_CASE_INSENSITIVE", "true"
+    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
+    environment "REDIS_KEY", "session"
+    environment "TRACING_ENABLED", "false"
+
+    testLogging {
+        showStandardStreams = false
+    }
+
+    doLast {
+        tasks.getByName("jacocoTestReport").sourceDirectories.from(
+                project(":ipv-api").sourceSets.main.java,
+                project(":shared").sourceSets.main.java)
+
+        tasks.getByName("jacocoTestReport").classDirectories.from(
+                project(":ipv-api").sourceSets.main.output,
+                project(":shared").sourceSets.main.output)
+    }
+    dependsOn ":composeUp"
+    finalizedBy ":composeDown"
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+}

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.ipv.api;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import org.junit.jupiter.api.Test;
