@@ -149,8 +149,8 @@ subprojects {
                         because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
                     }
 
-                    add(conf.name, 'com.fasterxml.jackson.core:jackson-core:[2.15.0,)') {
-                        because 'CVE-2025-52999 is fixed in com.fasterxml.jackson.core:jackson-core:2.15.0 and higher'
+                    add(conf.name, 'com.fasterxml.jackson.core:jackson-core:[2.21.1,)') {
+                        because 'GHSA-72hv-8253-57qq is fixed in com.fasterxml.jackson.core:jackson-core:2.21.1 and higher'
                     }
 
                     // Apache Commons constraints
