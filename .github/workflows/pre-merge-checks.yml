@@ -139,7 +139,7 @@ jobs:
         if: needs.check-changed-files.outputs.java_changed == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x account-data-api-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x account-data-api-integration-tests:test -x ipv-api-integration-tests:test -x spotlessApply -x spotlessCheck
 
       - name: Cache Unit Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
