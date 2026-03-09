@@ -16,7 +16,9 @@ import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -26,6 +28,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -85,7 +88,19 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(failure);
         }
 
-        var tokenResponse = sendTokenRequest(requestResult.getSuccess());
+        var persistentSessionId =
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+        var additionalAmcHeaders =
+                Map.ofEntries(
+                        Map.entry("di-persistent-session-id", persistentSessionId),
+                        Map.entry("session-id", userContext.getAuthSession().getSessionId()),
+                        Map.entry("client-session-id", userContext.getClientSessionId()),
+                        Map.entry("txma-audit-encoded", userContext.getTxmaAuditEncoded()),
+                        Map.entry("x-forwarded-for", IpAddressHelper.extractIpAddress(input)),
+                        Map.entry("user-language", userContext.getUserLanguage().getLanguage()));
+
+        var tokenResponse = sendTokenRequest(requestResult.getSuccess(), additionalAmcHeaders);
 
         if (tokenResponse.isFailure()) {
             return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(tokenResponse.getFailure());
@@ -115,9 +130,12 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         });
     }
 
-    private Result<TokenResponseError, TokenResponse> sendTokenRequest(TokenRequest tokenRequest) {
+    private Result<TokenResponseError, TokenResponse> sendTokenRequest(
+            TokenRequest tokenRequest, Map<String, String> amcHeaders) {
         try {
-            var response = tokenRequest.toHTTPRequest().send();
+            var request = tokenRequest.toHTTPRequest();
+            amcHeaders.forEach(request::setHeader);
+            var response = request.send();
             if (!response.indicatesSuccess()) {
                 LOG.warn(
                         "Error {} when attempting to call AMC token endpoint: {}",
