@@ -1376,6 +1376,54 @@ Resources:
 
   #endregion
 
+  #region Client Registry Rate Limit Lambda
+
+  ClientRegistryRateLimitFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: Lambda is manually invoked so DLQ not needed
+    Properties:
+      FunctionName: !Sub ${Environment}-ClientRegistryRateLimitFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
+      Handler: uk.gov.di.authentication.oidc.lambda.ClientRegistryRateLimitHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref ClientRegistryRateLimitFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref ClientRegistryTableWriteAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  ClientRegistryRateLimitFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-client-registry-rate-limit-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  ClientRegistryRateLimitFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref ClientRegistryRateLimitFunctionLogGroup
+  #endregion
+
   #region Jwks Cache DynamoDB Table
 
   JwksCacheTableEncryptionKey:
