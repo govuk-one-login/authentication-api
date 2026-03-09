@@ -118,7 +118,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                                 .getBearerAccessToken());
 
         return amcService
-                .requestJourneyOutcome(userInfoRequest)
+                .requestJourneyOutcome(userInfoRequest, additionalAmcHeaders)
                 .fold(
                         error -> {
                             LOG.warn("Error requesting journey outcome: {}", error.getValue());

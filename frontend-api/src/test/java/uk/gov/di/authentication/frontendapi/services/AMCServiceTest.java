@@ -466,7 +466,7 @@ class AMCServiceTest {
             var response = new HTTPResponse(200);
             when(httpRequestFromUserInfoRequest.send()).thenReturn(response);
 
-            var result = amcService.requestJourneyOutcome(userInfoRequest);
+            var result = amcService.requestJourneyOutcome(userInfoRequest, Map.of());
 
             assertEquals(Result.success(response), result);
         }
@@ -476,7 +476,7 @@ class AMCServiceTest {
             var response = new HTTPResponse(400);
             when(httpRequestFromUserInfoRequest.send()).thenReturn(response);
 
-            var result = amcService.requestJourneyOutcome(userInfoRequest);
+            var result = amcService.requestJourneyOutcome(userInfoRequest, Map.of());
 
             assertEquals(
                     Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME),
@@ -487,7 +487,7 @@ class AMCServiceTest {
         void shouldReturnAnErrorForAnIOException() throws IOException {
             when(httpRequestFromUserInfoRequest.send()).thenThrow(new IOException("Uh oh"));
 
-            var result = amcService.requestJourneyOutcome(userInfoRequest);
+            var result = amcService.requestJourneyOutcome(userInfoRequest, Map.of());
 
             assertEquals(Result.failure(JourneyOutcomeError.IO_EXCEPTION), result);
         }

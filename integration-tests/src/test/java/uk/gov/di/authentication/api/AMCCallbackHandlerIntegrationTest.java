@@ -172,6 +172,12 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         WireMock.verify(
                 1,
                 getRequestedFor(urlPathMatching("/amc/journeyoutcome"))
+                        .withHeader("di-persistent-session-id", equalTo(DI_PERSISTENT_SESSION_ID))
+                        .withHeader("session-id", equalTo(sessionId))
+                        .withHeader("client-session-id", equalTo(CLIENT_SESSION_ID))
+                        .withHeader("txma-audit-encoded", equalTo(ENCODED_DEVICE_INFORMATION))
+                        .withHeader("x-forwarded-for", equalTo(IP_ADDRESS))
+                        .withHeader("user-language", equalTo("en"))
                         .withHeader(
                                 "Authorization", containing("Bearer %s".formatted(ACCESS_TOKEN))));
 

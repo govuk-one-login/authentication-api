@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -121,7 +122,8 @@ class AMCCallbackHandlerTest {
                                         userInfoRequest
                                                 .getAccessToken()
                                                 .toString()
-                                                .equals(ACCESS_TOKEN))))
+                                                .equals(ACCESS_TOKEN)),
+                        anyMap()))
                 .thenReturn(Result.success(successfulJourneyOutcomeHttpResponse));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
@@ -229,7 +231,8 @@ class AMCCallbackHandlerTest {
                                         userInfoRequest
                                                 .getAccessToken()
                                                 .toString()
-                                                .equals(ACCESS_TOKEN))))
+                                                .equals(ACCESS_TOKEN)),
+                        anyMap()))
                 .thenReturn(
                         Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME));
 
@@ -259,7 +262,8 @@ class AMCCallbackHandlerTest {
                                         userInfoRequest
                                                 .getAccessToken()
                                                 .toString()
-                                                .equals(ACCESS_TOKEN))))
+                                                .equals(ACCESS_TOKEN)),
+                        anyMap()))
                 .thenReturn(Result.failure(JourneyOutcomeError.IO_EXCEPTION));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
