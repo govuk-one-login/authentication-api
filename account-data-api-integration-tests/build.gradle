@@ -24,7 +24,6 @@ dependencies {
 
     testImplementation project(":shared"), noXray
     testImplementation project(":account-data-api"), noXray
-    testImplementation project(":shared-test"), noXray
     testImplementation libs.jetbrainsKotlin
     testImplementation libs.jacksonDatabind
     testImplementation libs.jsonAssertJ
@@ -41,20 +40,11 @@ dependencies {
 test {
     useJUnitPlatform()
 
-    environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
     environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
     environment "AWS_REGION", "eu-west-2"
-    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
-    environment "OIDC_API_BASE_URL", "http://localhost"
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
-    environment "HEADERS_CASE_INSENSITIVE", "true"
-    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
-    environment "REDIS_KEY", "account-data"
-    environment "SQS_ENDPOINT", "http://localhost:45678"
-    environment "SNS_ENDPOINT", "http://localhost:45678"
-    environment "TRACING_ENABLED", "false"
-    environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
 
     testLogging {
         showStandardStreams = false
