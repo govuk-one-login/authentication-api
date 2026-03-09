@@ -156,7 +156,9 @@ public class AMCService {
                                             .subject(internalPairwiseSubject)
                                             .claim("email", authSessionItem.getEmailAddress())
                                             .claim("public_sub", publicSubject)
-                                            .claim("access_token", accessToken.getValue())
+                                            .claim(
+                                                    "account_management_api_access_token",
+                                                    accessToken.getValue())
                                             .build();
 
                             return signJWT(

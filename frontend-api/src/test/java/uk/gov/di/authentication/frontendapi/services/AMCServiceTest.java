@@ -170,7 +170,8 @@ class AMCServiceTest {
             JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
             assertCompositeJWTClaims(compositeClaims);
 
-            var accessTokenValue = (String) compositeClaims.getClaim("access_token");
+            var accessTokenValue =
+                    (String) compositeClaims.getClaim("account_management_api_access_token");
             SignedJWT accessTokenJWT = SignedJWT.parse(accessTokenValue);
             assertTrue(accessTokenJWT.verify(new ECDSAVerifier(accessTokenKey.toECPublicKey())));
 
