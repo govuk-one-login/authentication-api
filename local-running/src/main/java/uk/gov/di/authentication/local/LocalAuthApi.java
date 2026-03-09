@@ -35,38 +35,71 @@ public class LocalAuthApi {
 
     // These path mappings must match those in the infrastructure-as-code configuration
     public LocalAuthApi() {
-        var app = Javalin.create();
+        var app =
+                Javalin.create(
+                        config -> {
+                            // Frontend API
+                            config.routes.get(
+                                    "/mfa-reset-jwk.json",
+                                    handlerFor(new MfaResetStorageTokenJwkHandler()));
+                            config.routes.get(
+                                    "/reverification-jwk.json",
+                                    handlerFor(new MfaResetJarJwkHandler()));
 
-        // Frontend API
-        app.get("/mfa-reset-jwk.json", handlerFor(new MfaResetStorageTokenJwkHandler()));
-        app.get("/reverification-jwk.json", handlerFor(new MfaResetJarJwkHandler()));
+                            config.routes.post(
+                                    "/account-interventions",
+                                    handlerFor(new AccountInterventionsHandler()));
+                            config.routes.post(
+                                    "/account-recovery", handlerFor(new AccountRecoveryHandler()));
+                            config.routes.post(
+                                    "/orch-auth-code",
+                                    handlerFor(new AuthenticationAuthCodeHandler()));
+                            config.routes.post(
+                                    "/check-email-fraud-block",
+                                    handlerFor(new CheckEmailFraudBlockHandler()));
+                            config.routes.post(
+                                    "/check-reauth-user", handlerFor(new CheckReAuthUserHandler()));
+                            config.routes.post(
+                                    "/id-reverification-state",
+                                    handlerFor(new IDReverificationStateHandler()));
+                            config.routes.post("/login", handlerFor(new LoginHandler()));
+                            config.routes.post("/mfa", handlerFor(new MfaHandler()));
+                            config.routes.post(
+                                    "/amc-authorize", handlerFor(new AMCAuthorizeHandler()));
+                            config.routes.post(
+                                    "/mfa-reset-authorize",
+                                    handlerFor(new MfaResetAuthorizeHandler()));
+                            config.routes.post(
+                                    "/reset-password-request",
+                                    handlerFor(new ResetPasswordRequestHandler()));
+                            config.routes.post(
+                                    "/reset-password", handlerFor(new ResetPasswordHandler()));
+                            config.routes.post(
+                                    "/reverification-result",
+                                    handlerFor(new ReverificationResultHandler()));
+                            config.routes.post(
+                                    "/send-notification",
+                                    handlerFor(new SendNotificationHandler()));
+                            config.routes.post("/signup", handlerFor(new SignUpHandler()));
+                            config.routes.post("/start", handlerFor(new StartHandler()));
+                            config.routes.post(
+                                    "/update-profile", handlerFor(new UpdateProfileHandler()));
+                            config.routes.post(
+                                    "/user-exists", handlerFor(new CheckUserExistsHandler()));
+                            config.routes.post("/verify-code", handlerFor(new VerifyCodeHandler()));
+                            config.routes.post(
+                                    "/verify-mfa-code", handlerFor(new VerifyMfaCodeHandler()));
+                            config.routes.post(
+                                    "/start-passkey-assertion",
+                                    handlerFor(new StartPasskeyAssertionHandler()));
+                            config.routes.post(
+                                    "/finish-passkey-assertion",
+                                    handlerFor(new FinishPasskeyAssertionHandler()));
 
-        app.post("/account-interventions", handlerFor(new AccountInterventionsHandler()));
-        app.post("/account-recovery", handlerFor(new AccountRecoveryHandler()));
-        app.post("/orch-auth-code", handlerFor(new AuthenticationAuthCodeHandler()));
-        app.post("/check-email-fraud-block", handlerFor(new CheckEmailFraudBlockHandler()));
-        app.post("/check-reauth-user", handlerFor(new CheckReAuthUserHandler()));
-        app.post("/id-reverification-state", handlerFor(new IDReverificationStateHandler()));
-        app.post("/login", handlerFor(new LoginHandler()));
-        app.post("/mfa", handlerFor(new MfaHandler()));
-        app.post("/amc-authorize", handlerFor(new AMCAuthorizeHandler()));
-        app.post("/mfa-reset-authorize", handlerFor(new MfaResetAuthorizeHandler()));
-        app.post("/reset-password-request", handlerFor(new ResetPasswordRequestHandler()));
-        app.post("/reset-password", handlerFor(new ResetPasswordHandler()));
-        app.post("/reverification-result", handlerFor(new ReverificationResultHandler()));
-        app.post("/send-notification", handlerFor(new SendNotificationHandler()));
-        app.post("/signup", handlerFor(new SignUpHandler()));
-        app.post("/start", handlerFor(new StartHandler()));
-        app.post("/update-profile", handlerFor(new UpdateProfileHandler()));
-        app.post("/user-exists", handlerFor(new CheckUserExistsHandler()));
-        app.post("/verify-code", handlerFor(new VerifyCodeHandler()));
-        app.post("/verify-mfa-code", handlerFor(new VerifyMfaCodeHandler()));
-        app.post("/start-passkey-assertion", handlerFor(new StartPasskeyAssertionHandler()));
-        app.post("/finish-passkey-assertion", handlerFor(new FinishPasskeyAssertionHandler()));
-
-        // External API
-        app.post("/token", handlerFor(new TokenHandler()));
-        app.get("/userinfo", handlerFor(new UserInfoHandler()));
+                            // External API
+                            config.routes.post("/token", handlerFor(new TokenHandler()));
+                            config.routes.get("/userinfo", handlerFor(new UserInfoHandler()));
+                        });
 
         // Start app
         app.start(getPort());
