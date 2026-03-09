@@ -40,7 +40,7 @@ jobs:
           distribution: "corretto"
 
       - name: 🏗️ Set Up Gradle
-        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v4
         with:
           cache-read-only: false
           add-job-summary: never
@@ -68,7 +68,7 @@ jobs:
         shell: bash
 
       - name: 🏗️ Set Up Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
 
       - name: 🏗️ Install Pre-commit
         run: python -m pip install pre-commit
