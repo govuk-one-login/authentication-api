@@ -81,7 +81,8 @@ class AMCServiceTest {
             "urn:fdc:gov.uk:2022:xH7hrtJCgdi2NEF7TXcOC6SMz8DohdoLo9hWqQMWPRk";
     private static final String AUTH_ISSUER_CLAIM = "https://signin.account.gov.uk/";
     private static final String AUTH_TO_AUTH_AUDIENCE = "https://api.manage.account.gov.uk";
-    private static final String AUTH_TO_AMC_PUBLIC_AUDIENCE = "https://amc.account.gov.uk";
+    private static final String AUTH_TO_AMC_PUBLIC_AUDIENCE =
+            "https://manage.account.gov.uk/authorize";
     private static final String AUTH_TO_AMC_PRIVATE_AUDIENCE = "https://amc.account.gov.uk";
     private static final String RESPONSE_TYPE = "code";
     private static final String REDIRECT_URI = "https://example.com/callback";
@@ -421,7 +422,7 @@ class AMCServiceTest {
 
             assertEquals(AMC_CLIENT_ID, claims.getIssuer());
             assertEquals(AMC_CLIENT_ID, claims.getSubject());
-            assertEquals(List.of(AUTH_TO_AMC_PUBLIC_AUDIENCE), claims.getAudience());
+            assertEquals(List.of(AUTH_TO_AMC_PRIVATE_AUDIENCE), claims.getAudience());
             assertInstanceOf(String.class, claims.getJWTID());
             assertEquals(NOW.toInstant(), claims.getIssueTime().toInstant());
             assertEquals(NOW.toInstant(), claims.getNotBeforeTime().toInstant());
