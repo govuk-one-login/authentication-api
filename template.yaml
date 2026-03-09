@@ -245,7 +245,7 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       defaultProvisionedConcurrency: 1
-      aisUriSecretId: 15fd1c23-eac2-4881-9ca8-d287b476fc3b
+      aisUriSecretId: 79692761-0248-4f13-8f1a-39b91596b24f
       authStubEnabled: false
       syncWaitForSpotTimeout: 20000
     staging:
