@@ -536,7 +536,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3fd823db-5980-4853-bd9b-ed674ea8719e
       useStronglyConsistentReads: false
-      forcedMFAResetAfterMFACheckEnabled: false
+      forcedMFAResetAfterMFACheckEnabled: true
       OrchAccountID: 058264132019
       OrchApiBaseUrl: https://oidc.integration.account.gov.uk
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/1b5c001b-ed53-4a7b-bfbe-5d0f596110b5
