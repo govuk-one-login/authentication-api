@@ -121,10 +121,7 @@ Conditions:
   UseNewSigningKeys:
     !And [
       !Condition PublishNextExternalTokenSigningKeys,
-      !Or [
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-      ],
+      !Equals [integration, !Ref Environment],
     ]
   NewSpotRequestQueueWriting:
     !Or [
