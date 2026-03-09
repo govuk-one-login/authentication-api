@@ -415,8 +415,10 @@ task searchForDependency {
     doLast {
         def targetGroup = project.hasProperty('targetGroup') ? project.property('targetGroup') : null
         def targetName = project.hasProperty('targetName') ? project.property('targetName') : null
+        def minVersion = project.hasProperty('minVersion') ? project.property('minVersion') : null
+        def parsedMinVersion  = VersionNumber.parse(minVersion)
 
-        println "searching for ${targetGroup}:${targetName}...\n"
+        println "searching for ${targetGroup}:${targetName} < ${minVersion}\n"
 
         def foundProjects = new LinkedHashSet<String>()
 
@@ -427,7 +429,12 @@ task searchForDependency {
 
                     resolvedDependencies.each { dep ->
                         if (dep.moduleGroup == targetGroup && dep.moduleName == targetName) {
-                            foundProjects.add(project.name + ":" + config.name)
+                            def parsedResolvedVersion = VersionNumber.parse(dep.getModuleVersion())
+                            def isLower = parsedResolvedVersion < parsedMinVersion
+                            def versionString = isLower
+                                    ? "Version: \u001B[31m${dep.getModuleVersion()}\u001B[0m"
+                                    : "Version: \u001B[32m${dep.getModuleVersion()}\u001B[0m"
+                            foundProjects.add(project.name + ":" + config.name +". "  + versionString)
                         }
                     }
                 }
