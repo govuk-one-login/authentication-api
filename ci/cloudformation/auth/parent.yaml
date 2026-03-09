@@ -230,6 +230,7 @@ Mappings:
       amcClientId: auth_amc
       EvcsApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
+      forceRedeploy: pleaseDelete
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
