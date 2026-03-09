@@ -20,7 +20,7 @@ public class CommonTestVariables {
     public static final String UK_MOBILE_NUMBER = "+447234567890";
     public static final String UK_NOTIFY_MOBILE_TEST_NUMBER = "07700900000";
     public static final String INTERNATIONAL_MOBILE_NUMBER = "+77777777777";
-    public static final String IP_ADDRESS = "123.123.123.123";
+    public static final String IP_ADDRESS = "192.0.2.0/24";
     public static final String DI_PERSISTENT_SESSION_ID = "some-persistent-id-value";
     public static final String ENCODED_DEVICE_DETAILS =
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
