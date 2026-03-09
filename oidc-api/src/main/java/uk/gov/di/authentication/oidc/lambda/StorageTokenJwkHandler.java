@@ -63,7 +63,9 @@ public class StorageTokenJwkHandler
 
             List<JWK> signingKeys = new ArrayList<>();
 
-            signingKeys.add(jwksService.getPublicStorageTokenJwkWithOpaqueId());
+            if (configurationService.isPublishOldStorageTokenSigningKeyEnabled()) {
+                signingKeys.add(jwksService.getPublicStorageTokenJwkWithOpaqueId());
+            }
 
             if (configurationService.isPublishNextStorageTokenSigningKeyEnabled()) {
                 signingKeys.add(jwksService.getNextPublicStorageTokenJwkWithOpaqueId());

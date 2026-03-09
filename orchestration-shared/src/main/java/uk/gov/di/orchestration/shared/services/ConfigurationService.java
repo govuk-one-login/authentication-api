@@ -434,6 +434,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("USE_NEXT_STORAGE_TOKEN_SIGNING_KEY");
     }
 
+    public boolean isPublishOldStorageTokenSigningKeyEnabled() {
+        return getFlagOrTrue("PUBLISH_OLD_STORAGE_TOKEN_SIGNING_KEY");
+    }
+
     public Optional<String> getIPVCapacity() {
         try {
             var request =
