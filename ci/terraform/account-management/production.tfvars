@@ -25,14 +25,14 @@ redis_node_size = "cache.m4.xlarge"
 performance_tuning = {
   authorizer = {
     memory          = 1536
-    concurrency     = 3
-    max_concurrency = 10
+    concurrency     = 0
+    max_concurrency = 0
     scaling_trigger = 0.6
   }
 }
 
-lambda_max_concurrency = 10
-lambda_min_concurrency = 3
+lambda_max_concurrency = 0
+lambda_min_concurrency = 0
 
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
