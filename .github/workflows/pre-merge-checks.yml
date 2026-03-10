@@ -171,14 +171,14 @@ jobs:
 
           retention-days: 5
 
-  run-integration-tests:
+  run-integration-tests-api-a-to-l:
     runs-on: ubuntu-latest
     needs:
       - build
       - check-changed-files
     services:
       localstack:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
         env:
           SERVICES: "sqs, sns, kms, ssm, s3, secretsmanager"
           GATEWAY_LISTEN: 0.0.0.0:45678
@@ -190,7 +190,7 @@ jobs:
         ports:
           - 45678:45678
       redis:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb' || '' }}
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb' || '' }}
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -199,7 +199,7 @@ jobs:
         ports:
           - 6379:6379
       dynamodb:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
         options: >-
           --health-cmd "curl http://localhost:8000"
           --health-interval 10s
@@ -209,22 +209,22 @@ jobs:
           - 8000:8000
     steps:
       - name: Check out repository code
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set up JDK 17
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
         uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: |
@@ -233,24 +233,190 @@ jobs:
             !*/build/reports
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
-      - name: Run Integration Tests
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+      - name: Run Integration Tests (API A-L)
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
         run: |
-          ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.api.[A-L]*" -x spotlessApply -x spotlessCheck -x composeUp
 
       - name: Cache Test Reports
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
         uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
-          key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
+          key: ${{ runner.os }}-integration-test-reports-api-a-to-l-${{ github.sha }}
           path: |
             integration-tests/build/jacoco/
             integration-tests/build/reports/
       - name: Upload Integration Test Reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
+        if: failure() && needs.check-changed-files.outputs.integration_tests_needed == 'true'
         with:
-          name: integration-test-reports
+          name: integration-test-reports-api-a-to-l
+          path: integration-tests/build/reports/tests/test/
+          retention-days: 5
+
+  run-integration-tests-api-m-to-z:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - check-changed-files
+    services:
+      localstack:
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
+        env:
+          SERVICES: "sqs, sns, kms, ssm, s3, secretsmanager"
+          GATEWAY_LISTEN: 0.0.0.0:45678
+          LOCALSTACK_HOST: localhost:45678
+          TEST_AWS_ACCOUNT_ID: 123456789012
+        options: >-
+          --add-host "notify.internal:host-gateway"
+          --add-host "subscriber.internal:host-gateway"
+        ports:
+          - 45678:45678
+      redis:
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb' || '' }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      dynamodb:
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
+        options: >-
+          --health-cmd "curl http://localhost:8000"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8000:8000
+    steps:
+      - name: Check out repository code
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+      - name: Set up Gradle
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: true
+      - name: Restore Build Cache
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            .gradle/
+            */build/
+            !*/build/reports
+            !*/build/jacoco
+          key: ${{ runner.os }}-build-${{ github.sha }}
+      - name: Run Integration Tests (API M-Z + Queue Handlers)
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        run: |
+          ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.api.[M-Z]*" --tests "uk.gov.di.authentication.queuehandlers.*" -x spotlessApply -x spotlessCheck -x composeUp
+
+      - name: Cache Test Reports
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          key: ${{ runner.os }}-integration-test-reports-api-m-to-z-${{ github.sha }}
+          path: |
+            integration-tests/build/jacoco/
+            integration-tests/build/reports/
+      - name: Upload Integration Test Reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure() && needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        with:
+          name: integration-test-reports-api-m-to-z
+          path: integration-tests/build/reports/tests/test/
+          retention-days: 5
+
+  run-integration-tests-services-and-utils:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - check-changed-files
+    services:
+      localstack:
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
+        env:
+          SERVICES: "sqs, sns, kms, ssm, s3, secretsmanager"
+          GATEWAY_LISTEN: 0.0.0.0:45678
+          LOCALSTACK_HOST: localhost:45678
+          TEST_AWS_ACCOUNT_ID: 123456789012
+        options: >-
+          --add-host "notify.internal:host-gateway"
+          --add-host "subscriber.internal:host-gateway"
+        ports:
+          - 45678:45678
+      redis:
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb' || '' }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      dynamodb:
+        image: ${{ (needs.check-changed-files.outputs.integration_tests_needed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
+        options: >-
+          --health-cmd "curl http://localhost:8000"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8000:8000
+    steps:
+      - name: Check out repository code
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+      - name: Set up Gradle
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: true
+      - name: Restore Build Cache
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            .gradle/
+            */build/
+            !*/build/reports
+            !*/build/jacoco
+          key: ${{ runner.os }}-build-${{ github.sha }}
+      - name: Run Integration Tests (Services + Utils)
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        run: |
+          ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.services.*" --tests "uk.gov.di.authentication.utils.*" --tests "uk.gov.di.authentication.shared.*" -x spotlessApply -x spotlessCheck -x composeUp
+
+      - name: Cache Test Reports
+        if: needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          key: ${{ runner.os }}-integration-test-reports-services-utils-${{ github.sha }}
+          path: |
+            integration-tests/build/jacoco/
+            integration-tests/build/reports/
+      - name: Upload Integration Test Reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure() && needs.check-changed-files.outputs.integration_tests_needed == 'true'
+        with:
+          name: integration-test-reports-services-utils
           path: integration-tests/build/reports/tests/test/
           retention-days: 5
 
@@ -261,7 +427,7 @@ jobs:
       - check-changed-files
     services:
       localstack:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
+        image: ${{ (needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
         env:
           SERVICES: "sqs, sns, kms, ssm, s3, secretsmanager"
           DEFAULT_REGION: eu-west-2
@@ -275,7 +441,7 @@ jobs:
         ports:
           - 45678:45678
       redis:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb' || '' }}
+        image: ${{ (needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true') && 'redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb' || '' }}
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -284,7 +450,7 @@ jobs:
         ports:
           - 6379:6379
       dynamodb:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
+        image: ${{ (needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
         options: >-
           --health-cmd "curl http://localhost:8000"
           --health-interval 10s
@@ -294,22 +460,22 @@ jobs:
           - 8000:8000
     steps:
       - name: Check out repository code
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set up JDK 17
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: |
@@ -320,23 +486,23 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: Run Account Management Integration Tests
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         run: |
           ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
+        if: failure() && needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         with:
           name: account-management-integration-test-reports
           path: account-management-integration-tests/build/reports/tests/test/
           retention-days: 5
       - name: Run Delivery Receipts Integration Tests
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         run: |
           ./gradlew :delivery-receipts-integration-tests:test :delivery-receipts-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
 
       - name: Cache Test Reports
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
@@ -348,7 +514,7 @@ jobs:
 
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
+        if: failure() && needs.check-changed-files.outputs.am_dr_integration_tests_needed == 'true'
         with:
           name: delivery-receipts-integration-test-reports
           path: delivery-receipts-integration-tests/build/reports/tests/test/
@@ -378,7 +544,7 @@ jobs:
       - check-changed-files
     services:
       localstack:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
+        image: ${{ (needs.check-changed-files.outputs.account_data_integration_tests_needed == 'true') && 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348' || '' }}
         env:
           SERVICES: "sqs, sns, kms, ssm, s3, secretsmanager"
           DEFAULT_REGION: eu-west-2
@@ -392,7 +558,7 @@ jobs:
         ports:
           - 45678:45678
       dynamodb:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
+        image: ${{ (needs.check-changed-files.outputs.account_data_integration_tests_needed == 'true') && 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b' || '' }}
         options: >-
           --health-cmd "curl http://localhost:8000"
           --health-interval 10s
@@ -402,22 +568,22 @@ jobs:
           - 8000:8000
     steps:
       - name: Check out repository code
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.account_data_integration_tests_needed == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set up JDK 17
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.account_data_integration_tests_needed == 'true'
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.account_data_integration_tests_needed == 'true'
         uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.account_data_integration_tests_needed == 'true'
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: |
@@ -428,12 +594,12 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: Run Account Data Api Integration Tests
-        if: needs.check-changed-files.outputs.java_changed == 'true'
+        if: needs.check-changed-files.outputs.account_data_integration_tests_needed == 'true'
         run: |
           ./gradlew :account-data-api-integration-tests:test :account-data-api-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
+        if: failure() && needs.check-changed-files.outputs.account_data_integration_tests_needed == 'true'
         with:
           name: account-data-api-integration-test-reports
           path: account-data-api-integration-tests/build/reports/tests/test/
@@ -443,7 +609,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - run-unit-tests
-      - run-integration-tests
+      - run-integration-tests-api-a-to-l
+      - run-integration-tests-api-m-to-z
+      - run-integration-tests-services-and-utils
       - run-account-management-and-delivery-receipts-tests
       - check-changed-files
     if: github.event_name != 'merge_group'
@@ -492,11 +660,27 @@ jobs:
             !delivery-receipts-integration-tests/build/reports/
             !account-data-api-integration-tests/build/jacoco/
             !account-data-api-integration-tests/build/reports/
-      - name: Restore Cached Integration Test Reports
+      - name: Restore Cached Integration Test Reports (API A-L)
         if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
-          key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
+          key: ${{ runner.os }}-integration-test-reports-api-a-to-l-${{ github.sha }}
+          path: |
+            integration-tests/build/jacoco/
+            integration-tests/build/reports/
+      - name: Restore Cached Integration Test Reports (API M-Z)
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          key: ${{ runner.os }}-integration-test-reports-api-m-to-z-${{ github.sha }}
+          path: |
+            integration-tests/build/jacoco/
+            integration-tests/build/reports/
+      - name: Restore Cached Integration Test Reports (Services + Utils)
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          key: ${{ runner.os }}-integration-test-reports-services-utils-${{ github.sha }}
           path: |
             integration-tests/build/jacoco/
             integration-tests/build/reports/

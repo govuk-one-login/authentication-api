@@ -5,6 +5,15 @@ on:
       java_changed:
         description: "Whether any Java files have changed"
         value: ${{ jobs.check-changed-files.outputs.java_changed}}
+      integration_tests_needed:
+        description: "Whether the main integration tests need to run"
+        value: ${{ jobs.check-changed-files.outputs.integration_tests_needed}}
+      am_dr_integration_tests_needed:
+        description: "Whether account-management and delivery-receipts integration tests need to run"
+        value: ${{ jobs.check-changed-files.outputs.am_dr_integration_tests_needed}}
+      account_data_integration_tests_needed:
+        description: "Whether account-data integration tests need to run"
+        value: ${{ jobs.check-changed-files.outputs.account_data_integration_tests_needed}}
       orch_alerting_files_changed:
         description: "Whether any files have changed in the orchestration-alerting folder"
         value: ${{ jobs.check-changed-files.outputs.orch_alerting_files_changed}}
@@ -14,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       java_changed: ${{ steps.changed-java-files.outputs.any_changed }}
+      integration_tests_needed: ${{ steps.changed-integration-test-files.outputs.any_changed }}
+      am_dr_integration_tests_needed: ${{ steps.changed-am-dr-files.outputs.any_changed }}
+      account_data_integration_tests_needed: ${{ steps.changed-account-data-files.outputs.any_changed }}
       orch_alerting_files_changed: ${{ steps.changed-orch-alerting-files.outputs.any_changed }}
     steps:
       - name: Check out repository code
@@ -28,6 +40,62 @@ jobs:
           files: |
             **/src/**
             **/*.java
+            **/*.gradle
+            **/*.properties
+            gradle*
+            gradle/**
+
+      - name: Get changed files for main integration tests
+        id: changed-integration-test-files
+        uses: tj-actions/changed-files@05f9457d921137103bb9687b6b571075f75a65f2 # v45.0.7
+        with:
+          files: |
+            shared/**
+            shared-test/**
+            orchestration-shared/**
+            orchestration-shared-test/**
+            frontend-api/**
+            oidc-api/**
+            ipv-api/**
+            auth-external-api/**
+            client-registry-api/**
+            doc-checking-app-api/**
+            utils/**
+            interventions-api-stub/**
+            user-permissions/**
+            audit-events/**
+            integration-tests/**
+            **/*.gradle
+            **/*.properties
+            gradle*
+            gradle/**
+
+      - name: Get changed files for account-management and delivery-receipts integration tests
+        id: changed-am-dr-files
+        uses: tj-actions/changed-files@05f9457d921137103bb9687b6b571075f75a65f2 # v45.0.7
+        with:
+          files: |
+            shared/**
+            shared-test/**
+            account-management-api/**
+            account-management-integration-tests/**
+            delivery-receipts-api/**
+            delivery-receipts-integration-tests/**
+            audit-events/**
+            **/*.gradle
+            **/*.properties
+            gradle*
+            gradle/**
+
+      - name: Get changed files for account-data integration tests
+        id: changed-account-data-files
+        uses: tj-actions/changed-files@05f9457d921137103bb9687b6b571075f75a65f2 # v45.0.7
+        with:
+          files: |
+            shared/**
+            shared-test/**
+            account-data-api/**
+            account-data-api-integration-tests/**
             **/*.gradle
             **/*.properties
             gradle*
