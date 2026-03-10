@@ -13,19 +13,16 @@ import java.util.List;
 import java.util.Map;
 
 public class ClientRegistryRateLimitService {
-    private ConfigurationService configurationService;
     private DynamoDbClient dynamoDbClient;
     private String tableName;
 
     ClientRegistryRateLimitService(
             ConfigurationService configurationService, DynamoDbClient dynamoDbClient) {
-        this.configurationService = configurationService;
         this.dynamoDbClient = dynamoDbClient;
         this.tableName = configurationService.getEnvironment() + "-" + "client-registry";
     }
 
     ClientRegistryRateLimitService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.dynamoDbClient =
                 DynamoDbClient.builder()
                         .credentialsProvider(DefaultCredentialsProvider.builder().build())
