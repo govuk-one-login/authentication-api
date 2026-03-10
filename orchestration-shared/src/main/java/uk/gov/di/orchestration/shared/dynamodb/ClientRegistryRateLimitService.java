@@ -22,7 +22,7 @@ public class ClientRegistryRateLimitService {
         this.tableName = configurationService.getEnvironment() + "-" + "client-registry";
     }
 
-    ClientRegistryRateLimitService(ConfigurationService configurationService) {
+    public ClientRegistryRateLimitService(ConfigurationService configurationService) {
         this.dynamoDbClient =
                 DynamoDbClient.builder()
                         .credentialsProvider(DefaultCredentialsProvider.builder().build())
