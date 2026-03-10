@@ -32,6 +32,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    maxParallelForks = 4
     environment "TRACING_ENABLED", "false"
 }
 
