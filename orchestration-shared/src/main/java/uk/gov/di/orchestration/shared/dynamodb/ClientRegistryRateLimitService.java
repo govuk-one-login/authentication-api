@@ -3,10 +3,12 @@ package uk.gov.di.orchestration.shared.dynamodb;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,5 +47,18 @@ public class ClientRegistryRateLimitService {
             clients.addAll(scanResult.items());
         }
         return clients;
+    }
+
+    public void updateClientsWithRateLimit(List<Map<String, AttributeValue>> clients) {
+        clients.forEach(
+                client -> {
+                    var updatedClient = new HashMap<>(client);
+                    updatedClient.put("RateLimit", AttributeValue.fromN("2000"));
+                    dynamoDbClient.putItem(
+                            PutItemRequest.builder()
+                                    .tableName(tableName)
+                                    .item(updatedClient)
+                                    .build());
+                });
     }
 }
