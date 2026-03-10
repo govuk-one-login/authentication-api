@@ -143,15 +143,15 @@ performance_tuning = {
 
   mfa-reset-jwk = {
     memory          = 1536
-    concurrency     = 0
-    max_concurrency = 0
+    concurrency     = 3
+    max_concurrency = 10
     scaling_trigger = 0.6
   }
 
   mfa-reset-jar-jwk = {
     memory          = 1536
-    concurrency     = 0
-    max_concurrency = 0
+    concurrency     = 3
+    max_concurrency = 10
     scaling_trigger = 0.6
   }
 
