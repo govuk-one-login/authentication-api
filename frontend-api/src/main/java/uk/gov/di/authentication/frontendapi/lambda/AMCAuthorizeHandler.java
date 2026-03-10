@@ -84,9 +84,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         Result<JwtFailureReason, String> result =
                 amcService.buildAuthorizationUrl(
                         authSessionItem.getInternalCommonSubjectId(),
-                        new AMCScope[] {AMCScope.ACCOUNT_DELETE},
+                        AMCScope.ACCOUNT_DELETE,
                         authSessionItem,
-                        userContext.getClientSessionId(),
                         userProfile.getPublicSubjectID());
 
         return result.fold(
