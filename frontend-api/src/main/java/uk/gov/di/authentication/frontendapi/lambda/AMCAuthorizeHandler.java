@@ -70,6 +70,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             AMCAuthorizeRequest request,
             UserContext userContext) {
 
+        // hoopy scoop
         AuthSessionItem authSessionItem = userContext.getAuthSession();
         var userProfile =
                 authenticationService
