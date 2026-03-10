@@ -67,6 +67,11 @@ Conditions:
     ]
   IsDevOrBuild:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
+  IsDevOrIntegration:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+    ]
   IsStagingIntOrProd:
     !Or [
       !Equals [staging, !Ref Environment],
@@ -74,6 +79,7 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
   IsNotIntegration: !Not [!Equals [!Ref Environment, integration]]
+  IsIntegration: !Equals [integration, !Ref Environment]
   IsNotDevOrProd:
     !Not [
       !Or [
@@ -1380,6 +1386,7 @@ Resources:
 
   ClientRegistryRateLimitFunction:
     Type: AWS::Serverless::Function
+    Condition: IsDevOrIntegration
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: Lambda is manually invoked so DLQ not needed
     Properties:
@@ -1398,6 +1405,7 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       SnapStart:
         ApplyOn: PublishedVersions
+      Timeout: 300 #5 min
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1410,13 +1418,14 @@ Resources:
 
   ClientRegistryRateLimitFunctionLogGroup:
     Type: AWS::Logs::LogGroup
+    Condition: IsDevOrIntegration
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-client-registry-rate-limit-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
   ClientRegistryRateLimitFunctionSubscriptionFilter:
-    Condition: IsNotDevEnvironment
+    Condition: IsIntegration
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
