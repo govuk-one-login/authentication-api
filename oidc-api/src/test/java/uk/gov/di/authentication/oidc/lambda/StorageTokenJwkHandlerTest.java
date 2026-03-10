@@ -40,7 +40,9 @@ class StorageTokenJwkHandlerTest {
     }
 
     @Test
-    void shouldReturnStorageTokenJwk() {
+    void shouldReturnStorageTokenJwkWhenPublishOldKeyEnabled() {
+        when(configurationService.isPublishOldStorageTokenSigningKeyEnabled()).thenReturn(true);
+
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
 
@@ -51,7 +53,9 @@ class StorageTokenJwkHandlerTest {
     }
 
     @Test
-    void shouldReturnTwoStorageTokenJwksWhenPublishNextStorageTokenEnabled() throws JOSEException {
+    void shouldReturnTwoStorageTokenJwksWhenPublishOldAndNewStorageKeysEnabled()
+            throws JOSEException {
+        when(configurationService.isPublishOldStorageTokenSigningKeyEnabled()).thenReturn(true);
         when(configurationService.isPublishNextStorageTokenSigningKeyEnabled()).thenReturn(true);
         ECKey nextStorageTokenSigningKey =
                 new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
@@ -69,7 +73,27 @@ class StorageTokenJwkHandlerTest {
     }
 
     @Test
+    void shouldReturnOnlyNewStorageTokenJwksWhenPublishOldKeyDisabledAndPublishNewKeyEnabled()
+            throws JOSEException {
+        when(configurationService.isPublishOldStorageTokenSigningKeyEnabled()).thenReturn(false);
+        when(configurationService.isPublishNextStorageTokenSigningKeyEnabled()).thenReturn(true);
+        ECKey nextStorageTokenSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        when(jwksService.getNextPublicStorageTokenJwkWithOpaqueId())
+                .thenReturn(nextStorageTokenSigningKey);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet = new JWKSet(List.of(nextStorageTokenSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+    }
+
+    @Test
     void shouldReturn500WhenSigningKeyIsNotPresent() {
+        when(configurationService.isPublishOldStorageTokenSigningKeyEnabled()).thenReturn(true);
         when(jwksService.getPublicStorageTokenJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
