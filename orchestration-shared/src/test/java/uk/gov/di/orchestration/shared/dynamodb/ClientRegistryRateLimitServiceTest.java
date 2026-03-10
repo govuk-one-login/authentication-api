@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.dynamodb;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.AdditionalAnswers;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
@@ -12,6 +13,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -38,7 +40,30 @@ public class ClientRegistryRateLimitServiceTest {
 
         var clients = clientRegistryRateLimitService.getAllClients();
 
-        assertEquals(clients, List.of(client1, client2));
+        assertEquals(List.of(client1, client2), clients);
+    }
+
+    @Test
+    void getAllClientsReturnsThePaginatedClients() {
+        var client1 = generateUnmappedClientRegistryDynamoItem("test-client-1");
+        var client2 = generateUnmappedClientRegistryDynamoItem("test-client-2");
+        var client3 = generateUnmappedClientRegistryDynamoItem("test-client-3");
+
+        var mockScanResult =
+                List.of(
+                        ScanResponse.builder()
+                                .items(client1, client2)
+                                .lastEvaluatedKey(client2)
+                                .build(),
+                        ScanResponse.builder().items(client3).lastEvaluatedKey(emptyMap()).build());
+
+        when(dynamoDbClient.scan(any(ScanRequest.class)))
+                .thenAnswer(AdditionalAnswers.returnsElementsOf(mockScanResult));
+
+        var clients = clientRegistryRateLimitService.getAllClients();
+
+        assertEquals(3, clients.size());
+        assertEquals(List.of(client1, client2, client3), clients);
     }
 
     private Map<String, AttributeValue> generateUnmappedClientRegistryDynamoItem(String clientId) {

@@ -13,11 +13,13 @@ import java.util.Map;
 public class ClientRegistryRateLimitService {
     private ConfigurationService configurationService;
     private DynamoDbClient dynamoDbClient;
+    private String tableName;
 
     ClientRegistryRateLimitService(
             ConfigurationService configurationService, DynamoDbClient dynamoDbClient) {
         this.configurationService = configurationService;
         this.dynamoDbClient = dynamoDbClient;
+        this.tableName = configurationService.getEnvironment() + "-" + "client-registry";
     }
 
     ClientRegistryRateLimitService(ConfigurationService configurationService) {
@@ -26,11 +28,22 @@ public class ClientRegistryRateLimitService {
                 DynamoDbClient.builder()
                         .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .build();
+        this.tableName = configurationService.getEnvironment() + "-" + "client-registry";
     }
 
     public List<Map<String, AttributeValue>> getAllClients() {
-        var scanResult = dynamoDbClient.scan(ScanRequest.builder().build());
+        var scanResult = dynamoDbClient.scan(ScanRequest.builder().tableName(tableName).build());
         var clients = new ArrayList<>(scanResult.items());
+
+        while (scanResult.hasLastEvaluatedKey() && !scanResult.lastEvaluatedKey().isEmpty()) {
+            scanResult =
+                    dynamoDbClient.scan(
+                            ScanRequest.builder()
+                                    .tableName(tableName)
+                                    .exclusiveStartKey(scanResult.lastEvaluatedKey())
+                                    .build());
+            clients.addAll(scanResult.items());
+        }
         return clients;
     }
 }
