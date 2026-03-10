@@ -34,7 +34,7 @@ jobs:
         run: |
           find ci/terraform -type f -name "*openapi*.yaml" -exec python scripts/validate_openapi_definition.py {} \;
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-4-cores
     needs:
       - check-changed-files
     steps:
@@ -172,7 +172,7 @@ jobs:
           retention-days: 5
 
   run-integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-4-cores
     needs:
       - build
       - check-changed-files
