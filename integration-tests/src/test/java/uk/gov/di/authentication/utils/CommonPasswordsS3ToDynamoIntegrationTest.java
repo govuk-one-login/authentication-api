@@ -11,7 +11,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension;
+import uk.gov.di.authentication.sharedtest.extensions.S3BucketExtension;
 import uk.gov.di.authentication.sharedtest.helper.S3TestEventHelper;
 import uk.gov.di.authentication.utils.lambda.S3ToDynamoDbHandler;
 
@@ -28,8 +28,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension.COMMON_PASSWORDS_BUCKET;
-import static uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension.TEST_FILE_NAME;
 
 class CommonPasswordsS3ToDynamoIntegrationTest extends HandlerIntegrationTest<S3Event, Void> {
 
@@ -38,13 +36,22 @@ class CommonPasswordsS3ToDynamoIntegrationTest extends HandlerIntegrationTest<S3
     private static final String S3_ENDPOINT =
             Optional.ofNullable(System.getenv().get("LOCALSTACK_ENDPOINT"))
                     .orElse("http://localhost:45678");
-    private static final S3Event testS3Event =
-            S3TestEventHelper.generateS3TestEvent(
-                    REGION, "ObjectCreated:Put", COMMON_PASSWORDS_BUCKET, TEST_FILE_NAME);
+    private static final String COMMON_PASSWORDS_BUCKET = "local-common-passwords";
+    private static final String COMMON_PASSWORDS_FILE_KEY = "local-common-passwords-test-file";
 
     @RegisterExtension
-    protected static final CommonPasswordsS3Extension commonPasswordsS3 =
-            new CommonPasswordsS3Extension();
+    protected static final S3BucketExtension commonPasswordsS3 =
+            new S3BucketExtension(
+                    COMMON_PASSWORDS_BUCKET,
+                    COMMON_PASSWORDS_FILE_KEY,
+                    "common_passwords_integration_test.txt");
+
+    private static final S3Event testS3Event =
+            S3TestEventHelper.generateS3TestEvent(
+                    REGION,
+                    "ObjectCreated:Put",
+                    COMMON_PASSWORDS_BUCKET,
+                    COMMON_PASSWORDS_FILE_KEY);
 
     @BeforeEach
     void setup() {
