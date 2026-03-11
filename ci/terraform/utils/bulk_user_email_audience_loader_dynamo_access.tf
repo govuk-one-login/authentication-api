@@ -44,8 +44,10 @@ data "aws_iam_policy_document" "bulk_user_email_audience_loader_dynamo_read_acce
     resources = [
       data.aws_dynamodb_table.bulk_email_users_table[0].arn,
       data.aws_dynamodb_table.user_profile_table[0].arn,
+      data.aws_dynamodb_table.user_credentials_table[0].arn,
       "${data.aws_dynamodb_table.bulk_email_users_table[0].arn}/index/*",
       "${data.aws_dynamodb_table.user_profile_table[0].arn}/index/*",
+      "${data.aws_dynamodb_table.user_credentials_table[0].arn}/index/*",
     ]
   }
 
