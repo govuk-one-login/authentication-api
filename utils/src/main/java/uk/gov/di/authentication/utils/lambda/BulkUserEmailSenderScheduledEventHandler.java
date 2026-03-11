@@ -158,7 +158,22 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                         BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
                                             } else {
                                                 try {
-                                                    if (sendNotifyEmail(userProfile.getEmail())) {
+                                                    var emailSent = false;
+                                                    if (configurationService
+                                                            .isBulkUserEmailEmailSendingEnabled()) {
+                                                        LOG.info("Bulk user email sending email.");
+                                                        notificationService.sendEmail(
+                                                                userProfile.getEmail(),
+                                                                Map.of(),
+                                                                TERMS_AND_CONDITIONS_BULK_EMAIL,
+                                                                "");
+                                                        emailSent = true;
+                                                    } else {
+                                                        LOG.info(
+                                                                "Bulk user email email sending not enabled.");
+                                                    }
+
+                                                    if (emailSent) {
                                                         addAuditEventForEmailSent(
                                                                 userProfile, auditableEvent);
                                                     }
@@ -210,17 +225,6 @@ public class BulkUserEmailSenderScheduledEventHandler
                         limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE);
             default:
                 throw new UnrecognisedSendModeException(sendMode.getValue());
-        }
-    }
-
-    private boolean sendNotifyEmail(String email) throws NotificationClientException {
-        if (configurationService.isBulkUserEmailEmailSendingEnabled()) {
-            LOG.info("Bulk user email sending email.");
-            notificationService.sendEmail(email, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL, "");
-            return true;
-        } else {
-            LOG.info("Bulk user email email sending not enabled.");
-            return false;
         }
     }
 
