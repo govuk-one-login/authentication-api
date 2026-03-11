@@ -137,36 +137,6 @@ Conditions:
         !Equals [integration, !Ref Environment],
       ],
     ]
-  ProvisionNewStorageTokenSigningKey:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
-  PublishNextStorageTokenSigningKey:
-    !And [
-      !Condition ProvisionNewStorageTokenSigningKey,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
-  UseNewStorageTokenSigningKey:
-    !And [
-      !Condition PublishNextStorageTokenSigningKey,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3121,14 +3091,7 @@ Resources:
               !Ref Environment,
               storageTokenKeyArn,
             ]
-          NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !If
-            - PublishNextStorageTokenSigningKey
-            - !Ref OrchStorageTokenSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          USE_NEXT_STORAGE_TOKEN_SIGNING_KEY: !If
-            - UseNewStorageTokenSigningKey
-            - true
-            - false
+          NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchStorageTokenSigningKmsKeyAlias
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED: !If
@@ -5660,15 +5623,7 @@ Resources:
               !Ref Environment,
               storageTokenKeyArn,
             ]
-          PUBLISH_NEXT_STORAGE_TOKEN_SIGNING_KEY: !If
-            - PublishNextStorageTokenSigningKey
-            - true
-            - false
-          NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !If
-            - PublishNextStorageTokenSigningKey
-            - !Ref OrchStorageTokenSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          PUBLISH_OLD_STORAGE_TOKEN_SIGNING_KEY: false
+          NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchStorageTokenSigningKmsKeyAlias
       Policies:
         - !Ref StorageTokenSigningKmsAccessPolicy
       Tags:
@@ -6611,16 +6566,13 @@ Resources:
                   !Ref Environment,
                   storageTokenKeyArn,
                 ]
-          - Fn::If:
-              - ProvisionNewStorageTokenSigningKey
-              - Sid: AllowOrchStorageTokenSigningKms
-                Effect: Allow
-                Action:
-                  - kms:Sign
-                  - kms:GetPublicKey
-                Resource:
-                  - !GetAtt OrchStorageTokenSigningKmsKey.Arn
-              - !Ref AWS::NoValue
+          - Sid: AllowOrchStorageTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt OrchStorageTokenSigningKmsKey.Arn
 
   IpvTokenSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
