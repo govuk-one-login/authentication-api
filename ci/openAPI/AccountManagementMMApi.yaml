@@ -744,13 +744,6 @@ paths:
       security:
         - authorise-access-token: []
         - x-account-data-api-access-token: []
-      #      x-amazon-apigateway-integration:
-      #        type: "aws_proxy"
-      #        httpMethod: "POST"
-      #        uri:
-      #          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${XXX.Arn}:active/invocations"
-      #        passthroughBehavior: "when_no_match"
-      #        timeoutInMillis: 29000
       tags:
         - Passkey
       summary: Retrieve all passkeys for a user
@@ -769,13 +762,6 @@ paths:
       security:
         - authorise-access-token: []
         - x-account-data-api-access-token: []
-      #      x-amazon-apigateway-integration:
-      #        type: "aws_proxy"
-      #        httpMethod: "POST"
-      #        uri:
-      #          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${XXX.Arn}:active/invocations"
-      #        passthroughBehavior: "when_no_match"
-      #        timeoutInMillis: 29000
       tags:
         - Passkey
       summary: Delete a passkey
