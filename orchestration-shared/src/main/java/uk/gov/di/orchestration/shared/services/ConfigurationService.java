@@ -419,7 +419,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getStorageTokenSigningKeyAlias() {
-        return System.getenv("NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS");
+        return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
     public Optional<String> getIPVCapacity() {

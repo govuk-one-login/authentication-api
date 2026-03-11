@@ -151,7 +151,6 @@ Mappings:
       serviceDomain: authdev3.dev.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:653994557586:key/17e5e566-4e99-43b4-ad59-e1ef924a582b
-      storageTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/cf42638b-73a6-498f-a56f-e7ec341c276b
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:653994557586:authdev3-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -178,7 +177,6 @@ Mappings:
       serviceDomain: build.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/0189356a-b80f-4f12-9f31-60f5b34a574f
-      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fcebbac-6a3a-4948-9700-e061ef3d308e
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -205,7 +203,6 @@ Mappings:
       serviceDomain: staging.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:758531536632:key/1d506b73-c506-4cec-bc46-db0ac1a54149
-      storageTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/01d22c46-bccf-4a2f-bd3b-149fe03f5321
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
       docAppDomain: https://api.review-b.staging.account.gov.uk
@@ -234,7 +231,6 @@ Mappings:
       serviceDomain: integration.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
-      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6dccb5b3-2754-4c66-ba66-c11f861ad55f
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
       docAppDomain: https://api.review-b.integration.account.gov.uk
@@ -261,7 +257,6 @@ Mappings:
       serviceDomain: account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:172348255554:key/ce5d0a05-909c-449b-be82-87009f5bef9a
-      storageTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0fce68a7-62bd-407d-919e-07f3fd621304
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
       docAppDomain: https://api.review-b.account.gov.uk
@@ -3085,13 +3080,7 @@ Resources:
                   ]
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
             !If [AisAbortOnError, true, false]
-          STORAGE_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              storageTokenKeyArn,
-            ]
-          NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchStorageTokenSigningKmsKeyAlias
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchStorageTokenSigningKmsKeyAlias
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED: !If
@@ -5617,13 +5606,7 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          STORAGE_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              storageTokenKeyArn,
-            ]
-          NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchStorageTokenSigningKmsKeyAlias
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchStorageTokenSigningKmsKeyAlias
       Policies:
         - !Ref StorageTokenSigningKmsAccessPolicy
       Tags:
@@ -6555,17 +6538,6 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowStorageTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  storageTokenKeyArn,
-                ]
           - Sid: AllowOrchStorageTokenSigningKms
             Effect: Allow
             Action:
