@@ -19,6 +19,8 @@ import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
+import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
+import uk.gov.di.authentication.utils.services.bulkemailsender.TermsAndConditionsBulkEmailSender;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -127,6 +129,10 @@ public class BulkUserEmailSenderScheduledEventHandler
 
         List<String> userSubjectIdBatch;
 
+        BulkEmailSender bulkEmailSender =
+                new TermsAndConditionsBulkEmailSender(
+                        bulkEmailUsersService, cloudwatchMetricsService, configurationService);
+
         int batchCounter = 0;
         do {
             batchCounter++;
@@ -152,7 +158,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                                                     .getTermsAndConditions()
                                                                                     .getVersion()));
                                             if (hasAcceptedRecentTermsAndConditions) {
-                                                updateBulkUserStatus(
+                                                bulkEmailSender.updateBulkUserStatus(
                                                         subjectId,
                                                         BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
                                             } else {
@@ -200,12 +206,13 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                                                 .VC_EXPIRY_BULK_EMAIL
                                                                                 .name()));
                                                     }
-                                                    updateBulkUserStatus(subjectId, successStatus);
+                                                    bulkEmailSender.updateBulkUserStatus(
+                                                            subjectId, successStatus);
                                                 } catch (NotificationClientException e) {
                                                     LOG.error(
                                                             "Unable to send bulk email to user: {}",
                                                             e.getMessage());
-                                                    updateBulkUserStatus(
+                                                    bulkEmailSender.updateBulkUserStatus(
                                                             subjectId,
                                                             BulkEmailStatus.ERROR_SENDING_EMAIL);
                                                 }
@@ -213,7 +220,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                                         },
                                         () -> {
                                             LOG.warn("User not found by subject id");
-                                            updateBulkUserStatus(
+                                            bulkEmailSender.updateBulkUserStatus(
                                                     subjectId, BulkEmailStatus.ACCOUNT_NOT_FOUND);
                                         });
                     });
@@ -251,30 +258,11 @@ public class BulkUserEmailSenderScheduledEventHandler
         }
     }
 
-    private void updateBulkUserStatus(String subjectId, BulkEmailStatus bulkEmailStatus) {
-        if (bulkEmailUsersService.updateUserStatus(subjectId, bulkEmailStatus).isPresent()) {
-            LOG.info("Bulk email user status updated to: {}", bulkEmailStatus.getValue());
-        } else {
-            LOG.warn("Bulk user email status not updated, user not found.");
-        }
-        updateBulkUserStatusMetric(bulkEmailStatus);
-    }
-
     private void updateTableSizeMetric() {
         var noOfBulkEmailUserItems = bulkEmailUsersService.describeTable().table().itemCount();
         cloudwatchMetricsService.putEmbeddedValue(
                 "NumberOfBulkEmailUsers", noOfBulkEmailUserItems, Map.of());
         LOG.info("BulkEmailUsers table item count: {}", noOfBulkEmailUserItems);
-    }
-
-    private void updateBulkUserStatusMetric(BulkEmailStatus bulkEmailStatus) {
-        cloudwatchMetricsService.incrementCounter(
-                "BulkEmailStatus",
-                Map.of(
-                        "Status",
-                        bulkEmailStatus.getValue(),
-                        "Environment",
-                        configurationService.getEnvironment()));
     }
 
     BulkEmailUserSendMode readBulkEmailUserSendModeConfiguration(String bulkEmailUserSendMode) {
