@@ -7,7 +7,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
@@ -174,8 +173,32 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                     }
 
                                                     if (emailSent) {
-                                                        addAuditEventForEmailSent(
-                                                                userProfile, auditableEvent);
+                                                        var internalCommonSubjectIdentifier =
+                                                                userProfile.getSalt() != null
+                                                                        ? ClientSubjectHelper
+                                                                                .getSubjectWithSectorIdentifier(
+                                                                                        userProfile,
+                                                                                        configurationService
+                                                                                                .getInternalSectorUri(),
+                                                                                        dynamoService)
+                                                                                .getValue()
+                                                                        : AuditService.UNKNOWN;
+                                                        auditService.submitAuditEvent(
+                                                                auditableEvent,
+                                                                emptyAuditContext()
+                                                                        .withEmail(
+                                                                                userProfile
+                                                                                        .getEmail())
+                                                                        .withSubjectId(
+                                                                                internalCommonSubjectIdentifier),
+                                                                pair(
+                                                                        "internalSubjectId",
+                                                                        userProfile.getSubjectID()),
+                                                                pair(
+                                                                        "bulk-email-type",
+                                                                        BulkEmailType
+                                                                                .VC_EXPIRY_BULK_EMAIL
+                                                                                .name()));
                                                     }
                                                     updateBulkUserStatus(subjectId, successStatus);
                                                 } catch (NotificationClientException e) {
@@ -252,25 +275,6 @@ public class BulkUserEmailSenderScheduledEventHandler
                         bulkEmailStatus.getValue(),
                         "Environment",
                         configurationService.getEnvironment()));
-    }
-
-    private void addAuditEventForEmailSent(
-            UserProfile userProfile, UtilsAuditableEvent utilsAuditableEvent) {
-        var internalCommonSubjectIdentifier =
-                userProfile.getSalt() != null
-                        ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                        userProfile,
-                                        configurationService.getInternalSectorUri(),
-                                        dynamoService)
-                                .getValue()
-                        : AuditService.UNKNOWN;
-        auditService.submitAuditEvent(
-                utilsAuditableEvent,
-                emptyAuditContext()
-                        .withEmail(userProfile.getEmail())
-                        .withSubjectId(internalCommonSubjectIdentifier),
-                pair("internalSubjectId", userProfile.getSubjectID()),
-                pair("bulk-email-type", BulkEmailType.VC_EXPIRY_BULK_EMAIL.name()));
     }
 
     BulkEmailUserSendMode readBulkEmailUserSendModeConfiguration(String bulkEmailUserSendMode) {
