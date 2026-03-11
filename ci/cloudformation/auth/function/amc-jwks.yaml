@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Conditions:
+  DeployAMCJWKSWithSplunk: !Condition IsSplunkEnabled
+
+Resources:
+  AMCJWKSFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-amc-jwks-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.AMCJWKSHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref AMCJWKSFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AMCJWKSFunctionPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder: ""
+
+  AMCJWKSFunctionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for AMC JWKS lambda to write to S3 and use KMS"
+      Path: !Sub
+        - /${Env}/frontend-api/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowS3Write
+            Effect: Allow
+            Action:
+              - s3:PutObject
+            Resource: !Sub "${AMCJWKSBucket.Arn}/.well-known/amc-jwks.json"
+          - Sid: AllowFetchingPublicKeys
+            Effect: Allow
+            Action:
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt AuthToAccountManagementSigningKey.Arn
+              - !GetAtt AuthToAMCSigningKey.Arn
+
+  AMCJWKSFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-amc-jwks-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AMCJWKSFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/amc-jwks.yaml
+
+  AMCJWKSFunctionSubscriptionFilter:
+    Condition: "DeployAMCJWKSWithSplunk"
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AMCJWKSFunctionLogGroup
+
+  AMCJWKSBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub
+        - ${Env}-amc-jwks
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "aws:kms"
+              KMSMasterKeyID: "alias/aws/s3"
+      VersioningConfiguration:
+        Status: Enabled
