@@ -144,13 +144,35 @@ public class BulkUserEmailSenderScheduledEventHandler
                         dynamoService
                                 .getOptionalUserProfileFromSubject(subjectId)
                                 .ifPresentOrElse(
-                                        userProfile ->
-                                                sendEmailIfRequiredAndUpdateStatus(
-                                                        userProfile,
+                                        userProfile -> {
+                                            boolean hasAcceptedRecentTermsAndConditions =
+                                                    (userProfile.getTermsAndConditions() != null
+                                                            && !bulkUserEmailIncludedTermsAndConditions
+                                                                    .contains(
+                                                                            userProfile
+                                                                                    .getTermsAndConditions()
+                                                                                    .getVersion()));
+                                            if (hasAcceptedRecentTermsAndConditions) {
+                                                updateBulkUserStatus(
                                                         subjectId,
-                                                        bulkUserEmailIncludedTermsAndConditions,
-                                                        successStatus,
-                                                        auditableEvent),
+                                                        BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
+                                            } else {
+                                                try {
+                                                    if (sendNotifyEmail(userProfile.getEmail())) {
+                                                        addAuditEventForEmailSent(
+                                                                userProfile, auditableEvent);
+                                                    }
+                                                    updateBulkUserStatus(subjectId, successStatus);
+                                                } catch (NotificationClientException e) {
+                                                    LOG.error(
+                                                            "Unable to send bulk email to user: {}",
+                                                            e.getMessage());
+                                                    updateBulkUserStatus(
+                                                            subjectId,
+                                                            BulkEmailStatus.ERROR_SENDING_EMAIL);
+                                                }
+                                            }
+                                        },
                                         () -> {
                                             LOG.warn("User not found by subject id");
                                             updateBulkUserStatus(
@@ -199,31 +221,6 @@ public class BulkUserEmailSenderScheduledEventHandler
         } else {
             LOG.info("Bulk user email email sending not enabled.");
             return false;
-        }
-    }
-
-    private void sendEmailIfRequiredAndUpdateStatus(
-            UserProfile userProfile,
-            String subjectId,
-            List<String> bulkUserEmailIncludedTermsAndConditions,
-            BulkEmailStatus successStatus,
-            UtilsAuditableEvent utilsAuditableEvent) {
-        boolean hasAcceptedRecentTermsAndConditions =
-                (userProfile.getTermsAndConditions() != null
-                        && !bulkUserEmailIncludedTermsAndConditions.contains(
-                                userProfile.getTermsAndConditions().getVersion()));
-        if (hasAcceptedRecentTermsAndConditions) {
-            updateBulkUserStatus(subjectId, BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
-        } else {
-            try {
-                if (sendNotifyEmail(userProfile.getEmail())) {
-                    addAuditEventForEmailSent(userProfile, utilsAuditableEvent);
-                }
-                updateBulkUserStatus(subjectId, successStatus);
-            } catch (NotificationClientException e) {
-                LOG.error("Unable to send bulk email to user: {}", e.getMessage());
-                updateBulkUserStatus(subjectId, BulkEmailStatus.ERROR_SENDING_EMAIL);
-            }
         }
     }
 
