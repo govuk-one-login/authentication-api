@@ -262,6 +262,8 @@ if [[ ${O_DEPLOYUTILS} -eq 1 ]]; then
   # shellcheck disable=SC2046
   rain merge $(find "${DIR}/ci/cloudformation/utils" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${UTILS_TEMPLATE_FILE}"
 
+  sed -i '' 's/Mode: OFF/Mode: "OFF"/g' "${UTILS_TEMPLATE_FILE}"
+
   echo "Lint template file"
   sam validate --lint --template-file="${UTILS_TEMPLATE_FILE}"
 
