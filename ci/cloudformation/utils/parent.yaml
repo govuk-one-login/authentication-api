@@ -59,7 +59,7 @@ Parameters:
   ScheduleCron:
     Type: String
     Description: Cron expression for scheduling
-    Default: "cron(0 14 ? * MON-FRI *)"
+    Default: "cron(0 10 ? * MON-FRI *)"
   VersionsToKeep:
     Type: String
     Description: Number of Lambda versions to keep
