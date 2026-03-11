@@ -38,6 +38,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 import static java.util.Collections.singletonList;
@@ -221,9 +222,11 @@ public class AMCService {
     }
 
     public Result<JourneyOutcomeError, HTTPResponse> requestJourneyOutcome(
-            UserInfoRequest userInfoRequest) {
+            UserInfoRequest userInfoRequest, Map<String, String> additionalAmcHeaders) {
         try {
-            var response = userInfoRequest.toHTTPRequest().send();
+            var request = userInfoRequest.toHTTPRequest();
+            additionalAmcHeaders.forEach(request::setHeader);
+            var response = request.send();
             if (!response.indicatesSuccess()) {
                 return Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME);
             }

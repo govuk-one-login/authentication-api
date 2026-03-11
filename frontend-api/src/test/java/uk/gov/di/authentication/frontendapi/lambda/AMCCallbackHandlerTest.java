@@ -13,7 +13,9 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -23,6 +25,7 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -30,6 +33,9 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_TOKEN_RESPONSE_ERROR;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
@@ -41,6 +47,8 @@ class AMCCallbackHandlerTest {
             mock(ConfigurationService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
+    private static final AuthSessionItem authSession =
+            new AuthSessionItem().withSessionId(SESSION_ID);
     private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final AMCService AMC_SERVICE = mock(AMCService.class);
     private static TokenRequest tokenRequest;
@@ -80,6 +88,10 @@ class AMCCallbackHandlerTest {
     @BeforeAll
     static void setUp() {
         tokenRequest = mock(TokenRequest.class);
+        when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
+        when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+        when(USER_CONTEXT.getUserLanguage()).thenReturn(LocaleHelper.SupportedLanguage.EN);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         handler =
                 new AMCCallbackHandler(
@@ -110,7 +122,8 @@ class AMCCallbackHandlerTest {
                                         userInfoRequest
                                                 .getAccessToken()
                                                 .toString()
-                                                .equals(ACCESS_TOKEN))))
+                                                .equals(ACCESS_TOKEN)),
+                        anyMap()))
                 .thenReturn(Result.success(successfulJourneyOutcomeHttpResponse));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
@@ -218,7 +231,8 @@ class AMCCallbackHandlerTest {
                                         userInfoRequest
                                                 .getAccessToken()
                                                 .toString()
-                                                .equals(ACCESS_TOKEN))))
+                                                .equals(ACCESS_TOKEN)),
+                        anyMap()))
                 .thenReturn(
                         Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME));
 
@@ -248,7 +262,8 @@ class AMCCallbackHandlerTest {
                                         userInfoRequest
                                                 .getAccessToken()
                                                 .toString()
-                                                .equals(ACCESS_TOKEN))))
+                                                .equals(ACCESS_TOKEN)),
+                        anyMap()))
                 .thenReturn(Result.failure(JourneyOutcomeError.IO_EXCEPTION));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);

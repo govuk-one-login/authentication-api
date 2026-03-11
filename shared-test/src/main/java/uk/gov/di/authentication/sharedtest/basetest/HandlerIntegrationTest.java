@@ -337,7 +337,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
         clientSessionId.ifPresent(id -> headers.put("Client-Session-Id", id));
         persistentSessionId.ifPresent(id -> headers.put("di-persistent-session-id", id));
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, "base64 encoded");
         return headers;
     }
 

@@ -23,8 +23,22 @@ import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -127,10 +141,14 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         stubFor(get(urlPathMatching("/amc/journeyoutcome")).willReturn(journeyOutcomeResponse));
 
+        var requestHeaders =
+                constructFrontendHeaders(sessionId, CLIENT_SESSION_ID, DI_PERSISTENT_SESSION_ID);
+        requestHeaders.put("X-Forwarded-For", IP_ADDRESS);
+
         var response =
                 makeRequest(
                         Optional.of(new AMCCallbackRequest(AUTH_CODE, "state")),
-                        constructFrontendHeaders(sessionId, sessionId),
+                        requestHeaders,
                         Map.of());
 
         var clientAssertionRegex = "eyJ[A-Za-z0-9+/=]+\\.[A-Za-z0-9+/=]+\\.[A-Za-z0-9+/=_-]+";
@@ -138,6 +156,12 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 1,
                 postRequestedFor(urlPathMatching("/amc/token"))
                         .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
+                        .withHeader("di-persistent-session-id", equalTo(DI_PERSISTENT_SESSION_ID))
+                        .withHeader("session-id", equalTo(sessionId))
+                        .withHeader("client-session-id", equalTo(CLIENT_SESSION_ID))
+                        .withHeader("txma-audit-encoded", equalTo(ENCODED_DEVICE_INFORMATION))
+                        .withHeader("x-forwarded-for", equalTo(IP_ADDRESS))
+                        .withHeader("user-language", equalTo("en"))
                         .withFormParam("grant_type", equalTo("authorization_code"))
                         .withFormParam("code", equalTo(AUTH_CODE))
                         .withFormParam(
@@ -148,6 +172,12 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         WireMock.verify(
                 1,
                 getRequestedFor(urlPathMatching("/amc/journeyoutcome"))
+                        .withHeader("di-persistent-session-id", equalTo(DI_PERSISTENT_SESSION_ID))
+                        .withHeader("session-id", equalTo(sessionId))
+                        .withHeader("client-session-id", equalTo(CLIENT_SESSION_ID))
+                        .withHeader("txma-audit-encoded", equalTo(ENCODED_DEVICE_INFORMATION))
+                        .withHeader("x-forwarded-for", equalTo(IP_ADDRESS))
+                        .withHeader("user-language", equalTo("en"))
                         .withHeader(
                                 "Authorization", containing("Bearer %s".formatted(ACCESS_TOKEN))));
 
