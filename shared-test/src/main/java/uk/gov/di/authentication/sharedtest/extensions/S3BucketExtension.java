@@ -11,19 +11,22 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
 public class S3BucketExtension extends BaseAwsResourceExtension
         implements BeforeAllCallback, AfterAllCallback {
 
-    protected static final S3Client s3Client =
+    private static final S3Client s3Client =
             S3Client.builder()
                     .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
                     .region(Region.of(REGION))
@@ -44,16 +47,22 @@ public class S3BucketExtension extends BaseAwsResourceExtension
         this.classpathResource = classpathResource;
     }
 
+    public S3BucketExtension(String bucketName) {
+        this(bucketName, null, null);
+    }
+
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         if (!bucketExists(bucketName)) {
             s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build());
         }
-        URL testFileUrl =
-                Thread.currentThread().getContextClassLoader().getResource(classpathResource);
-        s3Client.putObject(
-                PutObjectRequest.builder().bucket(bucketName).key(fileKey).build(),
-                Paths.get(testFileUrl.toURI()));
+        if (classpathResource != null) {
+            URL testFileUrl =
+                    Thread.currentThread().getContextClassLoader().getResource(classpathResource);
+            s3Client.putObject(
+                    PutObjectRequest.builder().bucket(bucketName).key(fileKey).build(),
+                    Paths.get(testFileUrl.toURI()));
+        }
     }
 
     @Override
@@ -70,6 +79,13 @@ public class S3BucketExtension extends BaseAwsResourceExtension
                                                     .build()));
             s3Client.deleteBucket(DeleteBucketRequest.builder().bucket(bucketName).build());
         }
+    }
+
+    public String getObject(String key) throws IOException {
+        return new String(
+                s3Client.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build())
+                        .readAllBytes(),
+                StandardCharsets.UTF_8);
     }
 
     private boolean bucketExists(String bucketName) {
