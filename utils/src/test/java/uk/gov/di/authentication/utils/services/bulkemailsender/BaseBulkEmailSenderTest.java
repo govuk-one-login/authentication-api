@@ -31,6 +31,11 @@ class BaseBulkEmailSenderTest {
                 ConfigurationService configurationService) {
             super(bulkEmailUsersService, cloudwatchMetricsService, configurationService);
         }
+
+        @Override
+        public boolean validateUser(UserProfile userProfile) {
+            // No-op for testing base class
+        }
     }
 
     @Nested

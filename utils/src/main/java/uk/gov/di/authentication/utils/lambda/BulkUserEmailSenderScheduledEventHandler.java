@@ -150,72 +150,60 @@ public class BulkUserEmailSenderScheduledEventHandler
                                 .getOptionalUserProfileFromSubject(subjectId)
                                 .ifPresentOrElse(
                                         userProfile -> {
-                                            boolean hasAcceptedRecentTermsAndConditions =
-                                                    (userProfile.getTermsAndConditions() != null
-                                                            && !bulkUserEmailIncludedTermsAndConditions
-                                                                    .contains(
-                                                                            userProfile
-                                                                                    .getTermsAndConditions()
-                                                                                    .getVersion()));
-                                            if (hasAcceptedRecentTermsAndConditions) {
+                                            if (!bulkEmailSender.validateUser(userProfile)) return;
+
+                                            try {
+                                                var emailSent = false;
+                                                if (configurationService
+                                                        .isBulkUserEmailEmailSendingEnabled()) {
+                                                    LOG.info("Bulk user email sending email.");
+                                                    notificationService.sendEmail(
+                                                            userProfile.getEmail(),
+                                                            Map.of(),
+                                                            TERMS_AND_CONDITIONS_BULK_EMAIL,
+                                                            "");
+                                                    emailSent = true;
+                                                } else {
+                                                    LOG.info(
+                                                            "Bulk user email email sending not enabled.");
+                                                }
+
+                                                if (emailSent) {
+                                                    var internalCommonSubjectIdentifier =
+                                                            userProfile.getSalt() != null
+                                                                    ? ClientSubjectHelper
+                                                                            .getSubjectWithSectorIdentifier(
+                                                                                    userProfile,
+                                                                                    configurationService
+                                                                                            .getInternalSectorUri(),
+                                                                                    dynamoService)
+                                                                            .getValue()
+                                                                    : AuditService.UNKNOWN;
+                                                    auditService.submitAuditEvent(
+                                                            auditableEvent,
+                                                            emptyAuditContext()
+                                                                    .withEmail(
+                                                                            userProfile.getEmail())
+                                                                    .withSubjectId(
+                                                                            internalCommonSubjectIdentifier),
+                                                            pair(
+                                                                    "internalSubjectId",
+                                                                    userProfile.getSubjectID()),
+                                                            pair(
+                                                                    "bulk-email-type",
+                                                                    BulkEmailType
+                                                                            .VC_EXPIRY_BULK_EMAIL
+                                                                            .name()));
+                                                }
+                                                bulkEmailSender.updateBulkUserStatus(
+                                                        subjectId, successStatus);
+                                            } catch (NotificationClientException e) {
+                                                LOG.error(
+                                                        "Unable to send bulk email to user: {}",
+                                                        e.getMessage());
                                                 bulkEmailSender.updateBulkUserStatus(
                                                         subjectId,
-                                                        BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
-                                            } else {
-                                                try {
-                                                    var emailSent = false;
-                                                    if (configurationService
-                                                            .isBulkUserEmailEmailSendingEnabled()) {
-                                                        LOG.info("Bulk user email sending email.");
-                                                        notificationService.sendEmail(
-                                                                userProfile.getEmail(),
-                                                                Map.of(),
-                                                                TERMS_AND_CONDITIONS_BULK_EMAIL,
-                                                                "");
-                                                        emailSent = true;
-                                                    } else {
-                                                        LOG.info(
-                                                                "Bulk user email email sending not enabled.");
-                                                    }
-
-                                                    if (emailSent) {
-                                                        var internalCommonSubjectIdentifier =
-                                                                userProfile.getSalt() != null
-                                                                        ? ClientSubjectHelper
-                                                                                .getSubjectWithSectorIdentifier(
-                                                                                        userProfile,
-                                                                                        configurationService
-                                                                                                .getInternalSectorUri(),
-                                                                                        dynamoService)
-                                                                                .getValue()
-                                                                        : AuditService.UNKNOWN;
-                                                        auditService.submitAuditEvent(
-                                                                auditableEvent,
-                                                                emptyAuditContext()
-                                                                        .withEmail(
-                                                                                userProfile
-                                                                                        .getEmail())
-                                                                        .withSubjectId(
-                                                                                internalCommonSubjectIdentifier),
-                                                                pair(
-                                                                        "internalSubjectId",
-                                                                        userProfile.getSubjectID()),
-                                                                pair(
-                                                                        "bulk-email-type",
-                                                                        BulkEmailType
-                                                                                .VC_EXPIRY_BULK_EMAIL
-                                                                                .name()));
-                                                    }
-                                                    bulkEmailSender.updateBulkUserStatus(
-                                                            subjectId, successStatus);
-                                                } catch (NotificationClientException e) {
-                                                    LOG.error(
-                                                            "Unable to send bulk email to user: {}",
-                                                            e.getMessage());
-                                                    bulkEmailSender.updateBulkUserStatus(
-                                                            subjectId,
-                                                            BulkEmailStatus.ERROR_SENDING_EMAIL);
-                                                }
+                                                        BulkEmailStatus.ERROR_SENDING_EMAIL);
                                             }
                                         },
                                         () -> {
