@@ -167,7 +167,6 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
-  PublishOldStorageTokenSigningKey: !Equals [production, !Ref Environment]
 
 Mappings:
   EnvironmentConfiguration:
@@ -5669,10 +5668,7 @@ Resources:
             - PublishNextStorageTokenSigningKey
             - !Ref OrchStorageTokenSigningKmsKeyAlias
             - !Ref AWS::NoValue
-          PUBLISH_OLD_STORAGE_TOKEN_SIGNING_KEY: !If
-            - PublishOldStorageTokenSigningKey
-            - true
-            - false
+          PUBLISH_OLD_STORAGE_TOKEN_SIGNING_KEY: false
       Policies:
         - !Ref StorageTokenSigningKmsAccessPolicy
       Tags:
