@@ -8,5 +8,3 @@ fi
 
 # shellcheck disable=SC2046
 rain merge $(find "${GITHUB_WORKSPACE}/${TEMPLATE_SOURCE_DIR}" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${TEMPLATE_FILE}"
-
-sed -i '' 's/Mode: OFF/Mode: "OFF"/g' "${TEMPLATE_FILE}" || true
