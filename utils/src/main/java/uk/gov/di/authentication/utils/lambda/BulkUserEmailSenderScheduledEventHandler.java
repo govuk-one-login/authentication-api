@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.audit.AuditContext.emptyAuditContext;
-import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class BulkUserEmailSenderScheduledEventHandler
@@ -189,13 +188,34 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     private boolean sendNotifyEmail(String email) throws NotificationClientException {
         if (configurationService.isBulkUserEmailEmailSendingEnabled()) {
-            LOG.info("Bulk user email sending email.");
-            notificationService.sendEmail(email, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL, "");
+            LOG.info("Bulk user email would send to: {}", redactEmail(email));
             return true;
         } else {
             LOG.info("Bulk user email email sending not enabled.");
             return false;
         }
+    }
+
+    private String redactEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            return "***";
+        }
+        String[] parts = email.split("@");
+        String localPart = parts[0];
+        String domain = parts[1];
+
+        String redactedLocal = localPart.length() <= 2 ? "***" : localPart.substring(0, 2) + "***";
+
+        String redactedDomain;
+        int lastDot = domain.lastIndexOf('.');
+        if (lastDot > 0) {
+            String tld = domain.substring(lastDot);
+            redactedDomain = "***" + tld;
+        } else {
+            redactedDomain = "***";
+        }
+
+        return redactedLocal + "@" + redactedDomain;
     }
 
     private void sendEmailIfRequiredAndUpdateStatus(

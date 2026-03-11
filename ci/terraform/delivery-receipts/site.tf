@@ -38,7 +38,7 @@ provider "aws" {
 }
 
 locals {
-  deploy_bulk_email_users_count = 0
+  deploy_bulk_email_users_count = contains(["authdev1"], var.environment) ? 1 : 0
 
   access_logging_template = jsonencode({
     requestId            = "$context.requestId"
