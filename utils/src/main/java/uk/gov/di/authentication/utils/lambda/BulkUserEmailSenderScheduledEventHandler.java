@@ -50,11 +50,6 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     private final AuditService auditService;
 
-    public BulkUserEmailSenderScheduledEventHandler() {
-        this(ConfigurationService.getInstance());
-        this.configurationService.setSystemService(new SystemService());
-    }
-
     public BulkUserEmailSenderScheduledEventHandler(
             BulkEmailUsersService bulkEmailUsersService,
             DynamoService dynamoService,
@@ -71,20 +66,29 @@ public class BulkUserEmailSenderScheduledEventHandler
     }
 
     public BulkUserEmailSenderScheduledEventHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
-        this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
-        NotificationClient client =
-                configurationService
-                        .getNotifyApiUrl()
-                        .map(
-                                url ->
+        this(
+                new BulkEmailUsersService(configurationService),
+                new DynamoService(configurationService),
+                configurationService,
+                new NotificationService(
+                        configurationService
+                                .getNotifyApiUrl()
+                                .map(
+                                        url ->
+                                                new NotificationClient(
+                                                        configurationService.getNotifyApiKey(),
+                                                        url))
+                                .orElse(
                                         new NotificationClient(
-                                                configurationService.getNotifyApiKey(), url))
-                        .orElse(new NotificationClient(configurationService.getNotifyApiKey()));
-        this.notificationService = new NotificationService(client, configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.auditService = new AuditService(configurationService);
+                                                configurationService.getNotifyApiKey())),
+                        configurationService),
+                new CloudwatchMetricsService(),
+                new AuditService(configurationService));
+    }
+
+    public BulkUserEmailSenderScheduledEventHandler() {
+        this(ConfigurationService.getInstance());
+        this.configurationService.setSystemService(new SystemService());
     }
 
     @Override
