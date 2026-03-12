@@ -7,7 +7,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -15,21 +14,13 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SystemService;
-import uk.gov.di.authentication.utils.domain.BulkEmailType;
-import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
-import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
 import uk.gov.di.authentication.utils.services.bulkemailsender.TermsAndConditionsBulkEmailSender;
 import uk.gov.service.notify.NotificationClient;
-import uk.gov.service.notify.NotificationClientException;
 
 import java.util.List;
 import java.util.Map;
-
-import static uk.gov.di.audit.AuditContext.emptyAuditContext;
-import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class BulkUserEmailSenderScheduledEventHandler
         implements RequestHandler<ScheduledEvent, Void> {
@@ -40,51 +31,45 @@ public class BulkUserEmailSenderScheduledEventHandler
     public static final String DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE = "temporary-failure";
 
     private final BulkEmailUsersService bulkEmailUsersService;
-
-    private final DynamoService dynamoService;
-
-    private final NotificationService notificationService;
-
     private final ConfigurationService configurationService;
-
     private final CloudwatchMetricsService cloudwatchMetricsService;
-
-    private final AuditService auditService;
+    private final BulkEmailSender bulkEmailSender;
 
     public BulkUserEmailSenderScheduledEventHandler(
             BulkEmailUsersService bulkEmailUsersService,
-            DynamoService dynamoService,
             ConfigurationService configurationService,
-            NotificationService notificationService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            AuditService auditService) {
+            BulkEmailSender bulkEmailSender) {
         this.bulkEmailUsersService = bulkEmailUsersService;
-        this.dynamoService = dynamoService;
         this.configurationService = configurationService;
-        this.notificationService = notificationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.auditService = auditService;
+        this.bulkEmailSender = bulkEmailSender;
     }
 
     public BulkUserEmailSenderScheduledEventHandler(ConfigurationService configurationService) {
         this(
                 new BulkEmailUsersService(configurationService),
-                new DynamoService(configurationService),
                 configurationService,
-                new NotificationService(
-                        configurationService
-                                .getNotifyApiUrl()
-                                .map(
-                                        url ->
+                new CloudwatchMetricsService(configurationService),
+                new TermsAndConditionsBulkEmailSender(
+                        new BulkEmailUsersService(configurationService),
+                        new CloudwatchMetricsService(configurationService),
+                        configurationService,
+                        new NotificationService(
+                                configurationService
+                                        .getNotifyApiUrl()
+                                        .map(
+                                                url ->
+                                                        new NotificationClient(
+                                                                configurationService
+                                                                        .getNotifyApiKey(),
+                                                                url))
+                                        .orElse(
                                                 new NotificationClient(
-                                                        configurationService.getNotifyApiKey(),
-                                                        url))
-                                .orElse(
-                                        new NotificationClient(
-                                                configurationService.getNotifyApiKey())),
-                        configurationService),
-                new CloudwatchMetricsService(),
-                new AuditService(configurationService));
+                                                        configurationService.getNotifyApiKey())),
+                                configurationService),
+                        new AuditService(configurationService),
+                        new DynamoService(configurationService)));
     }
 
     public BulkUserEmailSenderScheduledEventHandler() {
@@ -101,37 +86,22 @@ public class BulkUserEmailSenderScheduledEventHandler
         final int bulkUserEmailMaxBatchCount = configurationService.getBulkUserEmailMaxBatchCount();
         final long bulkUserEmailBatchPauseDuration =
                 configurationService.getBulkUserEmailBatchPauseDuration();
-        final List<String> bulkUserEmailIncludedTermsAndConditions =
-                configurationService.getBulkUserEmailIncludedTermsAndConditions();
         final BulkEmailUserSendMode bulkEmailUserSendMode =
                 readBulkEmailUserSendModeConfiguration(
                         configurationService.getBulkEmailUserSendMode());
-        final BulkEmailStatus successStatus = bulkEmailUserSendMode.mapToSuccessStatus();
-        final UtilsAuditableEvent auditableEvent =
-                BulkEmailUserSendMode.DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES.equals(
-                                bulkEmailUserSendMode)
-                        ? UtilsAuditableEvent.AUTH_BULK_RETRY_EMAIL_SENT
-                        : UtilsAuditableEvent.AUTH_BULK_EMAIL_SENT;
-
-        if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
-            throw new IncludedTermsAndConditionsConfigMissingException();
-        }
 
         LOG.info(
-                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, includedTermsAndConditions: {}, bulkEmailUserSendMode: {}",
+                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, bulkEmailUserSendMode: {}",
                 bulkUserEmailBatchQueryLimit,
                 bulkUserEmailMaxBatchCount,
                 bulkUserEmailBatchPauseDuration,
-                bulkUserEmailIncludedTermsAndConditions,
                 bulkEmailUserSendMode);
+
+        bulkEmailSender.validateConfiguration();
 
         updateTableSizeMetric();
 
         List<String> userSubjectIdBatch;
-
-        BulkEmailSender bulkEmailSender =
-                new TermsAndConditionsBulkEmailSender(
-                        bulkEmailUsersService, cloudwatchMetricsService, configurationService);
 
         int batchCounter = 0;
         do {
@@ -145,73 +115,9 @@ public class BulkUserEmailSenderScheduledEventHandler
                     userSubjectIdBatch.size());
 
             userSubjectIdBatch.forEach(
-                    subjectId -> {
-                        dynamoService
-                                .getOptionalUserProfileFromSubject(subjectId)
-                                .ifPresentOrElse(
-                                        userProfile -> {
-                                            if (!bulkEmailSender.validateUser(userProfile)) return;
-
-                                            try {
-                                                var emailSent = false;
-                                                if (configurationService
-                                                        .isBulkUserEmailEmailSendingEnabled()) {
-                                                    LOG.info("Bulk user email sending email.");
-                                                    notificationService.sendEmail(
-                                                            userProfile.getEmail(),
-                                                            Map.of(),
-                                                            TERMS_AND_CONDITIONS_BULK_EMAIL,
-                                                            "");
-                                                    emailSent = true;
-                                                } else {
-                                                    LOG.info(
-                                                            "Bulk user email email sending not enabled.");
-                                                }
-
-                                                if (emailSent) {
-                                                    var internalCommonSubjectIdentifier =
-                                                            userProfile.getSalt() != null
-                                                                    ? ClientSubjectHelper
-                                                                            .getSubjectWithSectorIdentifier(
-                                                                                    userProfile,
-                                                                                    configurationService
-                                                                                            .getInternalSectorUri(),
-                                                                                    dynamoService)
-                                                                            .getValue()
-                                                                    : AuditService.UNKNOWN;
-                                                    auditService.submitAuditEvent(
-                                                            auditableEvent,
-                                                            emptyAuditContext()
-                                                                    .withEmail(
-                                                                            userProfile.getEmail())
-                                                                    .withSubjectId(
-                                                                            internalCommonSubjectIdentifier),
-                                                            pair(
-                                                                    "internalSubjectId",
-                                                                    userProfile.getSubjectID()),
-                                                            pair(
-                                                                    "bulk-email-type",
-                                                                    BulkEmailType
-                                                                            .VC_EXPIRY_BULK_EMAIL
-                                                                            .name()));
-                                                }
-                                                bulkEmailSender.updateBulkUserStatus(
-                                                        subjectId, successStatus);
-                                            } catch (NotificationClientException e) {
-                                                LOG.error(
-                                                        "Unable to send bulk email to user: {}",
-                                                        e.getMessage());
-                                                bulkEmailSender.updateBulkUserStatus(
-                                                        subjectId,
-                                                        BulkEmailStatus.ERROR_SENDING_EMAIL);
-                                            }
-                                        },
-                                        () -> {
-                                            LOG.warn("User not found by subject id");
-                                            bulkEmailSender.updateBulkUserStatus(
-                                                    subjectId, BulkEmailStatus.ACCOUNT_NOT_FOUND);
-                                        });
-                    });
+                    subjectId ->
+                            bulkEmailSender.validateAndSendMessage(
+                                    subjectId, bulkEmailUserSendMode));
 
             try {
                 if (bulkUserEmailBatchPauseDuration > 0) {

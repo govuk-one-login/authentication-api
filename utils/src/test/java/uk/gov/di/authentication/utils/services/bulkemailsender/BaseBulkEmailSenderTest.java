@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUser;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -33,7 +32,12 @@ class BaseBulkEmailSenderTest {
         }
 
         @Override
-        public boolean validateUser(UserProfile userProfile) {
+        public void validateConfiguration() {
+            // No-op for testing base class
+        }
+
+        @Override
+        public void validateAndSendMessage(String subjectId, BulkEmailUserSendMode sendMode) {
             // No-op for testing base class
         }
     }

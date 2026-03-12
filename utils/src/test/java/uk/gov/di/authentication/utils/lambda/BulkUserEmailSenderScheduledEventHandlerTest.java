@@ -310,7 +310,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
-                .thenReturn(Optional.of(new UserProfile().withEmail(EMAIL)));
+                .thenReturn(
+                        Optional.of(new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT_ID)));
         doThrow(NotificationClientException.class)
                 .when(notificationService)
                 .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL, "");
