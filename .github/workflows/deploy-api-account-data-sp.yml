@@ -17,6 +17,9 @@ on:
       - "local-running/**"
       - "notifications/**"
       - "quality-gate.manifest.json"
+      - "frontend-api/**"
+      - "account-management-api/**"
+      - "account-management-integration-tests/**"
 
 env:
   AWS_REGION: eu-west-2
