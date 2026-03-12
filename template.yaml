@@ -101,18 +101,11 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
-  ProvisionNewExternalTokenSigningKeys:
-    !Or [
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-    ]
+  ProvisionNewExternalTokenSigningKeys: !Equals [integration, !Ref Environment]
   PublishNextExternalTokenSigningKeys:
     !And [
       !Condition ProvisionNewExternalTokenSigningKeys,
-      !Or [
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-      ],
+      !Equals [integration, !Ref Environment],
     ]
   UseNewSigningKeys:
     !And [
