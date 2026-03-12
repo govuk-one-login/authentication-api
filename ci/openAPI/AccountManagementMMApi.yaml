@@ -737,7 +737,7 @@ paths:
                     code: 1066
                     message: "Cannot delete default priority mfa method"
 
-  /v1/accounts/{publicSubjectId}/authenticators/passkeys:
+  /v1/passkeys/{publicSubjectId}:
     parameters:
       - $ref: "#/components/parameters/PublicSubjectId"
     get:
@@ -754,10 +754,10 @@ paths:
         "500":
           $ref: "./AccountDataApi.yaml#/paths/~1accounts~1{publicSubjectId}~1authenticators~1passkeys/get/responses/500"
 
-  /v1/accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
+  /v1/passkeys/{publicSubjectId}/{passkeyIdentifier}:
     parameters:
       - $ref: "#/components/parameters/PublicSubjectId"
-      - $ref: "#/components/parameters/PasskeyId"
+      - $ref: "#/components/parameters/PasskeyIdentifier"
     delete:
       security:
         - authorise-access-token: []
@@ -1242,8 +1242,8 @@ components:
       required: true
       schema:
         type: string
-    PasskeyId:
-      name: passkeyId
+    PasskeyIdentifier:
+      name: passkeyIdentifier
       in: path
       description: Passkey ID
       required: true
