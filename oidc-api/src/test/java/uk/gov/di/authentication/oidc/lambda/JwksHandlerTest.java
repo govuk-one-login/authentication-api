@@ -114,30 +114,22 @@ class JwksHandlerTest {
     @Test
     void shouldPublishNewEcKeyWhenNewPublishIsEnabledButRsaNotEnabled() throws JOSEException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(false);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
         when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
                 .thenReturn(true);
 
         var tokenSigningKey = generateECKey();
         var docAppSigningKey = generateECKey();
-        var newTokenSigningKey = generateECKey();
         var newTokenSigningKeyV2 = generateECKey();
 
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
         when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
-        when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newTokenSigningKey);
         when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newTokenSigningKeyV2);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
 
         var expectedJWKSet =
-                new JWKSet(
-                        List.of(
-                                tokenSigningKey,
-                                docAppSigningKey,
-                                newTokenSigningKey,
-                                newTokenSigningKeyV2));
+                new JWKSet(List.of(tokenSigningKey, docAppSigningKey, newTokenSigningKeyV2));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));

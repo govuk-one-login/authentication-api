@@ -36,11 +36,7 @@ public class TokenSigningExtension extends KmsKeyExtension {
         super.beforeAll(context);
         kmsConnectionService =
                 new KmsConnectionService(
-                        Optional.of(LOCALSTACK_ENDPOINT),
-                        REGION,
-                        getKeyId(),
-                        getNewKeyId(),
-                        getNewKeyIdV2());
+                        Optional.of(LOCALSTACK_ENDPOINT), REGION, getKeyId(), getNewKeyIdV2());
     }
 
     public SignedJWT signJwt(JWTClaimsSet claimsSet) {

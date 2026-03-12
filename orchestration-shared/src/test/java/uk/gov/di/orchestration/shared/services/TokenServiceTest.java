@@ -555,9 +555,6 @@ class TokenServiceTest {
         private final String NEW_V2_KEY_ALIAS = "alias/new-signing-key-v2";
         private final String NEW_V2_KEY_ALIAS_RSA = "alias/new-signing-key-rsa-v2";
 
-        private final String NEW_KEY_ALIAS = "alias/new-signing-key";
-        private final String NEW_KEY_ALIAS_RSA = "alias/new-signing-key-rsa";
-
         private final String PREVIOUS_KEY_ALIAS = "alias/old-signing-key";
         private final String PREVIOUS_KEY_ALIAS_RSA = "alias/old-signing-key-rsa";
 
@@ -570,12 +567,6 @@ class TokenServiceTest {
                 hashSha256String(MOCK_PREVIOUS_EC_KEY_ID);
         private final String EXPECTED_OPAQUE_PREVIOUS_RSA_KEY_ID =
                 hashSha256String(MOCK_PREVIOUS_RSA_KEY_ID);
-
-        private final String MOCK_NEW_EC_KEY_ID = "i4rwnl-SLuhPjdtP1GJyKXZRDG00znaRld8sSArsToM";
-        private final String MOCK_NEW_RSA_KEY_ID = "LA9hmMyeZ2h4oOZcoWpReQKHGp0PwfyzuKCce68xpxs";
-
-        private final String EXPECTED_OPAQUE_NEW_EC_KEY_ID = hashSha256String(MOCK_NEW_EC_KEY_ID);
-        private final String EXPECTED_OPAQUE_NEW_RSA_KEY_ID = hashSha256String(MOCK_NEW_RSA_KEY_ID);
 
         private final String MOCK_NEW_V2_EC_KEY_ID = "i4rwnl-SLuhPjdtP1GJyKXZRDG00znaRld8s-h6Fn2i";
         private final String MOCK_NEW_V2_RSA_KEY_ID = "LA9hmMyeZ2h4oOZcoWpReQKHGp0PwfyzuKCc08cdjYh";
@@ -608,18 +599,6 @@ class TokenServiceTest {
                     .thenReturn(
                             GetPublicKeyResponse.builder().keyId(MOCK_PREVIOUS_RSA_KEY_ID).build());
 
-            when(configurationService.getNextExternalTokenSigningKeyAlias())
-                    .thenReturn(NEW_KEY_ALIAS);
-            when(configurationService.getNextExternalTokenSigningKeyRsaAlias())
-                    .thenReturn(NEW_KEY_ALIAS_RSA);
-
-            when(kmsConnectionService.getPublicKey(
-                            GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS).build()))
-                    .thenReturn(GetPublicKeyResponse.builder().keyId(MOCK_NEW_EC_KEY_ID).build());
-            when(kmsConnectionService.getPublicKey(
-                            GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS_RSA).build()))
-                    .thenReturn(GetPublicKeyResponse.builder().keyId(MOCK_NEW_RSA_KEY_ID).build());
-
             when(configurationService.getNextExternalTokenSigningKeyAliasV2())
                     .thenReturn(NEW_V2_KEY_ALIAS);
             when(configurationService.getNextExternalTokenSigningKeyRsaAliasV2())
@@ -633,13 +612,6 @@ class TokenServiceTest {
                             GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS_RSA).build()))
                     .thenReturn(
                             GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_RSA_KEY_ID).build());
-
-            when(kmsConnectionService.getPublicKey(
-                            GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS).build()))
-                    .thenReturn(GetPublicKeyResponse.builder().keyId(MOCK_NEW_EC_KEY_ID).build());
-            when(kmsConnectionService.getPublicKey(
-                            GetPublicKeyRequest.builder().keyId(NEW_KEY_ALIAS_RSA).build()))
-                    .thenReturn(GetPublicKeyResponse.builder().keyId(MOCK_NEW_RSA_KEY_ID).build());
 
             when(kmsConnectionService.getPublicKey(
                             GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS).build()))
