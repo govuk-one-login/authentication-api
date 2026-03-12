@@ -181,11 +181,8 @@ Conditions:
         !Equals [integration, !Ref Environment],
       ],
     ]
-  PublishOldStorageTokenSigningKey:
-    !Or [
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
+  PublishOldStorageTokenSigningKey: !Equals [production, !Ref Environment]
+
 Mappings:
   EnvironmentConfiguration:
     dev:
