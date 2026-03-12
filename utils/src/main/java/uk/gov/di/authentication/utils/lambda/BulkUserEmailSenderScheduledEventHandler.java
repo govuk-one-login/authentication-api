@@ -51,7 +51,20 @@ public class BulkUserEmailSenderScheduledEventHandler
                 new BulkEmailUsersService(configurationService),
                 configurationService,
                 new CloudwatchMetricsService(configurationService),
-                new TermsAndConditionsBulkEmailSender(
+                provideBulkEmailSender(configurationService));
+    }
+
+    public BulkUserEmailSenderScheduledEventHandler() {
+        this(ConfigurationService.getInstance());
+        this.configurationService.setSystemService(new SystemService());
+    }
+
+    private static BulkEmailSender provideBulkEmailSender(
+            ConfigurationService configurationService) {
+        String senderType = configurationService.getBulkUserEmailSenderType();
+        switch (senderType) {
+            case "TERMS_AND_CONDITIONS":
+                return new TermsAndConditionsBulkEmailSender(
                         new BulkEmailUsersService(configurationService),
                         new CloudwatchMetricsService(configurationService),
                         configurationService,
@@ -69,12 +82,10 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                         configurationService.getNotifyApiKey())),
                                 configurationService),
                         new AuditService(configurationService),
-                        new DynamoService(configurationService)));
-    }
-
-    public BulkUserEmailSenderScheduledEventHandler() {
-        this(ConfigurationService.getInstance());
-        this.configurationService.setSystemService(new SystemService());
+                        new DynamoService(configurationService));
+            default:
+                throw new IllegalArgumentException("Unknown bulk email sender type: " + senderType);
+        }
     }
 
     @Override

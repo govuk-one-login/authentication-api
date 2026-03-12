@@ -332,6 +332,11 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
             public String getBulkEmailUserSendMode() {
                 return sendMode;
             }
+
+            @Override
+            public String getBulkUserEmailSenderType() {
+                return "TERMS_AND_CONDITIONS";
+            }
         };
     }
 }
