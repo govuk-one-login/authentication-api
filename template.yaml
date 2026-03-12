@@ -120,11 +120,7 @@ Conditions:
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
     ]
-  OldSpotRequestQueueWriting:
-    !Or [
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
+  OldSpotRequestQueueWriting: !Equals [production, !Ref Environment]
   ProvisionNewExternalTokenSigningKeysV2:
     !Or [
       !Equals [dev, !Ref Environment],
