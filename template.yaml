@@ -108,11 +108,6 @@ Conditions:
       !Equals [staging, !Ref Environment],
     ]
   ProvisionNewExternalTokenSigningKeys: !Equals [integration, !Ref Environment]
-  PublishNextExternalTokenSigningKeys:
-    !And [
-      !Condition ProvisionNewExternalTokenSigningKeys,
-      !Equals [integration, !Ref Environment],
-    ]
   NewSpotRequestQueueWriting:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -1928,14 +1923,8 @@ Resources:
               !Ref Environment,
               idTokenKeyArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
-            - PublishNextExternalTokenSigningKeys
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
-            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2353,18 +2342,9 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
-            - PublishNextExternalTokenSigningKeys
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
-            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
           USE_NEW_TOKEN_SIGNING_KEYS: false
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
@@ -2587,18 +2567,9 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
-            - PublishNextExternalTokenSigningKeys
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
-            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -3470,18 +3441,9 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
-            - PublishNextExternalTokenSigningKeys
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
-            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -3957,14 +3919,8 @@ Resources:
               !Ref Environment,
               idTokenKeyArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
-            - PublishNextExternalTokenSigningKeys
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
-            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -4206,18 +4162,9 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: !If
-            - PublishNextExternalTokenSigningKeys
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenEcSigningKmsKeyAlias
-            - !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
-            - PublishNextExternalTokenSigningKeys
-            - !Ref OrchExternalTokenRsaSigningKmsKeyAlias
-            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
