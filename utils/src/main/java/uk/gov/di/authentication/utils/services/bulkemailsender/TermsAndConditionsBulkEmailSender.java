@@ -15,7 +15,6 @@ import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfi
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.List;
-import java.util.Map;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 
@@ -24,7 +23,6 @@ public class TermsAndConditionsBulkEmailSender extends BaseBulkEmailSender {
     private static final Logger LOG = LogManager.getLogger(TermsAndConditionsBulkEmailSender.class);
 
     private final List<String> includedTermsAndConditions;
-    private final NotificationService notificationService;
 
     public TermsAndConditionsBulkEmailSender(
             BulkEmailUsersService bulkEmailUsersService,
@@ -38,10 +36,10 @@ public class TermsAndConditionsBulkEmailSender extends BaseBulkEmailSender {
                 cloudwatchMetricsService,
                 configurationService,
                 auditService,
-                dynamoService);
+                dynamoService,
+                notificationService);
         this.includedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
-        this.notificationService = notificationService;
     }
 
     @Override
@@ -77,15 +75,7 @@ public class TermsAndConditionsBulkEmailSender extends BaseBulkEmailSender {
         var successStatus = sendMode.mapToSuccessStatus();
 
         try {
-            var emailSent = false;
-            if (configurationService.isBulkUserEmailEmailSendingEnabled()) {
-                LOG.info("Bulk user email sending email.");
-                notificationService.sendEmail(
-                        userProfile.getEmail(), Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL, "");
-                emailSent = true;
-            } else {
-                LOG.info("Bulk user email email sending not enabled.");
-            }
+            var emailSent = sendEmail(userProfile, TERMS_AND_CONDITIONS_BULK_EMAIL);
 
             if (emailSent) {
                 submitAuditEvent(userProfile, sendMode, BulkEmailType.VC_EXPIRY_BULK_EMAIL);

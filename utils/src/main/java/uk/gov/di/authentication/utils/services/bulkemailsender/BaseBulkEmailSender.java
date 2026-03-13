@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -11,8 +12,10 @@ import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
+import uk.gov.service.notify.NotificationClientException;
 
 import java.util.Map;
 
@@ -28,18 +31,21 @@ public abstract class BaseBulkEmailSender implements BulkEmailSender {
     protected final ConfigurationService configurationService;
     protected final AuditService auditService;
     protected final DynamoService dynamoService;
+    protected final NotificationService notificationService;
 
     protected BaseBulkEmailSender(
             BulkEmailUsersService bulkEmailUsersService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
             AuditService auditService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            NotificationService notificationService) {
         this.bulkEmailUsersService = bulkEmailUsersService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
         this.auditService = auditService;
         this.dynamoService = dynamoService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -79,5 +85,17 @@ public abstract class BaseBulkEmailSender implements BulkEmailSender {
                         .withSubjectId(internalCommonSubjectIdentifier),
                 pair("internalSubjectId", userProfile.getSubjectID()),
                 pair("bulk-email-type", bulkEmailType.name()));
+    }
+
+    protected boolean sendEmail(UserProfile userProfile, NotificationType template)
+            throws NotificationClientException {
+        if (configurationService.isBulkUserEmailEmailSendingEnabled()) {
+            LOG.info("Bulk user email sending email.");
+            notificationService.sendEmail(userProfile.getEmail(), Map.of(), template, "");
+            return true;
+        } else {
+            LOG.info("Bulk user email email sending not enabled.");
+            return false;
+        }
     }
 }

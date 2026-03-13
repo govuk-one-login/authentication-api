@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.NotificationService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +27,7 @@ class BaseBulkEmailSenderTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final NotificationService notificationService = mock(NotificationService.class);
 
     static class TestBulkEmailSender extends BaseBulkEmailSender {
         TestBulkEmailSender(
@@ -33,13 +35,15 @@ class BaseBulkEmailSenderTest {
                 CloudwatchMetricsService cloudwatchMetricsService,
                 ConfigurationService configurationService,
                 AuditService auditService,
-                DynamoService dynamoService) {
+                DynamoService dynamoService,
+                NotificationService notificationService) {
             super(
                     bulkEmailUsersService,
                     cloudwatchMetricsService,
                     configurationService,
                     auditService,
-                    dynamoService);
+                    dynamoService,
+                    notificationService);
         }
 
         @Override
@@ -68,7 +72,8 @@ class BaseBulkEmailSenderTest {
                             cloudwatchMetricsService,
                             configurationService,
                             auditService,
-                            dynamoService);
+                            dynamoService,
+                            notificationService);
 
             sender.updateBulkUserStatus("subject-id", BulkEmailStatus.EMAIL_SENT);
 
@@ -92,7 +97,8 @@ class BaseBulkEmailSenderTest {
                             cloudwatchMetricsService,
                             configurationService,
                             auditService,
-                            dynamoService);
+                            dynamoService,
+                            notificationService);
 
             sender.updateBulkUserStatus("subject-id", BulkEmailStatus.EMAIL_SENT);
 
