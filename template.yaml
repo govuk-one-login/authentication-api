@@ -136,6 +136,7 @@ Conditions:
         !Equals [integration, !Ref Environment],
       ],
     ]
+  ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
 
 Mappings:
   EnvironmentConfiguration:
@@ -5758,6 +5759,49 @@ Resources:
           IpProtocol: tcp
           FromPort: 443
           ToPort: 443
+
+    #region API Gateway
+
+  OrchestrationOidcApi:
+    Condition: ProvisionNewApiGateway
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${Environment}-orchestration-oidc-api"
+      StageName: !Sub "${Environment}"
+      AlwaysDeploy: true
+      AccessLogSetting:
+        DestinationArn: !GetAtt OidcApiAccessLogGroup.Arn
+        Format: '{"requestId": "$context.requestId", "ip": "$context.identity.sourceIp", "userAgent": "$context.identity.userAgent", "requestTime": "$context.requestTime", "httpMethod": "$context.httpMethod", "resourcePath": "$context.resourcePath", "status": "$context.status", "protocol": "$context.protocol", "responseLength": "$context.responseLength", "integrationStatus": "$context.integration.integrationStatus", "integrationLatency": "$context.integration.latency", "integrationRequestId": "$context.integration.requestId" }'
+      EndpointConfiguration:
+        Type: REGIONAL
+      DefinitionBody:
+        openapi: "3.0.1" # workaround to get `sam validate` to work
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: "./orchestration-api-spec.yaml"
+      OpenApiVersion: 3.0.1
+      CacheClusterEnabled: false
+      MethodSettings:
+        - CachingEnabled: false
+          DataTraceEnabled: false
+          HttpMethod: "*"
+          ResourcePath: "/*"
+          LoggingLevel: INFO
+          MetricsEnabled: true
+      TracingEnabled: true
+      Tags:
+        Name: orchestration-oidc-api
+
+  OidcApiAccessLogGroup:
+    Condition: ProvisionNewApiGateway
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub "${Environment}-orchestration-oidc-api-access-logs"
+      RetentionInDays: 30
+
+  #endregion
 
   #region Policies
 
