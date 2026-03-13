@@ -5,9 +5,11 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUser;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -22,13 +24,22 @@ class BaseBulkEmailSenderTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AuditService auditService = mock(AuditService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
 
     static class TestBulkEmailSender extends BaseBulkEmailSender {
         TestBulkEmailSender(
                 BulkEmailUsersService bulkEmailUsersService,
                 CloudwatchMetricsService cloudwatchMetricsService,
-                ConfigurationService configurationService) {
-            super(bulkEmailUsersService, cloudwatchMetricsService, configurationService);
+                ConfigurationService configurationService,
+                AuditService auditService,
+                DynamoService dynamoService) {
+            super(
+                    bulkEmailUsersService,
+                    cloudwatchMetricsService,
+                    configurationService,
+                    auditService,
+                    dynamoService);
         }
 
         @Override
@@ -53,7 +64,11 @@ class BaseBulkEmailSenderTest {
 
             var sender =
                     new TestBulkEmailSender(
-                            bulkEmailUsersService, cloudwatchMetricsService, configurationService);
+                            bulkEmailUsersService,
+                            cloudwatchMetricsService,
+                            configurationService,
+                            auditService,
+                            dynamoService);
 
             sender.updateBulkUserStatus("subject-id", BulkEmailStatus.EMAIL_SENT);
 
@@ -73,7 +88,11 @@ class BaseBulkEmailSenderTest {
 
             var sender =
                     new TestBulkEmailSender(
-                            bulkEmailUsersService, cloudwatchMetricsService, configurationService);
+                            bulkEmailUsersService,
+                            cloudwatchMetricsService,
+                            configurationService,
+                            auditService,
+                            dynamoService);
 
             sender.updateBulkUserStatus("subject-id", BulkEmailStatus.EMAIL_SENT);
 

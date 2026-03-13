@@ -3,11 +3,21 @@ package uk.gov.di.authentication.utils.services.bulkemailsender;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
+import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.utils.domain.BulkEmailType;
+import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 
 import java.util.Map;
+
+import static uk.gov.di.audit.AuditContext.emptyAuditContext;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public abstract class BaseBulkEmailSender implements BulkEmailSender {
 
@@ -16,14 +26,20 @@ public abstract class BaseBulkEmailSender implements BulkEmailSender {
     protected final BulkEmailUsersService bulkEmailUsersService;
     protected final CloudwatchMetricsService cloudwatchMetricsService;
     protected final ConfigurationService configurationService;
+    protected final AuditService auditService;
+    protected final DynamoService dynamoService;
 
     protected BaseBulkEmailSender(
             BulkEmailUsersService bulkEmailUsersService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AuditService auditService,
+            DynamoService dynamoService) {
         this.bulkEmailUsersService = bulkEmailUsersService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
+        this.auditService = auditService;
+        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -40,5 +56,28 @@ public abstract class BaseBulkEmailSender implements BulkEmailSender {
                         bulkEmailStatus.getValue(),
                         "Environment",
                         configurationService.getEnvironment()));
+    }
+
+    protected void submitAuditEvent(
+            UserProfile userProfile, BulkEmailUserSendMode sendMode, BulkEmailType bulkEmailType) {
+        var auditableEvent =
+                BulkEmailUserSendMode.DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES.equals(sendMode)
+                        ? UtilsAuditableEvent.AUTH_BULK_RETRY_EMAIL_SENT
+                        : UtilsAuditableEvent.AUTH_BULK_EMAIL_SENT;
+        var internalCommonSubjectIdentifier =
+                userProfile.getSalt() != null
+                        ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                        userProfile,
+                                        configurationService.getInternalSectorUri(),
+                                        dynamoService)
+                                .getValue()
+                        : AuditService.UNKNOWN;
+        auditService.submitAuditEvent(
+                auditableEvent,
+                emptyAuditContext()
+                        .withEmail(userProfile.getEmail())
+                        .withSubjectId(internalCommonSubjectIdentifier),
+                pair("internalSubjectId", userProfile.getSubjectID()),
+                pair("bulk-email-type", bulkEmailType.name()));
     }
 }
