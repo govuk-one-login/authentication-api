@@ -9,7 +9,6 @@ on:
       - "ci/cloudformation/stubs/**"
       - "ci/cloudformation/account-data/**"
       - "template.yaml"
-      - "ci/openAPI/**"
       - "docs/**"
       - "**/README.md"
       - "integration-tests/**"
