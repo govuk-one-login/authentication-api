@@ -1,0 +1,177 @@
+openapi: "3.0.1"
+info:
+  title: "${Environment}-orchestration-oidc-api"
+paths:
+  /ipv-callback:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${IpvCallbackFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /trustmark:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrustmarkFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /doc-app-callback:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocAppCallbackFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /.well-known/storage-token-jwk.json:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StorageTokenJwkFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /userinfo:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserInfoFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /token:
+    post:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TokenFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /.well-known/openid-configuration:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenIdConfigurationFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /auth-code:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthCodeFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /logout:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LogoutFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /.well-known/jwks.json:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${JwksFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /.well-known/ipv-jwks.json:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${IpvJwksFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /authorize:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorisationFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /orchestration-redirect:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticationCallbackFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /.well-known/auth-jwks.json:
+    get:
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthJwksFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
+  /connect/register: !If:
+    - IsNotProduction
+    - post:
+        security:
+          - api_key: []
+        x-amazon-apigateway-integration:
+          uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ClientRegistrationFunction.Arn}:latest/invocations"
+          httpMethod: "POST"
+          passthroughBehavior: "when_no_match"
+          timeoutInMillis: 29000
+          type: "aws_proxy"
+    - !Ref ${AWS::NoValue}
+  /connect/register/{clientId}: !If:
+    - IsNotProduction
+    - put:
+        parameters:
+          - name: "clientId"
+            in: "path"
+            required: true
+            schema:
+              type: "string"
+        security:
+          - api_key: []
+        x-amazon-apigateway-integration:
+          uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateClientConfigFunction.Arn}:latest/invocations"
+          httpMethod: "POST"
+          requestParameters:
+            integration.request.path.clientId: "method.request.path.clientId"
+          passthroughBehavior: "when_no_match"
+          timeoutInMillis: 29000
+          type: "aws_proxy"
+  /robots.txt:
+    get:
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Empty"
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: "200"
+            responseTemplates:
+              text/plain: "User-agent: *\nDisallow: /\n"
+        requestTemplates:
+          application/json: '{"statusCode":200}'
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "mock"
+components:
+  schemas:
+    Empty:
+      title: "Empty Schema"
+      type: "object"
+  securitySchemes:
+    api_key:
+      type: "apiKey"
+      name: "x-api-key"
+      in: "header"
