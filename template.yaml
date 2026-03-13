@@ -1557,6 +1557,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  OpenIdConfigurationFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref OpenIdConfigurationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/.well-known/openid-configuration"
+        - ApiId: !Ref OrchestrationOidcApi
+
   OpenIdConfigurationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -1703,6 +1714,17 @@ Resources:
             ]
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  TrustmarkFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref TrustmarkFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/trustmark"
+        - ApiId: !Ref OrchestrationOidcApi
 
   TrustmarkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -2117,6 +2139,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  DocAppCallbackFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref DocAppCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/doc-app-callback"
+        - ApiId: !Ref OrchestrationOidcApi
+
   DocAppCallbackFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -2323,6 +2356,17 @@ Resources:
             ]
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  TokenFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref TokenFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/POST/token"
+        - ApiId: !Ref OrchestrationOidcApi
 
   TokenFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -2546,6 +2590,17 @@ Resources:
             ]
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  LogoutFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref LogoutFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/logout"
+        - ApiId: !Ref OrchestrationOidcApi
 
   LogoutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -3130,6 +3185,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  AuthenticationCallbackFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref AuthenticationCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/orchestration-redirect"
+        - ApiId: !Ref OrchestrationOidcApi
+
   AuthenticationCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -3359,6 +3425,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  JwksFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref JwksFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/.well-known/jwks.json"
+        - ApiId: !Ref OrchestrationOidcApi
+
   JwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -3500,6 +3577,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  IpvJwksFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref IpvJwksFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/.well-known/ipv-jwks.json"
+        - ApiId: !Ref OrchestrationOidcApi
+
   IpvJwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -3621,6 +3709,17 @@ Resources:
             ]
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  AuthJwksFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref AuthJwksFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/.well-known/auth-jwks.json"
+        - ApiId: !Ref OrchestrationOidcApi
 
   AuthJwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -3896,6 +3995,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  AuthorisationFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref AuthorisationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/authorize"
+        - ApiId: !Ref OrchestrationOidcApi
+
   AuthorisationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -4111,6 +4221,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  UserInfoFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref UserInfoFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/userinfo"
+        - ApiId: !Ref OrchestrationOidcApi
+
   UserInfoFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -4301,6 +4422,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  AuthCodeFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref AuthCodeFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/auth-code"
+        - ApiId: !Ref OrchestrationOidcApi
+
   AuthCodeFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -4476,6 +4608,17 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
+  UpdateClientConfigFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref UpdateClientConfigFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/PUT/connect/register/{clientId}"
+        - ApiId: !Ref OrchestrationOidcApi
+
   UpdateClientConfigFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Condition: IsNotProduction
@@ -4646,6 +4789,17 @@ Resources:
             ]
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  ClientRegistrationFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref ClientRegistrationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/POST/connect/register"
+        - ApiId: !Ref OrchestrationOidcApi
 
   ClientRegistrationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -4980,6 +5134,17 @@ Resources:
             ]
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  IpvCallbackFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref IpvCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/ipv-callback"
+        - ApiId: !Ref OrchestrationOidcApi
 
   IpvCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -5607,6 +5772,17 @@ Resources:
             ]
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  StorageTokenJwkFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref StorageTokenJwkFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/.well-known/storage-token-jwk.json"
+        - ApiId: !Ref OrchestrationOidcApi
 
   StorageTokenJwkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
