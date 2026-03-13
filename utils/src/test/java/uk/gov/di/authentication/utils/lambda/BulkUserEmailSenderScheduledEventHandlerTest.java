@@ -5,20 +5,27 @@ import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -40,6 +47,9 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final BulkEmailSender bulkEmailSender = mock(BulkEmailSender.class);
+    private final NotificationService notificationService = mock(NotificationService.class);
+    private final AuditService auditService = mock(AuditService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
     private final DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
     private final ScheduledEvent scheduledEvent = mock(ScheduledEvent.class);
 
@@ -67,6 +77,42 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(bulkEmailUsersService.getNSubjectIdsByStatus(anyInt(), any())).thenReturn(List.of());
         when(bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(anyInt(), any()))
                 .thenReturn(List.of());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "TERMS_AND_CONDITIONS,TermsAndConditionsBulkEmailSender",
+        "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET,InternationalNumbersForcedMfaResetBulkEmailSender"
+    })
+    void shouldCreateCorrectSenderWhenConfigured(String senderType, String expectedClassName) {
+        when(configurationService.getBulkUserEmailSenderType()).thenReturn(senderType);
+
+        var handler =
+                new BulkUserEmailSenderScheduledEventHandler(
+                        configurationService,
+                        bulkEmailUsersService,
+                        cloudwatchMetricsService,
+                        notificationService,
+                        auditService,
+                        dynamoService);
+
+        assertEquals(expectedClassName, handler.getBulkEmailSenderClassName());
+    }
+
+    @Test
+    void shouldThrowExceptionForUnknownSenderType() {
+        when(configurationService.getBulkUserEmailSenderType()).thenReturn("UNKNOWN");
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        new BulkUserEmailSenderScheduledEventHandler(
+                                configurationService,
+                                bulkEmailUsersService,
+                                cloudwatchMetricsService,
+                                notificationService,
+                                auditService,
+                                dynamoService));
     }
 
     @ParameterizedTest

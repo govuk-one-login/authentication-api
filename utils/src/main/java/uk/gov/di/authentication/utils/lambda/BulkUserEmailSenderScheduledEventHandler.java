@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
+import uk.gov.di.authentication.utils.services.bulkemailsender.InternationalNumbersForcedMfaResetBulkEmailSender;
 import uk.gov.di.authentication.utils.services.bulkemailsender.TermsAndConditionsBulkEmailSender;
 import uk.gov.service.notify.NotificationClient;
 
@@ -46,12 +47,45 @@ public class BulkUserEmailSenderScheduledEventHandler
         this.bulkEmailSender = bulkEmailSender;
     }
 
+    public BulkUserEmailSenderScheduledEventHandler(
+            ConfigurationService configurationService,
+            BulkEmailUsersService bulkEmailUsersService,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            NotificationService notificationService,
+            AuditService auditService,
+            DynamoService dynamoService) {
+        this(
+                bulkEmailUsersService,
+                configurationService,
+                cloudwatchMetricsService,
+                provideBulkEmailSender(
+                        configurationService,
+                        bulkEmailUsersService,
+                        cloudwatchMetricsService,
+                        notificationService,
+                        auditService,
+                        dynamoService));
+    }
+
     public BulkUserEmailSenderScheduledEventHandler(ConfigurationService configurationService) {
         this(
-                new BulkEmailUsersService(configurationService),
                 configurationService,
+                new BulkEmailUsersService(configurationService),
                 new CloudwatchMetricsService(configurationService),
-                provideBulkEmailSender(configurationService));
+                new NotificationService(
+                        configurationService
+                                .getNotifyApiUrl()
+                                .map(
+                                        url ->
+                                                new NotificationClient(
+                                                        configurationService.getNotifyApiKey(),
+                                                        url))
+                                .orElse(
+                                        new NotificationClient(
+                                                configurationService.getNotifyApiKey())),
+                        configurationService),
+                new AuditService(configurationService),
+                new DynamoService(configurationService));
     }
 
     public BulkUserEmailSenderScheduledEventHandler() {
@@ -59,33 +93,36 @@ public class BulkUserEmailSenderScheduledEventHandler
         this.configurationService.setSystemService(new SystemService());
     }
 
-    private static BulkEmailSender provideBulkEmailSender(
-            ConfigurationService configurationService) {
+    public String getBulkEmailSenderClassName() {
+        return bulkEmailSender.getClass().getSimpleName();
+    }
+
+    static BulkEmailSender provideBulkEmailSender(
+            ConfigurationService configurationService,
+            BulkEmailUsersService bulkEmailUsersService,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            NotificationService notificationService,
+            AuditService auditService,
+            DynamoService dynamoService) {
         String senderType = configurationService.getBulkUserEmailSenderType();
-        switch (senderType) {
-            case "TERMS_AND_CONDITIONS":
-                return new TermsAndConditionsBulkEmailSender(
-                        new BulkEmailUsersService(configurationService),
-                        new CloudwatchMetricsService(configurationService),
-                        configurationService,
-                        new NotificationService(
-                                configurationService
-                                        .getNotifyApiUrl()
-                                        .map(
-                                                url ->
-                                                        new NotificationClient(
-                                                                configurationService
-                                                                        .getNotifyApiKey(),
-                                                                url))
-                                        .orElse(
-                                                new NotificationClient(
-                                                        configurationService.getNotifyApiKey())),
-                                configurationService),
-                        new AuditService(configurationService),
-                        new DynamoService(configurationService));
-            default:
-                throw new IllegalArgumentException("Unknown bulk email sender type: " + senderType);
-        }
+        return switch (senderType) {
+            case "TERMS_AND_CONDITIONS" -> new TermsAndConditionsBulkEmailSender(
+                    bulkEmailUsersService,
+                    cloudwatchMetricsService,
+                    configurationService,
+                    notificationService,
+                    auditService,
+                    dynamoService);
+            case "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET" -> new InternationalNumbersForcedMfaResetBulkEmailSender(
+                    bulkEmailUsersService,
+                    cloudwatchMetricsService,
+                    configurationService,
+                    notificationService,
+                    auditService,
+                    dynamoService);
+            default -> throw new IllegalArgumentException(
+                    "Unknown bulk email sender type: " + senderType);
+        };
     }
 
     @Override
