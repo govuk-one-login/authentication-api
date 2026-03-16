@@ -35,7 +35,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.kms.model.KmsException;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCDownstreamScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccountDataScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccountManagementScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
@@ -86,6 +90,11 @@ class AMCServiceTest {
     private static final String AUTH_TO_AMC_PRIVATE_AUDIENCE = "https://amc.account.gov.uk";
     private static final String RESPONSE_TYPE = "code";
     private static final String REDIRECT_URI = "https://example.com/callback";
+    private static final String ACCESS_TOKEN_REDIRECT_URI = "https://example.com/redirect-uri";
+    private static final String ACCESS_TOKEN_AUDIENCE = "access-token-audience";
+    private static final String SECOND_ACCESS_TOKEN_REDIRECT_URI =
+            "https://example.com/second-redirect-uri";
+    private static final String SECOND_ACCESS_TOKEN_AUDIENCE = "second-access-token-audience";
     private static final String AMC_CLIENT_ID = "amc-client-id";
     private static final String AMC_AUTHORIZE_URI = "https://amc.account.gov.uk/authorize";
     private static final URI TOKEN_ENDPOINT_URI = URI.create("https://amc.account.gov.uk/token");
@@ -98,6 +107,13 @@ class AMCServiceTest {
             (RSAPrivateKey) TEST_KEY_PAIR.getPrivate();
     private AuthSessionItem authSessionItem;
     private static final String AUTH_CODE = "1234";
+    private static final List<AccessTokenConfig> ACCESS_TOKEN_CONFIG =
+            List.of(
+                    new AccessTokenConfig(
+                            "account_management_api_access_token",
+                            AccountManagementScope.ACCOUNT_DELETE,
+                            ACCESS_TOKEN_REDIRECT_URI,
+                            ACCESS_TOKEN_AUDIENCE));
 
     // Ensure 0 milliseconds for JWT compatibility
     private static final Instant NOW_INSTANT = Instant.now().truncatedTo(ChronoUnit.SECONDS);
@@ -133,14 +149,14 @@ class AMCServiceTest {
 
     private void mockConfigurationService() {
         when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
-        when(configurationService.getAuthToAMAPIAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
+        when(configurationService.getAuthToAMApiAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
         when(configurationService.getAuthToAMCPublicAudience())
                 .thenReturn(AUTH_TO_AMC_PUBLIC_AUDIENCE);
-        when(configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
+        when(configurationService.getAuthToAMCDownstreamServiceSigningKey())
                 .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
-        when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
+        when(configurationService.getAuthToAMCTransportJWTSigningKey())
                 .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
-        when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
+        when(configurationService.getAMCSfadRedirectURI()).thenReturn(REDIRECT_URI);
         when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
         when(configurationService.getAMCAuthorizeURI()).thenReturn(URI.create(AMC_AUTHORIZE_URI));
     }
@@ -148,8 +164,33 @@ class AMCServiceTest {
     @Nested
     class AuthorizationUrlTests {
 
-        @Test
-        void shouldBuildAuthorizationUrlWithValidJWT() throws Exception {
+        private static Stream<Arguments> accessTokenConfigs() {
+            return Stream.of(
+                    Arguments.of(
+                            List.of(
+                                    new AccessTokenConfig(
+                                            "account_management_api_access_token",
+                                            AccountManagementScope.ACCOUNT_DELETE,
+                                            ACCESS_TOKEN_REDIRECT_URI,
+                                            ACCESS_TOKEN_AUDIENCE))),
+                    Arguments.of(
+                            List.of(
+                                    new AccessTokenConfig(
+                                            "account_management_api_access_token",
+                                            AccountManagementScope.ACCOUNT_DELETE,
+                                            ACCESS_TOKEN_REDIRECT_URI,
+                                            ACCESS_TOKEN_AUDIENCE),
+                                    new AccessTokenConfig(
+                                            "account_data_api_access_token",
+                                            AccountDataScope.PASSKEY_CREATE,
+                                            SECOND_ACCESS_TOKEN_REDIRECT_URI,
+                                            SECOND_ACCESS_TOKEN_AUDIENCE))));
+        }
+
+        @ParameterizedTest
+        @MethodSource("accessTokenConfigs")
+        void shouldBuildAuthorizationUrlWithValidJWT(List<AccessTokenConfig> accessTokenConfigs)
+                throws Exception {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
 
@@ -158,7 +199,9 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            PUBLIC_SUBJECT);
+                            PUBLIC_SUBJECT,
+                            REDIRECT_URI,
+                            accessTokenConfigs);
 
             assertTrue(result.isSuccess());
             String authorizationUrl = result.getSuccess();
@@ -171,13 +214,18 @@ class AMCServiceTest {
             JWTClaimsSet compositeClaims = compositeJWT.getJWTClaimsSet();
             assertCompositeJWTClaims(compositeClaims);
 
-            var accessTokenValue =
-                    (String) compositeClaims.getClaim("account_management_api_access_token");
-            SignedJWT accessTokenJWT = SignedJWT.parse(accessTokenValue);
-            assertTrue(accessTokenJWT.verify(new ECDSAVerifier(accessTokenKey.toECPublicKey())));
+            for (AccessTokenConfig accessTokenConfig : accessTokenConfigs) {
+                var accessTokenName = accessTokenConfig.accessTokenName();
+                var accessTokenValue = compositeClaims.getClaim(accessTokenName).toString();
 
-            JWTClaimsSet accessTokenClaims = accessTokenJWT.getJWTClaimsSet();
-            assertAccessTokenClaims(accessTokenClaims);
+                SignedJWT accessTokenJWT = SignedJWT.parse(accessTokenValue);
+                assertTrue(
+                        accessTokenJWT.verify(new ECDSAVerifier(accessTokenKey.toECPublicKey())));
+
+                JWTClaimsSet accessTokenClaims = accessTokenJWT.getJWTClaimsSet();
+                assertAccessTokenClaims(
+                        accessTokenConfig.scope(), accessTokenConfig.audience(), accessTokenClaims);
+            }
         }
 
         @Test
@@ -193,7 +241,9 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            PUBLIC_SUBJECT);
+                            PUBLIC_SUBJECT,
+                            REDIRECT_URI,
+                            ACCESS_TOKEN_CONFIG);
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
@@ -212,7 +262,9 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            PUBLIC_SUBJECT);
+                            PUBLIC_SUBJECT,
+                            REDIRECT_URI,
+                            ACCESS_TOKEN_CONFIG);
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.TRANSCODING_ERROR, result.getFailure());
@@ -251,7 +303,9 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            PUBLIC_SUBJECT);
+                            PUBLIC_SUBJECT,
+                            REDIRECT_URI,
+                            ACCESS_TOKEN_CONFIG);
 
             assertTrue(result.isFailure());
             assertEquals(expectedFailureReason, result.getFailure());
@@ -282,7 +336,9 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            PUBLIC_SUBJECT);
+                            PUBLIC_SUBJECT,
+                            REDIRECT_URI,
+                            ACCESS_TOKEN_CONFIG);
 
             assertTrue(result.isFailure());
             assertEquals(expectedFailureReason, result.getFailure());
@@ -298,7 +354,9 @@ class AMCServiceTest {
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
-                            PUBLIC_SUBJECT);
+                            PUBLIC_SUBJECT,
+                            REDIRECT_URI,
+                            ACCESS_TOKEN_CONFIG);
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
@@ -335,19 +393,18 @@ class AMCServiceTest {
                     () -> assertDoesNotThrow(() -> UUID.fromString(compositeClaims.getJWTID())));
         }
 
-        private void assertAccessTokenClaims(JWTClaimsSet accessTokenClaims) {
+        private void assertAccessTokenClaims(
+                AMCDownstreamScope expectedScope,
+                String expectedAudience,
+                JWTClaimsSet accessTokenClaims) {
             assertAll(
                     "Access Token Claims",
                     () -> assertEquals(AUTH_ISSUER_CLAIM, accessTokenClaims.getIssuer()),
                     () -> assertEquals(INTERNAL_PAIRWISE_ID, accessTokenClaims.getSubject()),
+                    () -> assertEquals(List.of(expectedAudience), accessTokenClaims.getAudience()),
                     () ->
                             assertEquals(
-                                    List.of(AUTH_TO_AUTH_AUDIENCE),
-                                    accessTokenClaims.getAudience()),
-                    () ->
-                            assertEquals(
-                                    AMCScope.ACCOUNT_DELETE.getValue(),
-                                    accessTokenClaims.getClaim("scope")),
+                                    expectedScope.getValue(), accessTokenClaims.getClaim("scope")),
                     () -> assertEquals(AMC_CLIENT_ID, accessTokenClaims.getClaim("client_id")),
                     () -> assertEquals(SESSION_ID, accessTokenClaims.getClaim("sid")),
                     () ->
@@ -388,7 +445,7 @@ class AMCServiceTest {
             when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
             when(configurationService.getAuthToAMCPrivateAudience())
                     .thenReturn(AUTH_TO_AMC_PRIVATE_AUDIENCE);
-            when(configurationService.getAMCRedirectURI()).thenReturn(REDIRECT_URI);
+            when(configurationService.getAMCSfadRedirectURI()).thenReturn(REDIRECT_URI);
             when(configurationService.getAMCTokenEndpointURI()).thenReturn(TOKEN_ENDPOINT_URI);
             signingKeyPair =
                     new ECKeyGenerator(Curve.P_256)
@@ -399,7 +456,7 @@ class AMCServiceTest {
 
         @Test
         void shouldBuildTokenRequest() throws ParseException, JOSEException {
-            when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
+            when(configurationService.getAuthToAMCTransportJWTSigningKey())
                     .thenReturn(signingKeyPair.getKeyID());
 
             mockJwtSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
@@ -432,7 +489,7 @@ class AMCServiceTest {
         @Test
         void shouldReturnTokenRequestErrorWhenSigningFails() {
             var invalidKeyAlias = "invalid-key-alias";
-            when(configurationService.getAuthToAMCPrivateSigningKeyAlias())
+            when(configurationService.getAuthToAMCTransportJWTSigningKey())
                     .thenReturn(invalidKeyAlias);
 
             when(jwtService.signJWT(any(JWTClaimsSet.class), eq(invalidKeyAlias)))
