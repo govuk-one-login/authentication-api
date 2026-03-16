@@ -167,6 +167,31 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 }
             };
 
+    protected static ConfigurationService supportPasskeysAndTxmaEnabledConfigurationService(
+            String accountDataBaseUri) {
+        return new IntegrationTestConfigurationService(
+                notificationsQueue,
+                tokenSigner,
+                docAppPrivateKeyJwtSigner,
+                configurationParameters) {
+
+            @Override
+            public String getTxmaAuditQueueUrl() {
+                return txmaAuditQueue.getQueueUrl();
+            }
+
+            @Override
+            public boolean supportPasskeys() {
+                return true;
+            }
+
+            @Override
+            public String getAccountDataURI() {
+                return accountDataBaseUri;
+            }
+        };
+    }
+
     protected static final ConfigurationService
             REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE =
                     new IntegrationTestConfigurationService(

@@ -17,6 +17,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
+import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -94,6 +96,7 @@ class CheckUserExistsHandlerTest {
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final PasskeysService passkeysService = mock(PasskeysService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String CLIENT_ID = "test-client-id";
@@ -137,6 +140,7 @@ class CheckUserExistsHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(configurationService.supportPasskeys()).thenReturn(false);
 
         handler =
                 new CheckUserExistsHandler(
@@ -145,7 +149,8 @@ class CheckUserExistsHandlerTest {
                         authenticationService,
                         auditService,
                         permissionDecisionManager,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        passkeysService);
         reset(authenticationService);
         reset(permissionDecisionManager);
 
@@ -606,6 +611,51 @@ class CheckUserExistsHandlerTest {
             assertNull(checkUserExistsResponse.phoneNumberLastThree());
         }
 
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldReturnResultOfHasActivePasskeysWhenFeatureFlagIsOn(boolean hasActivePasskey)
+                throws Json.JsonException {
+            when(configurationService.supportPasskeys()).thenReturn(true);
+            var userProfile = generateUserProfile();
+            setupUserProfileAndClient(Optional.of(userProfile));
+
+            MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+            when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID()))
+                    .thenReturn(Result.success(hasActivePasskey));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(hasActivePasskey, checkUserExistsResponse.hasActivePasskey());
+        }
+
+        @Test
+        void shouldReturnFalseForHasActivePasskeyIfPasskeysServiceReturnsFailure()
+                throws Json.JsonException {
+            when(configurationService.supportPasskeys()).thenReturn(true);
+            var userProfile = generateUserProfile();
+            setupUserProfileAndClient(Optional.of(userProfile));
+
+            MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+            when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID()))
+                    .thenReturn(
+                            Result.failure(
+                                    PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.hasActivePasskey());
+        }
+
         @Test
         void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
             var lockedOutDecision =
@@ -645,6 +695,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
+        assertFalse(checkUserExistsResponse.hasActivePasskey());
         assertNull(authSession.getInternalCommonSubjectId());
         verify(authSessionService).updateSession(any(AuthSessionItem.class));
         verify(auditService)

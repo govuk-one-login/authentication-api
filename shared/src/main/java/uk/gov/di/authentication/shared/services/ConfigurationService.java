@@ -875,6 +875,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getAccountDataURI() {
-        return System.getenv("ACCOUNT_DATA_API");
+        return System.getenv("ACCOUNT_DATA_API_URI");
     }
 }

@@ -227,6 +227,7 @@ Mappings:
       amcRedirectUri: https://signin.authdev1.dev.account.gov.uk/amc-callback
       amcTokenUri: https://amcstub.signin.authdev1.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/journeyoutcome
+      accountDataApiId: rjlo8fsb55
       amcClientId: auth_amc
       EvcsApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
@@ -273,6 +274,7 @@ Mappings:
       amcTokenUri: https://amcstub.signin.authdev2.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
+      accountDataApiId: ez2ro7vca7
       EvcsApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
       supportPasskeys: true
@@ -377,6 +379,7 @@ Mappings:
       amcJourneyOutcomeUri: https://amcstub.signin.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
       amcRedirectUri: https://signin.dev.account.gov.uk/amc-callback
+      accountDataApiId: 0aqzty84lj
       enhancedAuthCodeProtectionEnabled: true
       supportPasskeys: true
     build:
@@ -436,6 +439,7 @@ Mappings:
       amcTokenUri: https://amcstub.signin.build.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.build.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
+      accountDataApiId: ac3znt5m23
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
     staging:
@@ -496,6 +500,7 @@ Mappings:
       amcTokenUri: https://api.manage.staging.account.gov.uk/token
       amcJourneyOutcomeUri: https://api.manage.staging.account.gov.uk/journeyoutcome
       amcClientId: bb8ba862f42b4e5eb97cc0950f6419ca
+      accountDataApiId: 7xgl7lexy4
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
     integration:
@@ -556,6 +561,7 @@ Mappings:
       amcTokenUri: https://api.manage.integration.account.gov.uk/token
       amcJourneyOutcomeUri: https://api.manage.integration.account.gov.uk/journeyoutcome
       amcClientId: 0b649817932e4632861f1ab3fccb650d
+      accountDataApiId: hoidt6wujb
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
     production:
@@ -616,6 +622,7 @@ Mappings:
       amcTokenUri: https://api.manage.account.gov.uk/token
       amcJourneyOutcomeUri: https://api.manage.account.gov.uk/journeyoutcome
       amcClientId: be05e73e93e94626917b2bc0d7627cfa
+      accountDataApiId: 0218o1p9tj
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
   LambdaConfiguration:

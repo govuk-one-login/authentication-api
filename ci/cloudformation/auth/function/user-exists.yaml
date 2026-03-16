@@ -41,6 +41,20 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               supportPasskeys,
             ]
+          ACCOUNT_DATA_API_URI: !Sub
+            - "https://${ApiId}.execute-api.eu-west-2.amazonaws.com/${EnvOrSubEnv}"
+            - EnvOrSubEnv:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              ApiId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  accountDataApiId,
+                ]
       LoggingConfig:
         LogGroup: !Ref UserExistsFunctionLogGroup
       Policies:

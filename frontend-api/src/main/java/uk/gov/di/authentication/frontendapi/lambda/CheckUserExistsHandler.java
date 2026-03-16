@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -59,6 +60,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     private final AuditService auditService;
     private final PermissionDecisionManager permissionDecisionManager;
     private final MFAMethodsService mfaMethodsService;
+    private final PasskeysService passkeysService;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
@@ -66,7 +68,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuthenticationService authenticationService,
             AuditService auditService,
             PermissionDecisionManager permissionDecisionManager,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            PasskeysService passkeysService) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
@@ -75,6 +78,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         this.auditService = auditService;
         this.permissionDecisionManager = permissionDecisionManager;
         this.mfaMethodsService = mfaMethodsService;
+        this.passkeysService = passkeysService;
     }
 
     public CheckUserExistsHandler() {
@@ -86,6 +90,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         this.auditService = new AuditService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.passkeysService = new PasskeysService(configurationService);
     }
 
     @Override
@@ -201,6 +206,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         configurationService.isForcedMFAResetAfterMFACheckEnabled()
                                 && requiresMfaResetForInternationalNumber(
                                         authSession, userCredentials, userProfile.get());
+                hasActivePasskey = hasActivePasskey(userProfile.get().getPublicSubjectID());
             } else {
                 authSession.setInternalCommonSubjectId(null);
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
@@ -237,6 +243,20 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
+    }
+
+    private boolean hasActivePasskey(String publicSubjectId) {
+        if (configurationService.supportPasskeys()) {
+            LOG.info("Checking if user has active passkey");
+            var result = passkeysService.hasActivePasskey(publicSubjectId);
+            if (result.isFailure()) {
+                LOG.warn(
+                        "Error retrieving passkey information for user. Error: {}",
+                        result.getFailure());
+                return false;
+            }
+            return result.getSuccess();
+        } else return false;
     }
 
     private boolean requiresMfaResetForInternationalNumber(
