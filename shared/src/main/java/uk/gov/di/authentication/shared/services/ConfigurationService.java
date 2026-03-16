@@ -120,6 +120,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean supportPasskeys() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_PASSKEYS", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
     public boolean isAuthenticationAttemptsServiceEnabled() {
         return System.getenv()
                 .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", String.valueOf(false))

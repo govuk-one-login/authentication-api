@@ -35,6 +35,12 @@ Resources:
             - "https://identity.account.gov.uk"
           REDIS_KEY: "session"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          SUPPORT_PASSKEYS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              supportPasskeys,
+            ]
       LoggingConfig:
         LogGroup: !Ref UserExistsFunctionLogGroup
       Policies:
