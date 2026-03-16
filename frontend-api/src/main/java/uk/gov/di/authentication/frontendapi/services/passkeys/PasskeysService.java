@@ -34,8 +34,7 @@ public class PasskeysService {
         this.httpClient = httpClient;
     }
 
-    public Result<PasskeyRetrieveError, Boolean> hasActivePasskey(String publicSubjectId)
-            throws IOException, InterruptedException {
+    public Result<PasskeyRetrieveError, Boolean> hasActivePasskey(String publicSubjectId) {
         var accountDataBaseUri = configurationService.getAccountDataURI();
         var getPasskeysRequestUri =
                 buildURI(
@@ -43,18 +42,34 @@ public class PasskeysService {
                         "/accounts/" + publicSubjectId + "/authenticators/passkeys");
         var request = HttpRequest.newBuilder(getPasskeysRequestUri).build();
         LOG.info("Sending request to account data api retrieve endpoint");
-        var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        try {
+            var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        if (httpResponse.statusCode() != 200) {
-            LOG.warn(
-                    "Error response received from retrieved passkeys endpoint, http status code {}",
-                    httpResponse.statusCode());
-            return Result.failure(PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE);
+            if (httpResponse.statusCode() != 200) {
+                LOG.warn(
+                        "Error response received from retrieved passkeys endpoint, http status code {}",
+                        httpResponse.statusCode());
+                return Result.failure(PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE);
+            }
+
+            LOG.info("Successful response received from retrieve passkeys endpoint");
+            return parseResponse(httpResponse)
+                    .map(passkeyRetrieveResponse -> !passkeyRetrieveResponse.passkeys().isEmpty());
+        } catch (IOException e) {
+            LOG.error("IOException in retrieve passkeys", e);
+            return Result.failure(PasskeyRetrieveError.IO_EXCEPTION);
+        } catch (InterruptedException e) {
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making passkey retrieve request, exiting with fault");
+                System.exit(1);
+            }
+            LOG.error("Interrupted exception in retrieve passkeys");
+            Thread.currentThread().interrupt();
+            return Result.failure(PasskeyRetrieveError.INTERRUPTED_EXCEPTION);
         }
-
-        LOG.info("Successful response received from retrieve passkeys endpoint");
-        return parseResponse(httpResponse)
-                .map(passkeyRetrieveResponse -> !passkeyRetrieveResponse.passkeys().isEmpty());
     }
 
     private Result<PasskeyRetrieveError, PasskeysRetrieveResponse> parseResponse(

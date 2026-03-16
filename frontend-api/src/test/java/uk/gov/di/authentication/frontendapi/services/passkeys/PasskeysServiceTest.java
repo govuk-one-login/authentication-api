@@ -120,6 +120,33 @@ class PasskeysServiceTest {
             assertEquals(
                     PasskeyRetrieveError.ERROR_PARSING_RESPONSE_FROM_PASSKEY_RETRIEVE, failure);
         }
+
+        private static Stream<Arguments> exceptionsToExpectedErrors() {
+            return Stream.of(
+                    Arguments.of(new IOException("uh oh"), PasskeyRetrieveError.IO_EXCEPTION),
+                    Arguments.of(
+                            new InterruptedException("uh oh"),
+                            PasskeyRetrieveError.INTERRUPTED_EXCEPTION));
+        }
+
+        @MethodSource("exceptionsToExpectedErrors")
+        @ParameterizedTest
+        void shouldReturnFailureWhenAccountDataApiThrowsAnIOException(
+                Exception e, PasskeyRetrieveError expectedError)
+                throws IOException, InterruptedException {
+            when(httpClient.send(
+                            argThat(
+                                    request ->
+                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                            any()))
+                    .thenThrow(e);
+
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            assertTrue(result.isFailure());
+
+            var failure = result.getFailure();
+            assertEquals(expectedError, failure);
+        }
     }
 
     private String passkeyResponse(List<String> passkeys) {
