@@ -1,5 +1,8 @@
 package uk.gov.di.authentication.utils.services.bulkemailsender;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
@@ -9,6 +12,9 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 
 public class InternationalNumbersForcedMfaResetBulkEmailSender extends BaseBulkEmailSender {
+
+    private static final Logger LOG =
+            LogManager.getLogger(InternationalNumbersForcedMfaResetBulkEmailSender.class);
 
     public InternationalNumbersForcedMfaResetBulkEmailSender(
             BulkEmailUsersService bulkEmailUsersService,
@@ -32,5 +38,11 @@ public class InternationalNumbersForcedMfaResetBulkEmailSender extends BaseBulkE
     }
 
     @Override
-    public void validateAndSendMessage(String subjectId, BulkEmailUserSendMode sendMode) {}
+    public void validateAndSendMessage(String subjectId, BulkEmailUserSendMode sendMode) {
+        var userProfileOptional = dynamoService.getOptionalUserProfileFromSubject(subjectId);
+        if (userProfileOptional.isEmpty()) {
+            LOG.warn("User not found by subject id");
+            updateBulkUserStatus(subjectId, BulkEmailStatus.ACCOUNT_NOT_FOUND);
+        }
+    }
 }
