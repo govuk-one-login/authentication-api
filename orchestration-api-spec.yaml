@@ -1,3 +1,4 @@
+---
 openapi: "3.0.1"
 info:
   title: "${Environment}-orchestration-oidc-api"
@@ -114,37 +115,40 @@ paths:
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
         type: "aws_proxy"
-  /connect/register: !If:
-    - IsNotProduction
-    - post:
-        security:
-          - api_key: []
-        x-amazon-apigateway-integration:
-          uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ClientRegistrationFunction.Arn}:latest/invocations"
-          httpMethod: "POST"
-          passthroughBehavior: "when_no_match"
-          timeoutInMillis: 29000
-          type: "aws_proxy"
-    - !Ref ${AWS::NoValue}
-  /connect/register/{clientId}: !If:
-    - IsNotProduction
-    - put:
-        parameters:
-          - name: "clientId"
-            in: "path"
-            required: true
-            schema:
-              type: "string"
-        security:
-          - api_key: []
-        x-amazon-apigateway-integration:
-          uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateClientConfigFunction.Arn}:latest/invocations"
-          httpMethod: "POST"
-          requestParameters:
-            integration.request.path.clientId: "method.request.path.clientId"
-          passthroughBehavior: "when_no_match"
-          timeoutInMillis: 29000
-          type: "aws_proxy"
+  /connect/register:
+    Fn::If:
+      - IsNotProduction
+      - post:
+          security:
+            - api_key: []
+          x-amazon-apigateway-integration:
+            uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ClientRegistrationFunction.Arn}:latest/invocations"
+            httpMethod: "POST"
+            passthroughBehavior: "when_no_match"
+            timeoutInMillis: 29000
+            type: "aws_proxy"
+      - ${AWS::NoValue}
+  /connect/register/{clientId}:
+    Fn::If:
+      - IsNotProduction
+      - put:
+          parameters:
+            - name: "clientId"
+              in: "path"
+              required: true
+              schema:
+                type: "string"
+          security:
+            - api_key: []
+          x-amazon-apigateway-integration:
+            uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateClientConfigFunction.Arn}:latest/invocations"
+            httpMethod: "POST"
+            requestParameters:
+              integration.request.path.clientId: "method.request.path.clientId"
+            passthroughBehavior: "when_no_match"
+            timeoutInMillis: 29000
+            type: "aws_proxy"
+      - ${AWS::NoValue}
   /robots.txt:
     get:
       responses:
