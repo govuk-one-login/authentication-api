@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -96,6 +97,28 @@ class PasskeysServiceTest {
 
             var failure = result.getFailure();
             assertEquals(PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, failure);
+        }
+
+        @ValueSource(strings = {"{ invalid json ", "{\"foo\": \"bar\"}"})
+        @ParameterizedTest
+        void
+                shouldReturnFailureWhenAccountDataApiResponseReturnsResponseThatCannotBeParsedAsPasskeysRetrieveResponse(
+                        String invalidResponseBody) throws IOException, InterruptedException {
+            when(httpResponse.body()).thenReturn(invalidResponseBody);
+            when(httpResponse.statusCode()).thenReturn(200);
+            when(httpClient.send(
+                            argThat(
+                                    request ->
+                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                            any()))
+                    .thenReturn(httpResponse);
+
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            assertTrue(result.isFailure());
+
+            var failure = result.getFailure();
+            assertEquals(
+                    PasskeyRetrieveError.ERROR_PARSING_RESPONSE_FROM_PASSKEY_RETRIEVE, failure);
         }
     }
 

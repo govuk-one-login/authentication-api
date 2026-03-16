@@ -53,17 +53,21 @@ public class PasskeysService {
         }
 
         LOG.info("Successful response received from retrieve passkeys endpoint");
-        var passkeyRetrieveResponse = parseResponse(httpResponse);
-        var hasAnActivePasskey = !passkeyRetrieveResponse.passkeys().isEmpty();
-        return Result.success(hasAnActivePasskey);
+        return parseResponse(httpResponse)
+                .map(passkeyRetrieveResponse -> !passkeyRetrieveResponse.passkeys().isEmpty());
     }
 
-    private PasskeysRetrieveResponse parseResponse(HttpResponse<String> response) {
+    private Result<PasskeyRetrieveError, PasskeysRetrieveResponse> parseResponse(
+            HttpResponse<String> response) {
         try {
-            return serializationService.readValue(
-                    response.body(), PasskeysRetrieveResponse.class, true);
+            var retrieveResponse =
+                    serializationService.readValue(
+                            response.body(), PasskeysRetrieveResponse.class, true);
+            return Result.success(retrieveResponse);
         } catch (Json.JsonException | JsonParseException e) {
-            throw new RuntimeException("TODO");
+            LOG.error("Failed to parse passkeys retrieve response", e);
+            return Result.failure(
+                    PasskeyRetrieveError.ERROR_PARSING_RESPONSE_FROM_PASSKEY_RETRIEVE);
         }
     }
 }
