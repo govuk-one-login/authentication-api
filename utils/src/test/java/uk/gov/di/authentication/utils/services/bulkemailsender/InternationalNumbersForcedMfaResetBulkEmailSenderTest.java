@@ -60,71 +60,88 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
     @Nested
     class ValidateAndSendMessage {
 
-        @Test
-        void shouldUpdateStatusToAccountNotFoundWhenUserNotFound() {
-            when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
-                    .thenReturn(Optional.empty());
+        @Nested
+        class Success {
 
-            sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+            @Test
+            void shouldSendEmailAndUpdateStatus() throws NotificationClientException {
+                when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withSubjectID(SUBJECT_ID)
+                                                .withEmail(EMAIL)));
 
-            verify(bulkEmailUsersService, times(1))
-                    .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ACCOUNT_NOT_FOUND);
-            verifyNoMoreInteractions(bulkEmailUsersService);
-            verifyNoInteractions(notificationService);
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+                verify(notificationService)
+                        .sendEmail(
+                                EMAIL,
+                                Map.of(),
+                                INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL,
+                                "");
+                verify(bulkEmailUsersService, times(1))
+                        .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+                verifyNoMoreInteractions(bulkEmailUsersService);
+            }
+
+            @Test
+            void shouldNotSendAuditEventWhenEmailSendingDisabled() {
+                when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(false);
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withSubjectID(SUBJECT_ID)
+                                                .withEmail(EMAIL)));
+
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+                verifyNoInteractions(auditService);
+                verifyNoInteractions(notificationService);
+                verify(bulkEmailUsersService, times(1))
+                        .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+                verifyNoMoreInteractions(bulkEmailUsersService);
+            }
         }
 
-        @Test
-        void shouldSendEmailAndUpdateStatus() throws NotificationClientException {
-            when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
-            when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new UserProfile().withSubjectID(SUBJECT_ID).withEmail(EMAIL)));
+        @Nested
+        class Errors {
 
-            sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+            @Test
+            void shouldUpdateStatusToAccountNotFoundWhenUserNotFound() {
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(Optional.empty());
 
-            verify(notificationService)
-                    .sendEmail(
-                            EMAIL, Map.of(), INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL, "");
-            verify(bulkEmailUsersService, times(1))
-                    .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
-            verifyNoMoreInteractions(bulkEmailUsersService);
-        }
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
 
-        @Test
-        void shouldNotSendAuditEventWhenEmailSendingDisabled() {
-            when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(false);
-            when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new UserProfile().withSubjectID(SUBJECT_ID).withEmail(EMAIL)));
+                verify(bulkEmailUsersService, times(1))
+                        .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ACCOUNT_NOT_FOUND);
+                verifyNoMoreInteractions(bulkEmailUsersService);
+                verifyNoInteractions(notificationService);
+            }
 
-            sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+            @Test
+            void shouldUpdateStatusToErrorWhenNotificationClientExceptionThrown()
+                    throws NotificationClientException {
+                when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withSubjectID(SUBJECT_ID)
+                                                .withEmail(EMAIL)));
+                doThrow(new NotificationClientException("error"))
+                        .when(notificationService)
+                        .sendEmail(anyString(), anyMap(), any(), anyString());
 
-            verifyNoInteractions(auditService);
-            verifyNoInteractions(notificationService);
-            verify(bulkEmailUsersService, times(1))
-                    .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
-            verifyNoMoreInteractions(bulkEmailUsersService);
-        }
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
 
-        @Test
-        void shouldUpdateStatusToErrorWhenNotificationClientExceptionThrown()
-                throws NotificationClientException {
-            when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
-            when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new UserProfile().withSubjectID(SUBJECT_ID).withEmail(EMAIL)));
-            doThrow(new NotificationClientException("error"))
-                    .when(notificationService)
-                    .sendEmail(anyString(), anyMap(), any(), anyString());
-
-            sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
-
-            verify(bulkEmailUsersService, times(1))
-                    .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ERROR_SENDING_EMAIL);
-            verifyNoMoreInteractions(bulkEmailUsersService);
+                verify(bulkEmailUsersService, times(1))
+                        .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ERROR_SENDING_EMAIL);
+                verifyNoMoreInteractions(bulkEmailUsersService);
+            }
         }
     }
 }
