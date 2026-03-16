@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.entity.Application.AUTHENTICATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
@@ -151,14 +152,17 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                     notifyRequest.getCode(),
                     "email-address",
                     notifyRequest.getDestination());
-            case TERMS_AND_CONDITIONS_BULK_EMAIL -> Collections.emptyMap();
+            case TERMS_AND_CONDITIONS_BULK_EMAIL,
+                    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL -> Collections.emptyMap();
         };
     }
 
     private void sendNotifyMessage(NotifyRequest request) {
 
-        if (request.getNotificationType() == TERMS_AND_CONDITIONS_BULK_EMAIL) {
-            LOG.info("Not dispatching terms and conditions bulk email.");
+        if (request.getNotificationType() == TERMS_AND_CONDITIONS_BULK_EMAIL
+                || request.getNotificationType()
+                        == INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL) {
+            LOG.info("Not dispatching bulk email via NotificationHandler.");
             return;
         }
 

@@ -12,16 +12,26 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
+import uk.gov.service.notify.NotificationClientException;
 
+import java.util.Map;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.NotificationType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL;
 
 class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
 
+    private static final String EMAIL = "joe.bloggs@test.com";
     private static final String SUBJECT_ID = "urn:some:subject:identifier";
 
     private final BulkEmailUsersService bulkEmailUsersService = mock(BulkEmailUsersService.class);
@@ -57,19 +67,64 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
 
             sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
 
-            verify(bulkEmailUsersService)
+            verify(bulkEmailUsersService, times(1))
                     .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ACCOUNT_NOT_FOUND);
+            verifyNoMoreInteractions(bulkEmailUsersService);
+            verifyNoInteractions(notificationService);
         }
 
         @Test
-        void shouldNotUpdateStatusToAccountNotFoundWhenUserFound() {
+        void shouldSendEmailAndUpdateStatus() throws NotificationClientException {
+            when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
             when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
-                    .thenReturn(Optional.of(new UserProfile().withSubjectID(SUBJECT_ID)));
+                    .thenReturn(
+                            Optional.of(
+                                    new UserProfile().withSubjectID(SUBJECT_ID).withEmail(EMAIL)));
 
             sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
 
-            verify(bulkEmailUsersService, never())
-                    .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ACCOUNT_NOT_FOUND);
+            verify(notificationService)
+                    .sendEmail(
+                            EMAIL, Map.of(), INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL, "");
+            verify(bulkEmailUsersService, times(1))
+                    .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+            verifyNoMoreInteractions(bulkEmailUsersService);
+        }
+
+        @Test
+        void shouldNotSendAuditEventWhenEmailSendingDisabled() {
+            when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(false);
+            when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new UserProfile().withSubjectID(SUBJECT_ID).withEmail(EMAIL)));
+
+            sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(notificationService);
+            verify(bulkEmailUsersService, times(1))
+                    .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+            verifyNoMoreInteractions(bulkEmailUsersService);
+        }
+
+        @Test
+        void shouldUpdateStatusToErrorWhenNotificationClientExceptionThrown()
+                throws NotificationClientException {
+            when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+            when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new UserProfile().withSubjectID(SUBJECT_ID).withEmail(EMAIL)));
+            doThrow(new NotificationClientException("error"))
+                    .when(notificationService)
+                    .sendEmail(anyString(), anyMap(), any(), anyString());
+
+            sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+            verify(bulkEmailUsersService, times(1))
+                    .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ERROR_SENDING_EMAIL);
+            verifyNoMoreInteractions(bulkEmailUsersService);
         }
     }
 }

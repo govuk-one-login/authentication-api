@@ -65,7 +65,12 @@ public enum NotificationType implements TemplateAware, NotifiableType {
             true,
             false),
     TERMS_AND_CONDITIONS_BULK_EMAIL(
-            "TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID", MFAMethodType.NONE, true, false);
+            "TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID", MFAMethodType.NONE, true, false),
+    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL(
+            "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL_TEMPLATE_ID",
+            MFAMethodType.NONE,
+            true,
+            false);
 
     private final String templateName;
     private final MFAMethodType mfaMethodType;
