@@ -805,8 +805,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "GOV.UK One Login");
     }
 
-    public String getAuthToAMAPIAudience() {
-        return System.getenv().getOrDefault("AUTH_TO_AUTH_AUDIENCE", "");
+    public String getAuthToAMApiAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_API_AUDIENCE", "");
+    }
+
+    public String getAuthToAccountDataApiAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "");
     }
 
     public int getInternationalSmsNumberSendLimit() throws MissingEnvVariableException {
@@ -819,12 +823,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(key);
     }
 
-    public String getAuthToAccountManagementPrivateSigningKeyAlias() {
-        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_PRIVATE_SIGNING_KEY", "");
+    public String getAuthToAMCDownstreamServiceSigningKey() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY", "");
     }
 
-    public String getAuthToAMCPrivateSigningKeyAlias() {
-        return System.getenv().getOrDefault("AUTH_TO_AMC_PRIVATE_SIGNING_KEY", "");
+    public String getAuthToAMCTransportJWTSigningKey() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY", "");
     }
 
     public String getAuthToAMCPublicAudience() {
@@ -835,8 +839,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("AUTH_TO_AMC_PRIVATE_AUDIENCE", "");
     }
 
-    public String getAMCRedirectURI() {
-        return System.getenv().getOrDefault("AMC_REDIRECT_URI", "");
+    public String getAMCSfadRedirectURI() {
+        return System.getenv().getOrDefault("AMC_SFAD_REDIRECT_URI", "");
+    }
+
+    public String getAMCCreatePasskeyRedirectURI() {
+        return System.getenv().getOrDefault("AMC_CREATE_PASSKEY_REDIRECT_URI", "");
     }
 
     public String getAuthToAMCPublicEncryptionKey() {
