@@ -5801,6 +5801,18 @@ Resources:
       LogGroupName: !Sub "${Environment}-orchestration-oidc-api-access-logs"
       RetentionInDays: 30
 
+  ClientRegistryApiKey:
+    Condition: ProvisionNewApiGateway #TODO: Conditionally deploy only in non-prod
+    Type: "AWS::ApiGateway::ApiKey"
+    Properties:
+      Name: !Sub "${Environment}-client-registry-api-key"
+      Description: |
+        API Key for the client registry API endpoints (/connect/*)
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref OrchestrationOidcApi
+          StageName: !Sub "${Environment}"
+
   #endregion
 
   #region Policies
