@@ -8,7 +8,7 @@ public enum AMCJourneyType {
     SFAD,
     PASSKEY_CREATE;
 
-    public List<AccessTokenConfig> getAccessTokenConfig(ConfigurationService config) {
+    public List<AccessTokenConfig> getAccessTokenConfigs(ConfigurationService config) {
         return switch (this) {
             case SFAD -> List.of(
                     new AccessTokenConfig(

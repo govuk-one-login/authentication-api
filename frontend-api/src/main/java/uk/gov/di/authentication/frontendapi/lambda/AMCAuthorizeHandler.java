@@ -5,8 +5,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
-import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.TransportJWTConfig;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
+import java.util.List;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -81,12 +83,19 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
 
+        List<AccessTokenConfig> accessTokenConfigsForJourneyType =
+                request.amcJourneyType().getAccessTokenConfigs(configurationService);
+        TransportJWTConfig transportJwtConfig =
+                request.amcJourneyType().getTransportJwtConfig(configurationService);
+
         Result<JwtFailureReason, String> result =
                 amcService.buildAuthorizationUrl(
                         authSessionItem.getInternalCommonSubjectId(),
-                        AMCScope.ACCOUNT_DELETE,
+                        transportJwtConfig.scope(),
                         authSessionItem,
-                        userProfile.getPublicSubjectID());
+                        userProfile.getPublicSubjectID(),
+                        transportJwtConfig.redirectUri(),
+                        accessTokenConfigsForJourneyType);
 
         return result.fold(
                 AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,
