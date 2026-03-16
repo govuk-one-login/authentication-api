@@ -873,4 +873,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
                 .equals("true");
     }
+
+    public String getAccountDataURI() {
+        return System.getenv("ACCOUNT_DATA_API");
+    }
 }
