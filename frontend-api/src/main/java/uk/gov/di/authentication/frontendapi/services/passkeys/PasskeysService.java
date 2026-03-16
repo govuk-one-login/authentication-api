@@ -1,7 +1,11 @@
 package uk.gov.di.authentication.frontendapi.services.passkeys;
 
 import com.google.gson.JsonParseException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeysRetrieveResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -18,6 +22,7 @@ public class PasskeysService {
     private final ConfigurationService configurationService;
     HttpClient httpClient;
     private final SerializationService serializationService = SerializationService.getInstance();
+    private static final Logger LOG = LogManager.getLogger(PasskeysService.class);
 
     public PasskeysService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
@@ -29,7 +34,7 @@ public class PasskeysService {
         this.httpClient = httpClient;
     }
 
-    public boolean hasActivePasskey(String publicSubjectId)
+    public Result<PasskeyRetrieveError, Boolean> hasActivePasskey(String publicSubjectId)
             throws IOException, InterruptedException {
         var accountDataBaseUri = configurationService.getAccountDataURI();
         var getPasskeysRequestUri =
@@ -37,9 +42,20 @@ public class PasskeysService {
                         accountDataBaseUri,
                         "/accounts/" + publicSubjectId + "/authenticators/passkeys");
         var request = HttpRequest.newBuilder(getPasskeysRequestUri).build();
+        LOG.info("Sending request to account data api retrieve endpoint");
         var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (httpResponse.statusCode() != 200) {
+            LOG.warn(
+                    "Error response received from retrieved passkeys endpoint, http status code {}",
+                    httpResponse.statusCode());
+            return Result.failure(PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE);
+        }
+
+        LOG.info("Successful response received from retrieve passkeys endpoint");
         var passkeyRetrieveResponse = parseResponse(httpResponse);
-        return !passkeyRetrieveResponse.passkeys().isEmpty();
+        var hasAnActivePasskey = !passkeyRetrieveResponse.passkeys().isEmpty();
+        return Result.success(hasAnActivePasskey);
     }
 
     private PasskeysRetrieveResponse parseResponse(HttpResponse<String> response) {

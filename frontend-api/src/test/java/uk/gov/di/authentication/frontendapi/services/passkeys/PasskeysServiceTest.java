@@ -2,9 +2,12 @@ package uk.gov.di.authentication.frontendapi.services.passkeys;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.io.IOException;
@@ -15,6 +18,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -43,27 +47,56 @@ class PasskeysServiceTest {
         reset(httpClient, configurationService, httpResponse);
     }
 
-    private static Stream<Arguments> successfulTestCases() {
-        return Stream.of(
-                Arguments.of(List.of(aPasskeyWithId("123456")), true),
-                Arguments.of(List.of(aPasskeyWithId("123456"), aPasskeyWithId("456789")), true),
-                Arguments.of(List.of(), false));
+    @Nested
+    class SuccessCases {
+        private static Stream<Arguments> successfulTestCases() {
+            return Stream.of(
+                    Arguments.of(List.of(aPasskeyWithId("123456")), true),
+                    Arguments.of(List.of(aPasskeyWithId("123456"), aPasskeyWithId("456789")), true),
+                    Arguments.of(List.of(), false));
+        }
+
+        @MethodSource("successfulTestCases")
+        @ParameterizedTest
+        void shouldReturnTheExpectedResultForASuccessfulPasskeysResponse(
+                List<String> returnedPasskeys, boolean expectedResult)
+                throws IOException, InterruptedException {
+            when(httpResponse.body()).thenReturn(passkeyResponse(returnedPasskeys));
+            when(httpResponse.statusCode()).thenReturn(200);
+            when(httpClient.send(
+                            argThat(
+                                    request ->
+                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                            any()))
+                    .thenReturn(httpResponse);
+
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            assertTrue(result.isSuccess());
+
+            var hasActivePasskey = result.getSuccess();
+            assertEquals(expectedResult, hasActivePasskey);
+        }
     }
 
-    @MethodSource("successfulTestCases")
-    @ParameterizedTest
-    void shouldReturnTheExpectedResultForASuccessfulPasskeysResponse(
-            List<String> returnedPasskeys, boolean expectedResult)
-            throws IOException, InterruptedException {
-        when(httpResponse.body()).thenReturn(passkeyResponse(returnedPasskeys));
-        when(httpClient.send(
-                        argThat(request -> request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
-                        any()))
-                .thenReturn(httpResponse);
+    @Nested
+    class FailureCases {
+        @Test
+        void shouldReturnFailureWhenAccountDataApiReturnsANon200ResponseCode()
+                throws IOException, InterruptedException {
+            when(httpResponse.statusCode()).thenReturn(500);
+            when(httpClient.send(
+                            argThat(
+                                    request ->
+                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                            any()))
+                    .thenReturn(httpResponse);
 
-        var hasActivePasskey = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            assertTrue(result.isFailure());
 
-        assertEquals(expectedResult, hasActivePasskey);
+            var failure = result.getFailure();
+            assertEquals(PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, failure);
+        }
     }
 
     private String passkeyResponse(List<String> passkeys) {
