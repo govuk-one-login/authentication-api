@@ -436,9 +436,9 @@ task searchForDependency {
                             def parsedResolvedVersion = VersionNumber.parse(dep.getModuleVersion())
                             def isLower = parsedResolvedVersion < parsedMinVersion
                             def versionString = isLower
-                                    ? "Version: \u001B[31m${dep.getModuleVersion()}\u001B[0m"
-                                    : "Version: \u001B[32m${dep.getModuleVersion()}\u001B[0m"
-                            foundProjects.add(project.name + ":" + config.name +". "  + versionString)
+                                    ? "Version: \u001B[31m${dep.getModuleVersion()}\u001B[0m ⚠️"
+                                    : "Version: \u001B[32m${dep.getModuleVersion()}\u001B[0m ✅"
+                            foundProjects.add(project.path + ":" + config.name +". "  + versionString)
                         }
                     }
                 }
