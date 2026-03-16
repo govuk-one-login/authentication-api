@@ -5941,6 +5941,7 @@ Resources:
   OrchestrationOidcApi:
     Condition: ProvisionNewApiGateway
     Type: AWS::Serverless::Api
+    # checkov:skip=CKV_AWS_120: We absolutely do not want caching enabled for the API as it returns OIDC userinfo and access tokens
     Properties:
       Name: !Sub "${Environment}-orchestration-oidc-api"
       StageName: !Sub "${Environment}"
@@ -5968,6 +5969,7 @@ Resources:
       TracingEnabled: true
       Tags:
         Name: orchestration-oidc-api
+        CheckovRulesToSkip: CKV_AWS_120
 
   OidcApiAccessLogGroup:
     Condition: ProvisionNewApiGateway
