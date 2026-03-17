@@ -109,7 +109,6 @@ Conditions:
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
     ]
-  OldSpotRequestQueueWriting: !Equals [production, !Ref Environment]
   ProvisionNewExternalTokenSigningKeysV2:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -4983,10 +4982,7 @@ Resources:
             - NewSpotRequestQueueWriting
             - true
             - false
-          OLD_SPOT_REQUEST_QUEUE_WRITING: !If
-            - OldSpotRequestQueueWriting
-            - true
-            - false
+          OLD_SPOT_REQUEST_QUEUE_WRITING: false
           SPOT_QUEUE_URL: !If
             - IpvExists
             - !Sub
