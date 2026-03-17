@@ -39,7 +39,6 @@ class TokenValidationServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
-    private static final String NEW_KEY_ID = "14342354354354";
     private static final String NEW_V2_KEY_ID = "14342334554354";
     private static final String FAILED_KEY_ID = "14342354354355";
     private JWSSigner signer;
@@ -50,7 +49,6 @@ class TokenValidationServiceTest {
         ecJWK = generateECKeyPair();
         signer = new ECDSASigner(ecJWK);
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(ecJWK.toPublicJWK());
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(false);
         when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
                 .thenReturn(false);
     }
@@ -78,20 +76,6 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateNewECKeyAccessToken() throws JOSEException {
-        var newECKey = generateCustomECKeyPair(NEW_KEY_ID);
-        var ecSigner = new ECDSASigner(newECKey);
-
-        when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newECKey);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
-
-        SignedJWT signedAccessToken = createCustomSignedAccessToken(ecSigner, NEW_KEY_ID);
-        assertTrue(
-                tokenValidationService.isTokenSignatureValid(
-                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
-    }
-
-    @Test
     void shouldSuccessfullyValidateNewECKeyV2AccessToken() throws JOSEException {
         var newECKey = generateCustomECKeyPair(NEW_V2_KEY_ID);
         var ecSigner = new ECDSASigner(newECKey);
@@ -107,46 +91,12 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldFailToValidateECKeyAccessTokenIfKeyIdInvalidAndV2Disabled() throws JOSEException {
-        var newECKey = generateCustomECKeyPair(NEW_KEY_ID);
-        var failedECKey = generateCustomECKeyPair(FAILED_KEY_ID);
-        var ecSigner = new ECDSASigner(failedECKey);
-
-        when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newECKey);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
-
-        SignedJWT signedAccessToken = createCustomSignedAccessToken(ecSigner, FAILED_KEY_ID);
-        assertFalse(
-                tokenValidationService.isTokenSignatureValid(
-                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
-    }
-
-    @Test
-    void shouldFailToValidateECKeyAccessTokenIfKeyIdInvalidAndV1Disabled() throws JOSEException {
+    void shouldFailToValidateECKeyAccessTokenIfKeyIdInvalid() throws JOSEException {
         var newECKey = generateCustomECKeyPair(NEW_V2_KEY_ID);
         var failedECKey = generateCustomECKeyPair(FAILED_KEY_ID);
         var ecSigner = new ECDSASigner(failedECKey);
 
         when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newECKey);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
-                .thenReturn(true);
-
-        SignedJWT signedAccessToken = createCustomSignedAccessToken(ecSigner, FAILED_KEY_ID);
-        assertFalse(
-                tokenValidationService.isTokenSignatureValid(
-                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
-    }
-
-    @Test
-    void shouldFailToValidateECKeyAccessTokenIfKeyIdInvalid() throws JOSEException {
-        var newECKey = generateCustomECKeyPair(NEW_KEY_ID);
-        var newV2ECKey = generateCustomECKeyPair(NEW_V2_KEY_ID);
-        var failedECKey = generateCustomECKeyPair(FAILED_KEY_ID);
-        var ecSigner = new ECDSASigner(failedECKey);
-
-        when(jwksService.getNextPublicTokenJwkWithOpaqueId()).thenReturn(newECKey);
-        when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newV2ECKey);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
         when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
                 .thenReturn(true);
 
@@ -171,23 +121,6 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateNewRsaSignedAccessToken() throws JOSEException {
-        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
-        var newRSAKey = generateCustomRsaKeyPair(NEW_KEY_ID);
-        var newRSASigner = new RSASSASigner(newRSAKey);
-
-        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
-        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueId()).thenReturn(newRSAKey);
-
-        SignedJWT signedAccessToken = createCustomSignedAccessToken(newRSASigner, NEW_KEY_ID);
-        assertTrue(
-                tokenValidationService.isTokenSignatureValid(
-                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
-    }
-
-    @Test
     void shouldSuccessfullyValidateNewV2RsaSignedAccessToken() throws JOSEException {
         var rsaKey = generateCustomRsaKeyPair(KEY_ID);
         var newRSAKey = generateCustomRsaKeyPair(NEW_V2_KEY_ID);
@@ -206,25 +139,7 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldFailToValidateRsaKeyAccessTokenIfKeyIdInvalidAndV2Disabled() throws JOSEException {
-        var wrongRSAKey = new RSAKeyGenerator(2048).generate();
-        var rsaSigner = new RSASSASigner(wrongRSAKey);
-        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
-        var newRSAKey = generateCustomRsaKeyPair(NEW_KEY_ID);
-
-        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
-        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueId()).thenReturn(newRSAKey);
-
-        SignedJWT signedAccessToken = createCustomSignedAccessToken(rsaSigner, FAILED_KEY_ID);
-        assertFalse(
-                tokenValidationService.isTokenSignatureValid(
-                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
-    }
-
-    @Test
-    void shouldFailToValidateRsaKeyAccessTokenIfKeyIdInvalidAndV1Disabled() throws JOSEException {
+    void shouldFailToValidateRsaKeyAccessTokenIfKeyIdInvalid() throws JOSEException {
         var wrongRSAKey = new RSAKeyGenerator(2048).generate();
         var rsaSigner = new RSASSASigner(wrongRSAKey);
         var rsaKey = generateCustomRsaKeyPair(KEY_ID);
@@ -235,28 +150,6 @@ class TokenValidationServiceTest {
                 .thenReturn(true);
         when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
         when(jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2()).thenReturn(newRSAKey);
-
-        SignedJWT signedAccessToken = createCustomSignedAccessToken(rsaSigner, FAILED_KEY_ID);
-        assertFalse(
-                tokenValidationService.isTokenSignatureValid(
-                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
-    }
-
-    @Test
-    void shouldFailToValidateRsaKeyAccessTokenIfKeyIdInvalid() throws JOSEException {
-        var wrongRSAKey = new RSAKeyGenerator(2048).generate();
-        var rsaSigner = new RSASSASigner(wrongRSAKey);
-        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
-        var newRSAKey = generateCustomRsaKeyPair(NEW_KEY_ID);
-        var newV2RSAKey = generateCustomRsaKeyPair(NEW_V2_KEY_ID);
-
-        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabled()).thenReturn(true);
-        when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
-                .thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
-        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueId()).thenReturn(newRSAKey);
-        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2()).thenReturn(newV2RSAKey);
 
         SignedJWT signedAccessToken = createCustomSignedAccessToken(rsaSigner, FAILED_KEY_ID);
         assertFalse(

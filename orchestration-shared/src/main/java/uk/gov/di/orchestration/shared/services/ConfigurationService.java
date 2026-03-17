@@ -369,24 +369,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
 
-    public String getNextExternalTokenSigningKeyAlias() {
-        return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
     public String getNextExternalTokenSigningKeyAliasV2() {
         return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2");
     }
 
-    public String getNextExternalTokenSigningKeyRsaAlias() {
-        return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS");
-    }
-
     public String getNextExternalTokenSigningKeyRsaAliasV2() {
         return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2");
-    }
-
-    public boolean isPublishNextExternalTokenSigningKeysEnabled() {
-        return getFlagOrFalse("PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS");
     }
 
     public boolean isPublishNextExternalTokenSigningKeysEnabledV2() {
@@ -396,10 +384,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean isRsaSigningAvailable() {
         return List.of("dev", "build", "staging", "integration", "production")
                 .contains(getEnvironment());
-    }
-
-    public boolean isUseNewTokenSigningKeysEnabled() {
-        return getFlagOrFalse("USE_NEW_TOKEN_SIGNING_KEYS");
     }
 
     public boolean isUseNewV2TokenSigningKeysEnabled() {

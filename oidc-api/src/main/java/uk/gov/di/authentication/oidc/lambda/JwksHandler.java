@@ -71,14 +71,6 @@ public class JwksHandler
                 signingKeys.add(jwksService.getPublicTokenRsaJwkWithOpaqueId());
             }
 
-            if (configurationService.isPublishNextExternalTokenSigningKeysEnabled()) {
-                signingKeys.add(jwksService.getNextPublicTokenJwkWithOpaqueId());
-
-                if (configurationService.isRsaSigningAvailable()) {
-                    signingKeys.add(jwksService.getNextPublicTokenRsaJwkWithOpaqueId());
-                }
-            }
-
             if (configurationService.isPublishNextExternalTokenSigningKeysEnabledV2()) {
                 signingKeys.add(jwksService.getNextPublicTokenJwkWithOpaqueIdV2());
 

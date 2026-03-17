@@ -101,7 +101,6 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
-  ProvisionNewExternalTokenSigningKeys: !Equals [integration, !Ref Environment]
   NewSpotRequestQueueWriting:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -1863,8 +1862,6 @@ Resources:
               !Ref Environment,
               idTokenKeyArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -1873,7 +1870,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          USE_NEW_TOKEN_SIGNING_KEYS: false
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -2282,10 +2278,6 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
-          USE_NEW_TOKEN_SIGNING_KEYS: false
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -2507,9 +2499,6 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -3381,9 +3370,6 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -3859,8 +3845,6 @@ Resources:
               !Ref Environment,
               idTokenKeyArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -4102,9 +4086,6 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS: false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !Ref AWS::NoValue
           PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - true
@@ -6523,16 +6504,6 @@ Resources:
                   idTokenKeyArn,
                 ]
           - Fn::If:
-              - ProvisionNewExternalTokenSigningKeys
-              - Sid: AllowNewIdTokenSigningKms
-                Effect: Allow
-                Action:
-                  - kms:Sign
-                  - kms:GetPublicKey
-                Resource:
-                  - !GetAtt OrchExternalTokenEcSigningKmsKey.Arn
-              - !Ref AWS::NoValue
-          - Fn::If:
               - ProvisionNewExternalTokenSigningKeysV2
               - Sid: AllowNewIdTokenSigningKmsV2
                 Effect: Allow
@@ -6560,16 +6531,6 @@ Resources:
                   !Ref Environment,
                   idTokenKeyRsaArn,
                 ]
-          - Fn::If:
-              - ProvisionNewExternalTokenSigningKeys
-              - Sid: AllowNewIdTokenSigningKms
-                Effect: Allow
-                Action:
-                  - kms:Sign
-                  - kms:GetPublicKey
-                Resource:
-                  - !GetAtt OrchExternalTokenRsaSigningKmsKey.Arn
-              - !Ref AWS::NoValue
           - Fn::If:
               - ProvisionNewExternalTokenSigningKeysV2
               - Sid: AllowNewIdTokenSigningKmsV2
@@ -8027,61 +7988,6 @@ Resources:
   #endregion
 
   #region External Token signing keys
-  OrchExternalTokenEcSigningKmsKey:
-    Condition: ProvisionNewExternalTokenSigningKeys
-    Type: AWS::KMS::Key
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      Description: KMS signing key for signing external tokens issued to RPs. This key is specifically for use in signing with EC based algorithms.
-      PendingWindowInDays: 30
-      KeyUsage: SIGN_VERIFY
-      KeySpec: ECC_NIST_P256
-      KeyPolicy:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowIamManagement
-            Effect: Allow
-            Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
-            Action: kms:*
-            Resource: "*"
-
-  OrchExternalTokenEcSigningKmsKeyAlias:
-    Condition: ProvisionNewExternalTokenSigningKeys
-    Type: AWS::KMS::Alias
-    Properties:
-      AliasName: !Sub "alias/${Environment}-orch-external-token-ec-signing-kms-key-alias"
-      TargetKeyId: !Ref OrchExternalTokenEcSigningKmsKey
-
-  OrchExternalTokenRsaSigningKmsKey:
-    Condition: ProvisionNewExternalTokenSigningKeys
-    Type: AWS::KMS::Key
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      Description: KMS signing key for signing external tokens issued to RPs. This key is specifically for use in signing with RSA based algorithms.
-      PendingWindowInDays: 30
-      KeyUsage: SIGN_VERIFY
-      KeySpec: RSA_4096
-      KeyPolicy:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowIamManagement
-            Effect: Allow
-            Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
-            Action: kms:*
-            Resource: "*"
-
-  OrchExternalTokenRsaSigningKmsKeyAlias:
-    Condition: ProvisionNewExternalTokenSigningKeys
-    Type: AWS::KMS::Alias
-    Properties:
-      AliasName: !Sub "alias/${Environment}-orch-external-token-rsa-signing-kms-key-alias"
-      TargetKeyId: !Ref OrchExternalTokenRsaSigningKmsKey
-
-  # KMS Keys to be used
 
   OrchExternalTokenEcSigningKmsKeyV2:
     Condition: ProvisionNewExternalTokenSigningKeysV2
