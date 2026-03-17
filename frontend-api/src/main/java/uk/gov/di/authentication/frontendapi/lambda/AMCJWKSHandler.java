@@ -4,6 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -23,6 +25,7 @@ public class AMCJWKSHandler implements RequestHandler<Object, Void> {
     private final ConfigurationService configurationService;
     private final JwksService jwksService;
     private final S3Client s3Client;
+    private static final Logger LOG = LogManager.getLogger(AMCJWKSHandler.class);
 
     public AMCJWKSHandler() {
         this(ConfigurationService.getInstance());
@@ -75,11 +78,14 @@ public class AMCJWKSHandler implements RequestHandler<Object, Void> {
 
     @Override
     public Void handleRequest(Object event, Context context) {
-        JWK authToAMCJwk = jwksService.getPublicAuthToAMCSigningJwkWithOpaqueId();
-        JWK authToAccountManagementJwk =
+        LOG.info("AMC JWKS lambda invoked");
+        JWK authToAMCSigningJwk = jwksService.getPublicAuthToAMCSigningJwkWithOpaqueId();
+        JWK authToAccountManagementSigningJwk =
                 jwksService.getPublicAuthToAccountManagementSigningJwkWithOpaqueId();
 
-        var jwks = new JWKSet(List.of(authToAMCJwk, authToAccountManagementJwk)).toString(true);
+        var jwks =
+                new JWKSet(List.of(authToAMCSigningJwk, authToAccountManagementSigningJwk))
+                        .toString(true);
 
         s3Client.putObject(
                 PutObjectRequest.builder()
@@ -89,6 +95,7 @@ public class AMCJWKSHandler implements RequestHandler<Object, Void> {
                         .build(),
                 RequestBody.fromString(jwks));
 
+        LOG.info("AMC JWKS has been put to S3");
         return null;
     }
 }
