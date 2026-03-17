@@ -78,7 +78,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
@@ -201,29 +200,6 @@ class TokenServiceTest {
         var parsedToken = SignedJWT.parse(token.getValue());
 
         verify(configurationService).getStorageTokenSigningKeyAlias();
-        assertEquals(3, parsedToken.getParsedParts().length);
-        assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
-        var unixTimestampScrubber = new RegExScrubber("\\d{10}", "1700000000");
-        var guidScrubber = new GuidScrubber();
-        JsonApprovals.verifyAsJson(
-                parsedToken.getJWTClaimsSet().toJSONObject(),
-                new Options(Scrubbers.scrubAll(unixTimestampScrubber, guidScrubber)));
-    }
-
-    @Test
-    void shouldGenerateWellFormedStorageTokenWhenUsingNewSigningKey()
-            throws JOSEException, ParseException {
-        when(configurationService.getCredentialStoreURI())
-                .thenReturn(URI.create(CREDENTIAL_STORE_URI));
-        when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
-        when(configurationService.isUseNewStorageTokenSigningKey()).thenReturn(true);
-        createSignedStorageToken();
-
-        AccessToken token = tokenService.generateStorageToken(FIXED_INTERNAL_PAIRWISE_SUBJECT);
-        var parsedToken = SignedJWT.parse(token.getValue());
-
-        verify(configurationService, never()).getStorageTokenSigningKeyAlias();
-        verify(configurationService).getNextStorageTokenSigningKeyAlias();
         assertEquals(3, parsedToken.getParsedParts().length);
         assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
         var unixTimestampScrubber = new RegExScrubber("\\d{10}", "1700000000");

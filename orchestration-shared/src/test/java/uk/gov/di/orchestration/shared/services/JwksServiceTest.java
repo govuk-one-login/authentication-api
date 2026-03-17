@@ -92,21 +92,6 @@ class JwksServiceTest {
         assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
     }
 
-    @Test
-    void shouldRetrieveNextStorageTokenSigningKeyFromKmsAndParseToJwk() throws Exception {
-        var keyAlias = "test-storage-token-key-alias";
-        when(configurationService.getNextStorageTokenSigningKeyAlias()).thenReturn(keyAlias);
-
-        var publicKey = generateECKey().toPublicKey().getEncoded();
-        mockKmsPublicKeyResponse(publicKey, keyAlias);
-
-        JWK publicKeyJwk = jwksService.getNextPublicStorageTokenJwkWithOpaqueId();
-
-        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(keyAlias)));
-        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
-        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
-    }
-
     private void mockKmsPublicKeyResponse(byte[] publicKey, String alias) {
         mockKmsPublicKeyResponse(publicKey, SigningAlgorithmSpec.ECDSA_SHA_256, alias);
     }

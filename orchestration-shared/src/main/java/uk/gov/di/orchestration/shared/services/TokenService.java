@@ -402,10 +402,7 @@ public class TokenService {
 
     public SignedJWT generateSignedJwtUsingStorageKey(
             JWTClaimsSet claimsSet, Optional<String> type) {
-        String storageTokenSigningKeyAlias =
-                configService.isUseNewStorageTokenSigningKey()
-                        ? configService.getNextStorageTokenSigningKeyAlias()
-                        : configService.getStorageTokenSigningKeyAlias();
+        String storageTokenSigningKeyAlias = configService.getStorageTokenSigningKeyAlias();
 
         return generateSignedJWT(claimsSet, type, JWSAlgorithm.ES256, storageTokenSigningKeyAlias);
     }

@@ -406,22 +406,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public String getNextStorageTokenSigningKeyAlias() {
-        return System.getenv("NEXT_STORAGE_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public boolean isPublishNextStorageTokenSigningKeyEnabled() {
-        return getFlagOrFalse("PUBLISH_NEXT_STORAGE_TOKEN_SIGNING_KEY");
-    }
-
-    public boolean isUseNewStorageTokenSigningKey() {
-        return getFlagOrFalse("USE_NEXT_STORAGE_TOKEN_SIGNING_KEY");
-    }
-
-    public boolean isPublishOldStorageTokenSigningKeyEnabled() {
-        return getFlagOrTrue("PUBLISH_OLD_STORAGE_TOKEN_SIGNING_KEY");
-    }
-
     public Optional<String> getIPVCapacity() {
         try {
             var request =
