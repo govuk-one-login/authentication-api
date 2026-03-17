@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
@@ -50,6 +51,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     private final NotificationService notificationService = mock(NotificationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
     private final ScheduledEvent scheduledEvent = mock(ScheduledEvent.class);
 
@@ -94,7 +96,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         cloudwatchMetricsService,
                         notificationService,
                         auditService,
-                        dynamoService);
+                        dynamoService,
+                        mfaMethodsService);
 
         assertEquals(expectedClassName, handler.getBulkEmailSenderClassName());
     }
@@ -112,7 +115,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                                 cloudwatchMetricsService,
                                 notificationService,
                                 auditService,
-                                dynamoService));
+                                dynamoService,
+                                mfaMethodsService));
     }
 
     @ParameterizedTest

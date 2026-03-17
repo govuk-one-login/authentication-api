@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SystemService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
 import uk.gov.di.authentication.utils.services.bulkemailsender.InternationalNumbersForcedMfaResetBulkEmailSender;
@@ -53,7 +54,8 @@ public class BulkUserEmailSenderScheduledEventHandler
             CloudwatchMetricsService cloudwatchMetricsService,
             NotificationService notificationService,
             AuditService auditService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            MFAMethodsService maybeMfaMethodsService) {
         this(
                 bulkEmailUsersService,
                 configurationService,
@@ -64,7 +66,8 @@ public class BulkUserEmailSenderScheduledEventHandler
                         cloudwatchMetricsService,
                         notificationService,
                         auditService,
-                        dynamoService));
+                        dynamoService,
+                        maybeMfaMethodsService));
     }
 
     public BulkUserEmailSenderScheduledEventHandler(ConfigurationService configurationService) {
@@ -85,7 +88,8 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                 configurationService.getNotifyApiKey())),
                         configurationService),
                 new AuditService(configurationService),
-                new DynamoService(configurationService));
+                new DynamoService(configurationService),
+                null);
     }
 
     public BulkUserEmailSenderScheduledEventHandler() {
@@ -103,7 +107,8 @@ public class BulkUserEmailSenderScheduledEventHandler
             CloudwatchMetricsService cloudwatchMetricsService,
             NotificationService notificationService,
             AuditService auditService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            MFAMethodsService maybeMfaMethodsService) {
         String senderType = configurationService.getBulkUserEmailSenderType();
         return switch (senderType) {
             case "TERMS_AND_CONDITIONS" -> new TermsAndConditionsBulkEmailSender(
@@ -119,7 +124,10 @@ public class BulkUserEmailSenderScheduledEventHandler
                     configurationService,
                     notificationService,
                     auditService,
-                    dynamoService);
+                    dynamoService,
+                    maybeMfaMethodsService != null
+                            ? maybeMfaMethodsService
+                            : new MFAMethodsService(configurationService));
             default -> throw new IllegalArgumentException(
                     "Unknown bulk email sender type: " + senderType);
         };

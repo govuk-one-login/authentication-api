@@ -5,7 +5,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -14,11 +18,14 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -43,6 +50,8 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
     private static final String SUBJECT_ID = "urn:some:subject:identifier";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
+    private static final String DOMESTIC_PHONE_NUMBER = "+447700900000";
 
     private final BulkEmailUsersService bulkEmailUsersService = mock(BulkEmailUsersService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -51,6 +60,7 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
     private final NotificationService notificationService = mock(NotificationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
 
     private InternationalNumbersForcedMfaResetBulkEmailSender sender;
 
@@ -64,7 +74,8 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
                         configurationService,
                         notificationService,
                         auditService,
-                        dynamoService);
+                        dynamoService,
+                        mfaMethodsService);
     }
 
     @Nested
@@ -74,7 +85,8 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
         class Success {
 
             @Test
-            void shouldSendEmailAndUpdateStatus() throws NotificationClientException {
+            void shouldSendEmailAndUpdateStatusWhenNumberInUserProfile()
+                    throws NotificationClientException {
                 when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
                 when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
                 when(dynamoService.getOrGenerateSalt(any())).thenReturn(SALT);
@@ -82,7 +94,8 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
                         new UserProfile()
                                 .withSubjectID(SUBJECT_ID)
                                 .withEmail(EMAIL)
-                                .withSalt(ByteBuffer.wrap(SALT));
+                                .withSalt(ByteBuffer.wrap(SALT))
+                                .withPhoneNumber(INTERNATIONAL_PHONE_NUMBER);
                 when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
                         .thenReturn(Optional.of(userProfile));
                 var expectedSubjectId =
@@ -92,6 +105,67 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
 
                 sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
 
+                assertSuccessfulSendingMessage(expectedSubjectId);
+            }
+
+            @Test
+            void shouldSendEmailAndUpdateStatusWhenNumberInUserCredentials()
+                    throws NotificationClientException {
+                when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+                when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+                when(dynamoService.getOrGenerateSalt(any())).thenReturn(SALT);
+                var userProfile =
+                        new UserProfile()
+                                .withSubjectID(SUBJECT_ID)
+                                .withEmail(EMAIL)
+                                .withSalt(ByteBuffer.wrap(SALT))
+                                .withPhoneNumber(DOMESTIC_PHONE_NUMBER)
+                                .withMfaMethodsMigrated(true);
+                var userCredentials = new UserCredentials().withEmail(EMAIL);
+                var internationalMfaMethod =
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                INTERNATIONAL_PHONE_NUMBER,
+                                PriorityIdentifier.DEFAULT,
+                                "mfa-id");
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(Optional.of(userProfile));
+                when(dynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+                when(mfaMethodsService.getMfaMethods(userProfile, userCredentials, true))
+                        .thenReturn(Result.success(List.of(internationalMfaMethod)));
+                var expectedSubjectId =
+                        ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                        userProfile, INTERNAL_SECTOR_URI, dynamoService)
+                                .getValue();
+
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+                assertSuccessfulSendingMessage(expectedSubjectId);
+            }
+
+            @Test
+            void shouldNotSendAuditEventWhenEmailSendingDisabled() {
+                when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(false);
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withSubjectID(SUBJECT_ID)
+                                                .withEmail(EMAIL)
+                                                .withPhoneNumber(INTERNATIONAL_PHONE_NUMBER)));
+
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+                verifyNoInteractions(auditService);
+                verifyNoInteractions(notificationService);
+                verify(bulkEmailUsersService, times(1))
+                        .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+                verifyNoMoreInteractions(bulkEmailUsersService);
+            }
+
+            private void assertSuccessfulSendingMessage(String expectedSubjectId)
+                    throws NotificationClientException {
                 verify(notificationService)
                         .sendEmail(
                                 EMAIL,
@@ -117,10 +191,28 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
                                                         .INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL
                                                         .name())));
             }
+        }
+
+        @Nested
+        class Validation {
 
             @Test
-            void shouldNotSendAuditEventWhenEmailSendingDisabled() {
-                when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(false);
+            void shouldSetNoInternationalNumberWhenDomesticPhoneAndNotMigrated() {
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withSubjectID(SUBJECT_ID)
+                                                .withEmail(EMAIL)
+                                                .withPhoneNumber(DOMESTIC_PHONE_NUMBER)));
+
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+                assertFailedValidation();
+            }
+
+            @Test
+            void shouldSetNoInternationalNumberWhenNullPhoneAndNotMigrated() {
                 when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
                         .thenReturn(
                                 Optional.of(
@@ -130,11 +222,81 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
 
                 sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
 
+                assertFailedValidation();
+            }
+
+            @Test
+            void shouldSetNoInternationalNumberWhenMigratedButCredentialsNotFound() {
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withSubjectID(SUBJECT_ID)
+                                                .withEmail(EMAIL)
+                                                .withPhoneNumber(DOMESTIC_PHONE_NUMBER)
+                                                .withMfaMethodsMigrated(true)));
+                when(dynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(null);
+
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+                assertFailedValidation();
+            }
+
+            @Test
+            void shouldSetNoInternationalNumberWhenMigratedButMfaMethodsRetrieveFails() {
+                var userProfile =
+                        new UserProfile()
+                                .withSubjectID(SUBJECT_ID)
+                                .withEmail(EMAIL)
+                                .withPhoneNumber(DOMESTIC_PHONE_NUMBER)
+                                .withMfaMethodsMigrated(true);
+                var userCredentials = new UserCredentials().withEmail(EMAIL);
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(Optional.of(userProfile));
+                when(dynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+                when(mfaMethodsService.getMfaMethods(userProfile, userCredentials, true))
+                        .thenReturn(
+                                Result.failure(
+                                        MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
+
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+                assertFailedValidation();
+            }
+
+            @Test
+            void shouldSetNoInternationalNumberWhenMigratedButNoInternationalInMfaMethods() {
+                var userProfile =
+                        new UserProfile()
+                                .withSubjectID(SUBJECT_ID)
+                                .withEmail(EMAIL)
+                                .withPhoneNumber(DOMESTIC_PHONE_NUMBER)
+                                .withMfaMethodsMigrated(true);
+                var userCredentials = new UserCredentials().withEmail(EMAIL);
+                var domesticMfaMethod =
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                DOMESTIC_PHONE_NUMBER,
+                                PriorityIdentifier.DEFAULT,
+                                "mfa-id");
+                when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                        .thenReturn(Optional.of(userProfile));
+                when(dynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+                when(mfaMethodsService.getMfaMethods(userProfile, userCredentials, true))
+                        .thenReturn(Result.success(List.of(domesticMfaMethod)));
+
+                sender.validateAndSendMessage(SUBJECT_ID, BulkEmailUserSendMode.PENDING);
+
+                assertFailedValidation();
+            }
+
+            private void assertFailedValidation() {
+                verify(bulkEmailUsersService, times(1))
+                        .updateUserStatus(SUBJECT_ID, BulkEmailStatus.NO_INTERNATIONAL_NUMBER);
+                verifyNoMoreInteractions(bulkEmailUsersService);
                 verifyNoInteractions(auditService);
                 verifyNoInteractions(notificationService);
-                verify(bulkEmailUsersService, times(1))
-                        .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
-                verifyNoMoreInteractions(bulkEmailUsersService);
             }
         }
 
@@ -163,7 +325,8 @@ class InternationalNumbersForcedMfaResetBulkEmailSenderTest {
                                 Optional.of(
                                         new UserProfile()
                                                 .withSubjectID(SUBJECT_ID)
-                                                .withEmail(EMAIL)));
+                                                .withEmail(EMAIL)
+                                                .withPhoneNumber(INTERNATIONAL_PHONE_NUMBER)));
                 doThrow(new NotificationClientException("error"))
                         .when(notificationService)
                         .sendEmail(anyString(), anyMap(), any(), anyString());
