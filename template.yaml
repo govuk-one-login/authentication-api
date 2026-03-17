@@ -342,11 +342,7 @@ Globals:
     Timeout: 30
     Runtime: java17
     Architectures:
-      - !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          architecture,
-        ]
+      - !FindInMap [EnvironmentConfiguration, !Ref Environment, architecture]
     KmsKeyArn: !GetAtt MainKmsKey.Arn
     PermissionsBoundary: !If
       - UsePermissionsBoundary
