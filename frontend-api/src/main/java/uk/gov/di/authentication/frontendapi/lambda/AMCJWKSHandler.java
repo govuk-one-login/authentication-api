@@ -81,7 +81,7 @@ public class AMCJWKSHandler implements RequestHandler<Object, Void> {
         LOG.info("AMC JWKS lambda invoked");
         JWK authToAMCSigningJwk = jwksService.getPublicAuthToAMCSigningJwkWithOpaqueId();
         JWK authToAccountManagementSigningJwk =
-                jwksService.getPublicAuthToAccountManagementSigningJwkWithOpaqueId();
+                jwksService.getPublicAuthToAMCDownstreamServiceSigningJwkWithOpaqueId();
 
         var jwks =
                 new JWKSet(List.of(authToAMCSigningJwk, authToAccountManagementSigningJwk))
