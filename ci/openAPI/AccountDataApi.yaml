@@ -15,6 +15,8 @@ paths:
         schema:
           type: string
     get:
+      security:
+        - authorise-access-token: []
       x-amazon-apigateway-integration:
         type: "aws_proxy"
         httpMethod: "POST"
@@ -50,6 +52,8 @@ paths:
                     code: 5000
                     message: "Internal server error"
     post:
+      security:
+        - authorise-access-token: []
       x-amazon-apigateway-integration:
         type: "aws_proxy"
         httpMethod: "POST"
@@ -141,6 +145,8 @@ paths:
         schema:
           type: string
     patch:
+      security:
+        - authorise-access-token: []
       x-amazon-apigateway-integration:
         type: "aws_proxy"
         httpMethod: "POST"
@@ -194,6 +200,8 @@ paths:
                     code: 5000
                     message: "Internal server error"
     delete:
+      security:
+        - authorise-access-token: []
       x-amazon-apigateway-integration:
         type: "aws_proxy"
         httpMethod: "POST"
@@ -232,6 +240,11 @@ paths:
                     message: "Internal server error"
 
 components:
+  securitySchemes:
+    authorise-access-token:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
   schemas:
     PasskeyAuthenticatorCreate:
       type: object
