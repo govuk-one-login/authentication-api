@@ -175,6 +175,33 @@ Resources:
       FilterPattern: ""
       LogGroupName: !Ref AuthInternalApiExecutionLogGroup
 
+  AuthInternalApiS3ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary: !Ref PermissionsBoundary
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3ReadAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub
+                  - "arn:aws:s3:::${Env}-amc-jwks/.well-known/amc-jwks.json"
+                  - Env:
+                      !If [
+                        UseSubEnvironment,
+                        !Ref SubEnvironment,
+                        !Ref Environment,
+                      ]
+
   AuthInternalApiDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:

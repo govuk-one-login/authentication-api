@@ -76,6 +76,17 @@ public class JwksService {
         return getPublicJWKWithKeyId(deprecatedKeyAlias);
     }
 
+    public JWK getPublicAuthToAMCSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Auth to AMC signing public key");
+        return getPublicJWKWithKeyId(configurationService.getAuthToAMCPrivateSigningKeyAlias());
+    }
+
+    public JWK getPublicAuthToAccountManagementSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Auth to Account Management signing public key");
+        return getPublicJWKWithKeyId(
+                configurationService.getAuthToAccountManagementPrivateSigningKeyAlias());
+    }
+
     private JWK getPublicJWKWithKeyId(String keyId) {
         var jwk =
                 segmentedFunctionCall(

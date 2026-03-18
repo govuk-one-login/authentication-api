@@ -862,6 +862,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("AMC_JOURNEY_OUTCOME_URI", ""));
     }
 
+    public String getAMCJWKSBucketName() {
+        return System.getenv().getOrDefault("AMC_JWKS_BUCKET_NAME", "");
+    }
+
     public boolean isEnhancedAuthCodeProtectionEnabled() {
         return System.getenv()
                 .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
