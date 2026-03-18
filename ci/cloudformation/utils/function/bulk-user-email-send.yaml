@@ -12,6 +12,8 @@ Resources:
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoBulkEmailTablesAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoCredentialReadAccessPolicy
         - !Ref SourceCodeBucketReadAccessPolicy
         - !Ref SecretsManagerNotifyAccessPolicy
         - !Ref EmailCheckResultsTableKmsAccessPolicy
