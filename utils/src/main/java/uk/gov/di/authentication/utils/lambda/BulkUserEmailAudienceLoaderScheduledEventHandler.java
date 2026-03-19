@@ -14,9 +14,11 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
-import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
+import uk.gov.di.authentication.utils.domain.BulkEmailType;
+import uk.gov.di.authentication.utils.services.audienceloader.BulkEmailAudienceLoader;
+import uk.gov.di.authentication.utils.services.audienceloader.InternationalNumbersForcedMfaResetBulkEmailAudienceLoader;
+import uk.gov.di.authentication.utils.services.audienceloader.TermsAndConditionsBulkEmailAudienceLoader;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,9 +34,9 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
     private final BulkEmailUsersService bulkEmailUsersService;
 
-    private final DynamoService dynamoService;
-
     private final ConfigurationService configurationService;
+
+    private final BulkEmailAudienceLoader audienceLoader;
 
     private LambdaInvokerService lambdaInvokerService;
 
@@ -45,25 +47,43 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler(
             BulkEmailUsersService bulkEmailUsersService,
-            DynamoService dynamoService,
             ConfigurationService configurationService,
-            LambdaInvokerService lambdaInvokerService) {
+            LambdaInvokerService lambdaInvokerService,
+            BulkEmailAudienceLoader audienceLoader) {
         this.bulkEmailUsersService = bulkEmailUsersService;
-        this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.lambdaInvokerService = lambdaInvokerService;
+        this.audienceLoader = audienceLoader;
     }
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler(
             ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.lambdaInvokerService = new LambdaInvokerService(configurationService);
+        this.audienceLoader =
+                createAudienceLoader(configurationService, new DynamoService(configurationService));
     }
 
     public void setLambdaInvoker(LambdaInvokerService lambdaInvokerService) {
         this.lambdaInvokerService = lambdaInvokerService;
+    }
+
+    private static BulkEmailAudienceLoader createAudienceLoader(
+            ConfigurationService configurationService, DynamoService dynamoService) {
+        BulkEmailType bulkUserEmailType =
+                BulkEmailType.valueOf(configurationService.getBulkUserEmailType());
+
+        if (bulkUserEmailType == BulkEmailType.TERMS_AND_CONDITIONS_BULK_EMAIL) {
+            return new TermsAndConditionsBulkEmailAudienceLoader(
+                    configurationService, dynamoService);
+        }
+        if (bulkUserEmailType == BulkEmailType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL) {
+            return new InternationalNumbersForcedMfaResetBulkEmailAudienceLoader();
+        }
+
+        throw new UnsupportedOperationException(
+                "Unsupported bulk user email type: " + bulkUserEmailType);
     }
 
     @Override
@@ -77,11 +97,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         Map<String, AttributeValue> exclusiveStartKey = null;
         Long existingCountOfAddedUsers = 0L;
 
-        List<String> includedTermsAndConditions =
-                configurationService.getBulkUserEmailIncludedTermsAndConditions();
-        if (includedTermsAndConditions == null || includedTermsAndConditions.isEmpty()) {
-            throw new IncludedTermsAndConditionsConfigMissingException();
-        }
+        audienceLoader.validateConfig();
 
         if (event.getDetail() != null && event.getDetail().containsKey(LAST_EVALUATED_KEY)) {
             String lastEvaluatedKey = event.getDetail().get(LAST_EVALUATED_KEY).toString();
@@ -108,9 +124,8 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
 
-        dynamoService
-                .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        exclusiveStartKey, includedTermsAndConditions)
+        audienceLoader
+                .loadUsers(exclusiveStartKey)
                 .takeWhile(userProfile -> (currentBatchSize > itemCounter.get()))
                 .forEach(
                         userProfile -> {

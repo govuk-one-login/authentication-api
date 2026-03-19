@@ -224,6 +224,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals(FEATURE_SWITCH_ON);
     }
 
+    public String getBulkUserEmailType() {
+        String value = System.getenv().get("BULK_USER_EMAIL_TYPE");
+        if (value == null || value.isEmpty()) {
+            throw new MissingEnvVariableException("BULK_USER_EMAIL_TYPE");
+        }
+        return value;
+    }
+
     public String getBulkEmailLoaderLambdaName() {
         return System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
     }

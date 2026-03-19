@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.BulkEmailUsersExtension;
+import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler;
 
 import java.time.Clock;
@@ -88,6 +89,11 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                     @Override
                     public boolean isBulkUserEmailEmailSendingEnabled() {
                         return true;
+                    }
+
+                    @Override
+                    public String getBulkUserEmailType() {
+                        return BulkEmailType.TERMS_AND_CONDITIONS_BULK_EMAIL.name();
                     }
 
                     @Override

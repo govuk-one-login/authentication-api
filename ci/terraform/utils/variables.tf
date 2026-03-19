@@ -110,6 +110,11 @@ variable "bulk_user_email_send_schedule_enabled" {
   default = false
 }
 
+variable "bulk_user_email_type" {
+  type    = string
+  default = null
+}
+
 variable "bulk_user_email_included_terms_and_conditions" {
   type    = string
   default = null

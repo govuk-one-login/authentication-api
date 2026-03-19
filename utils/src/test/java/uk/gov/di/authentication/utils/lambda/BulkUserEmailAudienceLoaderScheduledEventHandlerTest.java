@@ -10,9 +10,9 @@ import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
+import uk.gov.di.authentication.utils.services.audienceloader.BulkEmailAudienceLoader;
 
 import java.util.Arrays;
 import java.util.List;
@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -38,11 +39,11 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
     private final BulkEmailUsersService bulkEmailUsersService = mock(BulkEmailUsersService.class);
 
-    private final DynamoService dynamoService = mock(DynamoService.class);
-
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     private final LambdaInvokerService lambdaInvokerService = mock(LambdaInvokerService.class);
+
+    private final BulkEmailAudienceLoader audienceLoader = mock(BulkEmailAudienceLoader.class);
 
     private final ScheduledEvent scheduledEvent = mock(ScheduledEvent.class);
 
@@ -59,24 +60,24 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         bulkUserEmailAudienceLoaderScheduledEventHandler =
                 new BulkUserEmailAudienceLoaderScheduledEventHandler(
                         bulkEmailUsersService,
-                        dynamoService,
                         configurationService,
-                        lambdaInvokerService);
+                        lambdaInvokerService,
+                        audienceLoader);
         when(configurationService.getBulkEmailLoaderLambdaName()).thenReturn(functionName);
+        when(configurationService.getBulkUserEmailType())
+                .thenReturn(BulkEmailType.TERMS_AND_CONDITIONS_BULK_EMAIL.name());
     }
 
     @Test
     void shouldAddOneBulkEmailUser() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
-                .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        null, List.of("1.5", "1.6")))
+        when(audienceLoader.loadUsers(null))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
+        verify(audienceLoader).validateConfig();
         verify(bulkEmailUsersService).addUser(SUBJECT_ID, BulkEmailStatus.PENDING);
     }
 
@@ -84,10 +85,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldNotAddBulkEmailUserWhenMaxLoadAudienceUserCountIsZero() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(0L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
-                .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        null, List.of("1.5", "1.6")))
+        when(audienceLoader.loadUsers(null))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
@@ -99,10 +97,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldAddManyBulkEmailUsers() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
-                .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        null, List.of("1.5", "1.6")))
+        when(audienceLoader.loadUsers(null))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(TEST_SUBJECT_IDS)));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
@@ -118,10 +113,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldAddOnlyMaxLoadAudienceUserCountBulkEmailUsers() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(3L);
-        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
-                .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        null, List.of("1.5", "1.6")))
+        when(audienceLoader.loadUsers(null))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(TEST_SUBJECT_IDS)));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
@@ -133,14 +125,10 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldReinvokeLambdaWithLastSubjectIdAndIncrementedCountWhenNoInitialStartKey() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
-                .thenReturn(List.of("1.5", "1.6"));
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[0], TEST_SUBJECT_IDS[1], TEST_SUBJECT_IDS[2]);
         var userProfiles = testUserProfilesFromSubjectIds(subjectIds);
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        null, List.of("1.5", "1.6")))
-                .thenReturn(userProfiles);
+        when(audienceLoader.loadUsers(null)).thenReturn(userProfiles);
 
         var event = new ScheduledEvent().withDetail(Map.of());
 
@@ -179,8 +167,6 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldReinvokeLambdaWithLastSubjectIdWithInitialStartKeyAndCount() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
-                .thenReturn(List.of("1.5", "1.6"));
 
         var lastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
         var lastEvaluatedKey =
@@ -197,8 +183,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[3], TEST_SUBJECT_IDS[4]);
 
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        lastEvaluatedKey, List.of("1.5", "1.6")))
+        when(audienceLoader.loadUsers(lastEvaluatedKey))
                 .thenReturn(testUserProfilesFromSubjectIds(subjectIds));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(event, mockContext);
@@ -234,16 +219,12 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldNotReinvokeLambdaWhenNoItemsReturned() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
-                .thenReturn(List.of("1.5", "1.6"));
 
         var lastEvaluatedSubjectId = TEST_SUBJECT_IDS[2];
         var lastEvaluatedKey =
-                Map.of("SubjectID", AttributeValue.builder().s(lastEvaluatedSubjectId).build());
+                Map.of("Email", AttributeValue.builder().s(lastEvaluatedSubjectId).build());
 
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        null, List.of("1.5", "1.6")))
-                .thenReturn(Stream.empty());
+        when(audienceLoader.loadUsers(lastEvaluatedKey)).thenReturn(Stream.empty());
 
         when(scheduledEvent.getDetail())
                 .thenReturn(Map.of("lastEvaluatedKey", lastEvaluatedSubjectId));
@@ -261,16 +242,19 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     }
 
     @Test
-    void shouldThrowWhenNoExlcudedTermsAndConditionsConfig() {
+    void shouldThrowWhenValidateConfigFails() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
+        doThrow(new IncludedTermsAndConditionsConfigMissingException())
+                .when(audienceLoader)
+                .validateConfig();
 
         assertThrows(
                 IncludedTermsAndConditionsConfigMissingException.class,
                 () ->
                         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(
                                 scheduledEvent, mockContext),
-                "Excluded terms and conditions configuration is missing");
+                "Included terms and conditions configuration is missing");
 
         verify(bulkEmailUsersService, never()).addUser(SUBJECT_ID, BulkEmailStatus.PENDING);
     }
