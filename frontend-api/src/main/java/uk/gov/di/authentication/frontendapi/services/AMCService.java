@@ -23,9 +23,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkException;
-import uk.gov.di.authentication.frontendapi.entity.amc.AMCDownstreamScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
-import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
@@ -40,8 +38,6 @@ import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -61,67 +57,6 @@ public class AMCService {
         this.configurationService = configurationService;
         this.nowClock = nowClock;
         this.jwtService = jwtService;
-    }
-
-    public Result<JwtFailureReason, String> buildAuthorizationUrl(
-            String internalPairwiseSubject,
-            AMCScope amcScope,
-            AuthSessionItem authSessionItem,
-            String publicSubject,
-            String amcRedirectUri,
-            List<AccessTokenConfig> accessTokenConfigs) {
-        LOG.info("Building AMC authorization URL");
-
-        return createTransportJWT(
-                        internalPairwiseSubject,
-                        amcScope,
-                        amcRedirectUri,
-                        authSessionItem,
-                        publicSubject,
-                        accessTokenConfigs)
-                .map(
-                        requestJWT -> {
-                            AuthorizationRequest authRequest =
-                                    new AuthorizationRequest.Builder(
-                                                    new ResponseType(ResponseType.Value.CODE),
-                                                    new ClientID(
-                                                            configurationService.getAMCClientId()))
-                                            .endpointURI(configurationService.getAMCAuthorizeURI())
-                                            .requestObject(requestJWT)
-                                            .build();
-                            String authorizationUrl = authRequest.toURI().toString();
-                            LOG.info("AMC authorization URL created");
-                            return authorizationUrl;
-                        });
-    }
-
-    public Result<JwtFailureReason, TokenRequest> buildTokenRequest(String authCode) {
-        var clientAssertionJwt = buildClientAssertionJwt();
-        var keyId = configurationService.getAuthToAMCTransportJWTSigningKey();
-        var signedJWTResult = signJWT(clientAssertionJwt.toJWTClaimsSet(), keyId);
-        return signedJWTResult.map(
-                signedJWT ->
-                        new TokenRequest(
-                                configurationService.getAMCTokenEndpointURI(),
-                                new PrivateKeyJWT(signedJWT),
-                                new AuthorizationCodeGrant(
-                                        new AuthorizationCode(authCode),
-                                        URI.create(configurationService.getAMCSfadRedirectURI()))));
-    }
-
-    public Result<JourneyOutcomeError, HTTPResponse> requestJourneyOutcome(
-            UserInfoRequest userInfoRequest, Map<String, String> additionalAmcHeaders) {
-        try {
-            var request = userInfoRequest.toHTTPRequest();
-            additionalAmcHeaders.forEach(request::setHeader);
-            var response = request.send();
-            if (!response.indicatesSuccess()) {
-                return Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME);
-            }
-            return Result.success(response);
-        } catch (IOException e) {
-            return Result.failure(JourneyOutcomeError.IO_EXCEPTION);
-        }
     }
 
     private Result<JwtFailureReason, SignedJWT> signJWT(JWTClaimsSet jwtClaims, String keyId) {
@@ -155,109 +90,18 @@ public class AMCService {
         }
     }
 
-    private Result<JwtFailureReason, EncryptedJWT> createTransportJWT(
+    private Result<JwtFailureReason, BearerAccessToken> createAccessToken(
             String internalPairwiseSubject,
-            AMCScope amcScope,
-            String amcRedirectUri,
-            AuthSessionItem authSessionItem,
-            String publicSubject,
-            List<AccessTokenConfig> accessTokenConfigs) {
-        Date issueTime = nowClock.now();
-        // TODO: Check this value
-        Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
-
-        return createAccessTokenClaimsMap(
-                        accessTokenConfigs,
-                        internalPairwiseSubject,
-                        authSessionItem,
-                        issueTime,
-                        expiryDate)
-                .flatMap(
-                        accessTokenMap -> {
-                            var claimsBuilder =
-                                    new JWTClaimsSet.Builder()
-                                            .issuer(configurationService.getAuthIssuerClaim())
-                                            .claim(
-                                                    "client_id",
-                                                    configurationService.getAMCClientId())
-                                            .audience(
-                                                    configurationService
-                                                            .getAuthToAMCPublicAudience())
-                                            .claim("response_type", "code")
-                                            .claim("redirect_uri", amcRedirectUri)
-                                            .claim("scope", amcScope.getValue())
-                                            .claim("state", new State().getValue())
-                                            .jwtID(UUID.randomUUID().toString())
-                                            .issueTime(issueTime)
-                                            .notBeforeTime(issueTime)
-                                            .expirationTime(expiryDate)
-                                            .subject(internalPairwiseSubject)
-                                            .claim("email", authSessionItem.getEmailAddress())
-                                            .claim("public_sub", publicSubject);
-
-                            accessTokenMap.forEach(
-                                    (claimName, accessToken) ->
-                                            claimsBuilder.claim(claimName, accessToken.getValue()));
-
-                            return signJWT(
-                                    claimsBuilder.build(),
-                                    configurationService.getAuthToAMCTransportJWTSigningKey());
-                        })
-                .flatMap(
-                        signedJWT -> {
-                            try {
-                                RSAPublicKey publicKey =
-                                        JWK.parseFromPEMEncodedObjects(
-                                                        configurationService
-                                                                .getAuthToAMCPublicEncryptionKey())
-                                                .toRSAKey()
-                                                .toRSAPublicKey();
-                                return encryptJWT(signedJWT, publicKey);
-                            } catch (JOSEException e) {
-                                return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
-                            }
-                        });
-    }
-
-    private Result<JwtFailureReason, Map<String, BearerAccessToken>> createAccessTokenClaimsMap(
-            List<AccessTokenConfig> configs,
-            String internalPairwiseSubject,
+            AMCScope scope,
             AuthSessionItem authSessionItem,
             Date issueTime,
             Date expiryDate) {
-        var accessTokens = new HashMap<String, BearerAccessToken>();
 
-        for (AccessTokenConfig config : configs) {
-            var result =
-                    createAccessToken(
-                            internalPairwiseSubject,
-                            config.scope(),
-                            authSessionItem,
-                            issueTime,
-                            expiryDate,
-                            config.audience());
-
-            if (result.isFailure()) {
-                return Result.failure(result.getFailure());
-            }
-
-            accessTokens.put(config.accessTokenName(), result.getSuccess());
-        }
-        return Result.success(accessTokens);
-    }
-
-    private Result<JwtFailureReason, BearerAccessToken> createAccessToken(
-            String internalPairwiseSubject,
-            AMCDownstreamScope scope,
-            AuthSessionItem authSessionItem,
-            Date issueTime,
-            Date expiryDate,
-            String audience) {
         var claims =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scope.getValue())
                         .issuer(configurationService.getAuthIssuerClaim())
-                        .audience(audience)
+                        .audience(configurationService.getAuthToAMAPIAudience())
                         .expirationTime(expiryDate)
                         .issueTime(issueTime)
                         .notBeforeTime(issueTime)
@@ -267,13 +111,129 @@ public class AMCService {
                         .jwtID(UUID.randomUUID().toString())
                         .build();
 
-        return signJWT(claims, configurationService.getAuthToAMCDownstreamServiceSigningKey())
+        return signJWT(
+                        claims,
+                        configurationService.getAuthToAccountManagementPrivateSigningKeyAlias())
                 .map(
                         signedJWT ->
                                 new BearerAccessToken(
                                         signedJWT.serialize(),
                                         configurationService.getSessionExpiry(),
                                         new Scope(scope.getValue())));
+    }
+
+    private Result<JwtFailureReason, EncryptedJWT> createCompositeJWT(
+            String internalPairwiseSubject,
+            AMCScope scope,
+            AuthSessionItem authSessionItem,
+            String publicSubject) {
+        Date issueTime = nowClock.now();
+        // TODO: Check this value
+        Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
+
+        return createAccessToken(
+                        internalPairwiseSubject, scope, authSessionItem, issueTime, expiryDate)
+                .flatMap(
+                        accessToken -> {
+                            var claims =
+                                    new JWTClaimsSet.Builder()
+                                            .issuer(configurationService.getAuthIssuerClaim())
+                                            .claim(
+                                                    "client_id",
+                                                    configurationService.getAMCClientId())
+                                            .audience(
+                                                    configurationService
+                                                            .getAuthToAMCPublicAudience())
+                                            .claim("response_type", "code")
+                                            .claim(
+                                                    "redirect_uri",
+                                                    configurationService.getAMCRedirectURI())
+                                            .claim("scope", scope.getValue())
+                                            .claim("state", new State().getValue())
+                                            .jwtID(UUID.randomUUID().toString())
+                                            .issueTime(issueTime)
+                                            .notBeforeTime(issueTime)
+                                            .expirationTime(expiryDate)
+                                            .subject(internalPairwiseSubject)
+                                            .claim("email", authSessionItem.getEmailAddress())
+                                            .claim("public_sub", publicSubject)
+                                            .claim(
+                                                    "account_management_api_access_token",
+                                                    accessToken.getValue())
+                                            .build();
+
+                            return signJWT(
+                                            claims,
+                                            configurationService
+                                                    .getAuthToAMCPrivateSigningKeyAlias())
+                                    .flatMap(
+                                            signedJWT -> {
+                                                try {
+                                                    RSAPublicKey publicKey =
+                                                            JWK.parseFromPEMEncodedObjects(
+                                                                            configurationService
+                                                                                    .getAuthToAMCPublicEncryptionKey())
+                                                                    .toRSAKey()
+                                                                    .toRSAPublicKey();
+                                                    return encryptJWT(signedJWT, publicKey);
+                                                } catch (JOSEException e) {
+                                                    return Result.failure(
+                                                            JwtFailureReason.JWT_ENCODING_ERROR);
+                                                }
+                                            });
+                        });
+    }
+
+    public Result<JwtFailureReason, String> buildAuthorizationUrl(
+            String internalPairwiseSubject,
+            AMCScope scope,
+            AuthSessionItem authSessionItem,
+            String publicSubject) {
+        LOG.info("Building AMC authorization URL");
+        return createCompositeJWT(internalPairwiseSubject, scope, authSessionItem, publicSubject)
+                .map(
+                        requestJWT -> {
+                            AuthorizationRequest authRequest =
+                                    new AuthorizationRequest.Builder(
+                                                    new ResponseType(ResponseType.Value.CODE),
+                                                    new ClientID(
+                                                            configurationService.getAMCClientId()))
+                                            .endpointURI(configurationService.getAMCAuthorizeURI())
+                                            .requestObject(requestJWT)
+                                            .build();
+                            String authorizationUrl = authRequest.toURI().toString();
+                            LOG.info("AMC authorization URL created");
+                            return authorizationUrl;
+                        });
+    }
+
+    public Result<JwtFailureReason, TokenRequest> buildTokenRequest(String authCode) {
+        var clientAssertionJwt = buildClientAssertionJwt();
+        var keyId = configurationService.getAuthToAMCPrivateSigningKeyAlias();
+        var signedJWTResult = signJWT(clientAssertionJwt.toJWTClaimsSet(), keyId);
+        return signedJWTResult.map(
+                signedJWT ->
+                        new TokenRequest(
+                                configurationService.getAMCTokenEndpointURI(),
+                                new PrivateKeyJWT(signedJWT),
+                                new AuthorizationCodeGrant(
+                                        new AuthorizationCode(authCode),
+                                        URI.create(configurationService.getAMCRedirectURI()))));
+    }
+
+    public Result<JourneyOutcomeError, HTTPResponse> requestJourneyOutcome(
+            UserInfoRequest userInfoRequest, Map<String, String> additionalAmcHeaders) {
+        try {
+            var request = userInfoRequest.toHTTPRequest();
+            additionalAmcHeaders.forEach(request::setHeader);
+            var response = request.send();
+            if (!response.indicatesSuccess()) {
+                return Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME);
+            }
+            return Result.success(response);
+        } catch (IOException e) {
+            return Result.failure(JourneyOutcomeError.IO_EXCEPTION);
+        }
     }
 
     private JWTAuthenticationClaimsSet buildClientAssertionJwt() {
