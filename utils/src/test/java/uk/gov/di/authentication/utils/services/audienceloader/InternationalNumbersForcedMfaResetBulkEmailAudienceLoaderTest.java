@@ -2,6 +2,7 @@ package uk.gov.di.authentication.utils.services.audienceloader;
 
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.utils.domain.DynamoTable;
@@ -72,6 +73,23 @@ class InternationalNumbersForcedMfaResetBulkEmailAudienceLoaderTest {
         var expectedResult =
                 List.of(new BulkUserEmailAudienceUser("international@example.com", "subject-1"));
         assertEquals(expectedResult, result.toList());
+    }
+
+    @Test
+    void loadUsersShouldReturnMappedStreamForUserCredentials() {
+        DynamoTable tableToScan = DynamoTable.USER_CREDENTIALS;
+        var userCredentials = new UserCredentials();
+        userCredentials.setEmail("creds@example.com");
+        userCredentials.setSubjectID("subject-2");
+
+        when(dynamoService.getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(null))
+                .thenReturn(Stream.of(userCredentials));
+
+        var result = loader.loadUsers(null, tableToScan).toList();
+
+        var expectedResult =
+                List.of(new BulkUserEmailAudienceUser("creds@example.com", "subject-2"));
+        assertEquals(expectedResult, result);
     }
 
     @Test

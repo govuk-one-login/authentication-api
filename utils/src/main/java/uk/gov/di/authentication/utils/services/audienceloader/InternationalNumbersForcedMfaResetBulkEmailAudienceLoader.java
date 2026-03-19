@@ -30,16 +30,18 @@ public class InternationalNumbersForcedMfaResetBulkEmailAudienceLoader
     @Override
     public Stream<BulkUserEmailAudienceUser> loadUsers(
             Map<String, AttributeValue> exclusiveStartKey, DynamoTable tableToScan) {
-        // TODO (future commit): Remove this guard once USER_CREDENTIALS supported.
-        if (tableToScan != DynamoTable.USER_PROFILE) {
-            throw new IllegalArgumentException("Only USER_PROFILE table supported (at present).");
-        }
-
         LOG.info("Loading users from table: {}", tableToScan.name());
 
-        return dynamoService
-                .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(exclusiveStartKey)
-                .map(BulkUserEmailAudienceUser::from);
-    }
+        var sourceStream =
+                switch (tableToScan) {
+                    case USER_PROFILE -> dynamoService
+                            .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
+                                    exclusiveStartKey);
+                    case USER_CREDENTIALS -> dynamoService
+                            .getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(
+                                    exclusiveStartKey);
+                };
 
+        return sourceStream.map(BulkUserEmailAudienceUser::from);
+    }
 }
