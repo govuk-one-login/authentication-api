@@ -59,6 +59,7 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       "dynamodb:PutItem",
       "dynamodb:BatchWriteItem",
       "dynamodb:DeleteItem",
+      "dynamodb:Query"
     ]
     resources = [
       data.aws_dynamodb_table.user_credentials_table[0].arn,
