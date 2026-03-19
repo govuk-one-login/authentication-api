@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.services;
+package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.jwk.JWK;

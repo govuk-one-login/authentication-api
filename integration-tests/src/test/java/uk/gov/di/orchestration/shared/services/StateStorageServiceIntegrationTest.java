@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.services;
+package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.State;
 import org.junit.jupiter.api.BeforeEach;

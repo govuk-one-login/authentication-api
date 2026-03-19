@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.services;
+package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
