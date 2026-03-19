@@ -770,40 +770,15 @@ class MfaHandlerTest {
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes(
             JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
-        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
-        when(codeStorageService.isBlockedForEmail(
-                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(true);
-
-        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(BLOCKED_FOR_SENDING_MFA_OTPS));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
-                        AUDIT_CONTEXT
-                                .withPhoneNumber(AuditService.UNKNOWN)
-                                .withMetadataItem(pair("journey-type", journeyType))
-                                .withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue())));
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @Test
-    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodesUsingDeprecatedPrefix() {
-        var journeyType = JourneyType.SIGN_IN;
-        usingValidSession();
-        var codeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(MFAMethodType.SMS, journeyType);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-        when(codeStorageService.isBlockedForEmail(
-                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(true);
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                        0,
+                                        java.time.Instant.now().plusSeconds(300),
+                                        false)));
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);

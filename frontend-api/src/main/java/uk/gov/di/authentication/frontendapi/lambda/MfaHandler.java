@@ -48,6 +48,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.EMAIL_HAS_NO_USER_PROFILE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
@@ -255,6 +256,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(
                         400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
             }
+            if (canSendSmsResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+                return generateApiGatewayProxyErrorResponse(400, BLOCKED_FOR_SENDING_MFA_OTPS);
+            }
 
             auditContext = auditContext.withPhoneNumber(phoneNumber);
 
@@ -361,20 +366,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         var deprecatedCodeRequestType =
                 CodeRequestType.getDeprecatedCodeRequestTypeString(
                         MFA_SMS.getMfaMethodType(), journeyType);
-
-        if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
-        }
-        if (codeStorageService.isBlockedForEmail(
-                email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
-        }
 
         if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
             LOG.info(
