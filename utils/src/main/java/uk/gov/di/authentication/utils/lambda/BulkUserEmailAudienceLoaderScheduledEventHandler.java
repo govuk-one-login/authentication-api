@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.DynamoTable;
+import uk.gov.di.authentication.utils.helpers.BulkEmailBatchPauseHelper;
 import uk.gov.di.authentication.utils.services.audienceloader.BulkEmailAudienceLoader;
 import uk.gov.di.authentication.utils.services.audienceloader.InternationalNumbersForcedMfaResetBulkEmailAudienceLoader;
 import uk.gov.di.authentication.utils.services.audienceloader.TermsAndConditionsBulkEmailAudienceLoader;
@@ -185,7 +186,10 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
                 totalUsersAddedSoFar,
                 nextTableToScan.name());
 
-            reinvokeLambdaAsync(event);
+        BulkEmailBatchPauseHelper.pauseBetweenBatches(
+                configurationService.getBulkUserEmailAudienceLoadPauseDuration());
+
+        reinvokeLambdaAsync(event);
         return null;
     }
 
@@ -199,7 +203,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
         JSONObject detail = new JSONObject();
         if (event.getDetail().containsKey(LAST_EVALUATED_KEY)) {
-        detail.appendField(LAST_EVALUATED_KEY, event.getDetail().get(LAST_EVALUATED_KEY));
+            detail.appendField(LAST_EVALUATED_KEY, event.getDetail().get(LAST_EVALUATED_KEY));
         }
         detail.appendField(
                 GLOBAL_USERS_ADDED_COUNT, event.getDetail().get(GLOBAL_USERS_ADDED_COUNT));
