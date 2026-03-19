@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.orchestration.ipv.lambda;
 
 import com.google.gson.internal.LinkedTreeMap;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -27,7 +27,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
-import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -52,6 +51,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
+import uk.gov.di.orchestration.testsupport.helpers.SpotQueueAssertionHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -81,12 +81,12 @@ import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSF
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
-import static uk.gov.di.authentication.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 
 class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";

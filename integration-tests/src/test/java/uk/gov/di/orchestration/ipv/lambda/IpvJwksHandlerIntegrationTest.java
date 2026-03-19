@@ -1,8 +1,8 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.orchestration.ipv.lambda;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler;
+import uk.gov.di.authentication.ipv.lambda.IpvJwksHandler;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.text.ParseException;
@@ -14,8 +14,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-class StorageTokenJwkIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-
+class IpvJwksHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
         var configurationService =
@@ -27,7 +26,9 @@ class StorageTokenJwkIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         spotRequestQueue,
                         docAppPrivateKeyJwtSigner,
                         configurationParameters);
-        handler = new StorageTokenJwkHandler(configurationService);
+
+        handler = new IpvJwksHandler(configurationService);
+
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
         assertThat(response, hasStatus(200));

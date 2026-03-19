@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.testsupport.helpers;
+package uk.gov.di.orchestration.testsupport.helpers;
 
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
@@ -13,8 +13,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.authentication.testsupport.matchers.SpotRequestMatcher.hasAccountId;
-import static uk.gov.di.authentication.testsupport.matchers.SpotRequestMatcher.hasSub;
+import static uk.gov.di.orchestration.testsupport.matchers.SpotRequestMatcher.hasAccountId;
+import static uk.gov.di.orchestration.testsupport.matchers.SpotRequestMatcher.hasSub;
 
 public class SpotQueueAssertionHelper {
 

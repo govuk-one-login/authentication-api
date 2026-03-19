@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.testsupport.helpers;
+package uk.gov.di.orchestration.testsupport.helpers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;

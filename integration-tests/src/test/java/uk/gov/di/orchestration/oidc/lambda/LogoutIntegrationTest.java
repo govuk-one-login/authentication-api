@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.orchestration.oidc.lambda;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;

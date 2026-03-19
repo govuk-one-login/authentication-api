@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.orchestration.oidc.lambda;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
@@ -96,13 +96,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX;
-import static uk.gov.di.authentication.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
+import static uk.gov.di.orchestration.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 
 public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
