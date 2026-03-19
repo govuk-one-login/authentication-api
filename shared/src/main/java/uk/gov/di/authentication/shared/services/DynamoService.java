@@ -972,6 +972,34 @@ public class DynamoService implements AuthenticationService {
         return dynamoUserProfileTable.scan(scanRequest).items().stream();
     }
 
+    public Stream<UserProfile> getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
+            Map<String, AttributeValue> exclusiveStartKey) {
+        final String expressionString =
+                "PhoneNumber <> :empty"
+                        + " AND begins_with(PhoneNumber, :plus)"
+                        + " AND NOT begins_with(PhoneNumber, :ukCountryCode)";
+
+        final Map<String, AttributeValue> expressionValues =
+                Map.of(
+                        ":empty", AttributeValue.builder().s("").build(),
+                        ":plus", AttributeValue.builder().s("+").build(),
+                        ":ukCountryCode", AttributeValue.builder().s("+44").build());
+
+        ScanEnhancedRequest scanRequest =
+                ScanEnhancedRequest.builder()
+                        .addAttributeToProject("SubjectID")
+                        .addAttributeToProject("Email")
+                        .exclusiveStartKey(exclusiveStartKey)
+                        .filterExpression(
+                                Expression.builder()
+                                        .expression(expressionString)
+                                        .expressionValues(expressionValues)
+                                        .build())
+                        .build();
+
+        return dynamoUserProfileTable.scan(scanRequest).items().stream();
+    }
+
     private static String hashPassword(String password) {
         return Argon2EncoderHelper.argon2Hash(password);
     }

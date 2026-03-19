@@ -758,6 +758,82 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void shouldGetUserWithInternationalPhoneNumber() {
+        signUpWithPhoneNumber("domestic@test.com", "1111", "+447700900000");
+        signUpWithPhoneNumber("international@test.com", "2222", "+33612345678");
+        signUpWithPhoneNumber("nophone@test.com", "3333", null);
+
+        var users =
+                dynamoService
+                        .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null)
+                        .toList();
+
+        assertThat(users.size(), equalTo(1));
+        assertThat(users.get(0).getEmail(), equalTo("international@test.com"));
+    }
+
+    @Test
+    void shouldReturnNoUsersWithInternationalNumberWhenAllPhoneNumbersAreDomestic() {
+        signUpWithPhoneNumber("domestic@test.com", "1111", "+447700900000");
+
+        var users =
+                dynamoService.getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null);
+        assertThat(users.count(), equalTo(0L));
+    }
+
+    @Test
+    void shouldExcludeUserProfileWithPhoneNumberNotStartingWithPlus() {
+        signUpWithPhoneNumber("uk-country-code@test.com", "1111", "+447700900000");
+        signUpWithPhoneNumber("no-country-code@test.com", "2222", "07700900000");
+        signUpWithPhoneNumber("international@test.com", "3333", "+33612345678");
+
+        var users =
+                dynamoService
+                        .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null)
+                        .toList();
+
+        assertThat(users.size(), equalTo(1));
+        assertThat(users.get(0).getEmail(), equalTo("international@test.com"));
+    }
+
+    @Test
+    void shouldNotMatchUserProfileScanWhenInternationalNumberIsOnlyInUserCredentialsMfaMethods() {
+        signUpWithMfaMethods(
+                "authapp@test.com",
+                "1111",
+                MFAMethod.authAppMfaMethod(
+                        "credential", true, true, PriorityIdentifier.DEFAULT, "id-1"));
+        signUpWithMfaMethods(
+                "domestic@test.com",
+                "2222",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447700900000", PriorityIdentifier.DEFAULT, "id-2"));
+        signUpWithMfaMethods(
+                "international@test.com",
+                "3333",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+33612345678", PriorityIdentifier.DEFAULT, "id-3"));
+
+        var users =
+                dynamoService.getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null);
+        assertThat(users.count(), equalTo(0L));
+    }
+
+    @Test
+    void shouldExcludeUsersWithEmptyPhoneNumberFromInternationalNumberResults() {
+        signUpWithPhoneNumber("international@test.com", "1111", "+33612345678");
+        signUpWithPhoneNumber("empty@test.com", "2222", "");
+
+        var users =
+                dynamoService
+                        .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null)
+                        .toList();
+
+        assertThat(users.size(), equalTo(1));
+        assertThat(users.get(0).getEmail(), equalTo("international@test.com"));
+    }
+
+    @Test
     void shouldThrowWhenUserNotFoundBySubjectId() {
         setupDynamoWithMultipleUsers();
 
@@ -797,6 +873,13 @@ class DynamoServiceIntegrationTest {
         assertFalse(userProfileAfterUpdate.isMfaMethodsMigrated());
         assertTrue(userProfileAfterUpdate.isPhoneNumberVerified());
         assertEquals(phoneNumber, userProfileAfterUpdate.getPhoneNumber());
+    }
+
+    private void signUpWithPhoneNumber(String email, String subjectId, String phoneNumber) {
+        userStore.signUp(email, "password-1", new Subject(subjectId));
+        if (phoneNumber != null) {
+            userStore.setPhoneNumberAndVerificationStatus(email, phoneNumber, true, true);
+        }
     }
 
     private void setupDynamoWithMultipleUsers() {
