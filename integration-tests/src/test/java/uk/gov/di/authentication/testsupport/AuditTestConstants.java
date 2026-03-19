@@ -13,4 +13,8 @@ public interface AuditTestConstants {
             "extensions.number_of_attempts_user_allowed_to_login";
     String USER_SUPPLIED_EMAIL = "restricted.user_supplied_email";
     String USER_ID_FOR_USER_SUPPLIED_EMAIL = "restricted.user_id_for_user_supplied_email";
+    String EXTENSIONS_JOURNEY_TYPE = "extensions.journey-type";
+    String EXTENSIONS_MFA_TYPE = "extensions.mfa-type";
+    String EXTENSIONS_MFA_METHOD = "extensions.mfa-method";
+    String USER_EMAIL_FIELD = "user.email";
 }

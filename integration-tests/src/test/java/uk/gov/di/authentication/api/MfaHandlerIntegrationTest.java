@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.List;
 import java.util.Map;
@@ -31,9 +32,13 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_EMAIL_FIELD;
 
 class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
@@ -79,7 +84,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationNotificationTypeAndCode(
                     notificationsQueue,
                     USER_PHONE_NUMBER,
@@ -96,7 +108,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
 
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, USER_PHONE_NUMBER, MFA_SMS);
@@ -113,7 +132,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "PASSWORD_RESET_MFA")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, USER_PHONE_NUMBER, MFA_SMS);
         }
@@ -134,7 +160,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REAUTHENTICATION")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, USER_PHONE_NUMBER, MFA_SMS);
         }
@@ -176,7 +209,12 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             assertThat(response, hasStatus(400));
             assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_MFA_OTPS_SENT));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_INVALID_CODE_REQUEST));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_INVALID_CODE_REQUEST)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REAUTHENTICATION")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
@@ -219,7 +257,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, MIGRATED_PHONE_NUMBER_1, MFA_SMS);
         }
@@ -238,7 +283,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "backup")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, MIGRATED_PHONE_NUMBER_2, MFA_SMS);
         }
@@ -257,7 +309,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationNotificationTypeAndCode(
                     notificationsQueue,
                     MIGRATED_PHONE_NUMBER_1,
@@ -276,7 +335,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "PASSWORD_RESET_MFA")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, MIGRATED_PHONE_NUMBER_1, MFA_SMS);
         }
@@ -297,7 +363,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REAUTHENTICATION")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, MIGRATED_PHONE_NUMBER_1, MFA_SMS);
         }
@@ -339,7 +412,12 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             assertThat(response, hasStatus(400));
             assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_MFA_OTPS_SENT));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_INVALID_CODE_REQUEST));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_INVALID_CODE_REQUEST)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REAUTHENTICATION")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
@@ -408,7 +486,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
         }
 
         @Test
@@ -423,7 +508,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
         }
     }
 
