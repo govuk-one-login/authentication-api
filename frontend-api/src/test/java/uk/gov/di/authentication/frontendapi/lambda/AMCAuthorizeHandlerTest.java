@@ -5,9 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
@@ -26,13 +24,11 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -71,65 +67,42 @@ class AMCAuthorizeHandlerTest {
                         authenticationService,
                         authSessionService,
                         amcService);
-        when(configurationService.getAMCSfadRedirectURI())
-                .thenReturn("https://example.com/callback");
-        when(configurationService.getAuthToAMApiAudience())
-                .thenReturn("https://example.com/AmAudience");
-        when(configurationService.getAMCCreatePasskeyRedirectURI())
-                .thenReturn("https://example.com/account-data-callback");
-        when(configurationService.getAuthToAccountDataApiAudience())
-                .thenReturn("https://example.com/ADAPIAudience");
-        when(configurationService.getAMCSfadRedirectURI())
-                .thenReturn("https://example.com/redirectUri");
+
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
     }
 
-    private static Stream<Arguments> amcJourneyTypeAndExpectedScope() {
-        return Stream.of(
-                Arguments.of(AMCJourneyType.SFAD, AMCScope.ACCOUNT_DELETE),
-                Arguments.of(AMCJourneyType.PASSKEY_CREATE, AMCScope.PASSKEY_CREATE));
-    }
-
-    @ParameterizedTest
-    @MethodSource("amcJourneyTypeAndExpectedScope")
-    void shouldReturnAuthorizationUrlOnSuccess(
-            AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
+    @Test
+    void shouldReturnAuthorizationUrlOnSuccess() {
         String expectedUrl = "https://example.com/authorize";
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(amcService.buildAuthorizationUrl(
                         eq(INTERNAL_COMMON_SUBJECT_ID),
-                        eq(expectedAmcScope),
+                        eq(AMCScope.ACCOUNT_DELETE),
                         eq(authSession),
-                        eq(PUBLIC_SUBJECT_ID),
-                        anyString(),
-                        anyList()))
+                        eq(PUBLIC_SUBJECT_ID)))
                 .thenReturn(Result.success(expectedUrl));
 
         var event =
                 ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
                         CommonTestVariables.VALID_HEADERS,
-                        format("{\"journeyType\":\"%s\"}", amcJourneyType));
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
-        var request = new AMCAuthorizeRequest(amcJourneyType);
         APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(event, context, request, userContext);
+                handler.handleRequestWithUserContext(
+                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
         assertEquals(200, result.getStatusCode());
         assertTrue(result.getBody().contains(expectedUrl));
         verify(amcService)
                 .buildAuthorizationUrl(
                         INTERNAL_COMMON_SUBJECT_ID,
-                        expectedAmcScope,
+                        AMCScope.ACCOUNT_DELETE,
                         authSession,
-                        PUBLIC_SUBJECT_ID,
-                        request.amcJourneyType()
-                                .getTransportJwtConfig(configurationService)
-                                .redirectUri(),
-                        request.amcJourneyType().getAccessTokenConfigs(configurationService));
+                        PUBLIC_SUBJECT_ID);
     }
 
     @Test
@@ -154,8 +127,7 @@ class AMCAuthorizeHandlerTest {
     void shouldHandleAllFailureReasons(JwtFailureReason failureReason) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(amcService.buildAuthorizationUrl(
-                        anyString(), any(), any(), anyString(), anyString(), anyList()))
+        when(amcService.buildAuthorizationUrl(anyString(), any(), any(), anyString()))
                 .thenReturn(Result.failure(failureReason));
 
         var event =
