@@ -11,6 +11,8 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.utils.domain.BulkEmailType;
+import uk.gov.di.authentication.utils.domain.DynamoTable;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 import uk.gov.di.authentication.utils.services.audienceloader.BulkEmailAudienceLoader;
 
@@ -29,6 +31,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler.GLOBAL_USERS_ADDED_COUNT;
+import static uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler.LAST_EVALUATED_KEY;
+import static uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler.TABLE_TO_SCAN;
 
 class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
@@ -72,7 +77,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldAddOneBulkEmailUser() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(audienceLoader.loadUsers(null))
+        when(audienceLoader.loadUsers(null, DynamoTable.USER_PROFILE))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
@@ -85,7 +90,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldNotAddBulkEmailUserWhenMaxLoadAudienceUserCountIsZero() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(0L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(audienceLoader.loadUsers(null))
+        when(audienceLoader.loadUsers(null, DynamoTable.USER_PROFILE))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
@@ -97,7 +102,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldAddManyBulkEmailUsers() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(audienceLoader.loadUsers(null))
+        when(audienceLoader.loadUsers(null, DynamoTable.USER_PROFILE))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(TEST_SUBJECT_IDS)));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
@@ -113,7 +118,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldAddOnlyMaxLoadAudienceUserCountBulkEmailUsers() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(3L);
-        when(audienceLoader.loadUsers(null))
+        when(audienceLoader.loadUsers(null, DynamoTable.USER_PROFILE))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(TEST_SUBJECT_IDS)));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
@@ -128,7 +133,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[0], TEST_SUBJECT_IDS[1], TEST_SUBJECT_IDS[2]);
         var userProfiles = testUserProfilesFromSubjectIds(subjectIds);
-        when(audienceLoader.loadUsers(null)).thenReturn(userProfiles);
+        when(audienceLoader.loadUsers(null, DynamoTable.USER_PROFILE)).thenReturn(userProfiles);
 
         var event = new ScheduledEvent().withDetail(Map.of());
 
@@ -148,16 +153,19 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         var expectedLastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
         assertEquals(
                 Map.of(
-                        "lastEvaluatedKey",
+                        LAST_EVALUATED_KEY,
                         expectedLastEvaluatedEmail,
-                        "globalUsersAddedCount",
-                        Integer.toUnsignedLong(subjectIds.size())),
+                        GLOBAL_USERS_ADDED_COUNT,
+                        Integer.toUnsignedLong(subjectIds.size()),
+                        TABLE_TO_SCAN,
+                        DynamoTable.USER_PROFILE),
                 event.getDetail());
         JSONObject detail =
                 new JSONObject()
-                        .appendField("lastEvaluatedKey", expectedLastEvaluatedEmail)
+                        .appendField(LAST_EVALUATED_KEY, expectedLastEvaluatedEmail)
                         .appendField(
-                                "globalUsersAddedCount", Integer.toUnsignedLong(subjectIds.size()));
+                                GLOBAL_USERS_ADDED_COUNT, Integer.toUnsignedLong(subjectIds.size()))
+                        .appendField(TABLE_TO_SCAN, DynamoTable.USER_PROFILE);
         String payloadString = new JSONObject().appendField("detail", detail).toJSONString();
 
         verify(lambdaInvokerService, times(1)).invokeAsyncWithPayload(payloadString, functionName);
@@ -171,19 +179,20 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         var lastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
         var lastEvaluatedKey =
                 Map.of("Email", AttributeValue.builder().s(lastEvaluatedEmail).build());
+        var tableToScan = DynamoTable.USER_PROFILE;
 
         var event =
                 new ScheduledEvent()
                         .withDetail(
                                 Map.of(
-                                        "lastEvaluatedKey",
+                                        LAST_EVALUATED_KEY,
                                         lastEvaluatedEmail,
-                                        "globalUsersAddedCount",
+                                        GLOBAL_USERS_ADDED_COUNT,
                                         2L));
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[3], TEST_SUBJECT_IDS[4]);
 
-        when(audienceLoader.loadUsers(lastEvaluatedKey))
+        when(audienceLoader.loadUsers(lastEvaluatedKey, tableToScan))
                 .thenReturn(testUserProfilesFromSubjectIds(subjectIds));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(event, mockContext);
@@ -201,15 +210,17 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
         Map<String, Object> expectedUpdatedDetailsMap =
                 Map.ofEntries(
-                        Map.entry("lastEvaluatedKey", lastEmail),
-                        Map.entry("globalUsersAddedCount", 4L));
+                        Map.entry(LAST_EVALUATED_KEY, lastEmail),
+                        Map.entry(GLOBAL_USERS_ADDED_COUNT, 4L),
+                        Map.entry(TABLE_TO_SCAN, DynamoTable.USER_PROFILE));
 
         assertEquals(expectedUpdatedDetailsMap, event.getDetail());
 
         JSONObject detail =
                 new JSONObject()
-                        .appendField("lastEvaluatedKey", lastEmail)
-                        .appendField("globalUsersAddedCount", 4L);
+                        .appendField(LAST_EVALUATED_KEY, lastEmail)
+                        .appendField(GLOBAL_USERS_ADDED_COUNT, 4L)
+                        .appendField(TABLE_TO_SCAN, DynamoTable.USER_PROFILE);
         String payloadString = new JSONObject().appendField("detail", detail).toJSONString();
 
         verify(lambdaInvokerService, times(1)).invokeAsyncWithPayload(payloadString, functionName);
@@ -223,11 +234,12 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         var lastEvaluatedSubjectId = TEST_SUBJECT_IDS[2];
         var lastEvaluatedKey =
                 Map.of("Email", AttributeValue.builder().s(lastEvaluatedSubjectId).build());
+        var tableToScan = DynamoTable.USER_PROFILE;
 
-        when(audienceLoader.loadUsers(lastEvaluatedKey)).thenReturn(Stream.empty());
+        when(audienceLoader.loadUsers(lastEvaluatedKey, tableToScan)).thenReturn(Stream.empty());
 
         when(scheduledEvent.getDetail())
-                .thenReturn(Map.of("lastEvaluatedKey", lastEvaluatedSubjectId));
+                .thenReturn(Map.of(LAST_EVALUATED_KEY, lastEvaluatedSubjectId));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 

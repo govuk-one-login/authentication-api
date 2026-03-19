@@ -4,6 +4,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.utils.domain.DynamoTable;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 
 import java.util.List;
@@ -32,7 +33,12 @@ public class TermsAndConditionsBulkEmailAudienceLoader implements BulkEmailAudie
     }
 
     @Override
-    public Stream<UserProfile> loadUsers(Map<String, AttributeValue> exclusiveStartKey) {
+    public Stream<UserProfile> loadUsers(
+            Map<String, AttributeValue> exclusiveStartKey, DynamoTable tableToScan) {
+        if (tableToScan != DynamoTable.USER_PROFILE) {
+            throw new IllegalArgumentException("Only USER_PROFILE table supported.");
+        }
+
         return dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                 exclusiveStartKey, includedTermsAndConditions);
     }
