@@ -1,12 +1,11 @@
 package uk.gov.di.authentication.frontendapi.entity.amc;
 
-public enum AMCScope {
-    ACCOUNT_DELETE("account-delete"),
-    PASSKEY_CREATE("passkey-create");
+public enum AccountManagementScope implements AMCDownstreamScope {
+    ACCOUNT_DELETE("account-delete");
 
     private final String value;
 
-    AMCScope(String value) {
+    AccountManagementScope(String value) {
         this.value = value;
     }
 
