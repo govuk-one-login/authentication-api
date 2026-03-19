@@ -526,6 +526,42 @@ class PermissionDecisionManagerTest {
             assertTrue(result.isFailure());
             assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
         }
+
+        @Test
+        void shouldReturnLockedOutWhenCodeRequestBlockExists() {
+            var userContext = createUserContext(0);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            CodeRequestType.SupportedCodeType.MFA, JourneyType.SIGN_IN);
+            when(codeStorageService.getTTL(
+                            EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
+                    .thenReturn(300L);
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                    lockedOut.forbiddenReason());
+        }
+
+        @Test
+        void shouldReturnStorageErrorWhenCodeStorageServiceThrowsException() {
+            var userContext = createUserContext(0);
+            when(codeStorageService.getTTL(eq(EMAIL), anyString()))
+                    .thenThrow(new RuntimeException("Storage error"));
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isFailure());
+            assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
+        }
     }
 
     @Nested
