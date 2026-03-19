@@ -25,17 +25,11 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcClientId,
             ]
-          AMC_SFAD_REDIRECT_URI:
+          AMC_REDIRECT_URI:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              amcSfadRedirectUri,
-            ]
-          AMC_CREATE_PASSKEY_REDIRECT_URI:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              amcCreatePasskeyRedirectUri,
+              amcRedirectUri,
             ]
           AUTH_ISSUER_CLAIM:
             !FindInMap [
@@ -43,7 +37,7 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               frontendBaseUrl,
             ]
-          AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY: !Sub
+          AUTH_TO_ACCOUNT_MANAGEMENT_PRIVATE_SIGNING_KEY: !Sub
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-management-signing-key
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -53,7 +47,7 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcPublicAudience,
             ]
-          AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY: !Sub
+          AUTH_TO_AMC_PRIVATE_SIGNING_KEY: !Sub
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-amc-signing-key
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -61,20 +55,13 @@ Resources:
             - "{{resolve:secretsmanager:/deploy/${env}/auth_to_amc_public_encryption_key}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          AUTH_TO_ACCOUNT_MANAGEMENT_API_AUDIENCE: !If
+          AUTH_TO_AUTH_AUDIENCE: !If
             - IsNotProduction
             - !If
               - UseSubEnvironment
               - !Sub "https://manage.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://manage.${Environment}.account.gov.uk"
             - "https://manage.account.gov.uk"
-          AUTH_TO_ACCOUNT_DATA_API_AUDIENCE: !!If
-            - IsNotProduction
-            - !If
-              - UseSubEnvironment
-              - !Sub "https://account.${SubEnvironment}.${Environment}.account.gov.uk"
-              - !Sub "https://account.${Environment}.account.gov.uk"
-            - "https://account.account.gov.uk"
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
