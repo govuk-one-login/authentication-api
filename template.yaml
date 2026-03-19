@@ -137,6 +137,8 @@ Conditions:
       ],
     ]
   ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
+  ProvisionNewApiClientRegistryApiKey:
+    !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
 
 Mappings:
   EnvironmentConfiguration:
@@ -5978,7 +5980,7 @@ Resources:
       RetentionInDays: 30
 
   ClientRegistryApiKey:
-    Condition: ProvisionNewApiGateway #TODO: Conditionally deploy only in non-prod
+    Condition: ProvisionNewApiClientRegistryApiKey
     DependsOn:
       - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
     Type: "AWS::ApiGateway::ApiKey"
