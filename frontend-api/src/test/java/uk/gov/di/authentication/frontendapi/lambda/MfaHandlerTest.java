@@ -594,6 +594,41 @@ class MfaHandlerTest {
     }
 
     @Test
+    void shouldReturn500WhenMfaMethodsServiceReturnsAuthAppMfaIdError() {
+        usingValidSession();
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(
+                        Result.failure(
+                                MfaRetrieveFailureReason
+                                        .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP));
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasJsonBody(ErrorResponse.AUTH_APP_MFA_ID_ERROR));
+        verify(sqsClient, never()).send(any());
+    }
+
+    @Test
+    void shouldReturn500WhenMfaMethodsServiceReturnsUnexpectedError() {
+        usingValidSession();
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.failure(MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER));
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasJsonBody(ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
+        verify(sqsClient, never()).send(any());
+    }
+
+    @Test
     void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
         usingValidSession();
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
