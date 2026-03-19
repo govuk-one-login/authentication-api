@@ -1,6 +1,9 @@
 package uk.gov.di.authentication.api;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,6 +31,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -45,6 +51,8 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+
+    private static WireMockServer wireMockServer;
 
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String SECTOR_IDENTIFIER_HOST = "test.com";
@@ -257,6 +265,10 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Nested
     @DisplayName("Forced MFA reset after MFA check")
     class ForcedMFAResetAfterMFACheck {
+        @BeforeEach
+        void setUp() {
+            txmaAuditQueue.clear();
+        }
 
         @Test
         @DisplayName(
@@ -553,6 +565,80 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertTrue(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
 
             assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
+        }
+    }
+
+    @Nested
+    class Passkeys {
+        String accountDataApiBaseUri;
+
+        @BeforeEach
+        void setUp() {
+            wireMockServer =
+                    new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+            wireMockServer.start();
+
+            accountDataApiBaseUri = "http://localhost:" + wireMockServer.port();
+            txmaAuditQueue.clear();
+        }
+
+        @AfterAll
+        static void afterAll() {
+            if (wireMockServer != null) {
+                wireMockServer.stop();
+            }
+        }
+
+        @Test
+        void shouldReturnTheResultOfThePasskeysRetrieveServiceForHasActivePasskey()
+                throws JsonException {
+            handler =
+                    new CheckUserExistsHandler(
+                            supportPasskeysAndTxmaEnabledConfigurationService(
+                                    accountDataApiBaseUri));
+
+            var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.SMS);
+            var publicSubjectId = userStore.getPublicSubjectIdForEmail(TEST_EMAIL_1);
+            var clientSessionId = IdGenerator.generate();
+
+            var passkeysResponseWithActivePasskey =
+                    """
+                    {
+                      "passkeys": [
+                        {
+                          "id": "123456",
+                          "credential": "credential1",
+                          "aaguid": "some-aaguid",
+                          "isAttested": true,
+                          "signCount": 1,
+                          "transports": [],
+                          "isBackupEligible": true,
+                          "isBackedUp": true,
+                          "createdAt": "some-timestamp",
+                          "lastUsedAt": "another-timestamp"
+                        }
+                      ]
+                    }
+                    """;
+            wireMockServer.stubFor(
+                    get(urlPathMatching(
+                                    "/accounts/" + publicSubjectId + "/authenticators/passkeys"))
+                            .willReturn(
+                                    aResponse()
+                                            .withStatus(200)
+                                            .withBody(passkeysResponseWithActivePasskey)));
+
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            constructFrontendHeaders(sessionId, clientSessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+            CheckUserExistsResponse checkUserExistsResponse =
+                    objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+            assertTrue(checkUserExistsResponse.hasActivePasskey());
         }
     }
 
