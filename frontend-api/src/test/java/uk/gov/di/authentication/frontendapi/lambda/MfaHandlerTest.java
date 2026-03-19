@@ -702,6 +702,7 @@ class MfaHandlerTest {
     void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(
             JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
+        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
 
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);

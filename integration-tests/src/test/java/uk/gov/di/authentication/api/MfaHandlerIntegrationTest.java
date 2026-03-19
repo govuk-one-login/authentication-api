@@ -196,6 +196,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 throws Json.JsonException {
             var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
+            authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
 
             aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 
@@ -399,6 +400,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 throws Json.JsonException {
             var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
+            authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
 
             aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 

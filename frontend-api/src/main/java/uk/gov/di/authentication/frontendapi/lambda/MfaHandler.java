@@ -184,15 +184,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
             }
 
-            Optional<ErrorResponse> userHasRequestedTooManyOTPs =
-                    validateCodeRequestAttempts(email, journeyType, userContext);
-
-            if (userHasRequestedTooManyOTPs.isPresent()) {
-                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
-
-                return generateApiGatewayProxyErrorResponse(400, userHasRequestedTooManyOTPs.get());
-            }
-
             if (!userContext.getAuthSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
                 auditService.submitAuditEvent(AUTH_MFA_MISMATCHED_EMAIL, auditContext);
@@ -236,6 +227,21 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             var requestSmsMfaMethod = maybeRequestedSmsMfaMethod.get();
             var phoneNumber = requestSmsMfaMethod.getDestination();
+
+            Optional<ErrorResponse> userHasRequestedTooManyOTPs =
+                    validateCodeRequestAttempts(email, journeyType, userContext);
+
+            if (userHasRequestedTooManyOTPs.isPresent()) {
+                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+
+                return generateApiGatewayProxyErrorResponse(400, userHasRequestedTooManyOTPs.get());
+            }
+
+            if (!internationalSmsSendLimitService.canSendSms(phoneNumber)) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
+            }
+
             auditContext = auditContext.withPhoneNumber(phoneNumber);
 
             LOG.info("Incrementing code request count for {}", journeyType);
@@ -253,11 +259,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
                 return generateApiGatewayProxyErrorResponse(
                         400, thisRequestExceedsMaximumAllowedRequests.get());
-            }
-
-            if (!internationalSmsSendLimitService.canSendSms(phoneNumber)) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
             }
 
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
