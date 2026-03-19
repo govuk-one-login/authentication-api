@@ -32,12 +32,15 @@ import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -104,8 +107,8 @@ class MfaHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
-    private final InternationalSmsSendLimitService internationalSmsSendLimitService =
-            mock(InternationalSmsSendLimitService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private static final int MAX_CODE_RETRIES = 6;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final MFAMethod backupAuthAppMethod =
@@ -204,6 +207,9 @@ class MfaHandlerTest {
                                                 PriorityIdentifier.DEFAULT,
                                                 "set-up-sms-mfa-identifier"))));
 
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+
         handler =
                 new MfaHandler(
                         configurationService,
@@ -215,14 +221,12 @@ class MfaHandlerTest {
                         authSessionService,
                         mfaMethodsService,
                         testUserHelper,
-                        internationalSmsSendLimitService);
+                        permissionDecisionManager);
     }
 
     @Test
     void shouldReturn204ForSuccessfulMfaRequestWhenNonResendCode() throws Json.JsonException {
         usingValidSession();
-
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -262,8 +266,6 @@ class MfaHandlerTest {
 
         List<MFAMethod> mfaMethods = List.of(backupAuthAppMethod, defaultSmsMethod);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
-        when(internationalSmsSendLimitService.canSendSms(PHONE_NUMBER_FOR_DEFAULT_SMS_METHOD))
-                .thenReturn(true);
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -319,8 +321,6 @@ class MfaHandlerTest {
 
         List<MFAMethod> mfaMethods = List.of(backupSmsMethod, defaultSmsMethod);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
-        when(internationalSmsSendLimitService.canSendSms(PHONE_NUMBER_FOR_BACKUP_SMS_METHOD))
-                .thenReturn(true);
 
         var body =
                 format(
@@ -355,8 +355,6 @@ class MfaHandlerTest {
 
         List<MFAMethod> mfaMethods = List.of(backupSmsMethod, defaultSmsMethod);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
-        when(internationalSmsSendLimitService.canSendSms(PHONE_NUMBER_FOR_BACKUP_SMS_METHOD))
-                .thenReturn(true);
 
         var body =
                 format(
@@ -429,8 +427,6 @@ class MfaHandlerTest {
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         usingValidSession();
 
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
-
         var headers = new HashMap<String, String>();
         headers.putAll(VALID_HEADERS);
         headers.remove(TXMA_AUDIT_ENCODED_HEADER);
@@ -464,7 +460,6 @@ class MfaHandlerTest {
     void shouldReturn204ForSuccessfulMfaRequestWhenResendingCode() throws Json.JsonException {
         usingValidSession();
 
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
         when(codeStorageService.getOtpCode(EMAIL.concat(UK_MOBILE_NUMBER), VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
         NotifyRequest verifyPhoneNumberNotifyRequest =
@@ -664,7 +659,6 @@ class MfaHandlerTest {
             authSession.incrementCodeRequestCount(
                     NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
         }
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -687,7 +681,6 @@ class MfaHandlerTest {
                         EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestTypeForBlockedOtpRequestType))
                 .thenReturn(true);
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -702,7 +695,6 @@ class MfaHandlerTest {
     void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(
             JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
 
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
@@ -884,7 +876,6 @@ class MfaHandlerTest {
         usingValidSession();
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -921,7 +912,6 @@ class MfaHandlerTest {
     void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
         usingValidSession();
 
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(CODE));
 
@@ -951,7 +941,6 @@ class MfaHandlerTest {
     void shouldGenerateAndSaveOtpCodeIfExistingOneNotFound() throws Json.JsonException {
         usingValidSession();
 
-        when(internationalSmsSendLimitService.canSendSms(UK_MOBILE_NUMBER)).thenReturn(true);
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.empty());
 
@@ -976,6 +965,22 @@ class MfaHandlerTest {
         assertThat(result, hasStatus(204));
     }
 
+    @Test
+    void shouldReturn500WhenPermissionDecisionManagerReturnsError() {
+        usingValidSession();
+
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        verify(sqsClient, never()).send(any());
+    }
+
     @ParameterizedTest
     @MethodSource("mfaJourneyTypes")
     void shouldReturn400WhenInternationalNumberHasHitSendLimit(JourneyType journeyType) {
@@ -983,8 +988,12 @@ class MfaHandlerTest {
 
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(defaultInternationalSmsMethod)));
-        when(internationalSmsSendLimitService.canSendSms(INTERNATIONAL_PHONE_NUMBER))
-                .thenReturn(false);
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.IndefinitelyLockedOut(
+                                        ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                        0)));
 
         var body =
                 format(
@@ -1008,8 +1017,6 @@ class MfaHandlerTest {
 
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(defaultInternationalSmsMethod)));
-        when(internationalSmsSendLimitService.canSendSms(INTERNATIONAL_PHONE_NUMBER))
-                .thenReturn(true);
 
         var body =
                 format(
@@ -1020,21 +1027,17 @@ class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(internationalSmsSendLimitService).canSendSms(INTERNATIONAL_PHONE_NUMBER);
         verify(sqsClient).send(any());
         verify(codeStorageService).saveOtpCode(any(), any(), anyLong(), any());
     }
 
     @ParameterizedTest
     @MethodSource("mfaJourneyTypes")
-    void shouldReturn204ForDomesticNumberRegardlessOfLimit(JourneyType journeyType)
-            throws Json.JsonException {
+    void shouldReturn204ForDomesticNumber(JourneyType journeyType) throws Json.JsonException {
         usingValidSession();
 
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(defaultSmsMethod)));
-        when(internationalSmsSendLimitService.canSendSms(PHONE_NUMBER_FOR_DEFAULT_SMS_METHOD))
-                .thenReturn(true);
 
         var body =
                 format(
@@ -1045,7 +1048,6 @@ class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(internationalSmsSendLimitService).canSendSms(PHONE_NUMBER_FOR_DEFAULT_SMS_METHOD);
         verify(sqsClient).send(any());
         verify(codeStorageService).saveOtpCode(any(), any(), anyLong(), any());
     }

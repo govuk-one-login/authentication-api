@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
+import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -30,10 +31,12 @@ import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.List;
 import java.util.Locale;
@@ -74,7 +77,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private final AwsSqsClient sqsClient;
     private final MFAMethodsService mfaMethodsService;
     private final TestUserHelper testUserHelper;
-    private final InternationalSmsSendLimitService internationalSmsSendLimitService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public MfaHandler(
             ConfigurationService configurationService,
@@ -86,7 +89,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             TestUserHelper testUserHelper,
-            InternationalSmsSendLimitService internationalSmsSendLimitService) {
+            PermissionDecisionManager permissionDecisionManager) {
         super(MfaRequest.class, configurationService, authenticationService, authSessionService);
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
@@ -94,7 +97,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.sqsClient = sqsClient;
         this.mfaMethodsService = mfaMethodsService;
         this.testUserHelper = testUserHelper;
-        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public MfaHandler(
@@ -112,8 +115,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getSqsEndpointUri());
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
-        this.internationalSmsSendLimitService =
-                new InternationalSmsSendLimitService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     public MfaHandler() {
@@ -128,8 +130,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getSqsEndpointUri());
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
-        this.internationalSmsSendLimitService =
-                new InternationalSmsSendLimitService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     @Override
@@ -237,7 +238,20 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, userHasRequestedTooManyOTPs.get());
             }
 
-            if (!internationalSmsSendLimitService.canSendSms(phoneNumber)) {
+            var permissionContext =
+                    PermissionContext.builder()
+                            .withEmailAddress(email)
+                            .withE164FormattedPhoneNumber(phoneNumber)
+                            .build();
+
+            var canSendSmsResult =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            journeyType, permissionContext);
+            if (canSendSmsResult.isFailure()) {
+                return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                        canSendSmsResult.getFailure());
+            }
+            if (canSendSmsResult.getSuccess() instanceof Decision.IndefinitelyLockedOut) {
                 return generateApiGatewayProxyErrorResponse(
                         400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
             }
