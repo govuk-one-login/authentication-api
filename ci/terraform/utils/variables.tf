@@ -70,7 +70,8 @@ variable "notify_url" {
 variable "notify_template_map" {
   type = map(string)
   default = {
-    TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID = "067548f2-420d-4da9-923f-ec9a941706cf"
+    TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID                   = "067548f2-420d-4da9-923f-ec9a941706cf"
+    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL_TEMPLATE_ID = "fcc5cc49-f896-4887-9ce2-567f93721bc4"
   }
 }
 
@@ -117,6 +118,11 @@ variable "bulk_user_email_included_terms_and_conditions" {
 variable "bulk_user_email_send_mode" {
   type    = string
   default = "PENDING"
+}
+
+variable "bulk_user_email_sender_type" {
+  type    = string
+  default = "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET"
 }
 
 variable "bulk_user_email_send_schedule_expression" {

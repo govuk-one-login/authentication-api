@@ -49,6 +49,10 @@ Resources:
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
             - bulkEmailSendMode
+          BULK_USER_EMAIL_SENDER_TYPE: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailSenderType
           BULK_USER_EMAIL_EMAIL_SENDING_ENABLED: !FindInMap
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]

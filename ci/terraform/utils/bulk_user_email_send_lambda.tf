@@ -54,6 +54,7 @@ resource "aws_lambda_function" "bulk_user_email_send_lambda" {
       BULK_USER_EMAIL_EMAIL_SENDING_ENABLED         = var.bulk_user_email_email_sending_enabled
       BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS = var.bulk_user_email_included_terms_and_conditions
       BULK_USER_EMAIL_SEND_MODE                     = var.bulk_user_email_send_mode
+      BULK_USER_EMAIL_SENDER_TYPE                   = var.bulk_user_email_sender_type
     })
   }
   # checkov:skip=CKV_AWS_116:Adding a DLQ would not be useful as the events cannot be replayed.
