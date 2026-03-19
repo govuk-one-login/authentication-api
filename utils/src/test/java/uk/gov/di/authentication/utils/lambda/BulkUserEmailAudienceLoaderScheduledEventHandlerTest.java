@@ -7,12 +7,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.DynamoTable;
+import uk.gov.di.authentication.utils.entity.BulkUserEmailAudienceUser;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 import uk.gov.di.authentication.utils.services.audienceloader.BulkEmailAudienceLoader;
 
@@ -275,12 +275,12 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         return String.format("%s@example.com", subjectId);
     }
 
-    private Stream<UserProfile> testUserProfilesFromSubjectIds(List<String> subjectIds) {
+    private Stream<BulkUserEmailAudienceUser> testUserProfilesFromSubjectIds(
+            List<String> subjectIds) {
         return subjectIds.stream()
                 .map(
                         subjectId ->
-                                new UserProfile()
-                                        .withSubjectID(subjectId)
-                                        .withEmail(emailFromSubjectId(subjectId)));
+                                new BulkUserEmailAudienceUser(
+                                        emailFromSubjectId(subjectId), subjectId));
     }
 }

@@ -5,7 +5,9 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.utils.domain.DynamoTable;
+import uk.gov.di.authentication.utils.entity.BulkUserEmailAudienceUser;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -31,14 +33,12 @@ class InternationalNumbersForcedMfaResetBulkEmailAudienceLoaderTest {
         DynamoTable tableToScan = DynamoTable.USER_PROFILE;
         var exclusiveStartKey =
                 Map.of("Email", AttributeValue.builder().s("test@example.com").build());
-        var expectedStream = Stream.<UserProfile>empty();
         when(dynamoService.getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
                         exclusiveStartKey))
-                .thenReturn(expectedStream);
+                .thenReturn(Stream.empty());
 
-        var result = loader.loadUsers(exclusiveStartKey, tableToScan);
+        loader.loadUsers(exclusiveStartKey, tableToScan);
 
-        assertEquals(expectedStream, result);
         verify(dynamoService)
                 .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(exclusiveStartKey);
     }
@@ -55,23 +55,23 @@ class InternationalNumbersForcedMfaResetBulkEmailAudienceLoaderTest {
     }
 
     @Test
-    void loadUsersShouldReturnStreamFromDynamoServiceForInternationalNumber() {
+    void loadUsersShouldReturnMappedStreamForUserProfile() {
         DynamoTable tableToScan = DynamoTable.USER_PROFILE;
-
         var userWithInternationalNumber = new UserProfile();
         userWithInternationalNumber.setEmail("international@example.com");
         userWithInternationalNumber.setSubjectID("subject-1");
 
         var exclusiveStartKey =
                 Map.of("SubjectID", AttributeValue.builder().s("subject-0").build());
-        var expectedStream = Stream.of(userWithInternationalNumber);
         when(dynamoService.getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
                         exclusiveStartKey))
-                .thenReturn(expectedStream);
+                .thenReturn(Stream.of(userWithInternationalNumber));
 
         var result = loader.loadUsers(exclusiveStartKey, tableToScan);
 
-        assertEquals(expectedStream, result);
+        var expectedResult =
+                List.of(new BulkUserEmailAudienceUser("international@example.com", "subject-1"));
+        assertEquals(expectedResult, result.toList());
     }
 
     @Test
@@ -86,12 +86,15 @@ class InternationalNumbersForcedMfaResetBulkEmailAudienceLoaderTest {
         user2.setEmail("user2@example.com");
         user2.setSubjectID("subject-2");
 
-        var expectedStream = Stream.of(user1, user2);
         when(dynamoService.getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null))
-                .thenReturn(expectedStream);
+                .thenReturn(Stream.of(user1, user2));
 
         var result = loader.loadUsers(null, tableToScan);
 
-        assertEquals(expectedStream, result);
+        var expectedResult =
+                List.of(
+                        new BulkUserEmailAudienceUser("user1@example.com", "subject-1"),
+                        new BulkUserEmailAudienceUser("user2@example.com", "subject-2"));
+        assertEquals(expectedResult, result.toList());
     }
 }

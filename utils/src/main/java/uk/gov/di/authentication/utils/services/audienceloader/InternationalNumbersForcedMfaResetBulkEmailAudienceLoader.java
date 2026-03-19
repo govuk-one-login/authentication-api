@@ -3,9 +3,9 @@ package uk.gov.di.authentication.utils.services.audienceloader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.utils.domain.DynamoTable;
+import uk.gov.di.authentication.utils.entity.BulkUserEmailAudienceUser;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -28,7 +28,7 @@ public class InternationalNumbersForcedMfaResetBulkEmailAudienceLoader
     }
 
     @Override
-    public Stream<UserProfile> loadUsers(
+    public Stream<BulkUserEmailAudienceUser> loadUsers(
             Map<String, AttributeValue> exclusiveStartKey, DynamoTable tableToScan) {
         // TODO (future commit): Remove this guard once USER_CREDENTIALS supported.
         if (tableToScan != DynamoTable.USER_PROFILE) {
@@ -37,7 +37,9 @@ public class InternationalNumbersForcedMfaResetBulkEmailAudienceLoader
 
         LOG.info("Loading users from table: {}", tableToScan.name());
 
-        return dynamoService.getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
-                exclusiveStartKey);
+        return dynamoService
+                .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(exclusiveStartKey)
+                .map(BulkUserEmailAudienceUser::from);
     }
+
 }

@@ -138,18 +138,18 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
         audienceLoader
                 .loadUsers(exclusiveStartKey, tableToScan)
-                .takeWhile(userProfile -> (currentBatchSize > itemCounter.get()))
+                .takeWhile(user -> (currentBatchSize > itemCounter.get()))
                 .forEach(
-                        userProfile -> {
+                        user -> {
                             itemCounter.getAndIncrement();
                             bulkEmailUsersService.addUser(
-                                    userProfile.getSubjectID(), BulkEmailStatus.PENDING);
+                                    user.subjectID(), BulkEmailStatus.PENDING);
                             if (itemCounter.get() >= remainingItemsLimit) {
                                 LOG.info(
                                         "Bulk User Email max audience load user count reached: {}. Stopping load.",
                                         itemCounter);
                             }
-                            lastEmail.set(userProfile.getEmail());
+                            lastEmail.set(user.email());
                         });
 
         LOG.info(

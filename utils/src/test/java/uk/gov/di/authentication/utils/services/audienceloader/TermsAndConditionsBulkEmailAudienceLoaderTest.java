@@ -2,10 +2,10 @@ package uk.gov.di.authentication.utils.services.audienceloader;
 
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.utils.domain.DynamoTable;
+import uk.gov.di.authentication.utils.entity.BulkUserEmailAudienceUser;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 
 import java.util.List;
@@ -59,13 +59,13 @@ class TermsAndConditionsBulkEmailAudienceLoaderTest {
         var exclusiveStartKey =
                 Map.of("Email", AttributeValue.builder().s("test@example.com").build());
         var tableToScan = DynamoTable.USER_PROFILE;
-        var expectedStream = Stream.<UserProfile>empty();
         when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         exclusiveStartKey, List.of("1.5", "1.6")))
-                .thenReturn(expectedStream);
+                .thenReturn(Stream.empty());
 
-        var result = loader.loadUsers(exclusiveStartKey, tableToScan);
+        var result = loader.loadUsers(exclusiveStartKey, tableToScan).toList();
 
+        var expectedStream = List.<BulkUserEmailAudienceUser>of();
         assertEquals(expectedStream, result);
         verify(dynamoService)
                 .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
