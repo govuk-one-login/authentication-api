@@ -29,7 +29,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
 
@@ -130,7 +130,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
         byte[] salt = userStore.addSalt(EMAIL);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         return internalCommonSubjectId;
     }
