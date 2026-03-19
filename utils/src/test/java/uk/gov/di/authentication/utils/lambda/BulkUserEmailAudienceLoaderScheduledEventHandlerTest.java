@@ -227,7 +227,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     }
 
     @Test
-    void shouldNotReinvokeLambdaWhenNoItemsReturned() {
+    void shouldNotReinvokeLambdaWhenNoItemsReturnedAndNoNextTable() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
 
@@ -248,6 +248,72 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                         id ->
                                 verify(bulkEmailUsersService, never())
                                         .addUser(id, BulkEmailStatus.PENDING));
+
+        verify(scheduledEvent, never()).setDetail(any());
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
+    }
+
+    @Test
+    void shouldReinvokeWithNextTableWhenNoItemsReturnedAndNextTableExists() {
+        when(configurationService.getBulkUserEmailType())
+                .thenReturn(BulkEmailType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL.name());
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
+
+        var lastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
+        var lastEvaluatedKey =
+                Map.of("Email", AttributeValue.builder().s(lastEvaluatedEmail).build());
+
+        when(audienceLoader.loadUsers(lastEvaluatedKey, DynamoTable.USER_PROFILE))
+                .thenReturn(Stream.empty());
+
+        var event =
+                new ScheduledEvent()
+                        .withDetail(
+                                Map.of(
+                                        LAST_EVALUATED_KEY,
+                                        lastEvaluatedEmail,
+                                        GLOBAL_USERS_ADDED_COUNT,
+                                        5L));
+
+        bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(event, mockContext);
+
+        assertEquals(
+                Map.of(GLOBAL_USERS_ADDED_COUNT, 5L, TABLE_TO_SCAN, DynamoTable.USER_CREDENTIALS),
+                event.getDetail());
+
+        JSONObject detail =
+                new JSONObject()
+                        .appendField(GLOBAL_USERS_ADDED_COUNT, 5L)
+                        .appendField(TABLE_TO_SCAN, DynamoTable.USER_CREDENTIALS);
+        String payloadString = new JSONObject().appendField("detail", detail).toJSONString();
+
+        verify(lambdaInvokerService, times(1)).invokeAsyncWithPayload(payloadString, functionName);
+    }
+
+    @Test
+    void shouldNotReinvokeWhenNoItemsReturnedFromUserCredentialsTable() {
+        when(configurationService.getBulkUserEmailType())
+                .thenReturn(BulkEmailType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL.name());
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
+
+        var lastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
+        var lastEvaluatedKey =
+                Map.of("Email", AttributeValue.builder().s(lastEvaluatedEmail).build());
+
+        when(audienceLoader.loadUsers(lastEvaluatedKey, DynamoTable.USER_CREDENTIALS))
+                .thenReturn(Stream.empty());
+
+        when(scheduledEvent.getDetail())
+                .thenReturn(
+                        Map.of(
+                                LAST_EVALUATED_KEY,
+                                lastEvaluatedEmail,
+                                TABLE_TO_SCAN,
+                                DynamoTable.USER_CREDENTIALS.name()));
+
+        bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
         verify(scheduledEvent, never()).setDetail(any());
         verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());

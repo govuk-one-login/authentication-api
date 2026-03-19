@@ -224,7 +224,17 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
     }
 
     private Optional<DynamoTable> getNextTableToScan(DynamoTable currentTable) {
+        BulkEmailType bulkUserEmailType =
+                BulkEmailType.valueOf(configurationService.getBulkUserEmailType());
+
+        if (bulkUserEmailType == BulkEmailType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL) {
+            if (currentTable != DynamoTable.USER_PROFILE) {
+                return Optional.empty();
+            }
+
+            return Optional.of(DynamoTable.USER_CREDENTIALS);
+        }
+
         return Optional.empty();
     }
-
 }

@@ -62,7 +62,7 @@ data "aws_iam_policy_document" "bulk_user_email_audience_loader_dynamo_read_acce
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.user_profile_kms_key_arn]
+    resources = [local.user_profile_kms_key_arn, local.user_credentials_kms_key_arn]
   }
 }
 
