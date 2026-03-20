@@ -386,7 +386,14 @@ public class TokenService {
     public SignedJWT generateSignedJwtUsingExternalKey(
             JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
         String alias;
-        if (configService.isUseNewV2TokenSigningKeysEnabled()) {
+        if (configService.isUseNewV2TokenSigningKeysEnabledforRotationGoldTest()) {
+            alias =
+                    algorithm == JWSAlgorithm.ES256
+                            ? configService
+                                    .getNextExternalTokenSigningKeyAliasV2forRotationGoldTest()
+                            : configService
+                                    .getNextExternalTokenSigningKeyRsaAliasV2forRotationGoldTest();
+        } else if (configService.isUseNewV2TokenSigningKeysEnabled()) {
             alias =
                     algorithm == JWSAlgorithm.ES256
                             ? configService.getNextExternalTokenSigningKeyAliasV2()

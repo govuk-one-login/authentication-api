@@ -402,6 +402,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("USE_NEW_V2_TOKEN_SIGNING_KEYS");
     }
 
+    public boolean isUseNewV2TokenSigningKeysEnabledforRotationGoldTest() {
+        return getFlagOrFalse("USE_NEW_V2_TOKEN_SIGNING_KEYSforRotationGoldTest");
+    }
+
     public boolean isSingleFactorAccountDeletionEnabled() {
         return getFlagOrFalse("SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED");
     }
