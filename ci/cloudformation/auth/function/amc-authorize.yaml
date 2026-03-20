@@ -68,7 +68,7 @@ Resources:
               - !Sub "https://manage.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://manage.${Environment}.account.gov.uk"
             - "https://manage.account.gov.uk"
-          AUTH_TO_ACCOUNT_DATA_API_AUDIENCE: !!If
+          AUTH_TO_ACCOUNT_DATA_API_AUDIENCE: !If
             - IsNotProduction
             - !If
               - UseSubEnvironment

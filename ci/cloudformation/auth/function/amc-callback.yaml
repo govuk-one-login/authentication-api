@@ -54,11 +54,11 @@ Resources:
               amcPrivateAudience,
             ]
           SESSION_EXPIRY: "3600"
-          AMC_REDIRECT_URI:
+          AMC_SFAD_REDIRECT_URI:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              amcRedirectUri,
+              amcSfadRedirectUri,
             ]
       LoggingConfig:
         LogGroup: !Ref AMCCallbackFunctionLogGroup
