@@ -37,7 +37,7 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcJourneyOutcomeUri,
             ]
-          AUTH_TO_AMC_PRIVATE_SIGNING_KEY: !Sub
+          AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY: !Sub
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-amc-signing-key
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -54,11 +54,11 @@ Resources:
               amcPrivateAudience,
             ]
           SESSION_EXPIRY: "3600"
-          AMC_REDIRECT_URI:
+          AMC_SFAD_REDIRECT_URI:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              amcRedirectUri,
+              amcSfadRedirectUri,
             ]
       LoggingConfig:
         LogGroup: !Ref AMCCallbackFunctionLogGroup

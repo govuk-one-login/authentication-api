@@ -9,6 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
@@ -52,9 +54,8 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @BeforeAll
     static void setupEnvironment() {
-        environment.set("AUTH_TO_AMC_PRIVATE_SIGNING_KEY", amcJwtSigningKey.getKeyId());
-        environment.set(
-                "AUTH_TO_ACCOUNT_MANAGEMENT_PRIVATE_SIGNING_KEY", amcJwtSigningKey.getKeyId());
+        environment.set("AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY", amcJwtSigningKey.getKeyId());
+        environment.set("AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY", amcJwtSigningKey.getKeyId());
         environment.set("AUTH_ISSUER_CLAIM", "https://test.account.gov.uk");
         environment.set("AUTH_TO_AUTH_AUDIENCE", "https://test.account.gov.uk");
         environment.set("AUTH_TO_AMC_PUBLIC_AUDIENCE", "https://manage.account.gov.uk/authorize");
@@ -104,13 +105,14 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         userStore.signUp(USER_EMAIL, "password", new Subject("test-subject-id"));
     }
 
-    @Test
-    void shouldAuthorizeAMCInitiation() throws Exception {
+    @ParameterizedTest
+    @EnumSource(AMCJourneyType.class)
+    void shouldAuthorizeAMCInitiation(AMCJourneyType amcJourneyType) throws Exception {
         handler = new AMCAuthorizeHandler();
 
         var response =
                 makeRequest(
-                        Optional.of(new AMCAuthorizeRequest(AMCJourneyType.SFAD)),
+                        Optional.of(new AMCAuthorizeRequest(amcJourneyType)),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
