@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest;
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 import software.amazon.awssdk.services.sqs.model.QueueDoesNotExistException;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
@@ -84,12 +85,12 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
     public void beforeAll(ExtensionContext context) {
         var queueName =
                 format(
-                        "{0}-{1}",
+                        "{0}-{1}-{2}",
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
-                        queueNameSuffix);
+                        queueNameSuffix,
+                        IdGenerator.generate());
         var truncatedQueueName = queueName.substring(0, Math.min(80, queueName.length()));
-        queueUrl =
-                getQueueUrlFor(truncatedQueueName).orElseGet(() -> createQueue(truncatedQueueName));
+        queueUrl = createQueue(truncatedQueueName);
         sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build());
     }
 

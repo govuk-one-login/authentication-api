@@ -7,18 +7,16 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest;
-import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest;
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
-import software.amazon.awssdk.services.sqs.model.QueueDoesNotExistException;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
@@ -87,24 +85,13 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
     public void beforeAll(ExtensionContext context) {
         var queueName =
                 format(
-                        "{0}-{1}",
+                        "{0}-{1}-{2}",
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
-                        queueNameSuffix);
+                        queueNameSuffix,
+                        IdGenerator.generate());
         var truncatedQueueName = queueName.substring(0, Math.min(80, queueName.length()));
-        queueUrl =
-                getQueueUrlFor(truncatedQueueName).orElseGet(() -> createQueue(truncatedQueueName));
+        queueUrl = createQueue(truncatedQueueName);
         sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build());
-    }
-
-    private Optional<String> getQueueUrlFor(String queueName) {
-        try {
-            return Optional.of(
-                    sqsClient
-                            .getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build())
-                            .toString());
-        } catch (QueueDoesNotExistException ignored) {
-            return Optional.empty();
-        }
     }
 
     private String createQueue(String queueName) {
