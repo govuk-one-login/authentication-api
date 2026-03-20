@@ -46,7 +46,7 @@ class AMCJWKSHandlerTest {
         handler = new AMCJWKSHandler(jwksService, configurationService, s3Client);
         when(configurationService.getAMCJWKSBucketName()).thenReturn("amc-jwks-bucket");
         when(jwksService.getPublicAuthToAMCSigningJwkWithOpaqueId()).thenReturn(authToAMCKey);
-        when(jwksService.getPublicAuthToAMCDownstreamServiceSigningJwkWithOpaqueId())
+        when(jwksService.getPublicAuthToAccountManagementSigningJwkWithOpaqueId())
                 .thenReturn(authToAccountManagementKey);
     }
 
