@@ -116,6 +116,8 @@ Conditions:
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
     ]
+  ProvisionNewExternalTokenSigningKeysV2forRotationGoldTest:
+    !Equals [dev, !Ref Environment]
   PublishNextExternalTokenSigningKeysV2:
     !And [
       !Condition ProvisionNewExternalTokenSigningKeysV2,
@@ -6447,6 +6449,16 @@ Resources:
                 Resource:
                   - !GetAtt OrchExternalTokenEcSigningKmsKeyV2.Arn
               - !Ref AWS::NoValue
+          - Fn::If:
+              - ProvisionNewExternalTokenSigningKeysV2forRotationGoldTest
+              - Sid: AllowNewIdTokenSigningKmsV2forRotationGoldTest
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchExternalTokenEcSigningKmsKeyV2forRotationGoldTest.Arn
+              - !Ref AWS::NoValue
 
   IdTokenKmsRsaAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6474,6 +6486,16 @@ Resources:
                   - kms:GetPublicKey
                 Resource:
                   - !GetAtt OrchExternalTokenRsaSigningKmsKeyV2.Arn
+              - !Ref AWS::NoValue
+          - Fn::If:
+              - ProvisionNewExternalTokenSigningKeysV2forRotationGoldTest
+              - Sid: AllowNewIdTokenSigningKmsV2forRotationGoldTest
+                Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                Resource:
+                  - !GetAtt OrchExternalTokenRsaSigningKmsKeyV2forRotationGoldTest.Arn
               - !Ref AWS::NoValue
 
   DocAppSigningKmsAccessPolicy:
@@ -7962,6 +7984,60 @@ Resources:
     Properties:
       AliasName: !Sub "alias/${Environment}-orch-external-token-rsa-signing-kms-key-alias-v2"
       TargetKeyId: !Ref OrchExternalTokenRsaSigningKmsKeyV2
+
+  OrchExternalTokenEcSigningKmsKeyV2forRotationGoldTest:
+    Condition: ProvisionNewExternalTokenSigningKeysV2forRotationGoldTest
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS signing key for signing external tokens issued to RPs. This key is specifically for use in signing with EC based algorithms.
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  OrchExternalTokenEcSigningKmsKeyAliasV2forRotationGoldTest:
+    Condition: ProvisionNewExternalTokenSigningKeysV2forRotationGoldTest
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-external-token-ec-signing-kms-key-alias-v2-for-rotation-gold-test"
+      TargetKeyId: !Ref OrchExternalTokenEcSigningKmsKeyV2forRotationGoldTest
+
+  OrchExternalTokenRsaSigningKmsKeyV2forRotationGoldTest:
+    Condition: ProvisionNewExternalTokenSigningKeysV2forRotationGoldTest
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS signing key for signing external tokens issued to RPs. This key is specifically for use in signing with RSA based algorithms.
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: RSA_4096
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  OrchExternalTokenRsaSigningKmsKeyAliasV2forRotationGoldTest:
+    Condition: ProvisionNewExternalTokenSigningKeysV2forRotationGoldTest
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-external-token-rsa-signing-kms-key-alias-v2-for-rotation-gold-test"
+      TargetKeyId: !Ref OrchExternalTokenRsaSigningKmsKeyV2forRotationGoldTest
 
   #endregion
 
