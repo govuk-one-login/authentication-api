@@ -10,7 +10,6 @@ on:
       - main
     paths-ignore:
       - "ci/cloudformation/**"
-      - "ci/openAPI/**"
       - "docs/**"
       - "**/README.md"
       - "integration-tests/**"
