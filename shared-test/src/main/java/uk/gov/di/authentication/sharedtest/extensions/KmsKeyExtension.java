@@ -7,10 +7,9 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.model.CreateAliasRequest;
 import software.amazon.awssdk.services.kms.model.CreateKeyRequest;
-import software.amazon.awssdk.services.kms.model.DescribeKeyRequest;
 import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
-import software.amazon.awssdk.services.kms.model.NotFoundException;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
 import java.net.URI;
 
@@ -48,16 +47,15 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
         keyAlias =
                 format(
-                        "alias/{0}-{1}",
+                        "alias/{0}-{1}-{2}",
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
-                        keyAliasSuffix);
+                        keyAliasSuffix,
+                        IdGenerator.generate());
 
-        if (!keyExists(keyAlias)) {
-            if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
-                createEncryptionKey(keyAlias);
-            } else {
-                createTokenSigningKey(keyAlias);
-            }
+        if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
+            createEncryptionKey(keyAlias);
+        } else {
+            createTokenSigningKey(keyAlias);
         }
     }
 
@@ -100,16 +98,6 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         .build();
 
         kms.createAlias(aliasRequest);
-    }
-
-    protected boolean keyExists(String keyAlias) {
-        try {
-            var request = DescribeKeyRequest.builder().keyId(keyAlias).build();
-            kms.describeKey(request);
-            return true;
-        } catch (NotFoundException ignored) {
-            return false;
-        }
     }
 
     public String getKeyAlias() {

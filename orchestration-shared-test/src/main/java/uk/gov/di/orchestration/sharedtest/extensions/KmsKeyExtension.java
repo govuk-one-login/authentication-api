@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.kms.model.DescribeKeyRequest;
 import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.NotFoundException;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 
 import java.net.URI;
 
@@ -52,15 +53,16 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
         keyAlias =
                 format(
-                        "alias/{0}-{1}",
+                        "alias/{0}-{1}-{2}",
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
-                        keyAliasSuffix);
-
+                        keyAliasSuffix,
+                        IdGenerator.generate());
         newKeyAliasV2 =
                 format(
-                        "alias/{0}-{1}",
+                        "alias/{0}-{1}-{2}",
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
-                        newKeyAliasSuffixV2);
+                        newKeyAliasSuffixV2,
+                        IdGenerator.generate());
 
         if (!keyExists(keyAlias)) {
             if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
