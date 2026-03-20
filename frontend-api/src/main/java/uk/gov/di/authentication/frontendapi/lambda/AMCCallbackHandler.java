@@ -80,7 +80,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
 
         LOG.info("Request received to AMCCallbackHandler");
 
-        var requestResult = amcService.buildTokenRequest(request.code());
+        var requestResult = amcService.buildTokenRequest(request.code(), request.usedRedirectUrl());
 
         if (requestResult.isFailure()) {
             var failure = requestResult.getFailure();

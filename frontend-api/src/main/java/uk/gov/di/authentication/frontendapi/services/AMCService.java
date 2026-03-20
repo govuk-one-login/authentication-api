@@ -95,7 +95,8 @@ public class AMCService {
                         });
     }
 
-    public Result<JwtFailureReason, TokenRequest> buildTokenRequest(String authCode) {
+    public Result<JwtFailureReason, TokenRequest> buildTokenRequest(
+            String authCode, String usedRedirectUrl) {
         var clientAssertionJwt = buildClientAssertionJwt();
         var keyId = configurationService.getAuthToAMCTransportJWTSigningKey();
         var signedJWTResult = signJWT(clientAssertionJwt.toJWTClaimsSet(), keyId);
@@ -106,7 +107,7 @@ public class AMCService {
                                 new PrivateKeyJWT(signedJWT),
                                 new AuthorizationCodeGrant(
                                         new AuthorizationCode(authCode),
-                                        URI.create(configurationService.getAMCSfadRedirectURI()))));
+                                        URI.create(usedRedirectUrl))));
     }
 
     public Result<JourneyOutcomeError, HTTPResponse> requestJourneyOutcome(

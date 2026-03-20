@@ -88,7 +88,6 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     static void setupEnvironment() {
         environment.set("AMC_CLIENT_ID", "a client id");
         environment.set("AUTH_TO_AMC_PRIVATE_AUDIENCE", "auth to amc audience");
-        environment.set("AMC_SFAD_REDIRECT_URI", "https://example.com/redirect");
         environment.set("AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY", amcJwtSigningKey.getKeyId());
         environment.set("AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY", amcJwtSigningKey.getKeyId());
         environment.set("AMC_AUTHORIZE_URI", "https://test-amc.account.gov.uk/authorize");
@@ -146,7 +145,9 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         var response =
                 makeRequest(
-                        Optional.of(new AMCCallbackRequest(AUTH_CODE, "state")),
+                        Optional.of(
+                                new AMCCallbackRequest(
+                                        AUTH_CODE, "state", "https://example.com/used-redirect")),
                         requestHeaders,
                         Map.of());
 

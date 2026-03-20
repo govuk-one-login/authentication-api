@@ -107,6 +107,7 @@ class AMCServiceTest {
             (RSAPrivateKey) TEST_KEY_PAIR.getPrivate();
     private AuthSessionItem authSessionItem;
     private static final String AUTH_CODE = "1234";
+    private static final String USED_REDIRECT_URL = "https://signin.account.gov.uk/amc-callback";
     private static final List<AccessTokenConfig> ACCESS_TOKEN_CONFIG =
             List.of(
                     new AccessTokenConfig(
@@ -445,7 +446,6 @@ class AMCServiceTest {
             when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
             when(configurationService.getAuthToAMCPrivateAudience())
                     .thenReturn(AUTH_TO_AMC_PRIVATE_AUDIENCE);
-            when(configurationService.getAMCSfadRedirectURI()).thenReturn(REDIRECT_URI);
             when(configurationService.getAMCTokenEndpointURI()).thenReturn(TOKEN_ENDPOINT_URI);
             signingKeyPair =
                     new ECKeyGenerator(Curve.P_256)
@@ -461,11 +461,12 @@ class AMCServiceTest {
 
             mockJwtSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
 
-            TokenRequest result = amcService.buildTokenRequest(AUTH_CODE).getSuccess();
+            TokenRequest result =
+                    amcService.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL).getSuccess();
 
             var authGrant = (AuthorizationCodeGrant) result.getAuthorizationGrant();
             assertEquals(AUTH_CODE, authGrant.getAuthorizationCode().toString());
-            assertEquals(URI.create(REDIRECT_URI), authGrant.getRedirectionURI());
+            assertEquals(URI.create(USED_REDIRECT_URL), authGrant.getRedirectionURI());
 
             assertEquals(TOKEN_ENDPOINT_URI, result.getEndpointURI());
 
@@ -498,7 +499,8 @@ class AMCServiceTest {
                                     "AWS SDK error when signing JWT",
                                     KmsException.create("Unable to sign", new RuntimeException())));
 
-            Result<JwtFailureReason, TokenRequest> result = amcService.buildTokenRequest(AUTH_CODE);
+            Result<JwtFailureReason, TokenRequest> result =
+                    amcService.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL);
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
