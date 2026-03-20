@@ -128,6 +128,11 @@ Conditions:
         !Equals [integration, !Ref Environment],
       ],
     ]
+  PublishNextExternalTokenSigningKeysV2forRotationGoldTest:
+    !And [
+      !Condition ProvisionNewExternalTokenSigningKeysV2forRotationGoldTest,
+      !Equals [dev, !Ref Environment],
+    ]
   UseNewV2SigningKeys:
     !And [
       !Condition PublishNextExternalTokenSigningKeysV2,
@@ -1844,6 +1849,14 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2forRotationGoldTest
+            - !Ref AWS::NoValue
           USE_NEW_V2_TOKEN_SIGNING_KEYS: !If
             - UseNewV2SigningKeys
             - true
@@ -2256,6 +2269,18 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2forRotationGoldTest
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2forRotationGoldTest
+            - !Ref AWS::NoValue
           USE_NEW_V2_TOKEN_SIGNING_KEYS: !If
             - UseNewV2SigningKeys
             - true
@@ -2476,6 +2501,18 @@ Resources:
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2forRotationGoldTest
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2forRotationGoldTest
             - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
@@ -3335,6 +3372,18 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2forRotationGoldTest
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2forRotationGoldTest
+            - !Ref AWS::NoValue
           DOC_APP_SIGNING_KEY_ALIAS: !Ref OrchDocAppSigningKmsKeyAlias
       Policies:
         - !Ref IdTokenKmsAccessPolicy
@@ -3806,6 +3855,14 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2forRotationGoldTest
+            - !Ref AWS::NoValue
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
@@ -4050,6 +4107,18 @@ Resources:
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
+            - !Ref AWS::NoValue
+          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - true
+            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2forRotationGoldTest
+            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2forRotationGoldTest: !If
+            - PublishNextExternalTokenSigningKeysV2forRotationGoldTest
+            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2forRotationGoldTest
             - !Ref AWS::NoValue
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/

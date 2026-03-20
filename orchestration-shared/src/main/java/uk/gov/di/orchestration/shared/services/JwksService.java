@@ -56,10 +56,22 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getNextExternalTokenSigningKeyAliasV2());
     }
 
+    public JWK getNextPublicTokenJwkWithOpaqueIdV2forRotationGoldTest() {
+        LOG.info("Retrieving next EC public key version 2 forRotationGoldTest");
+        return getPublicJWKWithKeyId(
+                configurationService.getNextExternalTokenSigningKeyAliasV2forRotationGoldTest());
+    }
+
     public JWK getNextPublicTokenRsaJwkWithOpaqueIdV2() {
         LOG.info("Retrieving next RSA public key version 2");
         return getPublicJWKWithKeyId(
                 configurationService.getNextExternalTokenSigningKeyRsaAliasV2());
+    }
+
+    public JWK getNextPublicTokenRsaJwkWithOpaqueIdV2forRotationGoldTest() {
+        LOG.info("Retrieving next RSA public key version 2 forRotationGoldTest");
+        return getPublicJWKWithKeyId(
+                configurationService.getNextExternalTokenSigningKeyRsaAliasV2forRotationGoldTest());
     }
 
     public JWK getPublicDocAppSigningJwkWithOpaqueId() {

@@ -79,6 +79,18 @@ public class JwksHandler
                 }
             }
 
+            if (configurationService
+                    .isPublishNextExternalTokenSigningKeysEnabledV2forRotationGoldTest()) {
+                signingKeys.add(
+                        jwksService.getNextPublicTokenJwkWithOpaqueIdV2forRotationGoldTest());
+
+                if (configurationService.isRsaSigningAvailable()) {
+                    signingKeys.add(
+                            jwksService
+                                    .getNextPublicTokenRsaJwkWithOpaqueIdV2forRotationGoldTest());
+                }
+            }
+
             JWKSet jwkSet = new JWKSet(signingKeys);
 
             LOG.info("Generating JWKs successful response");

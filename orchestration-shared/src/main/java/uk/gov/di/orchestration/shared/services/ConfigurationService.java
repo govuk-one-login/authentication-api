@@ -373,12 +373,24 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2");
     }
 
+    public String getNextExternalTokenSigningKeyAliasV2forRotationGoldTest() {
+        return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2forRotationGoldTest");
+    }
+
     public String getNextExternalTokenSigningKeyRsaAliasV2() {
         return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2");
     }
 
+    public String getNextExternalTokenSigningKeyRsaAliasV2forRotationGoldTest() {
+        return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2forRotationGoldTest");
+    }
+
     public boolean isPublishNextExternalTokenSigningKeysEnabledV2() {
         return getFlagOrFalse("PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2");
+    }
+
+    public boolean isPublishNextExternalTokenSigningKeysEnabledV2forRotationGoldTest() {
+        return getFlagOrFalse("PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2forRotationGoldTest");
     }
 
     public boolean isRsaSigningAvailable() {
