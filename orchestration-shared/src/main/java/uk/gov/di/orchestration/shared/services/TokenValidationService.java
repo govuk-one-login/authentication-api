@@ -60,7 +60,17 @@ public class TokenValidationService {
 
             if (JWSAlgorithm.RS256 == jwt.getHeader().getAlgorithm()
                     && configuration.isRsaSigningAvailable()) {
-                if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
+                if (configuration
+                        .isPublishNextExternalTokenSigningKeysEnabledV2forRotationGoldTest()) {
+                    var oldPublicKey = jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2();
+                    var newV2PublicKey =
+                            jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2forRotationGoldTest();
+                    if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
+                        return jwt.verify(new RSASSAVerifier(newV2PublicKey.toRSAKey()));
+                    } else {
+                        return jwt.verify(new RSASSAVerifier(oldPublicKey.toRSAKey()));
+                    }
+                } else if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
                     var oldPublicKey = jwksService.getPublicTokenRsaJwkWithOpaqueId();
                     var newV2PublicKey = jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2();
                     if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
@@ -74,7 +84,17 @@ public class TokenValidationService {
                                     jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
                 }
             } else {
-                if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
+                if (configuration
+                        .isPublishNextExternalTokenSigningKeysEnabledV2forRotationGoldTest()) {
+                    var oldPublicKey = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
+                    var newV2PublicKey =
+                            jwksService.getNextPublicTokenJwkWithOpaqueIdV2forRotationGoldTest();
+                    if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
+                        return jwt.verify(new ECDSAVerifier(newV2PublicKey.toECKey()));
+                    } else {
+                        return jwt.verify(new ECDSAVerifier(oldPublicKey.toECKey()));
+                    }
+                } else if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
                     var oldPublicKey = jwksService.getPublicTokenJwkWithOpaqueId();
                     var newV2PublicKey = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
                     if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
