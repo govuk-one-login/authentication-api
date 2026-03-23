@@ -28,7 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @PactConsumerTest
-@MockServerConfig(hostInterface = "localhost", port = "1234")
+@MockServerConfig(hostInterface = "localhost", port = "3011")
 public class AccountInterventionsServiceTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final HttpClient httpClient = HttpClient.newHttpClient();

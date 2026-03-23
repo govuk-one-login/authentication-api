@@ -47,7 +47,7 @@ import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.when;
 
 @PactConsumerTest
-@MockServerConfig(hostInterface = "localHost", port = "1234")
+@MockServerConfig(hostInterface = "localHost", port = "3010")
 class IpvTokenTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);

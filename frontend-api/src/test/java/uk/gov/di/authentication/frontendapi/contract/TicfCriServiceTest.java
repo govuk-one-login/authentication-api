@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 @PactConsumerTest
-@MockServerConfig(hostInterface = "localhost", port = "1234")
+@MockServerConfig(hostInterface = "localhost", port = "7890")
 class TicfCriServiceTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
