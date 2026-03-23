@@ -21,7 +21,7 @@ public class LogLineHelper {
         AWS_REQUEST_ID("awsRequestId", false),
         CLIENT_ID("clientId", true),
         CLIENT_NAME("clientName", false),
-        TRACE_ID("traceId", false);
+        TRACE_ID("dt.trace_id", false);
 
         private final String logFieldName;
         private boolean isBase64;
@@ -67,8 +67,9 @@ public class LogLineHelper {
     }
 
     public static void attachTraceId() {
-        // Adapted from
-        // https://docs.dynatrace.com/docs/analyze-explore-automate/logs/lma-log-enrichment#retrieve-span-and-trace-ids
+        // Set the OpenTelemetry trace ID if available.
+        // With Dynatrace Log Enrichment enabled the property will be set automatically,
+        // but we must do it here if we switch to pure OpenTelemetry.
         var spanContext = Span.current().getSpanContext();
         if (spanContext.isValid()) {
             attachLogFieldToLogs(TRACE_ID, spanContext.getTraceId());
