@@ -141,7 +141,7 @@ variable "performance_tuning" {
   default = {
     bulk-user-email-send = {
       memory  = 512
-      timeout = 50
+      timeout = 110
     }
   }
 }

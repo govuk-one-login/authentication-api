@@ -81,6 +81,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.getBulkEmailUserSendMode()).thenReturn("PENDING");
         when(configurationService.getBulkUserEmailBatchSize()).thenReturn(TEST_SUBJECT_IDS.length);
         when(configurationService.getBulkUserEmailTaskTimeoutSeconds()).thenReturn(15);
+        when(configurationService.getBulkUserEmailStopNewRequestsAfterSeconds()).thenReturn(45);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(anyInt(), any(), any()))
                 .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of(), Map.of()));
         when(bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(anyInt(), any(), any()))
@@ -337,5 +338,39 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
         verify(bulkEmailSender, times(3)).validateAndSendMessage(any(), any());
+    }
+
+    @Test
+    void shouldSkipTasksWhenTimeLimitExceeded() {
+        AtomicInteger startedCount = new AtomicInteger(0);
+
+        // Use more tasks than parallelism (10) to ensure some are queued
+        List<String> subjectIds =
+                List.of(
+                        "id-1", "id-2", "id-3", "id-4", "id-5", "id-6", "id-7", "id-8", "id-9",
+                        "id-10", "id-11", "id-12", "id-13", "id-14", "id-15");
+
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(subjectIds.size());
+        when(configurationService.getBulkUserEmailStopNewRequestsAfterSeconds()).thenReturn(1);
+        when(configurationService.getBulkUserEmailTaskTimeoutSeconds()).thenReturn(5);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(
+                        subjectIds.size(), BulkEmailStatus.PENDING, null))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(subjectIds, Map.of()));
+
+        doAnswer(
+                        invocation -> {
+                            startedCount.incrementAndGet();
+                            // Block long enough for time limit to be exceeded
+                            Thread.sleep(2000);
+                            return null;
+                        })
+                .when(bulkEmailSender)
+                .validateAndSendMessage(any(), any());
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        // First 10 tasks start (parallelism), remaining 5 should be skipped due to time limit
+        // being exceeded before they start executing
+        assertEquals(10, startedCount.get());
     }
 }

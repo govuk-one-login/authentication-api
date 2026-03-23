@@ -145,7 +145,10 @@ public class BulkUserEmailSenderScheduledEventHandler
     public Void handleRequest(ScheduledEvent event, Context context) {
 
         LOG.info("Bulk User Email Send has been triggered.");
+        long startTime = System.currentTimeMillis();
         final int bulkUserEmailBatchSize = configurationService.getBulkUserEmailBatchSize();
+        final int stopNewRequestsAfterSeconds =
+                configurationService.getBulkUserEmailStopNewRequestsAfterSeconds();
         final BulkEmailUserSendMode bulkEmailUserSendMode =
                 readBulkEmailUserSendModeConfiguration(
                         configurationService.getBulkEmailUserSendMode());
@@ -167,6 +170,7 @@ public class BulkUserEmailSenderScheduledEventHandler
         List<ForkJoinTask<Void>> allTasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(PARALLELISM);
         AtomicInteger processedCount = new AtomicInteger();
+        AtomicInteger skippedCount = new AtomicInteger();
         AtomicInteger unhandledExceptionCount = new AtomicInteger();
 
         List<String> allUserSubjectIds = new ArrayList<>();
@@ -199,6 +203,12 @@ public class BulkUserEmailSenderScheduledEventHandler
                 allTasks.add(
                         forkJoinPool.submit(
                                 () -> {
+                                    long elapsedSeconds =
+                                            (System.currentTimeMillis() - startTime) / 1000;
+                                    if (elapsedSeconds >= stopNewRequestsAfterSeconds) {
+                                        skippedCount.incrementAndGet();
+                                        return;
+                                    }
                                     try {
                                         bulkEmailSender.validateAndSendMessage(
                                                 subjectId, bulkEmailUserSendMode);
@@ -235,9 +245,10 @@ public class BulkUserEmailSenderScheduledEventHandler
         }
 
         LOG.info(
-                "Bulk user email: completed. Total users: {}, Processed: {}, Unhandled exceptions: {}",
+                "Bulk user email: completed. Total users: {}, Processed: {}, Skipped: {}, Unhandled exceptions: {}",
                 allUserSubjectIds.size(),
                 processedCount.get(),
+                skippedCount.get(),
                 unhandledExceptionCount.get());
         return null;
     }

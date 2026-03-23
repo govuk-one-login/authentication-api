@@ -140,7 +140,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public int getBulkUserEmailTaskTimeoutSeconds() {
         return Integer.parseInt(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_TASK_TIMEOUT_SECONDS", "15"));
+                System.getenv().getOrDefault("BULK_USER_EMAIL_TASK_TIMEOUT_SECONDS", "61"));
+    }
+
+    public int getBulkUserEmailStopNewRequestsAfterSeconds() {
+        return Integer.parseInt(
+                System.getenv()
+                        .getOrDefault("BULK_USER_EMAIL_STOP_NEW_REQUESTS_AFTER_SECONDS", "45"));
     }
 
     public long getBulkUserEmailMaxAudienceLoadUserCount() {

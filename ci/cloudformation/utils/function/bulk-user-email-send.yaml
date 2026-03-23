@@ -9,7 +9,7 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.BulkUserEmailSendHandler::handleRequest
-      Timeout: 50
+      Timeout: 110
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoBulkEmailTablesAccessPolicy
