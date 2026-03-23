@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -16,14 +17,20 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
-import uk.gov.di.authentication.utils.helpers.BulkEmailBatchPauseHelper;
 import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
 import uk.gov.di.authentication.utils.services.bulkemailsender.InternationalNumbersForcedMfaResetBulkEmailSender;
 import uk.gov.di.authentication.utils.services.bulkemailsender.TermsAndConditionsBulkEmailSender;
 import uk.gov.service.notify.NotificationClient;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class BulkUserEmailSenderScheduledEventHandler
         implements RequestHandler<ScheduledEvent, Void> {
@@ -32,6 +39,8 @@ public class BulkUserEmailSenderScheduledEventHandler
             LogManager.getLogger(BulkUserEmailSenderScheduledEventHandler.class);
 
     public static final String DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE = "temporary-failure";
+    private static final int PARALLELISM = 10;
+    private static final int MAX_QUERY_PAGE_SIZE = 100;
 
     private final BulkEmailUsersService bulkEmailUsersService;
     private final ConfigurationService configurationService;
@@ -138,64 +147,118 @@ public class BulkUserEmailSenderScheduledEventHandler
     public Void handleRequest(ScheduledEvent event, Context context) {
 
         LOG.info("Bulk User Email Send has been triggered.");
-        final int bulkUserEmailBatchQueryLimit =
-                configurationService.getBulkUserEmailBatchQueryLimit();
-        final int bulkUserEmailMaxBatchCount = configurationService.getBulkUserEmailMaxBatchCount();
-        final long bulkUserEmailBatchPauseDuration =
-                configurationService.getBulkUserEmailBatchPauseDuration();
+        final int bulkUserEmailBatchSize = configurationService.getBulkUserEmailBatchSize();
         final BulkEmailUserSendMode bulkEmailUserSendMode =
                 readBulkEmailUserSendModeConfiguration(
                         configurationService.getBulkEmailUserSendMode());
 
         LOG.info(
-                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, bulkEmailUserSendMode: {}",
-                bulkUserEmailBatchQueryLimit,
-                bulkUserEmailMaxBatchCount,
-                bulkUserEmailBatchPauseDuration,
+                "Bulk User Email Send configuration - bulkUserEmailBatchSize: {}, bulkEmailUserSendMode: {}",
+                bulkUserEmailBatchSize,
                 bulkEmailUserSendMode);
+
+        if (bulkUserEmailBatchSize <= 0) {
+            LOG.info("Bulk user email batch size is 0, nothing to process.");
+            return null;
+        }
 
         bulkEmailSender.validateConfiguration();
 
         updateTableSizeMetric();
 
-        List<String> userSubjectIdBatch;
-
+        List<String> allUserSubjectIds = new ArrayList<>();
+        Map<String, AttributeValue> lastEvaluatedKey = null;
         int batchCounter = 0;
-        do {
+        boolean hasMoreResults = true;
+        while (allUserSubjectIds.size() < bulkUserEmailBatchSize && hasMoreResults) {
             batchCounter++;
-            userSubjectIdBatch =
-                    getUserIdSubjectBatch(bulkEmailUserSendMode, bulkUserEmailBatchQueryLimit);
+            int queryLimit =
+                    Math.min(
+                            MAX_QUERY_PAGE_SIZE, bulkUserEmailBatchSize - allUserSubjectIds.size());
+
+            var result =
+                    getUserIdSubjectBatchPaginated(
+                            bulkEmailUserSendMode, queryLimit, lastEvaluatedKey);
+
+            allUserSubjectIds.addAll(result.subjectIds());
+            lastEvaluatedKey = result.lastEvaluatedKey();
+            hasMoreResults = lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty();
 
             LOG.info(
-                    "Retrieved user subject ids for batch no: {} no of users: {}",
+                    "Retrieved user subject ids for batch no: {} fetched: {} total: {}",
                     batchCounter,
-                    userSubjectIdBatch.size());
+                    result.subjectIds().size(),
+                    allUserSubjectIds.size());
+        }
 
-            userSubjectIdBatch.forEach(
-                    subjectId ->
-                            bulkEmailSender.validateAndSendMessage(
-                                    subjectId, bulkEmailUserSendMode));
+        ExecutorService executor = Executors.newFixedThreadPool(PARALLELISM);
+        TaskCounters counters = new TaskCounters();
+        int timeoutSeconds = configurationService.getBulkUserEmailTaskTimeoutSeconds();
 
-            BulkEmailBatchPauseHelper.pauseBetweenBatches(bulkUserEmailBatchPauseDuration);
-        } while (!userSubjectIdBatch.isEmpty() && batchCounter < bulkUserEmailMaxBatchCount);
+        List<CompletableFuture<Void>> futures =
+                allUserSubjectIds.stream()
+                        .map(
+                                subjectId ->
+                                        createEmailTask(
+                                                subjectId,
+                                                bulkEmailUserSendMode,
+                                                executor,
+                                                timeoutSeconds,
+                                                counters))
+                        .toList();
 
-        LOG.info("Bulk user email: batch completed.");
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        executor.shutdownNow();
+
+        LOG.info(
+                "Bulk user email: completed. Total users: {}, Processed: {}, Unhandled exceptions: {}, Timed out: {}",
+                allUserSubjectIds.size(),
+                counters.processed().get(),
+                counters.exceptions().get(),
+                counters.timedOut().get());
         return null;
     }
 
-    private List<String> getUserIdSubjectBatch(BulkEmailUserSendMode sendMode, Integer limit) {
-        switch (sendMode) {
-            case PENDING:
-                return bulkEmailUsersService.getNSubjectIdsByStatus(limit, BulkEmailStatus.PENDING);
-            case NOTIFY_ERROR_RETRIES:
-                return bulkEmailUsersService.getNSubjectIdsByStatus(
-                        limit, BulkEmailStatus.ERROR_SENDING_EMAIL);
-            case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES:
-                return bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
-                        limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE);
-            default:
-                throw new UnrecognisedSendModeException(sendMode.getValue());
-        }
+    private BulkEmailUsersService.BulkEmailQueryResult getUserIdSubjectBatchPaginated(
+            BulkEmailUserSendMode sendMode,
+            Integer limit,
+            Map<String, AttributeValue> exclusiveStartKey) {
+        return switch (sendMode) {
+            case PENDING -> bulkEmailUsersService.getNSubjectIdsByStatus(
+                    limit, BulkEmailStatus.PENDING, exclusiveStartKey);
+            case NOTIFY_ERROR_RETRIES -> bulkEmailUsersService.getNSubjectIdsByStatus(
+                    limit, BulkEmailStatus.ERROR_SENDING_EMAIL, exclusiveStartKey);
+            case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES -> bulkEmailUsersService
+                    .getNSubjectIdsByDeliveryReceiptStatus(
+                            limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE, exclusiveStartKey);
+            default -> throw new UnrecognisedSendModeException(sendMode.getValue());
+        };
+    }
+
+    private CompletableFuture<Void> createEmailTask(
+            String subjectId,
+            BulkEmailUserSendMode sendMode,
+            ExecutorService executor,
+            int timeoutSeconds,
+            TaskCounters counters) {
+        return CompletableFuture.runAsync(
+                        () -> {
+                            bulkEmailSender.validateAndSendMessage(subjectId, sendMode);
+                            counters.processed().incrementAndGet();
+                        },
+                        executor)
+                .orTimeout(timeoutSeconds, TimeUnit.SECONDS)
+                .exceptionally(
+                        e -> {
+                            if (e instanceof TimeoutException) {
+                                counters.timedOut().incrementAndGet();
+                                LOG.warn("Task timed out");
+                            } else {
+                                counters.exceptions().incrementAndGet();
+                                LOG.error("Error sending bulk email", e);
+                            }
+                            return null;
+                        });
     }
 
     private void updateTableSizeMetric() {
@@ -210,6 +273,13 @@ public class BulkUserEmailSenderScheduledEventHandler
             return BulkEmailUserSendMode.valueOf(bulkEmailUserSendMode);
         } catch (IllegalArgumentException e) {
             throw new UnrecognisedSendModeException(bulkEmailUserSendMode);
+        }
+    }
+
+    private record TaskCounters(
+            AtomicInteger processed, AtomicInteger timedOut, AtomicInteger exceptions) {
+        TaskCounters() {
+            this(new AtomicInteger(), new AtomicInteger(), new AtomicInteger());
         }
     }
 }

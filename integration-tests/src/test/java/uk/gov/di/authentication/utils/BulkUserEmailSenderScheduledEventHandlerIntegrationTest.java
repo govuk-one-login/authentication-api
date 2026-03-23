@@ -34,6 +34,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
     private static final String INTERNATIONAL_PHONE = "+33612345678";
     private static final String DOMESTIC_PHONE = "+447700900000";
+    private static final int MAX_EXPECTED_EMAILS = 300;
 
     @RegisterExtension
     protected static final BulkEmailUsersExtension bulkEmailUsersExtension =
@@ -92,26 +93,35 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                 equalTo(true));
     }
 
+    private int countByStatus(BulkEmailStatus status) {
+        return bulkEmailUsersService.getNSubjectIdsByStatus(MAX_EXPECTED_EMAILS, status).size();
+    }
+
     private void setupTermsAndConditions(String sendMode) {
-        setupConfig(sendMode, "TERMS_AND_CONDITIONS");
+        setupTermsAndConditions(sendMode, 20);
     }
 
-    private void setupInternationalNumbers(String sendMode) {
-        setupConfig(sendMode, "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET");
-    }
-
-    private void setupConfig(String sendMode, String senderType) {
-        var configuration = configWithSendMode(sendMode, senderType);
+    private void setupTermsAndConditions(String sendMode, int batchSize) {
+        var configuration =
+                configWithSendModeAndBatchSize(sendMode, "TERMS_AND_CONDITIONS", batchSize);
         handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
         bulkEmailUsersService = new BulkEmailUsersService(configuration);
     }
 
-    private int countByStatus(BulkEmailStatus status) {
-        return bulkEmailUsersService.getNSubjectIdsByStatus(100, status).size();
+    private void setupInternationalNumbers(String sendMode) {
+        setupInternationalNumbers(sendMode, 20);
     }
 
-    private static IntegrationTestConfigurationService configWithSendMode(
-            String sendMode, String senderType) {
+    private void setupInternationalNumbers(String sendMode, int batchSize) {
+        var configuration =
+                configWithSendModeAndBatchSize(
+                        sendMode, "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET", batchSize);
+        handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
+        bulkEmailUsersService = new BulkEmailUsersService(configuration);
+    }
+
+    private static IntegrationTestConfigurationService configWithSendModeAndBatchSize(
+            String sendMode, String senderType, int batchSize) {
         SecureRandom secureRandom = new SecureRandom();
         return new IntegrationTestConfigurationService(
                 notificationsQueue,
@@ -142,13 +152,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
             }
 
             @Override
-            public int getBulkUserEmailBatchQueryLimit() {
-                return 5;
-            }
-
-            @Override
-            public int getBulkUserEmailMaxBatchCount() {
-                return 4;
+            public int getBulkUserEmailBatchSize() {
+                return batchSize;
             }
 
             @Override
@@ -405,6 +410,49 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
             assertThat(countByStatus(BulkEmailStatus.NO_INTERNATIONAL_NUMBER), equalTo(2));
             assertTxmaAuditEventsSubmittedWithMatchingNames(
                     txmaAuditQueue, Collections.nCopies(2, AUTH_BULK_EMAIL_SENT));
+        }
+    }
+
+    @Nested
+    class HighVolume {
+
+        @Test
+        void shouldSuccessfullySendMaxExpectedEmailsForTermsAndConditions() {
+            setupTermsAndConditions("PENDING", MAX_EXPECTED_EMAILS);
+
+            for (int i = 1; i <= MAX_EXPECTED_EMAILS; i++) {
+                String subjectId = String.valueOf(i);
+                bulkEmailUsersExtension.addBulkEmailUser(subjectId, BulkEmailStatus.PENDING);
+                userStore.signUp(
+                        "user." + i + "@account.gov.uk",
+                        "password123",
+                        new Subject(subjectId),
+                        "1.0");
+            }
+
+            makeRequest();
+            notifyStub.waitForNumberOfRequests(60, MAX_EXPECTED_EMAILS);
+
+            assertThat(countByStatus(BulkEmailStatus.EMAIL_SENT), equalTo(MAX_EXPECTED_EMAILS));
+        }
+
+        @Test
+        void shouldSuccessfullySendMaxExpectedEmailsForInternationalNumbers() {
+            setupInternationalNumbers("PENDING", MAX_EXPECTED_EMAILS);
+
+            for (int i = 1; i <= MAX_EXPECTED_EMAILS; i++) {
+                String subjectId = String.valueOf(i);
+                bulkEmailUsersExtension.addBulkEmailUser(subjectId, BulkEmailStatus.PENDING);
+                userStore.signUp(
+                        "user." + i + "@account.gov.uk", "password123", new Subject(subjectId));
+                userStore.addVerifiedPhoneNumber(
+                        "user." + i + "@account.gov.uk", INTERNATIONAL_PHONE);
+            }
+
+            makeRequest();
+            notifyStub.waitForNumberOfRequests(60, MAX_EXPECTED_EMAILS);
+
+            assertThat(countByStatus(BulkEmailStatus.EMAIL_SENT), equalTo(MAX_EXPECTED_EMAILS));
         }
     }
 }

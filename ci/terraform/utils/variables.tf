@@ -75,19 +75,9 @@ variable "notify_template_map" {
   }
 }
 
-variable "bulk_user_email_batch_query_limit" {
+variable "bulk_user_email_batch_size" {
   type    = number
-  default = null
-}
-
-variable "bulk_user_email_max_batch_count" {
-  type    = number
-  default = null
-}
-
-variable "bulk_user_email_batch_pause_duration" {
-  type    = number
-  default = null
+  default = 108
 }
 
 variable "bulk_user_email_audience_load_pause_duration" {

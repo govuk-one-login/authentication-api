@@ -48,9 +48,7 @@ resource "aws_lambda_function" "bulk_user_email_send_lambda" {
       TXMA_AUDIT_QUEUE_URL                          = data.aws_sqs_queue.oidc_txma_audit_queue.url
       NOTIFY_API_KEY                                = var.notify_api_key
       NOTIFY_URL                                    = var.notify_url
-      BULK_USER_EMAIL_BATCH_QUERY_LIMIT             = var.bulk_user_email_batch_query_limit
-      BULK_USER_EMAIL_MAX_BATCH_COUNT               = var.bulk_user_email_max_batch_count
-      BULK_USER_EMAIL_BATCH_PAUSE_DURATION          = var.bulk_user_email_batch_pause_duration
+      BULK_USER_EMAIL_BATCH_SIZE                    = var.bulk_user_email_batch_size
       BULK_USER_EMAIL_EMAIL_SENDING_ENABLED         = var.bulk_user_email_email_sending_enabled
       BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS = var.bulk_user_email_included_terms_and_conditions
       BULK_USER_EMAIL_SEND_MODE                     = var.bulk_user_email_send_mode
