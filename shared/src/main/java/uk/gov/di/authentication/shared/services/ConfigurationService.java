@@ -864,10 +864,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("AMC_CREATE_PASSKEY_REDIRECT_URI", "");
     }
 
-    public String getAuthToAMCPublicEncryptionKey() {
-        return System.getenv().getOrDefault("AUTH_TO_AMC_PUBLIC_ENCRYPTION_KEY", "");
-    }
-
     public String getAMCClientId() {
         return System.getenv().getOrDefault("AMC_CLIENT_ID", "");
     }
@@ -905,5 +901,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getAccountDataURI() {
         return System.getenv("ACCOUNT_DATA_API_URI");
+    }
+
+    public URL getAmcJwksUrl() throws MalformedURLException {
+        try {
+            return new URL(System.getenv().getOrDefault("AMC_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid AMC JWKS URL: {}", e.getMessage());
+            throw new MalformedURLException(e.getMessage());
+        }
     }
 }
