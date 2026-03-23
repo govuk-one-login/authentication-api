@@ -16,11 +16,4 @@ cloudwatch_log_retention = 30
 vpc_environment = "dev"
 
 # Sizing
-performance_tuning = {
-  bulk-user-email-send = {
-    memory  = 512
-    timeout = 300
-  }
-}
-
 auth_new_account_id = "653994557586"

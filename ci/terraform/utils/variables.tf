@@ -148,7 +148,12 @@ variable "performance_tuning" {
     timeout : number,
   }))
   description = "A map of performance tuning parameters per lambda"
-  default     = {}
+  default = {
+    bulk-user-email-send = {
+      memory  = 512
+      timeout = 50
+    }
+  }
 }
 
 variable "lambda_log_alarm_error_rate_threshold" {
