@@ -329,7 +329,7 @@ Mappings:
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
       bulkEmailSendScheduleState: ENABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
-      bulkEmailAudienceLoaderScheduleState: ENABLED
+      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 1000
       bulkEmailMaxAudienceLoadUserBatchSize: 100
       bulkEmailBatchQueryLimit: 100
@@ -363,7 +363,7 @@ Mappings:
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
       bulkEmailSendScheduleState: ENABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
-      bulkEmailAudienceLoaderScheduleState: ENABLED
+      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 5000
       bulkEmailMaxAudienceLoadUserBatchSize: 500
       bulkEmailBatchQueryLimit: 200
@@ -397,7 +397,7 @@ Mappings:
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
       bulkEmailSendScheduleState: ENABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
-      bulkEmailAudienceLoaderScheduleState: ENABLED
+      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 10000
       bulkEmailMaxAudienceLoadUserBatchSize: 1000
       bulkEmailBatchQueryLimit: 500
