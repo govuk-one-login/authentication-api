@@ -25,6 +25,8 @@ public class AMCFailureHttpMapper {
                     500, ErrorResponse.AMC_UNKNOWN_JWT_SIGNING_ERROR);
             case UNKNOWN_JWT_ENCRYPTING_ERROR -> new ErrorResponseWithStatus(
                     500, ErrorResponse.AMC_UNKNOWN_JWT_ENCRYPTING_ERROR);
+            case JWKS_RETRIEVAL_ERROR -> new ErrorResponseWithStatus(
+                    500, ErrorResponse.AMC_JWKS_RETRIEVAL_ERROR);
         };
     }
 
