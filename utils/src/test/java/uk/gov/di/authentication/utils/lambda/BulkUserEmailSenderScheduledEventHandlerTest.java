@@ -90,6 +90,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.getBulkEmailUserSendMode()).thenReturn("PENDING");
         when(configurationService.getBulkUserEmailBatchSize()).thenReturn(TEST_SUBJECT_IDS.length);
         when(configurationService.getBulkUserEmailTaskTimeoutSeconds()).thenReturn(15);
+        when(configurationService.getBulkUserEmailStopNewRequestsAfterSeconds()).thenReturn(45);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(anyInt(), any(), any()))
                 .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of(), Map.of()));
         when(bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(anyInt(), any(), any()))
@@ -381,12 +382,25 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
 
     @Test
     void shouldLogCorrectCountersForMixedOutcomes() {
-        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(3);
-        when(configurationService.getBulkUserEmailTaskTimeoutSeconds()).thenReturn(1);
-        when(bulkEmailUsersService.getNSubjectIdsByStatus(3, BulkEmailStatus.PENDING, null))
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(12);
+        when(configurationService.getBulkUserEmailTaskTimeoutSeconds()).thenReturn(2);
+        when(configurationService.getBulkUserEmailStopNewRequestsAfterSeconds()).thenReturn(1);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(12, BulkEmailStatus.PENDING, null))
                 .thenReturn(
                         new BulkEmailUsersService.BulkEmailQueryResult(
-                                List.of("success", "timeout", "exception"), Map.of()));
+                                List.of(
+                                        "ok1",
+                                        "ok2",
+                                        "ok3",
+                                        "ok4",
+                                        "ok5",
+                                        "ok6",
+                                        "ok7",
+                                        "ok8",
+                                        "timeout",
+                                        "exception",
+                                        "skip"),
+                                Map.of()));
 
         doAnswer(
                         invocation -> {
@@ -394,7 +408,10 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                             if ("timeout".equals(subjectId)) {
                                 Thread.sleep(5000);
                             } else if ("exception".equals(subjectId)) {
+                                Thread.sleep(1100);
                                 throw new RuntimeException("Test exception");
+                            } else if (subjectId.startsWith("ok")) {
+                                Thread.sleep(1100);
                             }
                             return null;
                         })
@@ -403,9 +420,40 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
 
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
-        assertThat(logging.events(), hasItem(withMessageContaining("Total users: 3")));
-        assertThat(logging.events(), hasItem(withMessageContaining("Processed: 1")));
+        assertThat(logging.events(), hasItem(withMessageContaining("Total users: 11")));
+        assertThat(logging.events(), hasItem(withMessageContaining("Processed: 8")));
+        assertThat(logging.events(), hasItem(withMessageContaining("Skipped: 1")));
         assertThat(logging.events(), hasItem(withMessageContaining("Unhandled exceptions: 1")));
         assertThat(logging.events(), hasItem(withMessageContaining("Timed out: 1")));
+    }
+
+    @Test
+    void shouldSkipTasksWhenTimeLimitExceeded() {
+        AtomicInteger startedCount = new AtomicInteger(0);
+
+        List<String> subjectIds =
+                List.of(
+                        "id-1", "id-2", "id-3", "id-4", "id-5", "id-6", "id-7", "id-8", "id-9",
+                        "id-10", "id-11", "id-12", "id-13", "id-14", "id-15");
+
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(subjectIds.size());
+        when(configurationService.getBulkUserEmailStopNewRequestsAfterSeconds()).thenReturn(1);
+        when(configurationService.getBulkUserEmailTaskTimeoutSeconds()).thenReturn(5);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(
+                        subjectIds.size(), BulkEmailStatus.PENDING, null))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(subjectIds, Map.of()));
+
+        doAnswer(
+                        invocation -> {
+                            startedCount.incrementAndGet();
+                            Thread.sleep(2000);
+                            return null;
+                        })
+                .when(bulkEmailSender)
+                .validateAndSendMessage(any(), any());
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        assertEquals(10, startedCount.get());
     }
 }

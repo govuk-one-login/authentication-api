@@ -193,7 +193,10 @@ public class BulkUserEmailSenderScheduledEventHandler
 
         ExecutorService executor = Executors.newFixedThreadPool(PARALLELISM);
         TaskCounters counters = new TaskCounters();
-        int timeoutSeconds = configurationService.getBulkUserEmailTaskTimeoutSeconds();
+        long startTime = System.currentTimeMillis();
+        int taskTimeoutSeconds = configurationService.getBulkUserEmailTaskTimeoutSeconds();
+        int stopNewRequestsAfterSeconds =
+                configurationService.getBulkUserEmailStopNewRequestsAfterSeconds();
 
         List<CompletableFuture<Void>> futures =
                 allUserSubjectIds.stream()
@@ -203,7 +206,9 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                 subjectId,
                                                 bulkEmailUserSendMode,
                                                 executor,
-                                                timeoutSeconds,
+                                                taskTimeoutSeconds,
+                                                startTime,
+                                                stopNewRequestsAfterSeconds,
                                                 counters))
                         .toList();
 
@@ -211,9 +216,10 @@ public class BulkUserEmailSenderScheduledEventHandler
         executor.shutdownNow();
 
         LOG.info(
-                "Bulk user email: completed. Total users: {}, Processed: {}, Unhandled exceptions: {}, Timed out: {}",
+                "Bulk user email: completed. Total users: {}, Processed: {}, Skipped: {}, Unhandled exceptions: {}, Timed out: {}",
                 allUserSubjectIds.size(),
                 counters.processed().get(),
+                counters.skipped().get(),
                 counters.exceptions().get(),
                 counters.timedOut().get());
         return null;
@@ -240,9 +246,16 @@ public class BulkUserEmailSenderScheduledEventHandler
             BulkEmailUserSendMode sendMode,
             ExecutorService executor,
             int timeoutSeconds,
+            long startTime,
+            int stopNewRequestsAfterSeconds,
             TaskCounters counters) {
         return CompletableFuture.runAsync(
                         () -> {
+                            long elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000;
+                            if (elapsedSeconds >= stopNewRequestsAfterSeconds) {
+                                counters.skipped().incrementAndGet();
+                                return;
+                            }
                             bulkEmailSender.validateAndSendMessage(subjectId, sendMode);
                             counters.processed().incrementAndGet();
                         },
@@ -277,9 +290,16 @@ public class BulkUserEmailSenderScheduledEventHandler
     }
 
     private record TaskCounters(
-            AtomicInteger processed, AtomicInteger timedOut, AtomicInteger exceptions) {
+            AtomicInteger processed,
+            AtomicInteger skipped,
+            AtomicInteger timedOut,
+            AtomicInteger exceptions) {
         TaskCounters() {
-            this(new AtomicInteger(), new AtomicInteger(), new AtomicInteger());
+            this(
+                    new AtomicInteger(),
+                    new AtomicInteger(),
+                    new AtomicInteger(),
+                    new AtomicInteger());
         }
     }
 }
