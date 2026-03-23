@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -132,8 +133,10 @@ public class NotifyCallbackHandler
                 var templateName = getTemplateName(templateId);
                 incrementCounters("EmailSent", Map.of("EmailName", templateName), deliveryReceipt);
                 if (configurationService.isBulkUserEmailEnabled()
-                        && templateName.equals(
-                                TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())) {
+                        && (templateName.equals(TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())
+                                || templateName.equals(
+                                        INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL
+                                                .getTemplateAlias()))) {
                     LOG.info("Updating bulk email table for delivery receipt");
                     var maybeProfile =
                             dynamoService.getUserProfileByEmailMaybe(deliveryReceipt.to());

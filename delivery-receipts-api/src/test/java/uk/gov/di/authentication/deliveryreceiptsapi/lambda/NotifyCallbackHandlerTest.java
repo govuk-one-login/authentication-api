@@ -48,6 +48,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.EMAIL_UPDATED;
+import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -199,6 +200,7 @@ class NotifyCallbackHandlerTest {
     private static Stream<DeliveryReceiptsNotificationType> emailTemplates() {
         return Stream.of(
                 DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL,
+                DeliveryReceiptsNotificationType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL,
                 DeliveryReceiptsNotificationType.VERIFY_EMAIL);
     }
 
@@ -243,6 +245,30 @@ class NotifyCallbackHandlerTest {
 
         verify(dynamoService).getUserProfileByEmailMaybe(EMAIL);
 
+        verify(bulkEmailUsersService).updateDeliveryReceiptStatus(subjectId, "delivered");
+        assertThat(logging.events(), haveJourneyId(reference));
+    }
+
+    @Test
+    void shouldUpdateBulkEmailDeliveryReceiptsStatusForInternationalNumbersForcedMfaResetEmailType()
+            throws Json.JsonException {
+        setupNotifyTemplate(Optional.of(INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL));
+        when(configurationService.isBulkUserEmailEnabled()).thenReturn(true);
+        NotifyCallbackHandler handlerBulkEmailOn =
+                new NotifyCallbackHandler(
+                        cloudwatchMetricsService,
+                        configurationService,
+                        dynamoService,
+                        bulkEmailUsersService);
+        var reference = UUID.randomUUID().toString();
+        var deliveryReceipt =
+                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
+        String subjectId = "subject-id-1";
+        UserProfile userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(subjectId);
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
+        handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
+
+        verify(dynamoService).getUserProfileByEmailMaybe(EMAIL);
         verify(bulkEmailUsersService).updateDeliveryReceiptStatus(subjectId, "delivered");
         assertThat(logging.events(), haveJourneyId(reference));
     }
