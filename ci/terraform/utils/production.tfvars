@@ -13,8 +13,8 @@ bulk_user_email_max_audience_load_user_batch_size = 0
 bulk_user_email_max_audience_load_user_count      = 0
 bulk_user_email_send_mode                         = "PENDING"
 
-bulk_user_email_send_schedule_enabled = true
-bulk_user_email_email_sending_enabled = true
+bulk_user_email_send_schedule_enabled = false
+bulk_user_email_email_sending_enabled = false
 bulk_user_email_batch_query_limit     = 2500
 bulk_user_email_max_batch_count       = 1
 bulk_user_email_batch_pause_duration  = 0
