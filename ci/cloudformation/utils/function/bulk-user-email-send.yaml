@@ -9,9 +9,12 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.BulkUserEmailSendHandler::handleRequest
+      Timeout: 50
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoBulkEmailTablesAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoCredentialReadAccessPolicy
         - !Ref SourceCodeBucketReadAccessPolicy
         - !Ref SecretsManagerNotifyAccessPolicy
         - !Ref EmailCheckResultsTableKmsAccessPolicy
@@ -47,6 +50,10 @@ Resources:
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
             - bulkEmailSendMode
+          BULK_USER_EMAIL_SENDER_TYPE: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - bulkEmailSenderType
           BULK_USER_EMAIL_EMAIL_SENDING_ENABLED: !FindInMap
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]

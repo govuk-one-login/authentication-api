@@ -70,7 +70,8 @@ variable "notify_url" {
 variable "notify_template_map" {
   type = map(string)
   default = {
-    TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID = "067548f2-420d-4da9-923f-ec9a941706cf"
+    TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID                   = "067548f2-420d-4da9-923f-ec9a941706cf"
+    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL_TEMPLATE_ID = "fcc5cc49-f896-4887-9ce2-567f93721bc4"
   }
 }
 
@@ -119,6 +120,11 @@ variable "bulk_user_email_send_mode" {
   default = "PENDING"
 }
 
+variable "bulk_user_email_sender_type" {
+  type    = string
+  default = "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET"
+}
+
 variable "bulk_user_email_send_schedule_expression" {
   type        = string
   description = "Run at 15:00 every Friday in 2049.  Designed not to trigger, replace with desired expression."
@@ -142,7 +148,12 @@ variable "performance_tuning" {
     timeout : number,
   }))
   description = "A map of performance tuning parameters per lambda"
-  default     = {}
+  default = {
+    bulk-user-email-send = {
+      memory  = 512
+      timeout = 50
+    }
+  }
 }
 
 variable "lambda_log_alarm_error_rate_threshold" {

@@ -51,6 +51,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.entity.Application.AUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
@@ -227,6 +228,20 @@ public class NotificationHandlerTest {
     @Test
     void shouldNotSendAnythingWhenATermsAndConditionsBulkEmail() throws Json.JsonException {
         SQSEvent sqsEvent = notifyRequestEvent(EMAIL, TERMS_AND_CONDITIONS_BULK_EMAIL, "");
+
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
+
+        verifyNoInteractions(notificationService);
+        verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
+    void shouldNotSendAnythingWhenAnInternationalNumbersForcedMfaResetBulkEmail()
+            throws Json.JsonException {
+        SQSEvent sqsEvent =
+                notifyRequestEvent(EMAIL, INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL, "");
 
         var response = handler.handleRequest(sqsEvent, context);
 

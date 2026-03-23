@@ -184,6 +184,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("BULK_USER_EMAIL_ENABLED", "0").equals("1");
     }
 
+    public String getBulkUserEmailSenderType() {
+        return systemService.getOrDefault("BULK_USER_EMAIL_SENDER_TYPE", "UNKNOWN");
+    }
+
     public long getDefaultOtpCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("DEFAULT_OTP_CODE_EXPIRY", "900"));
     }
