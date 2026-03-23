@@ -68,7 +68,8 @@ public class LogLineHelper {
 
     public static void attachTraceId() {
         // Set the OpenTelemetry trace ID if available.
-        // N.B. with Dynatrace Log Enrichment enabled this will be set automatically by the layer
+        // With Dynatrace Log Enrichment enabled the property will be set automatically,
+        // but we must do it here if we switch to pure OpenTelemetry.
         var spanContext = Span.current().getSpanContext();
         if (spanContext.isValid()) {
             attachLogFieldToLogs(TRACE_ID, spanContext.getTraceId());
