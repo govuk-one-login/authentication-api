@@ -163,7 +163,6 @@ public class AMCService {
             String publicSubject,
             List<AccessTokenConfig> accessTokenConfigs) {
         Date issueTime = nowClock.now();
-        // TODO: Check this value
         Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
 
         return createAccessTokenClaimsMap(
@@ -280,7 +279,6 @@ public class AMCService {
         LOG.info("Building AMC authorization JWT");
 
         Date now = nowClock.now();
-        // TODO check this value
         Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
 
         return new JWTAuthenticationClaimsSet(
