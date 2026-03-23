@@ -20,7 +20,6 @@ import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -31,7 +30,6 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
-import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -47,7 +45,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
-import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.time.Clock;
@@ -164,10 +161,6 @@ class AuthenticationAuthorizationServiceTest {
         private static final String RP_SUBJECT_TYPE = "pairwise";
         private static final State STATE = new State("rp-state");
         private static final Nonce NONCE = new Nonce();
-
-        @RegisterExtension
-        public final CaptureLoggingExtension logging =
-                new CaptureLoggingExtension(AuthorisationHandler.class);
 
         @Test
         void shouldGenerateAuthRedirectRequestForAuthJourney() throws Exception {
