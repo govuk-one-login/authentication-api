@@ -79,13 +79,8 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getBulkUserEmailBatchQueryLimitShouldDefault() {
-        assertEquals(25, configurationService.getBulkUserEmailBatchQueryLimit());
-    }
-
-    @Test
-    void getBulkUserEmailMaxBatchCountShouldDefault() {
-        assertEquals(20, configurationService.getBulkUserEmailMaxBatchCount());
+    void getBulkUserEmailBatchSizeShouldDefault() {
+        assertEquals(1, configurationService.getBulkUserEmailBatchSize());
     }
 
     @Test
@@ -96,11 +91,6 @@ class ConfigurationServiceTest {
     @Test
     void getBulkUserEmailAudienceLoadUserBatchSizeShouldDefault() {
         assertEquals(0, configurationService.getBulkUserEmailAudienceLoadUserBatchSize());
-    }
-
-    @Test
-    void getBulkUserEmailBatchPauseDurationShouldDefault() {
-        assertEquals(0, configurationService.getBulkUserEmailBatchPauseDuration());
     }
 
     @Test

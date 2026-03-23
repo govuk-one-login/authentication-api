@@ -34,18 +34,10 @@ Resources:
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
             - notifyTemplateMap
-          BULK_USER_EMAIL_BATCH_QUERY_LIMIT: !FindInMap
+          BULK_USER_EMAIL_BATCH_SIZE: !FindInMap
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailBatchQueryLimit
-          BULK_USER_EMAIL_MAX_BATCH_COUNT: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailMaxBatchCount
-          BULK_USER_EMAIL_BATCH_PAUSE_DURATION: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailBatchPauseDuration
+            - bulkEmailBatchSize
           BULK_USER_EMAIL_SEND_MODE: !FindInMap
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]

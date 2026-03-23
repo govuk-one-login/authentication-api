@@ -162,9 +162,7 @@ Mappings:
       bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
-      bulkEmailBatchQueryLimit: 100
-      bulkEmailMaxBatchCount: 10
-      bulkEmailBatchPauseDuration: 1000
+      bulkEmailBatchSize: 108
       bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
@@ -196,9 +194,7 @@ Mappings:
       bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
-      bulkEmailBatchQueryLimit: 100
-      bulkEmailMaxBatchCount: 10
-      bulkEmailBatchPauseDuration: 1000
+      bulkEmailBatchSize: 108
       bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
@@ -230,9 +226,7 @@ Mappings:
       bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
-      bulkEmailBatchQueryLimit: 100
-      bulkEmailMaxBatchCount: 10
-      bulkEmailBatchPauseDuration: 1000
+      bulkEmailBatchSize: 108
       bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
@@ -264,9 +258,7 @@ Mappings:
       bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
-      bulkEmailBatchQueryLimit: 100
-      bulkEmailMaxBatchCount: 10
-      bulkEmailBatchPauseDuration: 1000
+      bulkEmailBatchSize: 108
       bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
@@ -298,9 +290,7 @@ Mappings:
       bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
-      bulkEmailBatchQueryLimit: 100
-      bulkEmailMaxBatchCount: 10
-      bulkEmailBatchPauseDuration: 1000
+      bulkEmailBatchSize: 108
       bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
@@ -332,10 +322,8 @@ Mappings:
       bulkEmailAudienceLoaderScheduleState: ENABLED
       bulkEmailMaxAudienceLoadUserCount: 1000
       bulkEmailMaxAudienceLoadUserBatchSize: 100
-      bulkEmailBatchQueryLimit: 100
-      bulkEmailMaxBatchCount: 10
-      bulkEmailBatchPauseDuration: 1000
-      bulkEmailSendMode: LIVE
+      bulkEmailBatchSize: 108
+      bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "false"
@@ -366,10 +354,8 @@ Mappings:
       bulkEmailAudienceLoaderScheduleState: ENABLED
       bulkEmailMaxAudienceLoadUserCount: 5000
       bulkEmailMaxAudienceLoadUserBatchSize: 500
-      bulkEmailBatchQueryLimit: 200
-      bulkEmailMaxBatchCount: 20
-      bulkEmailBatchPauseDuration: 500
-      bulkEmailSendMode: LIVE
+      bulkEmailBatchSize: 48
+      bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "false"
@@ -400,10 +386,8 @@ Mappings:
       bulkEmailAudienceLoaderScheduleState: ENABLED
       bulkEmailMaxAudienceLoadUserCount: 10000
       bulkEmailMaxAudienceLoadUserBatchSize: 1000
-      bulkEmailBatchQueryLimit: 500
-      bulkEmailMaxBatchCount: 50
-      bulkEmailBatchPauseDuration: 200
-      bulkEmailSendMode: LIVE
+      bulkEmailBatchSize: 48
+      bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "false"

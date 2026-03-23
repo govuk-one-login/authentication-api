@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
@@ -23,13 +24,19 @@ import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -72,13 +79,12 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .thenReturn(TableDescription.builder().itemCount(1L).build());
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getBulkEmailUserSendMode()).thenReturn("PENDING");
-        when(configurationService.getBulkUserEmailBatchQueryLimit())
-                .thenReturn(TEST_SUBJECT_IDS.length);
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
-        when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
-        when(bulkEmailUsersService.getNSubjectIdsByStatus(anyInt(), any())).thenReturn(List.of());
-        when(bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(anyInt(), any()))
-                .thenReturn(List.of());
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(TEST_SUBJECT_IDS.length);
+        when(configurationService.getBulkUserEmailTaskTimeoutSeconds()).thenReturn(15);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(anyInt(), any(), any()))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of(), Map.of()));
+        when(bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(anyInt(), any(), any()))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of(), Map.of()));
     }
 
     @ParameterizedTest
@@ -124,21 +130,27 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     void shouldCallBulkEmailSenderForEachSubjectIdInBatch(BulkEmailUserSendMode sendMode) {
         when(configurationService.getBulkEmailUserSendMode()).thenReturn(sendMode.getValue());
 
+        var result =
+                new BulkEmailUsersService.BulkEmailQueryResult(
+                        Arrays.asList(TEST_SUBJECT_IDS), Map.of());
+
         switch (sendMode) {
             case PENDING:
                 when(bulkEmailUsersService.getNSubjectIdsByStatus(
-                                TEST_SUBJECT_IDS.length, BulkEmailStatus.PENDING))
-                        .thenReturn(Arrays.asList(TEST_SUBJECT_IDS));
+                                TEST_SUBJECT_IDS.length, BulkEmailStatus.PENDING, null))
+                        .thenReturn(result);
                 break;
             case NOTIFY_ERROR_RETRIES:
                 when(bulkEmailUsersService.getNSubjectIdsByStatus(
-                                TEST_SUBJECT_IDS.length, BulkEmailStatus.ERROR_SENDING_EMAIL))
-                        .thenReturn(Arrays.asList(TEST_SUBJECT_IDS));
+                                TEST_SUBJECT_IDS.length, BulkEmailStatus.ERROR_SENDING_EMAIL, null))
+                        .thenReturn(result);
                 break;
             case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES:
                 when(bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
-                                TEST_SUBJECT_IDS.length, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE))
-                        .thenReturn(Arrays.asList(TEST_SUBJECT_IDS));
+                                TEST_SUBJECT_IDS.length,
+                                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                                null))
+                        .thenReturn(result);
                 break;
         }
 
@@ -176,13 +188,38 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     }
 
     @Test
+    void shouldPublishTableSizeMetric() {
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(cloudwatchMetricsService, times(1))
+                .putEmbeddedValue("NumberOfBulkEmailUsers", 1L, Map.of());
+    }
+
+    @Test
+    void shouldReturnEarlyWhenBatchSizeIsZero() {
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(0);
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(bulkEmailSender, never()).validateConfiguration();
+        verify(bulkEmailSender, never()).validateAndSendMessage(any(), any());
+        verify(bulkEmailUsersService, never()).getNSubjectIdsByStatus(anyInt(), any(), any());
+    }
+
+    @Test
     void shouldProcessMultipleBatches() {
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(3);
-        when(bulkEmailUsersService.getNSubjectIdsByStatus(
-                        TEST_SUBJECT_IDS.length, BulkEmailStatus.PENDING))
-                .thenReturn(List.of("id-1"))
-                .thenReturn(List.of("id-2"))
-                .thenReturn(List.of("id-3"));
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(300);
+
+        var key1 = Map.of("SubjectID", AttributeValue.fromS("id-1"));
+        var key2 = Map.of("SubjectID", AttributeValue.fromS("id-2"));
+
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(100, BulkEmailStatus.PENDING, null))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of("id-1"), key1));
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(100, BulkEmailStatus.PENDING, key1))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of("id-2"), key2));
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(100, BulkEmailStatus.PENDING, key2))
+                .thenReturn(
+                        new BulkEmailUsersService.BulkEmailQueryResult(List.of("id-3"), Map.of()));
 
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
@@ -196,24 +233,109 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
 
     @Test
     void shouldStopProcessingWhenBatchIsEmpty() {
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(10);
-        when(bulkEmailUsersService.getNSubjectIdsByStatus(
-                        TEST_SUBJECT_IDS.length, BulkEmailStatus.PENDING))
-                .thenReturn(List.of("id-1"))
-                .thenReturn(List.of());
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(500);
+
+        var key1 = Map.of("SubjectID", AttributeValue.fromS("id-1"));
+
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(100, BulkEmailStatus.PENDING, null))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of("id-1"), key1));
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(100, BulkEmailStatus.PENDING, key1))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of(), Map.of()));
 
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
         verify(bulkEmailSender, times(1))
                 .validateAndSendMessage("id-1", BulkEmailUserSendMode.PENDING);
-        verify(bulkEmailUsersService, times(2)).getNSubjectIdsByStatus(anyInt(), any());
+        verify(bulkEmailUsersService, times(2)).getNSubjectIdsByStatus(anyInt(), any(), any());
     }
 
     @Test
-    void shouldPublishTableSizeMetric() {
+    void shouldNotLoopInfinitelyWhenFirstBatchIsEmpty() {
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(500);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(100, BulkEmailStatus.PENDING, null))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(List.of(), Map.of()));
+
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
-        verify(cloudwatchMetricsService, times(1))
-                .putEmbeddedValue("NumberOfBulkEmailUsers", 1L, Map.of());
+        verify(bulkEmailSender, never()).validateAndSendMessage(any(), any());
+        verify(bulkEmailUsersService, times(1)).getNSubjectIdsByStatus(anyInt(), any(), any());
+    }
+
+    @Test
+    void shouldProcessRequestsInParallelUpTo10Concurrent() {
+        AtomicInteger maxConcurrent = new AtomicInteger(0);
+        AtomicInteger currentConcurrent = new AtomicInteger(0);
+        CountDownLatch allStarted = new CountDownLatch(10);
+        Set<String> processedIds = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+        List<String> subjectIds =
+                List.of(
+                        "id-1", "id-2", "id-3", "id-4", "id-5", "id-6", "id-7", "id-8", "id-9",
+                        "id-10", "id-11", "id-12");
+
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(subjectIds.size());
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(
+                        subjectIds.size(), BulkEmailStatus.PENDING, null))
+                .thenReturn(new BulkEmailUsersService.BulkEmailQueryResult(subjectIds, Map.of()));
+
+        doAnswer(
+                        invocation -> {
+                            int concurrent = currentConcurrent.incrementAndGet();
+                            maxConcurrent.updateAndGet(max -> Math.max(max, concurrent));
+                            allStarted.countDown();
+                            Thread.sleep(50);
+                            processedIds.add(invocation.getArgument(0));
+                            currentConcurrent.decrementAndGet();
+                            return null;
+                        })
+                .when(bulkEmailSender)
+                .validateAndSendMessage(any(), any());
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        assertEquals(subjectIds.size(), processedIds.size());
+        assertEquals(10, maxConcurrent.get());
+    }
+
+    @Test
+    void shouldHandleTaskTimeoutWithoutThrowing() {
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(1);
+        when(configurationService.getBulkUserEmailTaskTimeoutSeconds()).thenReturn(1);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING, null))
+                .thenReturn(
+                        new BulkEmailUsersService.BulkEmailQueryResult(List.of("id-1"), Map.of()));
+
+        doAnswer(
+                        invocation -> {
+                            Thread.sleep(2000); // Sleep longer than 1s timeout
+                            return null;
+                        })
+                .when(bulkEmailSender)
+                .validateAndSendMessage(any(), any());
+
+        // Should complete without throwing, even though task times out
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(bulkEmailSender, times(1))
+                .validateAndSendMessage("id-1", BulkEmailUserSendMode.PENDING);
+    }
+
+    @Test
+    void shouldContinueProcessingOtherTasksWhenOneThrowsException() {
+        when(configurationService.getBulkUserEmailBatchSize()).thenReturn(3);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(3, BulkEmailStatus.PENDING, null))
+                .thenReturn(
+                        new BulkEmailUsersService.BulkEmailQueryResult(
+                                List.of("id-1", "id-2", "id-3"), Map.of()));
+
+        doThrow(new RuntimeException("Test exception"))
+                .doNothing()
+                .doNothing()
+                .when(bulkEmailSender)
+                .validateAndSendMessage(any(), any());
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(bulkEmailSender, times(3)).validateAndSendMessage(any(), any());
     }
 }
