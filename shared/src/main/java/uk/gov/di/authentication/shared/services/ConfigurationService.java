@@ -166,6 +166,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));
     }
 
+    public long getBulkUserEmailAudienceLoadPauseDuration() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOAD_PAUSE_DURATION", "0"));
+    }
+
     public List<String> getBulkUserEmailIncludedTermsAndConditions() {
         String configurationValue =
                 systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", "");
@@ -222,6 +227,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
+    }
+
+    public String getBulkUserEmailType() {
+        String value = System.getenv().get("BULK_USER_EMAIL_TYPE");
+        if (value == null || value.isEmpty()) {
+            throw new MissingEnvVariableException("BULK_USER_EMAIL_TYPE");
+        }
+        return value;
     }
 
     public String getBulkEmailLoaderLambdaName() {

@@ -104,6 +104,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getBulkUserEmailAudienceLoadPauseDurationShouldDefault() {
+        assertEquals(0, configurationService.getBulkUserEmailAudienceLoadPauseDuration());
+    }
+
+    @Test
     void shouldReadTermsAndConditionsVersionCSVList() {
         when(systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", ""))
                 .thenReturn("1.1,1.3,1.5");

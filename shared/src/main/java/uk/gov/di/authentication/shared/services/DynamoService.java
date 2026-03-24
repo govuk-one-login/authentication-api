@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex;
@@ -970,6 +971,85 @@ public class DynamoService implements AuthenticationService {
                                         .build())
                         .build();
         return dynamoUserProfileTable.scan(scanRequest).items().stream();
+    }
+
+    public Stream<UserProfile> getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
+            Map<String, AttributeValue> exclusiveStartKey) {
+        final String expressionString =
+                "attribute_exists(PhoneNumber)"
+                        + " AND PhoneNumber <> :empty"
+                        + " AND begins_with(PhoneNumber, :plus)"
+                        + " AND NOT begins_with(PhoneNumber, :ukCountryCode)";
+
+        final Map<String, AttributeValue> expressionValues =
+                Map.of(
+                        ":empty", AttributeValue.builder().s("").build(),
+                        ":plus", AttributeValue.builder().s("+").build(),
+                        ":ukCountryCode", AttributeValue.builder().s("+44").build());
+
+        ScanEnhancedRequest scanRequest =
+                ScanEnhancedRequest.builder()
+                        .addAttributeToProject("SubjectID")
+                        .addAttributeToProject("Email")
+                        .exclusiveStartKey(exclusiveStartKey)
+                        .filterExpression(
+                                Expression.builder()
+                                        .expression(expressionString)
+                                        .expressionValues(expressionValues)
+                                        .build())
+                        .build();
+
+        return dynamoUserProfileTable.scan(scanRequest).items().stream();
+    }
+
+    public Stream<UserCredentials>
+            getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(
+                    Map<String, AttributeValue> exclusiveStartKey) {
+        List<String> clauses = getUserCredentialsMfaMethodsInternationalNumberClause();
+        String expressionString = String.join(" OR ", clauses);
+
+        final Map<String, AttributeValue> expressionValues =
+                Map.of(
+                        ":sms", AttributeValue.builder().s(MFAMethodType.SMS.getValue()).build(),
+                        ":verified", AttributeValue.builder().n("1").build(),
+                        ":empty", AttributeValue.builder().s("").build(),
+                        ":plus", AttributeValue.builder().s("+").build(),
+                        ":ukCountryCode", AttributeValue.builder().s("+44").build());
+
+        ScanEnhancedRequest scanRequest =
+                ScanEnhancedRequest.builder()
+                        .addAttributeToProject("SubjectID")
+                        .addAttributeToProject("Email")
+                        .exclusiveStartKey(exclusiveStartKey)
+                        .filterExpression(
+                                Expression.builder()
+                                        .expression(expressionString)
+                                        .expressionValues(expressionValues)
+                                        .build())
+                        .build();
+
+        return dynamoUserCredentialsTable.scan(scanRequest).items().stream();
+    }
+
+    @NotNull
+    private static List<String> getUserCredentialsMfaMethodsInternationalNumberClause() {
+        final int MAX_MFA_METHODS = 2;
+        final String mfaMethodExpressionClause =
+                "(attribute_exists(MfaMethods)"
+                        + " AND attribute_exists(MfaMethods[%1$d])"
+                        + " AND MfaMethods[%1$d].MfaMethodType = :sms"
+                        + " AND MfaMethods[%1$d].MethodVerified = :verified"
+                        + " AND attribute_exists(MfaMethods[%1$d].Destination)"
+                        + " AND MfaMethods[%1$d].Destination <> :empty"
+                        + " AND begins_with(MfaMethods[%1$d].Destination, :plus)"
+                        + " AND NOT begins_with(MfaMethods[%1$d].Destination, :ukCountryCode))";
+
+        List<String> clauses = new ArrayList<>();
+        for (int i = 0; i < MAX_MFA_METHODS; i++) {
+            clauses.add(format(mfaMethodExpressionClause, i));
+        }
+
+        return clauses;
     }
 
     private static String hashPassword(String password) {

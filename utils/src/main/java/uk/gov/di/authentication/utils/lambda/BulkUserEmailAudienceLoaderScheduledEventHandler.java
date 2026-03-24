@@ -14,10 +14,15 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
-import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
+import uk.gov.di.authentication.utils.domain.BulkEmailType;
+import uk.gov.di.authentication.utils.domain.DynamoTable;
+import uk.gov.di.authentication.utils.helpers.BulkEmailBatchPauseHelper;
+import uk.gov.di.authentication.utils.services.audienceloader.BulkEmailAudienceLoader;
+import uk.gov.di.authentication.utils.services.audienceloader.InternationalNumbersForcedMfaResetBulkEmailAudienceLoader;
+import uk.gov.di.authentication.utils.services.audienceloader.TermsAndConditionsBulkEmailAudienceLoader;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -29,12 +34,13 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
     public static final String LAST_EVALUATED_KEY = "lastEvaluatedKey";
     public static final String GLOBAL_USERS_ADDED_COUNT = "globalUsersAddedCount";
+    public static final String TABLE_TO_SCAN = "tableToScan";
 
     private final BulkEmailUsersService bulkEmailUsersService;
 
-    private final DynamoService dynamoService;
-
     private final ConfigurationService configurationService;
+
+    private final BulkEmailAudienceLoader audienceLoader;
 
     private LambdaInvokerService lambdaInvokerService;
 
@@ -45,25 +51,44 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler(
             BulkEmailUsersService bulkEmailUsersService,
-            DynamoService dynamoService,
             ConfigurationService configurationService,
-            LambdaInvokerService lambdaInvokerService) {
+            LambdaInvokerService lambdaInvokerService,
+            BulkEmailAudienceLoader audienceLoader) {
         this.bulkEmailUsersService = bulkEmailUsersService;
-        this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.lambdaInvokerService = lambdaInvokerService;
+        this.audienceLoader = audienceLoader;
     }
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler(
             ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.lambdaInvokerService = new LambdaInvokerService(configurationService);
+
+        DynamoService dynamoService = new DynamoService(configurationService);
+        this.audienceLoader = createAudienceLoader(configurationService, dynamoService);
     }
 
     public void setLambdaInvoker(LambdaInvokerService lambdaInvokerService) {
         this.lambdaInvokerService = lambdaInvokerService;
+    }
+
+    private static BulkEmailAudienceLoader createAudienceLoader(
+            ConfigurationService configurationService, DynamoService dynamoService) {
+        BulkEmailType bulkUserEmailType =
+                BulkEmailType.valueOf(configurationService.getBulkUserEmailType());
+
+        if (bulkUserEmailType == BulkEmailType.TERMS_AND_CONDITIONS_BULK_EMAIL) {
+            return new TermsAndConditionsBulkEmailAudienceLoader(
+                    configurationService, dynamoService);
+        }
+        if (bulkUserEmailType == BulkEmailType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL) {
+            return new InternationalNumbersForcedMfaResetBulkEmailAudienceLoader(dynamoService);
+        }
+
+        throw new UnsupportedOperationException(
+                "Unsupported bulk user email type: " + bulkUserEmailType);
     }
 
     @Override
@@ -76,11 +101,14 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
         Map<String, AttributeValue> exclusiveStartKey = null;
         Long existingCountOfAddedUsers = 0L;
+        DynamoTable tableToScan = DynamoTable.USER_PROFILE;
 
-        List<String> includedTermsAndConditions =
-                configurationService.getBulkUserEmailIncludedTermsAndConditions();
-        if (includedTermsAndConditions == null || includedTermsAndConditions.isEmpty()) {
-            throw new IncludedTermsAndConditionsConfigMissingException();
+        audienceLoader.validateConfig();
+
+        if (event.getDetail() != null && event.getDetail().containsKey(TABLE_TO_SCAN)) {
+            tableToScan = DynamoTable.valueOf(event.getDetail().get(TABLE_TO_SCAN).toString());
+        } else {
+            LOG.info("Defaulting to scanning table: {}", tableToScan.name());
         }
 
         if (event.getDetail() != null && event.getDetail().containsKey(LAST_EVALUATED_KEY)) {
@@ -99,31 +127,30 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         final Long currentBatchSize = Math.min(batchSize, remainingItemsLimit);
 
         LOG.info(
-                "Bulk User Email audience load parameters before batch: total users added so far {}, remaining items limit {}, batch size {}",
-                remainingItemsLimit,
+                "Bulk User Email audience load parameters before batch: total users added so far {}, remaining items limit {}, batch size {}, scanning table {}",
                 existingCountOfAddedUsers,
-                currentBatchSize);
+                remainingItemsLimit,
+                currentBatchSize,
+                tableToScan.name());
 
         AtomicLong itemCounter = new AtomicLong();
         AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
 
-        dynamoService
-                .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
-                        exclusiveStartKey, includedTermsAndConditions)
-                .takeWhile(userProfile -> (currentBatchSize > itemCounter.get()))
+        audienceLoader
+                .loadUsers(exclusiveStartKey, tableToScan)
+                .takeWhile(user -> (currentBatchSize > itemCounter.get()))
                 .forEach(
-                        userProfile -> {
+                        user -> {
                             itemCounter.getAndIncrement();
                             bulkEmailUsersService.addUser(
-                                    userProfile.getSubjectID(), BulkEmailStatus.PENDING);
-                            LOG.info("Bulk User Email added item number: {}", itemCounter);
+                                    user.subjectID(), BulkEmailStatus.PENDING);
                             if (itemCounter.get() >= remainingItemsLimit) {
                                 LOG.info(
                                         "Bulk User Email max audience load user count reached: {}. Stopping load.",
                                         itemCounter);
                             }
-                            lastEmail.set(userProfile.getEmail());
+                            lastEmail.set(user.email());
                         });
 
         LOG.info(
@@ -131,25 +158,38 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
                 itemCounter);
 
         final long totalUsersAddedSoFar = itemCounter.get() + existingCountOfAddedUsers;
+        DynamoTable nextTableToScan = tableToScan;
+
         if (itemCounter.get() == 0) {
-            LOG.info("No items remaining to insert, finished import");
+            LOG.info(
+                    "No items from table remaining to insert, finished import from table {}",
+                    tableToScan.name());
+
+            Optional<DynamoTable> nextTableToScanOptional = getNextTableToScan(tableToScan);
+            if (nextTableToScanOptional.isEmpty()) {
+                return null;
+            }
+
+            nextTableToScan = nextTableToScanOptional.get();
         } else if (itemCounter.get() >= remainingItemsLimit) {
             LOG.info(
-                    "Bulk User Email max audience load max user count reached. Total users added {}",
+                    "Bulk User Email max audience load max user count reached. Total users added {}. No further calls.",
                     totalUsersAddedSoFar);
-        } else {
-            event.setDetail(
-                    Map.of(
-                            LAST_EVALUATED_KEY,
-                            lastEmail.get(),
-                            GLOBAL_USERS_ADDED_COUNT,
-                            totalUsersAddedSoFar));
-            LOG.info(
-                    "Bulk User Email re-invoke.  Total users added so far {}",
-                    totalUsersAddedSoFar);
-            reinvokeLambdaAsync(event);
+
+            return null;
         }
 
+        event.setDetail(
+                buildReinvokeDetail(lastEmail.get(), totalUsersAddedSoFar, nextTableToScan));
+        LOG.info(
+                "Re-invoking lambda asynchronously. Total users added so far {}. Next table to scan: {}",
+                totalUsersAddedSoFar,
+                nextTableToScan.name());
+
+        BulkEmailBatchPauseHelper.pauseBetweenBatches(
+                configurationService.getBulkUserEmailAudienceLoadPauseDuration());
+
+        reinvokeLambdaAsync(event);
         return null;
     }
 
@@ -162,11 +202,43 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         }
 
         JSONObject detail = new JSONObject();
-        detail.appendField(LAST_EVALUATED_KEY, event.getDetail().get(LAST_EVALUATED_KEY));
+        if (event.getDetail().containsKey(LAST_EVALUATED_KEY)) {
+            detail.appendField(LAST_EVALUATED_KEY, event.getDetail().get(LAST_EVALUATED_KEY));
+        }
         detail.appendField(
                 GLOBAL_USERS_ADDED_COUNT, event.getDetail().get(GLOBAL_USERS_ADDED_COUNT));
+        detail.appendField(TABLE_TO_SCAN, event.getDetail().get(TABLE_TO_SCAN));
 
         String jsonPayload = new JSONObject().appendField("detail", detail).toJSONString();
         lambdaInvokerService.invokeAsyncWithPayload(jsonPayload, lambdaName);
+    }
+
+    private Map<String, Object> buildReinvokeDetail(
+            String lastEvaluatedKey, long globalUsersAddedCount, DynamoTable tableToScan) {
+        if (lastEvaluatedKey != null) {
+            return Map.of(
+                    LAST_EVALUATED_KEY,
+                    lastEvaluatedKey,
+                    GLOBAL_USERS_ADDED_COUNT,
+                    globalUsersAddedCount,
+                    TABLE_TO_SCAN,
+                    tableToScan);
+        }
+        return Map.of(GLOBAL_USERS_ADDED_COUNT, globalUsersAddedCount, TABLE_TO_SCAN, tableToScan);
+    }
+
+    private Optional<DynamoTable> getNextTableToScan(DynamoTable currentTable) {
+        BulkEmailType bulkUserEmailType =
+                BulkEmailType.valueOf(configurationService.getBulkUserEmailType());
+
+        if (bulkUserEmailType == BulkEmailType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL) {
+            if (currentTable != DynamoTable.USER_PROFILE) {
+                return Optional.empty();
+            }
+
+            return Optional.of(DynamoTable.USER_CREDENTIALS);
+        }
+
+        return Optional.empty();
     }
 }

@@ -90,6 +90,11 @@ variable "bulk_user_email_batch_pause_duration" {
   default = null
 }
 
+variable "bulk_user_email_audience_load_pause_duration" {
+  type    = number
+  default = null
+}
+
 variable "bulk_user_email_max_audience_load_user_count" {
   type    = number
   default = 0
@@ -108,6 +113,11 @@ variable "bulk_user_email_email_sending_enabled" {
 variable "bulk_user_email_send_schedule_enabled" {
   type    = bool
   default = false
+}
+
+variable "bulk_user_email_type" {
+  type    = string
+  default = null
 }
 
 variable "bulk_user_email_included_terms_and_conditions" {

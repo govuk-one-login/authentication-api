@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
+import uk.gov.di.authentication.utils.helpers.BulkEmailBatchPauseHelper;
 import uk.gov.di.authentication.utils.services.bulkemailsender.BulkEmailSender;
 import uk.gov.di.authentication.utils.services.bulkemailsender.InternationalNumbersForcedMfaResetBulkEmailSender;
 import uk.gov.di.authentication.utils.services.bulkemailsender.TermsAndConditionsBulkEmailSender;
@@ -175,18 +176,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                             bulkEmailSender.validateAndSendMessage(
                                     subjectId, bulkEmailUserSendMode));
 
-            try {
-                if (bulkUserEmailBatchPauseDuration > 0) {
-                    LOG.info(
-                            "Bulk user email batch pausing for: {} ms",
-                            bulkUserEmailBatchPauseDuration);
-                    Thread.sleep(bulkUserEmailBatchPauseDuration);
-                    LOG.info("Bulk user email batch pause complete.");
-                }
-            } catch (InterruptedException e) {
-                LOG.warn("Thread sleep for bulk user email batch pause interrupted.");
-                Thread.currentThread().interrupt();
-            }
+            BulkEmailBatchPauseHelper.pauseBetweenBatches(bulkUserEmailBatchPauseDuration);
         } while (!userSubjectIdBatch.isEmpty() && batchCounter < bulkUserEmailMaxBatchCount);
 
         LOG.info("Bulk user email: batch completed.");
