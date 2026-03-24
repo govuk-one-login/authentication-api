@@ -55,13 +55,13 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIF
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.SESSION_ID_MISSING;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
@@ -261,6 +261,17 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, BLOCKED_FOR_SENDING_MFA_OTPS);
             }
 
+            var canVerifyResult =
+                    permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext);
+            if (canVerifyResult.isFailure()) {
+                return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                        canVerifyResult.getFailure());
+            }
+            if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+                return generateApiGatewayProxyErrorResponse(400, TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+            }
+
             auditContext = auditContext.withPhoneNumber(phoneNumber);
 
             LOG.info("Incrementing code request count for {}", journeyType);
@@ -346,7 +357,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
         var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, journeyType);
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
             LOG.warn("User has requested too many OTP codes.");
@@ -360,26 +370,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             clearCountOfFailedCodeRequests(journeyType, userContext.getAuthSession());
 
             return Optional.of(ErrorResponse.TOO_MANY_MFA_OTPS_SENT);
-        }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(
-                        MFA_SMS.getMfaMethodType(), journeyType);
-
-        if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
-            LOG.info(
-                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    newCodeBlockPrefix);
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
-        }
-        if (deprecatedCodeRequestType != null
-                && codeStorageService.isBlockedForEmail(
-                        email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info(
-                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    newCodeBlockPrefix);
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
         }
 
         return Optional.empty();

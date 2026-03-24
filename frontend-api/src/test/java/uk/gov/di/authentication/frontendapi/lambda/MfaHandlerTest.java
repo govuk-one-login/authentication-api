@@ -42,6 +42,7 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -73,7 +74,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -208,6 +208,8 @@ class MfaHandlerTest {
                                                 "set-up-sms-mfa-identifier"))));
 
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
 
         handler =
@@ -777,7 +779,7 @@ class MfaHandlerTest {
                                 new Decision.TemporarilyLockedOut(
                                         ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
                                         0,
-                                        java.time.Instant.now().plusSeconds(300),
+                                        Instant.now().plusSeconds(300),
                                         false)));
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
@@ -802,10 +804,15 @@ class MfaHandlerTest {
     void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(
             JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
-        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
-        when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(true);
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                        0,
+                                        Instant.now().plusSeconds(300),
+                                        false)));
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -822,27 +829,6 @@ class MfaHandlerTest {
                                 .withPhoneNumber(AuditService.UNKNOWN)
                                 .withMetadataItem(pair("journey-type", journeyType))
                                 .withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue())));
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @ParameterizedTest
-    @MethodSource("smsJourneyTypes")
-    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodesUsingDeprecatedPrefix(
-            JourneyType journeyType) {
-        usingValidSession();
-        var codeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(MFAMethodType.SMS, journeyType);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-        when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(true);
-
-        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(TOO_MANY_INVALID_MFA_OTPS_ENTERED));
     }
 
     @Test
@@ -941,10 +927,26 @@ class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenPermissionDecisionManagerReturnsError() {
+    void shouldReturn500WhenCanSendSmsOtpNotificationReturnsError() {
         usingValidSession();
 
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        verify(sqsClient, never()).send(any());
+    }
+
+    @Test
+    void shouldReturn500WhenCanVerifyMfaOtpReturnsError() {
+        usingValidSession();
+
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
