@@ -32,6 +32,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.HashHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -209,6 +210,8 @@ public class AMCService {
                 .flatMap(
                         signedJWT -> {
                             try {
+                                var hashedCookie =
+                                        HashHelper.hashSha256String(signedJWT.serialize());
                                 RSAPublicKey publicKey =
                                         JWK.parseFromPEMEncodedObjects(
                                                         configurationService
@@ -219,7 +222,7 @@ public class AMCService {
                                         .map(
                                                 encryptedJWT ->
                                                         new EncryptedJWTAndAmcCookie(
-                                                                encryptedJWT, ""));
+                                                                encryptedJWT, hashedCookie));
                             } catch (JOSEException e) {
                                 return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
                             }

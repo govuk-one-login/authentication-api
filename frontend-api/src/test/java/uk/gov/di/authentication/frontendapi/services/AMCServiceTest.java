@@ -45,6 +45,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.HashHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -208,6 +209,9 @@ class AMCServiceTest {
             assertTrue(authorizationUrl.startsWith(AMC_AUTHORIZE_URI));
 
             SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(authorizationUrl);
+
+            String amcCookie = result.getSuccess().amcCookie();
+            assertEquals(HashHelper.hashSha256String(compositeJWT.serialize()), amcCookie);
 
             assertTrue(compositeJWT.verify(new ECDSAVerifier(compositeJWTKey.toECPublicKey())));
 
