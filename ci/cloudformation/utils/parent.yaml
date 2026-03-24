@@ -327,7 +327,7 @@ Mappings:
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
-      bulkEmailSendScheduleState: ENABLED
+      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
       bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 1000
@@ -361,7 +361,7 @@ Mappings:
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
-      bulkEmailSendScheduleState: ENABLED
+      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
       bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 5000
@@ -395,7 +395,7 @@ Mappings:
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
-      bulkEmailSendScheduleState: ENABLED
+      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
       bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 10000
