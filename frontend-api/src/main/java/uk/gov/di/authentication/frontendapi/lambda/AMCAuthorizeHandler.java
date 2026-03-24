@@ -89,7 +89,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                 request.amcJourneyType().getTransportJwtConfig(configurationService);
 
         Result<JwtFailureReason, String> result =
-                amcService.buildAuthorizationUrl(
+                amcService.buildAuthorizationResult(
                         authSessionItem.getInternalCommonSubjectId(),
                         transportJwtConfig.scope(),
                         authSessionItem,

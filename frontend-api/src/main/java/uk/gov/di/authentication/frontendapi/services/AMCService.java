@@ -63,7 +63,7 @@ public class AMCService {
         this.jwtService = jwtService;
     }
 
-    public Result<JwtFailureReason, String> buildAuthorizationUrl(
+    public Result<JwtFailureReason, String> buildAuthorizationResult(
             String internalPairwiseSubject,
             AMCScope amcScope,
             AuthSessionItem authSessionItem,
@@ -72,7 +72,7 @@ public class AMCService {
             List<AccessTokenConfig> accessTokenConfigs) {
         LOG.info("Building AMC authorization URL");
 
-        return createTransportJWT(
+        return createTransportJWTAndAmcCookie(
                         internalPairwiseSubject,
                         amcScope,
                         amcRedirectUri,
@@ -155,7 +155,7 @@ public class AMCService {
         }
     }
 
-    private Result<JwtFailureReason, EncryptedJWT> createTransportJWT(
+    private Result<JwtFailureReason, EncryptedJWT> createTransportJWTAndAmcCookie(
             String internalPairwiseSubject,
             AMCScope amcScope,
             String amcRedirectUri,

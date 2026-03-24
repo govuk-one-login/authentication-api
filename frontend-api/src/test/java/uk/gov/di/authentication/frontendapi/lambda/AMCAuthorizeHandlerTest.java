@@ -100,7 +100,7 @@ class AMCAuthorizeHandlerTest {
         String expectedUrl = "https://example.com/authorize";
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(amcService.buildAuthorizationUrl(
+        when(amcService.buildAuthorizationResult(
                         eq(INTERNAL_COMMON_SUBJECT_ID),
                         eq(expectedAmcScope),
                         eq(authSession),
@@ -121,7 +121,7 @@ class AMCAuthorizeHandlerTest {
         assertEquals(200, result.getStatusCode());
         assertTrue(result.getBody().contains(expectedUrl));
         verify(amcService)
-                .buildAuthorizationUrl(
+                .buildAuthorizationResult(
                         INTERNAL_COMMON_SUBJECT_ID,
                         expectedAmcScope,
                         authSession,
@@ -154,7 +154,7 @@ class AMCAuthorizeHandlerTest {
     void shouldHandleAllFailureReasons(JwtFailureReason failureReason) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(amcService.buildAuthorizationUrl(
+        when(amcService.buildAuthorizationResult(
                         anyString(), any(), any(), anyString(), anyString(), anyList()))
                 .thenReturn(Result.failure(failureReason));
 
