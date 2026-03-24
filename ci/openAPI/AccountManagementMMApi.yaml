@@ -178,11 +178,7 @@ paths:
         timeoutInMillis: 29000
   /v1/mfa-methods/{publicSubjectId}:
     parameters:
-      - name: publicSubjectId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/PublicSubjectId"
     get:
       security:
         - authorise-access-token: []
@@ -319,11 +315,7 @@ paths:
       description: Creates an mfa method. A new MFA Method cannot be created as DEFAULT, it must be BACKUP and promoted at a later stage
       operationId: "mfa-method-create"
       parameters:
-        - name: publicSubjectId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/PublicSubjectId"
       requestBody:
         content:
           application/json:
@@ -469,11 +461,7 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: publicSubjectId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/PublicSubjectId"
     put:
       security:
         - authorise-access-token: []
@@ -674,11 +662,7 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: publicSubjectId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/PublicSubjectId"
       responses:
         "204":
           description: MFA Method Deleted
@@ -752,6 +736,58 @@ paths:
                   value:
                     code: 1066
                     message: "Cannot delete default priority mfa method"
+
+  /v1/passkeys/{publicSubjectId}:
+    parameters:
+      - $ref: "#/components/parameters/PublicSubjectId"
+    get:
+      security:
+        - authorise-access-token: []
+        - x-account-data-api-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysRetrieveProxyFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - Passkey
+      summary: Retrieve all passkeys for a user
+      description: Get all passkeys registered to a user account
+      responses:
+        "200":
+          $ref: "./AccountDataApi.yaml#/paths/~1accounts~1{publicSubjectId}~1authenticators~1passkeys/get/responses/200"
+        "500":
+          $ref: "./AccountDataApi.yaml#/paths/~1accounts~1{publicSubjectId}~1authenticators~1passkeys/get/responses/500"
+
+  /v1/passkeys/{publicSubjectId}/{passkeyIdentifier}:
+    parameters:
+      - $ref: "#/components/parameters/PublicSubjectId"
+      - $ref: "#/components/parameters/PasskeyIdentifier"
+    delete:
+      security:
+        - authorise-access-token: []
+        - x-account-data-api-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysDeleteProxyFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - Passkey
+      summary: Delete a passkey
+      description: Remove a passkey authenticator from a user account
+      responses:
+        "204":
+          $ref: "./AccountDataApi.yaml#/paths/~1accounts~1{publicSubjectId}~1authenticators~1passkeys~1{passkeyId}/delete/responses/204"
+        "404":
+          $ref: "./AccountDataApi.yaml#/paths/~1accounts~1{publicSubjectId}~1authenticators~1passkeys~1{passkeyId}/delete/responses/404"
+        "500":
+          $ref: "./AccountDataApi.yaml#/paths/~1accounts~1{publicSubjectId}~1authenticators~1passkeys~1{passkeyId}/delete/responses/500"
+
 components:
   schemas:
     PriorityEnum:
@@ -1206,3 +1242,24 @@ components:
         authorizerCredentials:
           Fn::GetAtt: [ApiGatewayAuthorizerRole, Arn]
         authorizerResultTtlInSeconds: 0
+    x-account-data-api-access-token:
+      type: "apiKey"
+      name: X-ADAPI-AccessToken
+      in: header
+      description: The Account Data API access token
+
+  parameters:
+    PublicSubjectId:
+      name: publicSubjectId
+      in: path
+      description: Public Subject ID
+      required: true
+      schema:
+        type: string
+    PasskeyIdentifier:
+      name: passkeyIdentifier
+      in: path
+      description: Passkey ID
+      required: true
+      schema:
+        type: string

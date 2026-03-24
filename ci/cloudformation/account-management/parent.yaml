@@ -581,6 +581,10 @@ Mappings:
       RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
     send-otp-notification:
       RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+    passkeys-retrieve-proxy:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/FgCrsQ"
+    passkeys-delete-proxy:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/FgCrsQ"
     mfa-reset-authorize:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     mfa-reset-jar-jwk:
