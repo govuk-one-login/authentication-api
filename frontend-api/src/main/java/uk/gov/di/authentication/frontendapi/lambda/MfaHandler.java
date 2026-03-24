@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
@@ -245,31 +246,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             .withE164FormattedPhoneNumber(phoneNumber)
                             .build();
 
-            var canSendSmsResult =
-                    permissionDecisionManager.canSendSmsOtpNotification(
-                            journeyType, permissionContext);
-            if (canSendSmsResult.isFailure()) {
-                return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
-                        canSendSmsResult.getFailure());
-            }
-            if (canSendSmsResult.getSuccess() instanceof Decision.IndefinitelyLockedOut) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
-            }
-            if (canSendSmsResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
-                return generateApiGatewayProxyErrorResponse(400, BLOCKED_FOR_SENDING_MFA_OTPS);
-            }
-
-            var canVerifyResult =
-                    permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext);
-            if (canVerifyResult.isFailure()) {
-                return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
-                        canVerifyResult.getFailure());
-            }
-            if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
-                return generateApiGatewayProxyErrorResponse(400, TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+            var permissionCheckResult =
+                    ensurePermitted(journeyType, permissionContext, auditContext);
+            if (permissionCheckResult.isPresent()) {
+                return permissionCheckResult.get();
             }
 
             auditContext = auditContext.withPhoneNumber(phoneNumber);
@@ -348,6 +328,44 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 configurationService.getDefaultOtpCodeExpiry(),
                 notificationType);
         return newCode;
+    }
+
+    private Optional<APIGatewayProxyResponseEvent> ensurePermitted(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            AuditContext auditContext) {
+        var canSendSmsResult =
+                permissionDecisionManager.canSendSmsOtpNotification(journeyType, permissionContext);
+        if (canSendSmsResult.isFailure()) {
+            return Optional.of(
+                    DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                            canSendSmsResult.getFailure()));
+        }
+        if (canSendSmsResult.getSuccess() instanceof Decision.IndefinitelyLockedOut) {
+            return Optional.of(
+                    generateApiGatewayProxyErrorResponse(
+                            400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
+        }
+        if (canSendSmsResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+            auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+            return Optional.of(
+                    generateApiGatewayProxyErrorResponse(400, BLOCKED_FOR_SENDING_MFA_OTPS));
+        }
+
+        var canVerifyResult =
+                permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext);
+        if (canVerifyResult.isFailure()) {
+            return Optional.of(
+                    DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                            canVerifyResult.getFailure()));
+        }
+        if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+            auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+            return Optional.of(
+                    generateApiGatewayProxyErrorResponse(400, TOO_MANY_INVALID_MFA_OTPS_ENTERED));
+        }
+
+        return Optional.empty();
     }
 
     private Optional<ErrorResponse> validateCodeRequestAttempts(
