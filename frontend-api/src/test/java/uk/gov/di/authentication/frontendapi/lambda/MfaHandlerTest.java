@@ -38,6 +38,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
@@ -58,6 +59,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -109,6 +111,7 @@ class MfaHandlerTest {
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private static final int MAX_CODE_RETRIES = 6;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final MFAMethod backupAuthAppMethod =
@@ -211,6 +214,8 @@ class MfaHandlerTest {
                 .thenReturn(Result.success(new Decision.Permitted(0)));
         when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(userActionsManager.sentSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(null));
 
         handler =
                 new MfaHandler(
@@ -223,7 +228,8 @@ class MfaHandlerTest {
                         authSessionService,
                         mfaMethodsService,
                         testUserHelper,
-                        permissionDecisionManager);
+                        permissionDecisionManager,
+                        userActionsManager);
     }
 
     @Test
@@ -491,14 +497,7 @@ class MfaHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
-        verify(authSessionService)
-                .updateSession(
-                        argThat(
-                                session ->
-                                        session.getCodeRequestCount(
-                                                        NotificationType.MFA_SMS,
-                                                        JourneyType.SIGN_IN)
-                                                == 1));
+        verify(userActionsManager).sentSmsOtpNotification(eq(JourneyType.SIGN_IN), any());
         assertThat(result, hasStatus(204));
 
         verify(auditService)
@@ -694,15 +693,20 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
-    void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(
+    void shouldReturn400WhenUserHitsCodeRequestLimitAfterAction(
             JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
 
-        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        for (int i = 0; i < MAX_CODE_RETRIES; i++) {
-            authSession.incrementCodeRequestCount(MFA_SMS, journeyType);
-        }
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                        0,
+                                        Instant.now().plusSeconds(900),
+                                        false)));
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -711,60 +715,13 @@ class MfaHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(TOO_MANY_MFA_OTPS_SENT));
-
-        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
-
-        checkReauthenticatingUserIsNotBlockedWhenReauthFeatureIsEnabled(journeyType, reauthEnabled);
-
-        checkReauthenticatingUserIsBlockedWhenReauthFeatureIsNotEnabled(
-                journeyType, reauthEnabled, codeRequestType);
-
-        checkUserIsBlockedWhenNotReAuthenticating(journeyType, codeRequestType);
-
-        verify(authSessionService)
-                .updateSession(
-                        argThat(
-                                sessionForTestUser ->
-                                        sessionForTestUser.getCodeRequestCount(
-                                                        NotificationType.MFA_SMS, journeyType)
-                                                == 0));
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
                         AUDIT_CONTEXT
-                                .withPhoneNumber(AuditService.UNKNOWN)
+                                .withPhoneNumber(UK_MOBILE_NUMBER)
                                 .withMetadataItem(pair("journey-type", journeyType))
                                 .withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue())));
-    }
-
-    private void checkUserIsBlockedWhenNotReAuthenticating(
-            JourneyType journeyType, CodeRequestType codeRequestType) {
-        if (journeyType != JourneyType.REAUTHENTICATION) {
-            verify(codeStorageService)
-                    .saveBlockedForEmail(
-                            EMAIL,
-                            CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
-                            LOCKOUT_DURATION);
-        }
-    }
-
-    private void checkReauthenticatingUserIsBlockedWhenReauthFeatureIsNotEnabled(
-            JourneyType journeyType, boolean reauthEnabled, CodeRequestType codeRequestType) {
-        if (journeyType == JourneyType.REAUTHENTICATION && !reauthEnabled) {
-            verify(codeStorageService)
-                    .saveBlockedForEmail(
-                            EMAIL,
-                            CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
-                            LOCKOUT_DURATION);
-        }
-    }
-
-    private void checkReauthenticatingUserIsNotBlockedWhenReauthFeatureIsEnabled(
-            JourneyType journeyType, boolean reauthEnabled) {
-        if (journeyType == JourneyType.REAUTHENTICATION && reauthEnabled) {
-            verifyNoInteractions(codeStorageService);
-        }
     }
 
     @ParameterizedTest

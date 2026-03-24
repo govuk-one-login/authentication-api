@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -36,6 +35,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
@@ -57,13 +57,13 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.SESSION_ID_MISSING;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.TOO_MANY_MFA_OTPS_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
@@ -80,6 +80,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private final MFAMethodsService mfaMethodsService;
     private final TestUserHelper testUserHelper;
     private final PermissionDecisionManager permissionDecisionManager;
+    private final UserActionsManager userActionsManager;
 
     public MfaHandler(
             ConfigurationService configurationService,
@@ -91,7 +92,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             TestUserHelper testUserHelper,
-            PermissionDecisionManager permissionDecisionManager) {
+            PermissionDecisionManager permissionDecisionManager,
+            UserActionsManager userActionsManager) {
         super(MfaRequest.class, configurationService, authenticationService, authSessionService);
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
@@ -100,6 +102,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.mfaMethodsService = mfaMethodsService;
         this.testUserHelper = testUserHelper;
         this.permissionDecisionManager = permissionDecisionManager;
+        this.userActionsManager = userActionsManager;
     }
 
     public MfaHandler(
@@ -118,6 +121,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     public MfaHandler() {
@@ -133,6 +137,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     @Override
@@ -231,44 +236,27 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             var requestSmsMfaMethod = maybeRequestedSmsMfaMethod.get();
             var phoneNumber = requestSmsMfaMethod.getDestination();
 
-            Optional<ErrorResponse> userHasRequestedTooManyOTPs =
-                    validateCodeRequestAttempts(email, journeyType, userContext);
-
-            if (userHasRequestedTooManyOTPs.isPresent()) {
-                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
-
-                return generateApiGatewayProxyErrorResponse(400, userHasRequestedTooManyOTPs.get());
-            }
-
             var permissionContext =
                     PermissionContext.builder()
                             .withEmailAddress(email)
                             .withE164FormattedPhoneNumber(phoneNumber)
+                            .withAuthSessionItem(userContext.getAuthSession())
                             .build();
 
-            var permissionCheckResult =
-                    ensurePermitted(journeyType, permissionContext, auditContext);
-            if (permissionCheckResult.isPresent()) {
-                return permissionCheckResult.get();
+            var permissionCheckBeforeActionRecorded =
+                    ensurePermitted(journeyType, permissionContext, auditContext, false);
+            if (permissionCheckBeforeActionRecorded.isPresent()) {
+                return permissionCheckBeforeActionRecorded.get();
             }
 
             auditContext = auditContext.withPhoneNumber(phoneNumber);
 
-            LOG.info("Incrementing code request count for {}", journeyType);
+            userActionsManager.sentSmsOtpNotification(journeyType, permissionContext);
 
-            authSessionService.updateSession(
-                    userContext
-                            .getAuthSession()
-                            .incrementCodeRequestCount(NotificationType.MFA_SMS, journeyType));
-
-            Optional<ErrorResponse> thisRequestExceedsMaximumAllowedRequests =
-                    validateCodeRequestAttempts(email, journeyType, userContext);
-
-            if (thisRequestExceedsMaximumAllowedRequests.isPresent()) {
-                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
-
-                return generateApiGatewayProxyErrorResponse(
-                        400, thisRequestExceedsMaximumAllowedRequests.get());
+            var permissionCheckAfterActionRecorded =
+                    ensurePermitted(journeyType, permissionContext, auditContext, true);
+            if (permissionCheckAfterActionRecorded.isPresent()) {
+                return permissionCheckAfterActionRecorded.get();
             }
 
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
@@ -333,7 +321,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private Optional<APIGatewayProxyResponseEvent> ensurePermitted(
             JourneyType journeyType,
             PermissionContext permissionContext,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            boolean afterActionRecorded) {
         var canSendSmsResult =
                 permissionDecisionManager.canSendSmsOtpNotification(journeyType, permissionContext);
         if (canSendSmsResult.isFailure()) {
@@ -348,8 +337,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         }
         if (canSendSmsResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
             auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
-            return Optional.of(
-                    generateApiGatewayProxyErrorResponse(400, BLOCKED_FOR_SENDING_MFA_OTPS));
+            var errorResponse =
+                    afterActionRecorded ? TOO_MANY_MFA_OTPS_SENT : BLOCKED_FOR_SENDING_MFA_OTPS;
+            return Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse));
         }
 
         var canVerifyResult =
@@ -366,57 +356,5 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         }
 
         return Optional.empty();
-    }
-
-    private Optional<ErrorResponse> validateCodeRequestAttempts(
-            String email, JourneyType journeyType, UserContext userContext) {
-        AuthSessionItem authSession = userContext.getAuthSession();
-        var codeRequestCount = authSession.getCodeRequestCount(MFA_SMS, journeyType);
-        LOG.info("CodeRequestCount is: {}", codeRequestCount);
-        var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, journeyType);
-        var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-            LOG.warn("User has requested too many OTP codes.");
-
-            blockReauthenticatingUserWhenReauthenticationLogOffNotSupported(
-                    email, journeyType, newCodeRequestBlockPrefix);
-
-            blockUsersOnAllJourneysOtherThanReauthenticatingUsers(
-                    email, journeyType, newCodeRequestBlockPrefix);
-
-            clearCountOfFailedCodeRequests(journeyType, userContext.getAuthSession());
-
-            return Optional.of(ErrorResponse.TOO_MANY_MFA_OTPS_SENT);
-        }
-
-        return Optional.empty();
-    }
-
-    private void blockReauthenticatingUserWhenReauthenticationLogOffNotSupported(
-            String email, JourneyType journeyType, String newCodeRequestBlockPrefix) {
-        if (journeyType == JourneyType.REAUTHENTICATION
-                && !configurationService.supportReauthSignoutEnabled()) {
-            LOG.warn(
-                    "Blocking user as asked to re-authenticate when re-authentication is not supported.");
-            codeStorageService.saveBlockedForEmail(
-                    email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
-        }
-    }
-
-    private void blockUsersOnAllJourneysOtherThanReauthenticatingUsers(
-            String email, JourneyType journeyType, String newCodeRequestBlockPrefix) {
-        if (journeyType != JourneyType.REAUTHENTICATION) {
-            LOG.warn("Blocking user.");
-            codeStorageService.saveBlockedForEmail(
-                    email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
-        }
-    }
-
-    private void clearCountOfFailedCodeRequests(
-            JourneyType journeyType, AuthSessionItem authSessionItem) {
-        LOG.info("Resetting code request count");
-        authSessionService.updateSession(
-                authSessionItem.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
     }
 }
