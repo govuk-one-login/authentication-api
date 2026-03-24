@@ -12,8 +12,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
-import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
-import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -33,6 +31,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.google.gson.JsonParser.parseString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -110,16 +109,28 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
     void shouldAuthorizeAMCInitiation(AMCJourneyType amcJourneyType) throws Exception {
         handler = new AMCAuthorizeHandler();
 
+        var requestBody =
+                """
+                {
+                    "journeyType": "%s"
+                    }
+                """
+                        .formatted(amcJourneyType);
         var response =
                 makeRequest(
-                        Optional.of(new AMCAuthorizeRequest(amcJourneyType)),
+                        Optional.of(requestBody),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
         assertThat(response, hasStatus(200));
         String responseBody = response.getBody();
-        var amcResponse = objectMapper.readValue(responseBody, AMCAuthorizeResponse.class);
-        String redirectUrl = amcResponse.redirectUrl();
+
+        var jsonObject = parseString(responseBody).getAsJsonObject();
+        // Because we can't directly construct the full json response, here we check that the number
+        // of key value pairs in the json is equal to the number of fields we're retrieving in
+        // tests, meaning that we're checking the entire json object
+        assertEquals(1, jsonObject.size());
+        String redirectUrl = jsonObject.get("redirectUrl").getAsString();
 
         assertTrue(redirectUrl.startsWith("https://test-amc.account.gov.uk/authorize?"));
         assertTrue(redirectUrl.contains("response_type=code"));
@@ -141,9 +152,16 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         String emailWithoutProfile = "no-profile@email.com";
         authSessionStore.addEmailToSession(sessionId, emailWithoutProfile);
 
+        var requestBody =
+                """
+                {
+                    "journeyType": "SFAD"
+                    }
+                """;
+
         var response =
                 makeRequest(
-                        Optional.of(new AMCAuthorizeRequest(AMCJourneyType.SFAD)),
+                        Optional.of(requestBody),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
