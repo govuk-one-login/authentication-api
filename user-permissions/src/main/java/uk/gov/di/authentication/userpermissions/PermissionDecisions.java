@@ -5,6 +5,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 /**
@@ -61,8 +62,24 @@ public interface PermissionDecisions {
      * @param permissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
+    default Result<DecisionError, Decision> canSendSmsOtpNotification(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        return canSendSmsOtpNotification(journeyType, permissionContext, null);
+    }
+
+    /**
+     * Checks if the system can send an SMS OTP notification to the user.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @param lockoutStateHolder Holder for communicating lockout state within a single Lambda
+     *     invocation. See {@link InMemoryLockoutStateHolder} for details on why this exists.
+     * @return A Result containing either a Decision or a DecisionError
+     */
     Result<DecisionError, Decision> canSendSmsOtpNotification(
-            JourneyType journeyType, PermissionContext permissionContext);
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            InMemoryLockoutStateHolder lockoutStateHolder);
 
     /**
      * Checks if a user is permitted to verify an MFA OTP.

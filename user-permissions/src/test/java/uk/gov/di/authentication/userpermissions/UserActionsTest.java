@@ -3,6 +3,7 @@ package uk.gov.di.authentication.userpermissions;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
@@ -84,7 +85,9 @@ class UserActionsTest {
 
         @Override
         public Result<TrackingError, Void> sentSmsOtpNotification(
-                JourneyType journeyType, PermissionContext permissionContext) {
+                JourneyType journeyType,
+                PermissionContext permissionContext,
+                InMemoryLockoutStateHolder lockoutStateHolder) {
             return Result.success(null);
         }
 

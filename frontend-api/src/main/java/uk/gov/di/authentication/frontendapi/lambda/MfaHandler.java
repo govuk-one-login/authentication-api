@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.List;
@@ -242,19 +243,27 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             .withE164FormattedPhoneNumber(phoneNumber)
                             .withAuthSessionItem(userContext.getAuthSession())
                             .build();
+            var lockoutStateHolder = new InMemoryLockoutStateHolder();
 
             var permissionCheckBeforeActionRecorded =
-                    ensurePermitted(journeyType, permissionContext, auditContext, false);
+                    ensurePermitted(
+                            journeyType,
+                            permissionContext,
+                            auditContext,
+                            lockoutStateHolder,
+                            false);
             if (permissionCheckBeforeActionRecorded.isPresent()) {
                 return permissionCheckBeforeActionRecorded.get();
             }
 
             auditContext = auditContext.withPhoneNumber(phoneNumber);
 
-            userActionsManager.sentSmsOtpNotification(journeyType, permissionContext);
+            userActionsManager.sentSmsOtpNotification(
+                    journeyType, permissionContext, lockoutStateHolder);
 
             var permissionCheckAfterActionRecorded =
-                    ensurePermitted(journeyType, permissionContext, auditContext, true);
+                    ensurePermitted(
+                            journeyType, permissionContext, auditContext, lockoutStateHolder, true);
             if (permissionCheckAfterActionRecorded.isPresent()) {
                 return permissionCheckAfterActionRecorded.get();
             }
@@ -322,9 +331,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             JourneyType journeyType,
             PermissionContext permissionContext,
             AuditContext auditContext,
+            InMemoryLockoutStateHolder lockoutStateHolder,
             boolean afterActionRecorded) {
         var canSendSmsResult =
-                permissionDecisionManager.canSendSmsOtpNotification(journeyType, permissionContext);
+                permissionDecisionManager.canSendSmsOtpNotification(
+                        journeyType, permissionContext, lockoutStateHolder);
         if (canSendSmsResult.isFailure()) {
             return Optional.of(
                     DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(

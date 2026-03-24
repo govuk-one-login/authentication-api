@@ -210,11 +210,11 @@ class MfaHandlerTest {
                                                 PriorityIdentifier.DEFAULT,
                                                 "set-up-sms-mfa-identifier"))));
 
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
         when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(userActionsManager.sentSmsOtpNotification(any(), any()))
+        when(userActionsManager.sentSmsOtpNotification(any(), any(), any()))
                 .thenReturn(Result.success(null));
 
         handler =
@@ -497,7 +497,7 @@ class MfaHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
-        verify(userActionsManager).sentSmsOtpNotification(eq(JourneyType.SIGN_IN), any());
+        verify(userActionsManager).sentSmsOtpNotification(eq(JourneyType.SIGN_IN), any(), any());
         assertThat(result, hasStatus(204));
 
         verify(auditService)
@@ -698,7 +698,7 @@ class MfaHandlerTest {
         usingValidSession();
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
 
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)))
                 .thenReturn(
                         Result.success(
@@ -730,7 +730,7 @@ class MfaHandlerTest {
             JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(
                         Result.success(
                                 new Decision.TemporarilyLockedOut(
@@ -887,7 +887,7 @@ class MfaHandlerTest {
     void shouldReturn500WhenCanSendSmsOtpNotificationReturnsError() {
         usingValidSession();
 
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
@@ -922,7 +922,7 @@ class MfaHandlerTest {
 
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(defaultInternationalSmsMethod)));
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(
                         Result.success(
                                 new Decision.IndefinitelyLockedOut(

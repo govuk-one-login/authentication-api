@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.Instant;
@@ -169,7 +170,9 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     @SuppressWarnings("java:S2789")
     public Result<DecisionError, Decision> canSendSmsOtpNotification(
-            JourneyType journeyType, PermissionContext permissionContext) {
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            InMemoryLockoutStateHolder lockoutStateHolder) {
         Optional<String> phoneNumberMaybe = permissionContext.e164FormattedPhoneNumber();
         if (permissionContext.emailAddress() == null || phoneNumberMaybe == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
@@ -192,9 +195,21 @@ public class PermissionDecisionManager implements PermissionDecisions {
         }
 
         if (journeyType.equals(JourneyType.PASSWORD_RESET)) {
-            // We exit early here as there is no suppoerted CodeRequestType for PASSWORD_RESET
+            // We exit early here as there is no supported CodeRequestType for PASSWORD_RESET
             // Which means we do not yet have a counter for that
             return Result.success(new Decision.Permitted(0));
+        }
+
+        if (journeyType == JourneyType.REAUTHENTICATION
+                && lockoutStateHolder != null
+                && lockoutStateHolder.isReauthSmsOtpLimitExceeded()) {
+            LOG.info("Reauth user exceeded SMS OTP limit (from InMemoryLockoutStateHolder)");
+            return Result.success(
+                    new Decision.TemporarilyLockedOut(
+                            ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                            configurationService.getCodeMaxRetries(),
+                            Instant.now(),
+                            false));
         }
 
         try {

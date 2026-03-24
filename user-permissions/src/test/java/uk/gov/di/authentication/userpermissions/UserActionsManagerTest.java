@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
@@ -442,7 +443,7 @@ class UserActionsManagerTest {
         }
 
         @Test
-        void shouldResetCountWithoutBlockingForReauthWhenReauthSignoutEnabled() {
+        void shouldSetInMemoryLockoutStateHolderForReauthWhenReauthSignoutEnabled() {
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
             var sessionWithMaxCount = authSession;
             for (int i = 0; i < 5; i++) {
@@ -455,20 +456,15 @@ class UserActionsManagerTest {
                             .withEmailAddress(EMAIL)
                             .withAuthSessionItem(sessionWithMaxCount)
                             .build();
+            var lockoutStateHolder = new InMemoryLockoutStateHolder();
 
             var result =
                     userActionsManager.sentSmsOtpNotification(
-                            JourneyType.REAUTHENTICATION, contextWithMaxCount);
+                            JourneyType.REAUTHENTICATION, contextWithMaxCount, lockoutStateHolder);
 
             verify(codeStorageService, never())
                     .saveBlockedForEmail(anyString(), anyString(), anyLong());
-            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-            verify(authSessionService, times(2)).updateSession(captor.capture());
-            assertEquals(
-                    0,
-                    captor.getAllValues()
-                            .get(1)
-                            .getCodeRequestCount(MFA_SMS, JourneyType.REAUTHENTICATION));
+            assertTrue(lockoutStateHolder.isReauthSmsOtpLimitExceeded());
             assertTrue(result.isSuccess());
         }
     }
