@@ -103,7 +103,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                 success -> {
                     try {
                         return generateApiGatewayProxyResponse(
-                                200, new AMCAuthorizeResponse(success.url()));
+                                200, new AMCAuthorizeResponse(success.url(), success.amcCookie()));
                     } catch (Json.JsonException e) {
                         return generateApiGatewayProxyErrorResponse(
                                 500, ErrorResponse.SERIALIZATION_ERROR);

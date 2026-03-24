@@ -34,6 +34,7 @@ import java.util.Optional;
 import static com.google.gson.JsonParser.parseString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -129,7 +130,7 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         // Because we can't directly construct the full json response, here we check that the number
         // of key value pairs in the json is equal to the number of fields we're retrieving in
         // tests, meaning that we're checking the entire json object
-        assertEquals(1, jsonObject.size());
+        assertEquals(2, jsonObject.size());
         String redirectUrl = jsonObject.get("redirectUrl").getAsString();
 
         assertTrue(redirectUrl.startsWith("https://test-amc.account.gov.uk/authorize?"));
@@ -144,6 +145,9 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertNotNull(encryptedJWT.getHeader());
         assertEquals(JWEAlgorithm.RSA_OAEP_256, encryptedJWT.getHeader().getAlgorithm());
         assertEquals(EncryptionMethod.A256GCM, encryptedJWT.getHeader().getEncryptionMethod());
+
+        String amcCookie = jsonObject.get("amcCookie").getAsString();
+        assertFalse(amcCookie.isEmpty());
     }
 
     @Test
