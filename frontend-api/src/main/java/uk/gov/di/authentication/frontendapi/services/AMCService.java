@@ -23,6 +23,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkException;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCDownstreamScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
@@ -63,7 +64,7 @@ public class AMCService {
         this.jwtService = jwtService;
     }
 
-    public Result<JwtFailureReason, String> buildAuthorizationResult(
+    public Result<JwtFailureReason, AMCAuthorizationUrlAndCookie> buildAuthorizationResult(
             String internalPairwiseSubject,
             AMCScope amcScope,
             AuthSessionItem authSessionItem,
@@ -80,18 +81,19 @@ public class AMCService {
                         publicSubject,
                         accessTokenConfigs)
                 .map(
-                        requestJWT -> {
+                        encryptedJWTAndAmcCookie -> {
                             AuthorizationRequest authRequest =
                                     new AuthorizationRequest.Builder(
                                                     new ResponseType(ResponseType.Value.CODE),
                                                     new ClientID(
                                                             configurationService.getAMCClientId()))
                                             .endpointURI(configurationService.getAMCAuthorizeURI())
-                                            .requestObject(requestJWT)
+                                            .requestObject(encryptedJWTAndAmcCookie.encryptedJWT)
                                             .build();
                             String authorizationUrl = authRequest.toURI().toString();
                             LOG.info("AMC authorization URL created");
-                            return authorizationUrl;
+                            return new AMCAuthorizationUrlAndCookie(
+                                    authorizationUrl, encryptedJWTAndAmcCookie.amcCookie);
                         });
     }
 
@@ -155,7 +157,9 @@ public class AMCService {
         }
     }
 
-    private Result<JwtFailureReason, EncryptedJWT> createTransportJWTAndAmcCookie(
+    private record EncryptedJWTAndAmcCookie(EncryptedJWT encryptedJWT, String amcCookie) {}
+
+    private Result<JwtFailureReason, EncryptedJWTAndAmcCookie> createTransportJWTAndAmcCookie(
             String internalPairwiseSubject,
             AMCScope amcScope,
             String amcRedirectUri,
@@ -211,7 +215,11 @@ public class AMCService {
                                                                 .getAuthToAMCPublicEncryptionKey())
                                                 .toRSAKey()
                                                 .toRSAPublicKey();
-                                return encryptJWT(signedJWT, publicKey);
+                                return encryptJWT(signedJWT, publicKey)
+                                        .map(
+                                                encryptedJWT ->
+                                                        new EncryptedJWTAndAmcCookie(
+                                                                encryptedJWT, ""));
                             } catch (JOSEException e) {
                                 return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
                             }

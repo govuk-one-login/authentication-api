@@ -194,7 +194,7 @@ class AMCServiceTest {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
 
-            Result<JwtFailureReason, String> result =
+            var result =
                     amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
@@ -204,7 +204,7 @@ class AMCServiceTest {
                             accessTokenConfigs);
 
             assertTrue(result.isSuccess());
-            String authorizationUrl = result.getSuccess();
+            String authorizationUrl = result.getSuccess().url();
             assertTrue(authorizationUrl.startsWith(AMC_AUTHORIZE_URI));
 
             SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(authorizationUrl);
@@ -236,7 +236,7 @@ class AMCServiceTest {
                                     "AWS SDK error when signing JWT",
                                     SdkException.builder().message("KMS Unreachable").build()));
 
-            Result<JwtFailureReason, String> result =
+            var result =
                     amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
@@ -257,7 +257,7 @@ class AMCServiceTest {
                             new JwtServiceException(
                                     "Failed to transcode signature", new JOSEException("Invalid")));
 
-            Result<JwtFailureReason, String> result =
+            var result =
                     amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
@@ -298,7 +298,7 @@ class AMCServiceTest {
             AMCService serviceWithMockJwt =
                     new AMCService(configurationService, NOW_CLOCK, jwtService);
 
-            Result<JwtFailureReason, String> result =
+            var result =
                     serviceWithMockJwt.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
@@ -331,7 +331,7 @@ class AMCServiceTest {
             AMCService serviceWithMockJwt =
                     new AMCService(configurationService, NOW_CLOCK, jwtService);
 
-            Result<JwtFailureReason, String> result =
+            var result =
                     serviceWithMockJwt.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
@@ -349,7 +349,7 @@ class AMCServiceTest {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn("invalid-pem-key");
 
-            Result<JwtFailureReason, String> result =
+            var result =
                     amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,

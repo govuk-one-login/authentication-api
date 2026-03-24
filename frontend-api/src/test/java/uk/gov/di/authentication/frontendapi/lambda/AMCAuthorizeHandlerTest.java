@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
@@ -107,7 +108,7 @@ class AMCAuthorizeHandlerTest {
                         eq(PUBLIC_SUBJECT_ID),
                         anyString(),
                         anyList()))
-                .thenReturn(Result.success(expectedUrl));
+                .thenReturn(Result.success(new AMCAuthorizationUrlAndCookie(expectedUrl, "")));
 
         var event =
                 ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
