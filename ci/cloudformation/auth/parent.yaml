@@ -224,7 +224,7 @@ Mappings:
       amcPublicAudience: https://manage.authdev1.dev.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.authdev1.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.authdev1.dev.account.gov.uk/amc-callback
+      amcSfadRedirectUri: https://signin.authdev1.dev.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.authdev1.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/journeyoutcome
       accountDataApiId: rjlo8fsb55
@@ -271,7 +271,7 @@ Mappings:
       amcPublicAudience: https://manage.authdev2.dev.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.authdev2.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.authdev2.dev.account.gov.uk/amc-callback
+      amcSfadRedirectUri: https://signin.authdev2.dev.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.authdev2.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
@@ -322,7 +322,7 @@ Mappings:
       amcPublicAudience: https://manage.authdev3.dev.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.authdev3.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.authdev3.dev.account.gov.uk/amc-callback
+      amcSfadRedirectUri: https://signin.authdev3.dev.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.authdev3.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
@@ -382,7 +382,7 @@ Mappings:
       amcJourneyOutcomeUri: https://amcstub.signin.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
       accountDataApiId: 0aqzty84lj
-      amcSfadRedirectUri: https://signin.dev.account.gov.uk/amc-callback
+      amcSfadRedirectUri: https://signin.dev.account.gov.uk/sfad-callback
       enhancedAuthCodeProtectionEnabled: true
       amcCreatePasskeyRedirectUri: https://signin.dev.account.gov.uk/create-passkey-callback
       supportPasskeys: true
@@ -439,7 +439,7 @@ Mappings:
       amcPublicAudience: https://manage.build.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.build.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.build.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.build.account.gov.uk/amc-callback
+      amcSfadRedirectUri: https://signin.build.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.build.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.build.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
@@ -501,7 +501,7 @@ Mappings:
       amcPublicAudience: https://manage.staging.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.staging.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.staging.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.staging.account.gov.uk/amc-callback
+      amcSfadRedirectUri: https://signin.staging.account.gov.uk/sfad-callback
       amcTokenUri: https://api.manage.staging.account.gov.uk/token
       amcJourneyOutcomeUri: https://api.manage.staging.account.gov.uk/journeyoutcome
       amcClientId: bb8ba862f42b4e5eb97cc0950f6419ca
@@ -563,7 +563,7 @@ Mappings:
       amcPublicAudience: https://manage.integration.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.integration.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.integration.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.integration.account.gov.uk/amc-callback
+      amcSfadRedirectUri: https://signin.integration.account.gov.uk/sfad-callback
       amcTokenUri: https://api.manage.integration.account.gov.uk/token
       amcJourneyOutcomeUri: https://api.manage.integration.account.gov.uk/journeyoutcome
       amcClientId: 0b649817932e4632861f1ab3fccb650d
@@ -625,7 +625,7 @@ Mappings:
       amcPublicAudience: https://manage.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.account.gov.uk/amc-callback
+      amcSfadRedirectUri: https://signin.account.gov.uk/sfad-callback
       amcTokenUri: https://api.manage.account.gov.uk/token
       amcJourneyOutcomeUri: https://api.manage.account.gov.uk/journeyoutcome
       amcClientId: be05e73e93e94626917b2bc0d7627cfa

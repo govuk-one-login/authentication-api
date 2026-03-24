@@ -56,6 +56,7 @@ class AMCCallbackHandlerTest {
 
     private static final String STATE = "state";
     private static final String AUTH_CODE = "1234";
+    private static final String USED_REDIRECT_URL = "https://signin.account.gov.uk/amc-callback";
     private static final String ACCESS_TOKEN = "accessToken";
     private static final String SUCCESSFUL_TOKEN_RESPONSE =
             """
@@ -109,7 +110,8 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldReturn200WhenTokenResponseSuccessful() throws IOException, ParseException {
         HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
+                .thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
 
@@ -126,7 +128,7 @@ class AMCCallbackHandlerTest {
                         anyMap()))
                 .thenReturn(Result.success(successfulJourneyOutcomeHttpResponse));
 
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
@@ -141,10 +143,10 @@ class AMCCallbackHandlerTest {
 
     @Test
     void shouldReturn400WhenTokenResponseUnsuccessful() {
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE))
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
                 .thenReturn(Result.failure(JwtFailureReason.JWT_ENCODING_ERROR));
 
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
@@ -159,11 +161,12 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldReturn500WhenErrorRetrievingToken() throws ParseException, IOException {
         HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
+                .thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 500, "error from token response");
 
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
@@ -180,11 +183,12 @@ class AMCCallbackHandlerTest {
     void shouldReturn500WhenErrorResponseCannotBeParsedAsTokenResponse()
             throws ParseException, IOException {
         HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
+                .thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 200, "{\"foo\": \"not a token response\"}");
 
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
@@ -200,11 +204,12 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldReturn500WhenIOExceptionCallingTokenEndpoint() throws IOException {
         HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
+                .thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         when(httpRequest.send()).thenThrow(new IOException("Uh oh"));
 
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
@@ -221,7 +226,8 @@ class AMCCallbackHandlerTest {
     void shouldReturn400WhenJourneyOutcomeResponseUnsuccessful()
             throws ParseException, IOException {
         HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
+                .thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
 
@@ -236,7 +242,7 @@ class AMCCallbackHandlerTest {
                 .thenReturn(
                         Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME));
 
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
@@ -252,7 +258,8 @@ class AMCCallbackHandlerTest {
     void shouldReturn500WhenJourneyOutcomeResponseGetsIOException()
             throws ParseException, IOException {
         HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE)).thenReturn(Result.success(tokenRequest));
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
+                .thenReturn(Result.success(tokenRequest));
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
 
@@ -266,7 +273,7 @@ class AMCCallbackHandlerTest {
                         anyMap()))
                 .thenReturn(Result.failure(JourneyOutcomeError.IO_EXCEPTION));
 
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE);
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
