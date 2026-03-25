@@ -105,7 +105,6 @@ public class AuthoriseAccessTokenHandler
                 LOG.warn("Access Token subject is missing");
                 throw new RuntimeException("Unauthorized");
             }
-            LOG.info("User found in Dynamo with given SubjectID");
             String methodArn = input.getMethodArn();
             String[] arnPartials = methodArn.split(":");
             String region = arnPartials[3];
