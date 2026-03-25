@@ -64,14 +64,17 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       "dynamodb:BatchWriteItem",
       "dynamodb:DeleteItem",
     ]
-    resources = [
+    resources = concat([
       data.aws_dynamodb_table.user_credentials_table[0].arn,
       data.aws_dynamodb_table.user_profile_table[0].arn,
       data.aws_dynamodb_table.account_modifiers_table[0].arn,
       "arn:aws:dynamodb:eu-west-2:${var.auth_new_account_id}:table/${var.environment}-stub-account-interventions",
       data.aws_dynamodb_table.international_sms_send_count_table[0].arn,
       data.aws_dynamodb_table.authenticator_table[0].arn
-    ]
+      ], local.deploy_bulk_email_users_count > 0 ? [
+      aws_dynamodb_table.bulk_email_users[0].arn,
+      "${aws_dynamodb_table.bulk_email_users[0].arn}/index/*",
+    ] : [])
   }
 
   statement {
@@ -91,7 +94,8 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       aws_kms_key.user_credentials_table_encryption_key.arn,
       aws_kms_key.account_modifiers_table_encryption_key.arn,
       aws_kms_key.international_sms_send_count_encryption_key.arn,
-      aws_kms_key.authenticator_table_encryption_key.arn
+      aws_kms_key.authenticator_table_encryption_key.arn,
+      aws_kms_key.bulk_email_users_encryption_key.arn,
     ]
   }
 

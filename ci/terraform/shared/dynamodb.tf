@@ -852,6 +852,12 @@ resource "aws_dynamodb_resource_policy" "authenticator_table" {
   policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
+resource "aws_dynamodb_resource_policy" "bulk_email_users" {
+  count        = local.deploy_bulk_email_users_count
+  resource_arn = aws_dynamodb_table.bulk_email_users[0].arn
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
+}
+
 data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_document" {
   #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
   #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrict table actions
