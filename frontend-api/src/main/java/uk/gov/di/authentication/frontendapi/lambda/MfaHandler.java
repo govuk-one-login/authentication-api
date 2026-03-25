@@ -245,15 +245,15 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             .build();
             var lockoutStateHolder = new InMemoryLockoutStateHolder();
 
-            var permissionCheckBeforeActionRecorded =
-                    ensurePermitted(
+            var maybeResponseIfNotPermitted =
+                    getResponseIfNotPermitted(
                             journeyType,
                             permissionContext,
                             auditContext,
                             lockoutStateHolder,
                             false);
-            if (permissionCheckBeforeActionRecorded.isPresent()) {
-                return permissionCheckBeforeActionRecorded.get();
+            if (maybeResponseIfNotPermitted.isPresent()) {
+                return maybeResponseIfNotPermitted.get();
             }
 
             auditContext = auditContext.withPhoneNumber(phoneNumber);
@@ -261,11 +261,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             userActionsManager.sentSmsOtpNotification(
                     journeyType, permissionContext, lockoutStateHolder);
 
-            var permissionCheckAfterActionRecorded =
-                    ensurePermitted(
+            maybeResponseIfNotPermitted =
+                    getResponseIfNotPermitted(
                             journeyType, permissionContext, auditContext, lockoutStateHolder, true);
-            if (permissionCheckAfterActionRecorded.isPresent()) {
-                return permissionCheckAfterActionRecorded.get();
+            if (maybeResponseIfNotPermitted.isPresent()) {
+                return maybeResponseIfNotPermitted.get();
             }
 
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
@@ -327,7 +327,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         return newCode;
     }
 
-    private Optional<APIGatewayProxyResponseEvent> ensurePermitted(
+    private Optional<APIGatewayProxyResponseEvent> getResponseIfNotPermitted(
             JourneyType journeyType,
             PermissionContext permissionContext,
             AuditContext auditContext,
