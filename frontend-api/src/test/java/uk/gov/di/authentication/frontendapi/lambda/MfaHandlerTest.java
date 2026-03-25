@@ -590,7 +590,7 @@ class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenMfaMethodsServiceReturnsAuthAppMfaIdError() {
+    void shouldReturn500WhenMfaMethodsServiceReturnsUnexpectedErrorCreatingMfaId() {
         usingValidSession();
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(
@@ -609,7 +609,7 @@ class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenMfaMethodsServiceReturnsUnexpectedError() {
+    void shouldReturn500WhenMfaMethodsServiceReturnsUnknownMfaIdError() {
         usingValidSession();
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER));
