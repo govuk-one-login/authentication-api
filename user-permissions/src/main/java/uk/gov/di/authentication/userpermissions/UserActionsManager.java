@@ -11,11 +11,13 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.temporal.ChronoUnit;
 
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
@@ -189,7 +191,37 @@ public class UserActionsManager implements UserActions {
 
     @Override
     public Result<TrackingError, Void> sentSmsOtpNotification(
-            JourneyType journeyType, PermissionContext permissionContext) {
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            InMemoryLockoutStateHolder lockoutStateHolder) {
+        var updatedSession =
+                permissionContext.authSessionItem().incrementCodeRequestCount(MFA_SMS, journeyType);
+        getAuthSessionService().updateSession(updatedSession);
+
+        var codeRequestCount = updatedSession.getCodeRequestCount(MFA_SMS, journeyType);
+        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
+            var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, journeyType);
+            var blockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+
+            boolean shouldRecordBlock =
+                    journeyType != JourneyType.REAUTHENTICATION
+                            || !configurationService.supportReauthSignoutEnabled();
+
+            if (shouldRecordBlock) {
+                LOG.info("Setting block for email as user has requested too many MFA OTPs");
+                getCodeStorageService()
+                        .saveBlockedForEmail(
+                                permissionContext.emailAddress(),
+                                blockPrefix,
+                                configurationService.getLockoutDuration());
+            } else if (lockoutStateHolder != null) {
+                lockoutStateHolder.setReauthSmsOtpLimitExceeded();
+            }
+
+            getAuthSessionService()
+                    .updateSession(updatedSession.resetCodeRequestCount(MFA_SMS, journeyType));
+        }
+
         return Result.success(null);
     }
 

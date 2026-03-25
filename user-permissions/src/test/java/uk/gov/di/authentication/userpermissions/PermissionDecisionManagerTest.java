@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.ArrayList;
@@ -525,6 +526,73 @@ class PermissionDecisionManagerTest {
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
+        }
+
+        @Test
+        void shouldReturnLockedOutWhenCodeRequestBlockExists() {
+            var userContext = createUserContext(0);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            CodeRequestType.SupportedCodeType.MFA, JourneyType.SIGN_IN);
+            when(codeStorageService.getTTL(
+                            EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
+                    .thenReturn(300L);
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                    lockedOut.forbiddenReason());
+        }
+
+        @Test
+        void shouldReturnStorageErrorWhenCodeStorageServiceThrowsException() {
+            var userContext = createUserContext(0);
+            when(codeStorageService.getTTL(eq(EMAIL), anyString()))
+                    .thenThrow(new RuntimeException("Storage error"));
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isFailure());
+            assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
+        }
+
+        @Test
+        void shouldReturnLockedOutWhenInMemoryLockoutStateHolderIsSet() {
+            var userContext = createUserContext(0);
+            var lockoutStateHolder = new InMemoryLockoutStateHolder();
+            lockoutStateHolder.setReauthSmsOtpLimitExceeded();
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.REAUTHENTICATION, userContext, lockoutStateHolder);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                    lockedOut.forbiddenReason());
+        }
+
+        @Test
+        void shouldReturnPermittedWhenInMemoryLockoutStateHolderIsNotSet() {
+            var userContext = createUserContext(0);
+            var lockoutStateHolder = new InMemoryLockoutStateHolder();
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.REAUTHENTICATION, userContext, lockoutStateHolder);
+
+            assertTrue(result.isSuccess());
+            assertInstanceOf(Decision.Permitted.class, result.getSuccess());
         }
     }
 

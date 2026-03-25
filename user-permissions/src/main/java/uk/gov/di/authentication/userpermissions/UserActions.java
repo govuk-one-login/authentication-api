@@ -2,6 +2,7 @@ package uk.gov.di.authentication.userpermissions;
 
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
@@ -99,8 +100,24 @@ public interface UserActions {
      * @param permissionContext The user's permission context
      * @return A Result indicating success or failure of the tracking operation
      */
+    default Result<TrackingError, Void> sentSmsOtpNotification(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        return sentSmsOtpNotification(journeyType, permissionContext, null);
+    }
+
+    /**
+     * Records that an SMS OTP notification was sent to the user.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @param lockoutStateHolder Holder for communicating lockout state within a single Lambda
+     *     invocation. See {@link InMemoryLockoutStateHolder} for details on why this exists.
+     * @return A Result indicating success or failure of the tracking operation
+     */
     Result<TrackingError, Void> sentSmsOtpNotification(
-            JourneyType journeyType, PermissionContext permissionContext);
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            InMemoryLockoutStateHolder lockoutStateHolder);
 
     /**
      * Records that an incorrect SMS OTP was received.

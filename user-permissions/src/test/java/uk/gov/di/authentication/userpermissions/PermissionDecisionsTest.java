@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -78,7 +79,9 @@ class PermissionDecisionsTest {
 
         @Override
         public Result<DecisionError, Decision> canSendSmsOtpNotification(
-                JourneyType journeyType, PermissionContext permissionContext) {
+                JourneyType journeyType,
+                PermissionContext permissionContext,
+                InMemoryLockoutStateHolder lockoutStateHolder) {
             return Result.success(new Decision.Permitted(0));
         }
 
