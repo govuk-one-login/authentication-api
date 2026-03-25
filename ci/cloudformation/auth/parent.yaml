@@ -132,6 +132,15 @@ Conditions:
           - !Ref CodeSigningConfigArn
           - "none"
 
+  BulkEmailSendingEnabled:
+    Fn::Equals:
+      - !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          bulkEmailSendingEnabled,
+        ]
+      - "true"
+
   UsePermissionsBoundary:
     Fn::Not:
       - Fn::Equals:
@@ -193,6 +202,7 @@ Mappings:
       authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/85da3e1d-de4f-4f23-813f-efc4d42b10c8
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f98d3388-f92d-48a0-a29b-dfd7f8a113fd
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/03871a19-836e-457e-9179-7870bcbe6c67
+      bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/565b6192-de93-4ceb-a6b0-6e8760535c92
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/b5491829-ace6-4028-bf32-1886305daca7
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c4d54754-4c7f-47d2-b54f-4868342b3660
@@ -233,6 +243,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: true
       amcCreatePasskeyRedirectUri: https://signin.authdev1.dev.account.gov.uk/create-passkey-callback
       supportPasskeys: true
+      bulkEmailSendingEnabled: "false"
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -240,6 +251,7 @@ Mappings:
       authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/0c1930f0-3cb2-4d71-b4a1-e2b9bdd6668c
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e1d340f9-276d-4f56-b97d-799ae2ddce6f
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/70a5d810-8dcf-449d-bdf0-aed149c52302
+      bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/db4d5242-2db0-4d6e-b2c9-6983502dab3d
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/42f5a19c-11ce-4a0c-8b9d-c162a85d6f51
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
@@ -280,6 +292,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: true
       amcCreatePasskeyRedirectUri: https://signin.authdev2.dev.account.gov.uk/create-passkey-callback
       supportPasskeys: true
+      bulkEmailSendingEnabled: "false"
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ce9680d3-953a-4b6a-9098-a0380d0afc70
@@ -287,6 +300,7 @@ Mappings:
       authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4d72b78b-e8ed-4b5f-a045-383170969226
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/51712670-ba1d-4f4a-a7de-8fc1f47fec2f
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/38223bde-df39-4240-b614-3169cb19a342
+      bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/100431c6-ca2d-4ed5-a7f4-487b0a553c94
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/258b15a8-6157-439e-8018-24c59b91c8c5
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e3d591b4-d295-4041-b8f0-f5eb71742014
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ab3306cf-843a-423d-96f8-4c88e3fa1906
@@ -330,6 +344,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: true
       supportPasskeys: true
       amcCreatePasskeyRedirectUri: https://signin.authdev3.dev.account.gov.uk/create-passkey-callback
+      bulkEmailSendingEnabled: "false"
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -337,6 +352,7 @@ Mappings:
       authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7c60a855-8b61-4d0e-be99-f12a22bd2001
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/99608aca-5a73-4073-abae-cdb29fc5b3f4
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e4c701a9-4073-4143-9f12-ddf110b9c720
+      bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/70f90941-d094-4df8-ae7d-b5e177341fe5
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5103c4f-0fb1-4d89-b396-5a91dad9cb28
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/2e7ec5d4-f4b7-4342-a5d6-15952fd9111b
       dataStoreAccountId: 653994557586
@@ -386,6 +402,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: true
       amcCreatePasskeyRedirectUri: https://signin.dev.account.gov.uk/create-passkey-callback
       supportPasskeys: true
+      bulkEmailSendingEnabled: "false"
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574
@@ -393,6 +410,7 @@ Mappings:
       authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ce2114cb-cfe3-4108-a738-4790dbe99f64
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/d4ca8b09-1129-48fd-a8b9-483dece9128b
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/91e74f45-3473-4fa3-b35e-b6a1a1fe7a6d
+      bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/8f9caa07-f4dc-45e7-a4ed-ddec9ffe46d0
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/db350f01-bce4-4da8-9323-e70267569bd8
       customDocAppClaimEnabled: true
@@ -447,6 +465,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
       amcCreatePasskeyRedirectUri: https://signin.build.account.gov.uk/create-passkey-callback
+      bulkEmailSendingEnabled: "false"
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
@@ -454,6 +473,7 @@ Mappings:
       authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/b52a2843-0d62-404a-a04c-5d47ba9ae54e
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/b8ea7d99-8902-4d91-82a1-cb396d88f6db
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/4ee87f07-df3a-4745-9734-6e9cc7995270
+      bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c4b1c79f-1cd1-4ab8-8242-188045fa08b3
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/9c0cc476-e831-4ebf-81e6-c619e6b795e8
       customDocAppClaimEnabled: true
@@ -509,6 +529,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
       amcCreatePasskeyRedirectUri: https://signin.staging.account.gov.uk/create-passkey-callback
+      bulkEmailSendingEnabled: "false"
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
@@ -516,6 +537,7 @@ Mappings:
       authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/f7ca754b-80bb-4f60-a3e5-3963d6827f47
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5917a6e9-13c3-4276-946b-487a0e6411f9
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/9372359d-fb44-4182-8977-7254654dcd1a
+      bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e3b8282c-f03b-4df0-9e23-492072868a36
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
       cloudwatchLogRetentionInDays: 30
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/85164499-9392-458c-8596-b5a810ca90f6
@@ -571,6 +593,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
       amcCreatePasskeyRedirectUri: https://signin.integration.account.gov.uk/create-passkey-callback
+      bulkEmailSendingEnabled: "false"
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/075774c2-b836-452f-9684-dcd742146f81
@@ -578,6 +601,7 @@ Mappings:
       authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/cf8e9b5f-1511-4124-9025-9f98fbf30b01
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/65fad11d-d525-4fc1-a806-0b304b9dda36
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/a6becfd6-a3bb-4bfd-ba2f-2bdf35d36e40
+      bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6e0df2dd-520e-4df0-823a-7e5e4d89b0a0
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
       cloudwatchLogRetentionInDays: 30
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
@@ -633,6 +657,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
       amcCreatePasskeyRedirectUri: https://signin.account.gov.uk/create-passkey-callback
+      bulkEmailSendingEnabled: "false"
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
@@ -2784,6 +2809,71 @@ Resources:
             Effect: Allow
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
+
+  DynamoBulkEmailUsersReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: BulkEmailSendingEnabled
+    Properties:
+      Description: "IAM policy for access to bulk email users table"
+      Path: !Sub
+        - /${Env}/delivery-receipts/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-bulk-email-users"
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-bulk-email-users/index/*"
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    bulkEmailTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    bulkEmailTableEncryptionKey,
+                  ]
 
 Outputs:
   TestClientEmailAllowListSecretEncryptionKeyArn:

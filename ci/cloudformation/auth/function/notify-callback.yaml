@@ -305,11 +305,20 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
+          BULK_USER_EMAIL_ENABLED: !If [BulkEmailSendingEnabled, "1", "0"]
       LoggingConfig:
         LogGroup: !Ref NotifyCallbackFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref NotifyCallbackFunctionParameterPolicy
+        - !If
+          - BulkEmailSendingEnabled
+          - !Ref DynamoBulkEmailUsersReadWriteAccessPolicy
+          - !Ref AWS::NoValue
+        - !If
+          - BulkEmailSendingEnabled
+          - !Ref DynamoUserReadAccessPolicy
+          - !Ref AWS::NoValue
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
