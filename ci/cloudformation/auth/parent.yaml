@@ -529,7 +529,7 @@ Mappings:
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
       amcCreatePasskeyRedirectUri: https://signin.staging.account.gov.uk/create-passkey-callback
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
