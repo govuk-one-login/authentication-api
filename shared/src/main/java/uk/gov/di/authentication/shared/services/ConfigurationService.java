@@ -190,7 +190,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getBulkUserEmailSenderType() {
-        return systemService.getOrDefault("BULK_USER_EMAIL_SENDER_TYPE", "UNKNOWN");
+        return System.getenv().getOrDefault("BULK_USER_EMAIL_SENDER_TYPE", "UNKNOWN");
     }
 
     public long getDefaultOtpCodeExpiry() {

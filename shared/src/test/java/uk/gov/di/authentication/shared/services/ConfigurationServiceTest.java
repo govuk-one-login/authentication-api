@@ -148,6 +148,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getBulkUserEmailSenderTypeShouldDefault() {
+        assertEquals("UNKNOWN", configurationService.getBulkUserEmailSenderType());
+    }
+
+    @Test
     void getDefaultOtpCodeExpiryShouldDefault() {
         assertEquals(900, configurationService.getDefaultOtpCodeExpiry());
     }
