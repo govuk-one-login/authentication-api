@@ -9,7 +9,7 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.BulkUserEmailSendHandler::handleRequest
-      Timeout: 50
+      Timeout: 110
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoBulkEmailTablesAccessPolicy
@@ -34,18 +34,10 @@ Resources:
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
             - notifyTemplateMap
-          BULK_USER_EMAIL_BATCH_QUERY_LIMIT: !FindInMap
+          BULK_USER_EMAIL_BATCH_SIZE: !FindInMap
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailBatchQueryLimit
-          BULK_USER_EMAIL_MAX_BATCH_COUNT: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailMaxBatchCount
-          BULK_USER_EMAIL_BATCH_PAUSE_DURATION: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailBatchPauseDuration
+            - bulkEmailBatchSize
           BULK_USER_EMAIL_SEND_MODE: !FindInMap
             - EnvironmentConfiguration
             - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -67,10 +59,12 @@ Resources:
               - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
               - bulkEmailSendScheduleExpression
             Description: Triggers bulk user email send Lambda on schedule
-            Enabled: !If
-              - BulkEmailSendingEnabled
-              - true
-              - false
+            Enabled: !Equals
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - bulkEmailSendScheduleState
+              - ENABLED
       Tags:
         Name: !Sub
           - "${EnvironmentName}-bulk-user-email-send-lambda"

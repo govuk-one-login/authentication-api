@@ -140,14 +140,19 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("REDUCED_LOCKOUT_DURATION", "900"));
     }
 
-    public int getBulkUserEmailBatchQueryLimit() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_QUERY_LIMIT", "25"));
+    public int getBulkUserEmailBatchSize() {
+        return Integer.parseInt(System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_SIZE", "1"));
     }
 
-    public int getBulkUserEmailMaxBatchCount() {
+    public int getBulkUserEmailTaskTimeoutSeconds() {
         return Integer.parseInt(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_BATCH_COUNT", "20"));
+                System.getenv().getOrDefault("BULK_USER_EMAIL_TASK_TIMEOUT_SECONDS", "61"));
+    }
+
+    public int getBulkUserEmailStopNewRequestsAfterSeconds() {
+        return Integer.parseInt(
+                System.getenv()
+                        .getOrDefault("BULK_USER_EMAIL_STOP_NEW_REQUESTS_AFTER_SECONDS", "45"));
     }
 
     public long getBulkUserEmailMaxAudienceLoadUserCount() {
@@ -159,11 +164,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(
                 System.getenv()
                         .getOrDefault("BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE", "0"));
-    }
-
-    public long getBulkUserEmailBatchPauseDuration() {
-        return Long.parseLong(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));
     }
 
     public long getBulkUserEmailAudienceLoadPauseDuration() {

@@ -45,10 +45,12 @@ Resources:
               - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
               - bulkEmailAudienceLoaderScheduleExpression
             Description: Triggers bulk user email audience loader Lambda on schedule
-            Enabled: !If
-              - BulkEmailSendingEnabled
-              - true
-              - false
+            Enabled: !Equals
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+                - bulkEmailAudienceLoaderScheduleState
+              - ENABLED
       Tags:
         Name: !Sub
           - "${EnvironmentName}-bulk-user-email-audience-loader-lambda"

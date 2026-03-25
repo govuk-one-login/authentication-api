@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ComparisonOperator;
 import software.amazon.awssdk.services.dynamodb.model.Condition;
@@ -26,6 +28,14 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
 
     public BulkEmailUsersService(ConfigurationService configurationService) {
         super(BulkEmailUser.class, BULK_EMAIL_USERS_TABLE, configurationService);
+        this.configurationService = configurationService;
+    }
+
+    BulkEmailUsersService(
+            DynamoDbTable<BulkEmailUser> dynamoTable,
+            DynamoDbClient client,
+            ConfigurationService configurationService) {
+        super(dynamoTable, client);
         this.configurationService = configurationService;
     }
 
@@ -69,7 +79,17 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
     }
 
     public List<String> getNSubjectIdsByStatus(Integer limit, BulkEmailStatus bulkEmailStatus) {
-        QueryRequest queryRequest =
+        return getNSubjectIdsByStatus(limit, bulkEmailStatus, null).subjectIds();
+    }
+
+    public record BulkEmailQueryResult(
+            List<String> subjectIds, Map<String, AttributeValue> lastEvaluatedKey) {}
+
+    public BulkEmailQueryResult getNSubjectIdsByStatus(
+            Integer limit,
+            BulkEmailStatus bulkEmailStatus,
+            Map<String, AttributeValue> exclusiveStartKey) {
+        var builder =
                 QueryRequest.builder()
                         .tableName(
                                 configurationService.getEnvironment()
@@ -80,15 +100,28 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
                                         BULK_EMAIL_STATUS_FIELD,
                                         equalityCondition(bulkEmailStatus.toString())))
                         .indexName(BULK_EMAIL_STATUS_INDEX)
-                        .limit(limit)
-                        .build();
+                        .limit(limit);
 
-        return getSubjectIdsFromQueryRequest(queryRequest);
+        if (exclusiveStartKey != null && !exclusiveStartKey.isEmpty()) {
+            builder.exclusiveStartKey(exclusiveStartKey);
+        }
+
+        var response = query(builder.build());
+        return new BulkEmailQueryResult(
+                getSubjectIdsFromItems(response.items()), response.lastEvaluatedKey());
     }
 
     public List<String> getNSubjectIdsByDeliveryReceiptStatus(
             Integer limit, String deliveryReceiptStatus) {
-        QueryRequest queryRequest =
+        return getNSubjectIdsByDeliveryReceiptStatus(limit, deliveryReceiptStatus, null)
+                .subjectIds();
+    }
+
+    public BulkEmailQueryResult getNSubjectIdsByDeliveryReceiptStatus(
+            Integer limit,
+            String deliveryReceiptStatus,
+            Map<String, AttributeValue> exclusiveStartKey) {
+        var builder =
                 QueryRequest.builder()
                         .tableName(
                                 configurationService.getEnvironment()
@@ -105,16 +138,19 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
                                         AttributeValue.fromS(
                                                 BulkEmailStatus.EMAIL_SENT.toString())))
                         .indexName(DELIVERY_RECEIPT_STATUS_INDEX)
-                        .limit(limit)
-                        .build();
+                        .limit(limit);
 
-        return getSubjectIdsFromQueryRequest(queryRequest);
+        if (exclusiveStartKey != null && !exclusiveStartKey.isEmpty()) {
+            builder.exclusiveStartKey(exclusiveStartKey);
+        }
+
+        var response = query(builder.build());
+        return new BulkEmailQueryResult(
+                getSubjectIdsFromItems(response.items()), response.lastEvaluatedKey());
     }
 
-    private List<String> getSubjectIdsFromQueryRequest(QueryRequest queryRequest) {
-        var queryItems = query(queryRequest).items().stream();
-
-        return queryItems
+    private List<String> getSubjectIdsFromItems(List<Map<String, AttributeValue>> items) {
+        return items.stream()
                 .flatMap(
                         item ->
                                 item

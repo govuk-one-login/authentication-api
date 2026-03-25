@@ -26,6 +26,7 @@ dependencies {
     runtimeOnly libs.bundles.loggingRuntime
 
     testImplementation libs.bundles.test,
+            project(":shared-test"),
             libs.awsS3,
             libs.bundles.awsLambda,
             libs.bundles.awsDynamoDb

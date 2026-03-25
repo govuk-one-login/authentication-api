@@ -67,11 +67,6 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                     }
 
                     @Override
-                    public int getBulkUserEmailBatchQueryLimit() {
-                        return 3;
-                    }
-
-                    @Override
                     public long getBulkUserEmailAudienceLoadUserBatchSize() {
                         return bulkUserEmailAudienceLoadUserBatchSize;
                     }
