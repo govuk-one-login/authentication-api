@@ -794,6 +794,46 @@ resource "aws_dynamodb_table" "authenticator_table" {
   )
 }
 
+resource "aws_dynamodb_table" "amc_state" {
+  name         = "${var.environment}-amc-state"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  hash_key = "AuthenticationState"
+
+  attribute {
+    name = "AuthenticationState"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.amc_state_table_encryption_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = (
+    var.environment == "integration" || var.environment == "production" ?
+    {
+      "BackupFrequency" = "Bihourly"
+    } : {}
+  )
+}
+
 ## DynamoDB Resource Policies
 ## These policies are used to allow cross-account access to the DynamoDB tables
 
@@ -855,6 +895,11 @@ resource "aws_dynamodb_resource_policy" "authenticator_table" {
 resource "aws_dynamodb_resource_policy" "bulk_email_users" {
   count        = local.deploy_bulk_email_users_count
   resource_arn = aws_dynamodb_table.bulk_email_users[0].arn
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
+}
+
+resource "aws_dynamodb_resource_policy" "amc_state" {
+  resource_arn = aws_dynamodb_table.amc_state.arn
   policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
