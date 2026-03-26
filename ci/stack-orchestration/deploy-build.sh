@@ -125,15 +125,15 @@ function provision_base_stacks() {
 
   #Infra audit hook stack
   echo "Provisioning infrastructure audit hook stack"
-  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/infrastructure-audit-hook/parameters.json" ${PROVISION_COMMAND} "${AWS_ACCOUNT}" infrastructure-audit-hook infrastructure-audit-hook LATEST
+  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/infrastructure-audit-hook/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" infrastructure-audit-hook infrastructure-audit-hook LATEST
 
   # Lambda audit hook stack
   echo "Provisioning lambda audit hook stack"
-  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/lambda-audit-hook/parameters.json" ${PROVISION_COMMAND} "${AWS_ACCOUNT}" lambda-audit-hook lambda-audit-hook LATEST
+  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/lambda-audit-hook/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" lambda-audit-hook lambda-audit-hook LATEST
 
   # Build notification stack
   echo "Provisioning build notification stack"
-  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/build-notifications/parameters.json" ${PROVISION_COMMAND} "${AWS_ACCOUNT}" build-notifications build-notifications "${BUILD_NOTIFICATION_STACK_VERSION}"
+  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/build-notifications/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" build-notifications build-notifications "${BUILD_NOTIFICATION_STACK_VERSION}"
 
   echo "Provisioned base stacks"
 }
@@ -143,7 +143,7 @@ function provision_vpc_stack() {
 
   echo "Provisioning VPC stack"
 
-  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/build-notifications/parameters.json" ${PROVISION_COMMAND} "${AWS_ACCOUNT}" build-notifications build-notifications "${BUILD_NOTIFICATION_STACK_VERSION}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "vpc" "vpc" "${VPC_STACK_VERSION}"
+  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/build-notifications/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" build-notifications build-notifications "${BUILD_NOTIFICATION_STACK_VERSION}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "vpc" "vpc" "${VPC_STACK_VERSION}"
 
   echo "Provisioned VPC stack"
 }
