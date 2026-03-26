@@ -45,6 +45,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.HashHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -195,8 +196,8 @@ class AMCServiceTest {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn(constructTestPublicKey());
 
-            Result<JwtFailureReason, String> result =
-                    amcService.buildAuthorizationUrl(
+            var result =
+                    amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
@@ -205,10 +206,13 @@ class AMCServiceTest {
                             accessTokenConfigs);
 
             assertTrue(result.isSuccess());
-            String authorizationUrl = result.getSuccess();
+            String authorizationUrl = result.getSuccess().url();
             assertTrue(authorizationUrl.startsWith(AMC_AUTHORIZE_URI));
 
             SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(authorizationUrl);
+
+            String amcCookie = result.getSuccess().amcCookie();
+            assertEquals(HashHelper.hashSha256String(compositeJWT.serialize()), amcCookie);
 
             assertTrue(compositeJWT.verify(new ECDSAVerifier(compositeJWTKey.toECPublicKey())));
 
@@ -237,8 +241,8 @@ class AMCServiceTest {
                                     "AWS SDK error when signing JWT",
                                     SdkException.builder().message("KMS Unreachable").build()));
 
-            Result<JwtFailureReason, String> result =
-                    amcService.buildAuthorizationUrl(
+            var result =
+                    amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
@@ -258,8 +262,8 @@ class AMCServiceTest {
                             new JwtServiceException(
                                     "Failed to transcode signature", new JOSEException("Invalid")));
 
-            Result<JwtFailureReason, String> result =
-                    amcService.buildAuthorizationUrl(
+            var result =
+                    amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
@@ -299,8 +303,8 @@ class AMCServiceTest {
             AMCService serviceWithMockJwt =
                     new AMCService(configurationService, NOW_CLOCK, jwtService);
 
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
+            var result =
+                    serviceWithMockJwt.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
@@ -332,8 +336,8 @@ class AMCServiceTest {
             AMCService serviceWithMockJwt =
                     new AMCService(configurationService, NOW_CLOCK, jwtService);
 
-            Result<JwtFailureReason, String> result =
-                    serviceWithMockJwt.buildAuthorizationUrl(
+            var result =
+                    serviceWithMockJwt.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,
@@ -350,8 +354,8 @@ class AMCServiceTest {
             when(configurationService.getAuthToAMCPublicEncryptionKey())
                     .thenReturn("invalid-pem-key");
 
-            Result<JwtFailureReason, String> result =
-                    amcService.buildAuthorizationUrl(
+            var result =
+                    amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
                             AMCScope.ACCOUNT_DELETE,
                             authSessionItem,

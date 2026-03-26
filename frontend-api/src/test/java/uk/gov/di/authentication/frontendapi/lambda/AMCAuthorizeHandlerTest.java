@@ -8,7 +8,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
@@ -29,6 +31,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,6 +48,7 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMA
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class AMCAuthorizeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -62,6 +66,8 @@ class AMCAuthorizeHandlerTest {
     private final UserProfile userProfile =
             new UserProfile().withEmail(EMAIL).withPublicSubjectID(PUBLIC_SUBJECT_ID);
     private final UserContext userContext = mock(UserContext.class);
+
+    private static final String AMC_COOKIE = "some-cookie";
 
     @BeforeEach
     void setUp() {
@@ -95,19 +101,20 @@ class AMCAuthorizeHandlerTest {
 
     @ParameterizedTest
     @MethodSource("amcJourneyTypeAndExpectedScope")
-    void shouldReturnAuthorizationUrlOnSuccess(
+    void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
             AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
         String expectedUrl = "https://example.com/authorize";
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(amcService.buildAuthorizationUrl(
+        when(amcService.buildAuthorizationResult(
                         eq(INTERNAL_COMMON_SUBJECT_ID),
                         eq(expectedAmcScope),
                         eq(authSession),
                         eq(PUBLIC_SUBJECT_ID),
                         anyString(),
                         anyList()))
-                .thenReturn(Result.success(expectedUrl));
+                .thenReturn(
+                        Result.success(new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
 
         var event =
                 ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
@@ -118,10 +125,11 @@ class AMCAuthorizeHandlerTest {
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(event, context, request, userContext);
 
+        var expectedResponse = new AMCAuthorizeResponse(expectedUrl, AMC_COOKIE);
         assertEquals(200, result.getStatusCode());
-        assertTrue(result.getBody().contains(expectedUrl));
+        assertThat(result, hasJsonBody(expectedResponse));
         verify(amcService)
-                .buildAuthorizationUrl(
+                .buildAuthorizationResult(
                         INTERNAL_COMMON_SUBJECT_ID,
                         expectedAmcScope,
                         authSession,
@@ -154,7 +162,7 @@ class AMCAuthorizeHandlerTest {
     void shouldHandleAllFailureReasons(JwtFailureReason failureReason) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(amcService.buildAuthorizationUrl(
+        when(amcService.buildAuthorizationResult(
                         anyString(), any(), any(), anyString(), anyString(), anyList()))
                 .thenReturn(Result.failure(failureReason));
 
