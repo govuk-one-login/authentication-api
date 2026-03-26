@@ -2768,25 +2768,6 @@ Resources:
               - kms:GetPublicKey
             Resource: !GetAtt AuthToAccountManagementSigningKey.Arn
 
-  AuthToAMCPublicEncryptionKeyParameterPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "IAM policy for accessing Auth to AMC public encryption key from Secrets Manager"
-      Path: !Sub
-        - "/${Env}/auth-to-amc/"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowAccessToPublicEncryptionKey
-            Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Sub
-              - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/deploy/${env}/auth_to_amc_public_encryption_key-*"
-              - env:
-                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-
   NotifyCallbackFunctionParameterPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
