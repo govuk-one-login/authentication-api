@@ -19,6 +19,12 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcAuthorizeUri,
             ]
+          AMC_JWKS_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcJwksUrl,
+            ]
           AMC_CLIENT_ID:
             !FindInMap [
               EnvironmentConfiguration,
