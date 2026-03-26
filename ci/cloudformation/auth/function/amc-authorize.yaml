@@ -57,10 +57,6 @@ Resources:
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-amc-signing-key
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          AUTH_TO_AMC_PUBLIC_ENCRYPTION_KEY: !Sub
-            - "{{resolve:secretsmanager:/deploy/${env}/auth_to_amc_public_encryption_key}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           AUTH_TO_ACCOUNT_MANAGEMENT_API_AUDIENCE: !If
             - IsNotProduction
             - !If
@@ -101,7 +97,6 @@ Resources:
         LogGroup: !Ref AMCAuthorizeFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref AuthToAMCPublicEncryptionKeyParameterPolicy
         - !Ref AuthToAMCSigningKeyPolicy
         - !Ref AuthToAccountManagementSigningKeyPolicy
         - !Ref DynamoAuthSessionStoreReadAccessPolicy
