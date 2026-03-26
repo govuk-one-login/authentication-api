@@ -12,7 +12,7 @@ bulk_user_email_audience_load_pause_duration      = 1000
 
 bulk_user_email_send_schedule_enabled    = false
 bulk_user_email_send_schedule_expression = "rate(3 minutes)"
-bulk_user_email_email_sending_enabled    = false
+bulk_user_email_email_sending_enabled    = true
 bulk_user_email_batch_size               = 2
 bulk_user_email_send_mode                = "PENDING"
 bulk_user_email_sender_type              = "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET"
