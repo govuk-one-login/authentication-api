@@ -18,7 +18,7 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
-import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.List;
 import java.util.Map;
@@ -26,13 +26,18 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_EMAIL_FIELD;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_PHONE;
 
 class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final String USER_EMAIL = "test@email.com";
-    private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
     private static final int INTERNATIONAL_SMS_SEND_LIMIT = 3;
     private static final String TEST_REFERENCE = "test-reference";
     private String SESSION_ID;
@@ -72,7 +77,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         SESSION_ID = IdGenerator.generate();
         authSessionExtension.addSession(SESSION_ID);
-        authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
+        authSessionStore.addEmailToSession(SESSION_ID, EMAIL);
     }
 
     @Test
@@ -81,7 +86,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.of(
                                 new SendNotificationRequest(
-                                        USER_EMAIL,
+                                        EMAIL,
                                         NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                                         JourneyType.ACCOUNT_RECOVERY)),
                         constructFrontendHeaders(SESSION_ID),
@@ -94,9 +99,14 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                         JourneyType.ACCOUNT_RECOVERY),
                 equalTo(1));
-        assertTxmaAuditEventsReceived(
+
+        assertAuditEventExpectations(
                 txmaAuditQueue,
-                List.of(FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT));
+                List.of(
+                        new AuditEventExpectation(
+                                        FrontendAuditableEvent
+                                                .AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT)
+                                .withAttribute(USER_EMAIL_FIELD, EMAIL)));
     }
 
     @ParameterizedTest
@@ -113,11 +123,11 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var requestBody =
                 Map.of(
                         "email",
-                        USER_EMAIL,
+                        EMAIL,
                         "notificationType",
                         NotificationType.VERIFY_PHONE_NUMBER,
                         "phoneNumber",
-                        CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                        INTERNATIONAL_MOBILE_NUMBER,
                         "journeyType",
                         journeyType);
 
@@ -140,17 +150,17 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
             internationalSmsSendCountStore.recordSmsSent(
-                    INTERNATIONAL_PHONE_NUMBER, TEST_REFERENCE);
+                    INTERNATIONAL_MOBILE_NUMBER, TEST_REFERENCE);
         }
 
         var requestBody =
                 Map.of(
                         "email",
-                        USER_EMAIL,
+                        EMAIL,
                         "notificationType",
                         NotificationType.VERIFY_PHONE_NUMBER,
                         "phoneNumber",
-                        INTERNATIONAL_PHONE_NUMBER,
+                        INTERNATIONAL_MOBILE_NUMBER,
                         "journeyType",
                         JourneyType.REGISTRATION);
 
@@ -169,11 +179,11 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var requestBody =
                 Map.of(
                         "email",
-                        USER_EMAIL,
+                        EMAIL,
                         "notificationType",
                         NotificationType.VERIFY_PHONE_NUMBER,
                         "phoneNumber",
-                        INTERNATIONAL_PHONE_NUMBER,
+                        INTERNATIONAL_MOBILE_NUMBER,
                         "journeyType",
                         JourneyType.REGISTRATION);
 
@@ -182,22 +192,29 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(requestBody), constructFrontendHeaders(SESSION_ID), Map.of());
 
         assertThat(response, hasStatus(204));
+
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(FrontendAuditableEvent.AUTH_PHONE_CODE_SENT)
+                                .withAttribute(USER_PHONE, INTERNATIONAL_MOBILE_NUMBER)
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REGISTRATION")));
     }
 
     @Test
     void shouldReturn204ForDomesticNumberRegardlessOfLimit() {
         handler =
                 new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
-        String domesticNumber = "+447712345432";
 
         var requestBody =
                 Map.of(
                         "email",
-                        USER_EMAIL,
+                        EMAIL,
                         "notificationType",
                         NotificationType.VERIFY_PHONE_NUMBER,
                         "phoneNumber",
-                        domesticNumber,
+                        UK_MOBILE_NUMBER,
                         "journeyType",
                         JourneyType.REGISTRATION);
 
@@ -206,5 +223,13 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(requestBody), constructFrontendHeaders(SESSION_ID), Map.of());
 
         assertThat(response, hasStatus(204));
+
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(FrontendAuditableEvent.AUTH_PHONE_CODE_SENT)
+                                .withAttribute(USER_PHONE, UK_MOBILE_NUMBER)
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REGISTRATION")));
     }
 }
