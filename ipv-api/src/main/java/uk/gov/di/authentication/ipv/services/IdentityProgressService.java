@@ -6,9 +6,9 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.util.Map;
 
@@ -21,7 +21,7 @@ public class IdentityProgressService {
     private final ConfigurationService configurationService;
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final Sleeper sleeper;
     private final int maxRetries;
 
@@ -30,7 +30,7 @@ public class IdentityProgressService {
                 configurationService,
                 new DynamoIdentityService(configurationService),
                 new AuditService(configurationService),
-                new CloudwatchMetricsService(configurationService),
+                new Metrics(configurationService),
                 Thread::sleep);
     }
 
@@ -38,12 +38,12 @@ public class IdentityProgressService {
             ConfigurationService configurationService,
             DynamoIdentityService dynamoIdentityService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             Sleeper sleeper) {
         this.configurationService = configurationService;
         this.dynamoIdentityService = dynamoIdentityService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.sleeper = sleeper;
         this.maxRetries = (int) (configurationService.getSyncWaitForSpotTimeout() / DELAY_IN_MS);
     }
@@ -70,7 +70,7 @@ public class IdentityProgressService {
             }
         }
         LOG.info("Client session ID {} identity progress status: {}", clientSessionId, status);
-        cloudwatchMetricsService.incrementCounter(
+        metrics.increment(
                 "ProcessingIdentity",
                 Map.of(
                         "Environment",

@@ -62,8 +62,8 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -170,8 +170,7 @@ public class TokenHandlerTest {
     private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private TokenHandler handler;
     private final LocalDateTime clientSessionCreationTime = LocalDateTime.now();
     private final AuditService auditService = mock(AuditService.class);
@@ -196,7 +195,7 @@ public class TokenHandlerTest {
                         orchClientSessionService,
                         tokenValidationService,
                         tokenClientAuthValidatorFactory,
-                        cloudwatchMetricsService,
+                        metrics,
                         auditService);
     }
 
@@ -866,8 +865,8 @@ public class TokenHandlerTest {
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         SUCCESSFUL_TOKEN_ISSUED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
@@ -1049,8 +1048,7 @@ public class TokenHandlerTest {
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasBody("Internal server error"));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
+        verify(metrics, never()).increment(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
         verify(auditService, never())
                 .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
         verifyAuthCodeExchangeDataRetrieved(authCode);
@@ -1497,8 +1495,8 @@ public class TokenHandlerTest {
     }
 
     private void verifySuccessfulTokenMetricIncremented() {
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         SUCCESSFUL_TOKEN_ISSUED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
@@ -1518,7 +1516,7 @@ public class TokenHandlerTest {
     }
 
     private void verifyNoMetricsOrAuditEvents() {
-        verify(cloudwatchMetricsService, never()).incrementCounter(any(), anyMap());
+        verify(metrics, never()).increment(any(), anyMap());
         verify(auditService, never())
                 .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
     }

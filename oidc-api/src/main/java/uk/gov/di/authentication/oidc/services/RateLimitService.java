@@ -5,21 +5,19 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.util.Map;
 
 public class RateLimitService {
 
     private final RateLimitAlgorithm rateLimitAlgorithm;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private static final Logger LOG = LogManager.getLogger(RateLimitService.class);
 
-    public RateLimitService(
-            RateLimitAlgorithm rateLimitAlgorithm,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+    public RateLimitService(RateLimitAlgorithm rateLimitAlgorithm, Metrics metrics) {
         this.rateLimitAlgorithm = rateLimitAlgorithm;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
     }
 
     public RateLimitDecision getClientRateLimitDecision(
@@ -41,7 +39,7 @@ public class RateLimitService {
 
     private void emitRateLimitExceededMetric(RateLimitDecision rateLimitDecision, String clientId) {
         try {
-            cloudwatchMetricsService.incrementCounter(
+            metrics.increment(
                     "RpRateLimitExceeded",
                     Map.of(
                             "clientId",

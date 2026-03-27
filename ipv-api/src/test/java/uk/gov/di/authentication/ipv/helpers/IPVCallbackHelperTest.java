@@ -37,9 +37,9 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -76,8 +76,7 @@ class IPVCallbackHelperTest {
     private final AuthCodeResponseGenerationService authCodeResponseService =
             mock(AuthCodeResponseGenerationService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
@@ -213,7 +212,7 @@ class IPVCallbackHelperTest {
                         auditService,
                         authCodeResponseService,
                         orchAuthCodeService,
-                        cloudwatchMetricsService,
+                        metrics,
                         configurationService,
                         dynamoIdentityService,
                         SerializationService.getInstance(),
@@ -362,7 +361,7 @@ class IPVCallbackHelperTest {
                         auditService,
                         authCodeResponseService,
                         orchAuthCodeService,
-                        cloudwatchMetricsService,
+                        metrics,
                         configurationService,
                         dynamoIdentityService,
                         objectMapperMock,

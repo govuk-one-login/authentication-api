@@ -35,9 +35,9 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -79,7 +79,7 @@ public class AuthCodeHandler
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final ConfigurationService configurationService;
     private final DynamoClientService dynamoClientService;
 
@@ -91,7 +91,7 @@ public class AuthCodeHandler
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService) {
         this.orchSessionService = orchSessionService;
@@ -101,7 +101,7 @@ public class AuthCodeHandler
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.configurationService = configurationService;
         this.dynamoClientService = dynamoClientService;
     }
@@ -114,7 +114,7 @@ public class AuthCodeHandler
                 new OrchestrationAuthorizationService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
-        cloudwatchMetricsService = new CloudwatchMetricsService();
+        metrics = new Metrics();
         this.configurationService = configurationService;
         authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         dynamoClientService = new DynamoClientService(configurationService);
@@ -346,19 +346,18 @@ public class AuthCodeHandler
             authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
         }
 
-        cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+        metrics.increment("SignIn", dimensions);
 
-        cloudwatchMetricsService.incrementSignInByClient(
+        metrics.incrementSignInByClient(
                 orchSession.getIsNewAccount(),
                 clientID.getValue(),
                 orchClientSession.getClientName());
-        cloudwatchMetricsService.incrementCounter(
+        metrics.increment(
                 "orchIdentityJourneyCompleted",
                 Map.of(
                         "clientName", client.getClientName(),
                         "clientId", clientID.getValue()));
-        cloudwatchMetricsService.incrementCounter(
-                "orchJourneyCompleted", Map.of("journeyType", "identity"));
+        metrics.increment("orchJourneyCompleted", Map.of("journeyType", "identity"));
     }
 
     private static Optional<UserInfo> getAuthUserInfo(

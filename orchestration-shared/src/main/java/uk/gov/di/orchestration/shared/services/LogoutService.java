@@ -37,7 +37,7 @@ public class LogoutService {
     private final DynamoClientService dynamoClientService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final BackChannelLogoutService backChannelLogoutService;
     private final AuthFrontend authFrontend;
     private final NowClock nowClock;
@@ -50,7 +50,7 @@ public class LogoutService {
                 new DynamoClientService(configurationService),
                 new OrchClientSessionService(configurationService),
                 new AuditService(configurationService),
-                new CloudwatchMetricsService(),
+                new Metrics(),
                 new BackChannelLogoutService(configurationService),
                 new AuthFrontend(configurationService),
                 new NowClock(Clock.systemUTC()));
@@ -61,7 +61,7 @@ public class LogoutService {
             DynamoClientService dynamoClientService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             BackChannelLogoutService backChannelLogoutService,
             AuthFrontend authFrontend,
             NowClock nowClock) {
@@ -69,7 +69,7 @@ public class LogoutService {
         this.dynamoClientService = dynamoClientService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.backChannelLogoutService = backChannelLogoutService;
         this.authFrontend = authFrontend;
         this.nowClock = nowClock;
@@ -114,7 +114,7 @@ public class LogoutService {
         destroySessionsRequest.ifPresent(
                 request -> {
                     destroySessions(request);
-                    cloudwatchMetricsService.incrementLogout(clientId);
+                    metrics.incrementLogout(clientId);
                 });
 
         URI logoutUri;
@@ -151,7 +151,7 @@ public class LogoutService {
             URI errorRedirectUri) {
         var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
         destroySessions(request);
-        cloudwatchMetricsService.incrementLogout(Optional.of(clientId));
+        metrics.incrementLogout(Optional.of(clientId));
         return generateLogoutResponse(
                 errorRedirectUri,
                 LogoutReason.REAUTHENTICATION_FAILURE,
@@ -170,7 +170,7 @@ public class LogoutService {
         var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
 
         destroySessions(request);
-        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
+        metrics.incrementLogout(Optional.of(clientId), Optional.of(intervention));
 
         URI redirectURI;
         if (intervention.getBlocked()) {

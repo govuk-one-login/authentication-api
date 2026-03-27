@@ -20,11 +20,11 @@ import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
@@ -43,7 +43,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     private final DynamoIdentityService dynamoIdentityService;
     private final AccountInterventionService accountInterventionService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final LogoutService logoutService;
 
     private static final Logger LOG = LogManager.getLogger(ProcessingIdentityHandler.class);
@@ -52,10 +52,9 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         super(ProcessingIdentityRequest.class, configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.metrics = new Metrics();
         this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configurationService, metrics, auditService);
         this.logoutService = new LogoutService(configurationService);
     }
 
@@ -69,7 +68,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             DynamoClientService dynamoClientService,
             ConfigurationService configurationService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             LogoutService logoutService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
@@ -82,7 +81,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         this.dynamoIdentityService = dynamoIdentityService;
         this.accountInterventionService = accountInterventionService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.logoutService = logoutService;
     }
 
@@ -115,7 +114,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             if (processingStatus == ProcessingIdentityStatus.NO_ENTRY) {
                 userContext.getOrchSession().resetProcessingIdentityAttempts();
             }
-            cloudwatchMetricsService.incrementCounter(
+            metrics.increment(
                     "ProcessingIdentity",
                     Map.of(
                             "Environment",
