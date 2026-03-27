@@ -18,6 +18,12 @@ Resources:
       AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref BulkTestUserDeleteLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-AWSServicesEndpointSecurityGroupId"
+        SubnetIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
       Tags:
         Name: !Sub
           - "${EnvironmentName}-bulk-test-user-delete-lambda"

@@ -3,6 +3,7 @@ module "bulk_test_user_create_lambda_role" {
 
   environment = var.environment
   role_name   = "bulk_test_user_create_lambda_role"
+  vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
     aws_iam_policy.user_profile_dynamo_write_access.arn,
@@ -25,6 +26,11 @@ resource "aws_lambda_function" "bulk_test_user_create_lambda" {
   s3_bucket         = aws_s3_object.utils_release_zip.bucket
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
+
+  vpc_config {
+    security_group_ids = [local.allow_aws_service_access_security_group_id]
+    subnet_ids         = local.authentication_private_subnet_ids
+  }
 
   tracing_config {
     mode = "Active"
