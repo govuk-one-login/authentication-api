@@ -18,16 +18,15 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -42,12 +41,18 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
-import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -93,8 +98,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
@@ -130,9 +133,10 @@ class SendNotificationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final InternationalSmsSendLimitService internationalSmsSendLimitService =
-            mock(InternationalSmsSendLimitService.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
 
     private final Context context = mock(Context.class);
     private static final Json objectMapper = SerializationService.getInstance();
@@ -169,8 +173,9 @@ class SendNotificationHandlerTest {
                     auditService,
                     authSessionService,
                     cloudwatchMetricsService,
-                    internationalSmsSendLimitService,
-                    testUserHelper);
+                    testUserHelper,
+                    permissionDecisionManager,
+                    userActionsManager);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -200,7 +205,6 @@ class SendNotificationHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.isInternalApiNewInternationalSmsEnabled()).thenReturn(true);
-        when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(true);
 
         var userCreds =
                 new UserCredentials()
@@ -228,6 +232,26 @@ class SendNotificationHandlerTest {
 
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
+
+        when(permissionDecisionManager.canSendEmailOtpNotification(
+                        any(JourneyType.class), any(PermissionContext.class)))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canVerifyEmailOtp(
+                        any(JourneyType.class), any(PermissionContext.class)))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canSendSmsOtpNotification(
+                        any(JourneyType.class), any(PermissionContext.class)))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canVerifyMfaOtp(
+                        any(JourneyType.class), any(PermissionContext.class)))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+
+        when(userActionsManager.sentEmailOtpNotification(
+                        any(JourneyType.class), any(PermissionContext.class)))
+                .thenReturn(Result.success(null));
+        when(userActionsManager.sentSmsOtpNotification(
+                        any(JourneyType.class), any(PermissionContext.class)))
+                .thenReturn(Result.success(null));
     }
 
     @Nested
@@ -248,23 +272,6 @@ class SendNotificationHandlerTest {
 
         private static Stream<Arguments> requestEmailCheckPermutations() {
             return Stream.of(Arguments.of(true, false), Arguments.of(false, true));
-        }
-
-        private static Stream<Arguments> contrastingNotificationTypeAndJourneyTypeArgs() {
-            return Stream.of(
-                    Arguments.of(MFA_SMS, JourneyType.SIGN_IN, VERIFY_EMAIL, REGISTRATION),
-                    Arguments.of(VERIFY_PHONE_NUMBER, REGISTRATION, VERIFY_EMAIL, REGISTRATION),
-                    Arguments.of(VERIFY_EMAIL, REGISTRATION, VERIFY_PHONE_NUMBER, REGISTRATION),
-                    Arguments.of(
-                            VERIFY_EMAIL,
-                            REGISTRATION,
-                            VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                            JourneyType.ACCOUNT_RECOVERY),
-                    Arguments.of(
-                            VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                            JourneyType.ACCOUNT_RECOVERY,
-                            VERIFY_EMAIL,
-                            REGISTRATION));
         }
 
         @ParameterizedTest
@@ -336,13 +343,9 @@ class SendNotificationHandlerTest {
                                     EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
                     verify(codeStorageService).getOtpCode(EMAIL, notificationType);
 
-                    verify(authSessionService)
-                            .updateSession(
-                                    argThat(
-                                            authSession ->
-                                                    authSession.getCodeRequestCount(
-                                                                    notificationType, journeyType)
-                                                            == 1));
+                    verify(userActionsManager)
+                            .sentEmailOtpNotification(
+                                    eq(journeyType), any(PermissionContext.class));
                     verify(auditService)
                             .submitAuditEvent(
                                     notificationType.equals(VERIFY_EMAIL)
@@ -507,13 +510,8 @@ class SendNotificationHandlerTest {
             verify(codeStorageService).getOtpCode(EMAIL, notificationType);
             verify(codeStorageService)
                     .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
-            verify(authSessionService)
-                    .updateSession(
-                            argThat(
-                                    authSession ->
-                                            authSession.getCodeRequestCount(
-                                                            notificationType, journeyType)
-                                                    == 1));
+            verify(userActionsManager)
+                    .sentEmailOtpNotification(eq(journeyType), any(PermissionContext.class));
 
             var testClientAuditContext = auditContext.withClientId(TEST_CLIENT_ID);
 
@@ -600,63 +598,6 @@ class SendNotificationHandlerTest {
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
             verify(auditService).submitAuditEvent(eq(AUTH_PHONE_CODE_SENT), any());
-        }
-
-        @ParameterizedTest
-        @MethodSource("contrastingNotificationTypeAndJourneyTypeArgs")
-        void
-                shouldReturn204IfUserHasReachedTheOtpRequestLimitForADifferentOtpTypeToThatCurrentlyBeingRequested(
-                        NotificationType notificationTypeOne,
-                        JourneyType journeyTypeOne,
-                        NotificationType notificationTypeTwo,
-                        JourneyType journeyTypeTwo) {
-            maxOutCodeRequestCount(notificationTypeOne, journeyTypeOne);
-            usingValidSession();
-
-            var body =
-                    format(
-                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                            EMAIL,
-                            notificationTypeTwo,
-                            CommonTestVariables.UK_MOBILE_NUMBER,
-                            journeyTypeTwo);
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-            var result = handler.handleRequest(event, context);
-
-            assertEquals(204, result.getStatusCode());
-        }
-
-        @ParameterizedTest
-        @MethodSource("contrastingNotificationTypeAndJourneyTypeArgs")
-        void
-                shouldReturn204IfUserIsBlockedForRequestingADifferentOtpTypeToThatCurrentlyBeingRequested(
-                        NotificationType notificationTypeOne,
-                        JourneyType journeyTypeOne,
-                        NotificationType notificationTypeTwo,
-                        JourneyType journeyTypeTwo) {
-            CodeRequestType codeRequestTypeForBlockedOtpRequestType =
-                    CodeRequestType.getCodeRequestType(notificationTypeOne, journeyTypeOne);
-            when(codeStorageService.isBlockedForEmail(
-                            EMAIL,
-                            CODE_REQUEST_BLOCKED_KEY_PREFIX
-                                    + codeRequestTypeForBlockedOtpRequestType))
-                    .thenReturn(true);
-
-            usingValidSession();
-
-            var body =
-                    format(
-                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                            EMAIL,
-                            notificationTypeTwo,
-                            CommonTestVariables.UK_MOBILE_NUMBER,
-                            journeyTypeTwo);
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-            var result = handler.handleRequest(event, context);
-
-            assertEquals(204, result.getStatusCode());
         }
 
         @ParameterizedTest
@@ -1015,6 +956,17 @@ class SendNotificationHandlerTest {
         void checkEmailInvalidCodeRequestAuditEventStillEmittedWhenTICFHeaderNotProvided() {
             maxOutCodeRequestCount(VERIFY_EMAIL, REGISTRATION);
             usingValidSession();
+            when(permissionDecisionManager.canSendEmailOtpNotification(
+                            eq(REGISTRATION), any(PermissionContext.class)))
+                    .thenReturn(Result.success(new Decision.Permitted(0)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                            6,
+                                            Instant.now(),
+                                            true)));
 
             var body =
                     format(
@@ -1172,9 +1124,39 @@ class SendNotificationHandlerTest {
         @Nested
         class UserBlockedErrors {
             @Test
+            void shouldReturn500WhenPermissionDecisionManagerReturnsError() {
+                when(permissionDecisionManager.canSendEmailOtpNotification(
+                                any(JourneyType.class), any(PermissionContext.class)))
+                        .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+                usingValidSession();
+
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL, VERIFY_EMAIL, REGISTRATION);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertThat(result, hasStatus(500));
+                verifyNoInteractions(emailSqsClient);
+            }
+
+            @Test
             void shouldReturn400IfUserHasReachedTheRegistrationEmailOtpRequestLimit() {
                 maxOutCodeRequestCount(VERIFY_EMAIL, REGISTRATION);
                 usingValidSession();
+                when(permissionDecisionManager.canSendEmailOtpNotification(
+                                eq(REGISTRATION), any(PermissionContext.class)))
+                        .thenReturn(Result.success(new Decision.Permitted(0)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                true)));
 
                 var body =
                         format(
@@ -1186,12 +1168,6 @@ class SendNotificationHandlerTest {
 
                 assertEquals(400, result.getStatusCode());
                 assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_SENT));
-                verify(codeStorageService)
-                        .saveBlockedForEmail(
-                                EMAIL,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX
-                                        + CodeRequestType.EMAIL_REGISTRATION,
-                                LOCKOUT_DURATION);
                 verify(codeStorageService, never())
                         .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
                 verifyNoInteractions(emailSqsClient);
@@ -1204,6 +1180,17 @@ class SendNotificationHandlerTest {
                 maxOutCodeRequestCount(
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
                 usingValidSession();
+                when(permissionDecisionManager.canSendEmailOtpNotification(
+                                eq(JourneyType.ACCOUNT_RECOVERY), any(PermissionContext.class)))
+                        .thenReturn(Result.success(new Decision.Permitted(0)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                true)));
 
                 var body =
                         format(
@@ -1218,12 +1205,6 @@ class SendNotificationHandlerTest {
                 assertEquals(400, result.getStatusCode());
                 assertThat(
                         result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT));
-                verify(codeStorageService)
-                        .saveBlockedForEmail(
-                                EMAIL,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX
-                                        + CodeRequestType.EMAIL_ACCOUNT_RECOVERY,
-                                LOCKOUT_DURATION);
                 verify(codeStorageService, never())
                         .saveOtpCode(
                                 EMAIL,
@@ -1240,6 +1221,17 @@ class SendNotificationHandlerTest {
             void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
                 maxOutCodeRequestCount(VERIFY_PHONE_NUMBER, REGISTRATION);
                 usingValidSession();
+                when(permissionDecisionManager.canSendSmsOtpNotification(
+                                eq(REGISTRATION), any(PermissionContext.class)))
+                        .thenReturn(Result.success(new Decision.Permitted(0)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                true)));
 
                 var body =
                         format(
@@ -1255,11 +1247,6 @@ class SendNotificationHandlerTest {
                 assertEquals(400, result.getStatusCode());
                 assertThat(
                         result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_VERIFICATION_CODES_SENT));
-                verify(codeStorageService)
-                        .saveBlockedForEmail(
-                                EMAIL,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_REGISTRATION,
-                                LOCKOUT_DURATION);
                 verify(codeStorageService, never())
                         .saveOtpCode(
                                 EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_PHONE_NUMBER);
@@ -1272,11 +1259,16 @@ class SendNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreRegistrationEmailOtps() {
-                when(codeStorageService.isBlockedForEmail(
-                                EMAIL,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX
-                                        + CodeRequestType.EMAIL_REGISTRATION))
-                        .thenReturn(true);
+                when(permissionDecisionManager.canSendEmailOtpNotification(
+                                eq(REGISTRATION), any(PermissionContext.class)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                false)));
                 usingValidSession();
 
                 var body =
@@ -1296,11 +1288,16 @@ class SendNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreAccountRecoveryEmailOtps() {
-                when(codeStorageService.isBlockedForEmail(
-                                EMAIL,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX
-                                        + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
-                        .thenReturn(true);
+                when(permissionDecisionManager.canSendEmailOtpNotification(
+                                eq(JourneyType.ACCOUNT_RECOVERY), any(PermissionContext.class)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                false)));
                 usingValidSession();
 
                 var body =
@@ -1324,10 +1321,16 @@ class SendNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePhoneOtpCodes() {
-                when(codeStorageService.isBlockedForEmail(
-                                EMAIL,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_REGISTRATION))
-                        .thenReturn(true);
+                when(permissionDecisionManager.canSendSmsOtpNotification(
+                                eq(REGISTRATION), any(PermissionContext.class)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                false)));
                 usingValidSession();
 
                 var body =
@@ -1351,41 +1354,19 @@ class SendNotificationHandlerTest {
                                 auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
             }
 
-            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-            @Test
-            void
-                    shouldReturn400IfUserIsBlockedFromRequestingAnyMorePhoneOtpCodesWithDeprecatedPrefix() {
-                when(codeStorageService.isBlockedForEmail(
-                                EMAIL,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX
-                                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                                VERIFY_PHONE_NUMBER.getMfaMethodType(),
-                                                JourneyType.REGISTRATION)))
-                        .thenReturn(true);
-                usingValidSession();
-
-                var body =
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
-                                EMAIL,
-                                VERIFY_PHONE_NUMBER,
-                                CommonTestVariables.UK_MOBILE_NUMBER,
-                                JourneyType.REGISTRATION);
-                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-                var result = handler.handleRequest(event, context);
-
-                assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES));
-            }
-
             @Test
             void shouldReturn400IfUserIsBlockedFromEnteringRegistrationEmailOtpCodes() {
                 usingValidSession();
-                when(codeStorageService.isBlockedForEmail(
-                                EMAIL,
-                                CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
-                        .thenReturn(true);
+                when(permissionDecisionManager.canVerifyEmailOtp(
+                                eq(REGISTRATION), any(PermissionContext.class)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                false)));
 
                 var body =
                         format(
@@ -1405,10 +1386,16 @@ class SendNotificationHandlerTest {
             @Test
             void shouldReturn400IfUserIsBlockedFromEnteringAccountRecoveryEmailOtpCodes() {
                 usingValidSession();
-                when(codeStorageService.isBlockedForEmail(
-                                EMAIL,
-                                CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
-                        .thenReturn(true);
+                when(permissionDecisionManager.canVerifyEmailOtp(
+                                eq(JourneyType.ACCOUNT_RECOVERY), any(PermissionContext.class)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                false)));
 
                 var body =
                         format(
@@ -1432,9 +1419,16 @@ class SendNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
-                when(codeStorageService.isBlockedForEmail(
-                                EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_REGISTRATION))
-                        .thenReturn(true);
+                when(permissionDecisionManager.canVerifyMfaOtp(
+                                eq(REGISTRATION), any(PermissionContext.class)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.TemporarilyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                                6,
+                                                Instant.now(),
+                                                false)));
                 usingValidSession();
 
                 var body =
@@ -1452,32 +1446,16 @@ class SendNotificationHandlerTest {
                         .submitAuditEvent(AUTH_PHONE_INVALID_CODE_REQUEST, auditContext);
             }
 
-            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-            @Test
-            void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodesWithDeprecatedPrefix() {
-                when(codeStorageService.isBlockedForEmail(
-                                EMAIL,
-                                CODE_BLOCKED_KEY_PREFIX
-                                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                                MFAMethodType.SMS, JourneyType.REGISTRATION)))
-                        .thenReturn(true);
-                usingValidSession();
-
-                var body =
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION);
-                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-                var result = handler.handleRequest(event, context);
-
-                assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
-            }
-
             @Test
             void shouldReturn400WhenInternationalSmsLimitReached() {
-                when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(false);
+                when(permissionDecisionManager.canSendSmsOtpNotification(
+                                any(JourneyType.class), any(PermissionContext.class)))
+                        .thenReturn(
+                                Result.success(
+                                        new Decision.IndefinitelyLockedOut(
+                                                ForbiddenReason
+                                                        .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                                100)));
                 usingValidSession();
 
                 var body =
