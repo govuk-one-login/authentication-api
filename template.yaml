@@ -115,6 +115,7 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
     ]
   PublishNextExternalTokenSigningKeysV2:
     !And [
@@ -124,6 +125,7 @@ Conditions:
         !Equals [build, !Ref Environment],
         !Equals [staging, !Ref Environment],
         !Equals [integration, !Ref Environment],
+        !Equals [production, !Ref Environment],
       ],
     ]
   UseNewV2SigningKeys:
