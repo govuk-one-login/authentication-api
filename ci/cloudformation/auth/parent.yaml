@@ -239,8 +239,8 @@ Mappings:
       amcSfadRedirectUri: https://signin.authdev1.dev.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.authdev1.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/journeyoutcome
-      accountDataApiId: rjlo8fsb55
       amcClientId: auth_amc
+      accountDataApiId: rjlo8fsb55
       EvcsApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
       amcCreatePasskeyRedirectUri: https://signin.authdev1.dev.account.gov.uk/create-passkey-callback
@@ -348,6 +348,7 @@ Mappings:
       amcTokenUri: https://amcstub.signin.authdev3.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/journeyoutcome
       amcClientId: auth_amc
+      accountDataApiId: 5ctgxqnq37
       EvcsApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
       supportPasskeys: true

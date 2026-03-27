@@ -917,6 +917,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("ACCOUNT_DATA_API_URI");
     }
 
+    public long getAccountDataApiCallTimeout() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("ACCOUNT_DATA_API_CALL_TIMEOUT", "6000"));
+    }
+
     public URL getAmcJwksUrl() throws MalformedURLException {
         try {
             return new URL(System.getenv().getOrDefault("AMC_JWKS_URL", ""));
