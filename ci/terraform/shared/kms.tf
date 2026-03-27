@@ -801,6 +801,20 @@ resource "aws_kms_alias" "international_sms_send_count_encryption_key_alias" {
   target_key_id = aws_kms_key.international_sms_send_count_encryption_key.key_id
 }
 
+resource "aws_kms_key" "amc_state_table_encryption_key" {
+  description              = "KMS encryption key for amc_state table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "amc_state_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-amc-state-table-encryption-key"
+  target_key_id = aws_kms_key.amc_state_table_encryption_key.key_id
+}
+
 ## KMS Key policy to Allow access to the KMS key for the new authentication AWS account to access DynamoDB table
 
 
