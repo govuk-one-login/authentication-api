@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CodeRequestType.SupportedCodeType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -19,7 +20,6 @@ import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.temporal.ChronoUnit;
 
-import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -234,13 +234,14 @@ public class UserActionsManager implements UserActions {
             JourneyType journeyType,
             PermissionContext permissionContext,
             InMemoryLockoutStateHolder lockoutStateHolder) {
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(SupportedCodeType.MFA, journeyType);
         var updatedSession =
-                permissionContext.authSessionItem().incrementCodeRequestCount(MFA_SMS, journeyType);
+                permissionContext.authSessionItem().incrementCodeRequestCount(codeRequestType);
         getAuthSessionService().updateSession(updatedSession);
 
-        var codeRequestCount = updatedSession.getCodeRequestCount(MFA_SMS, journeyType);
+        var codeRequestCount = updatedSession.getCodeRequestCount(codeRequestType);
         if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-            var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, journeyType);
             var blockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
 
             boolean shouldRecordBlock =
@@ -248,7 +249,7 @@ public class UserActionsManager implements UserActions {
                             || !configurationService.supportReauthSignoutEnabled();
 
             if (shouldRecordBlock) {
-                LOG.info("Setting block for email as user has requested too many MFA OTPs");
+                LOG.info("Setting block for email as user has requested too many SMS OTPs");
                 getCodeStorageService()
                         .saveBlockedForEmail(
                                 permissionContext.emailAddress(),
@@ -259,7 +260,7 @@ public class UserActionsManager implements UserActions {
             }
 
             getAuthSessionService()
-                    .updateSession(updatedSession.resetCodeRequestCount(MFA_SMS, journeyType));
+                    .updateSession(updatedSession.resetCodeRequestCount(codeRequestType));
         }
 
         return Result.success(null);

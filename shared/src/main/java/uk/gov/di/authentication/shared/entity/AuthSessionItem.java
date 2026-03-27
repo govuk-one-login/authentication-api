@@ -279,6 +279,10 @@ public class AuthSessionItem {
             NotificationType notificationType, JourneyType journeyType) {
         CodeRequestType requestType =
                 CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        return incrementCodeRequestCount(requestType);
+    }
+
+    public AuthSessionItem incrementCodeRequestCount(CodeRequestType requestType) {
         int currentCount = getCodeRequestCount(requestType);
         LOG.info("CodeRequest count: {} is: {}", requestType, currentCount);
         codeRequestCountMap.put(requestType, currentCount + 1);
@@ -290,6 +294,10 @@ public class AuthSessionItem {
             NotificationType notificationType, JourneyType journeyType) {
         CodeRequestType requestType =
                 CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        return resetCodeRequestCount(requestType);
+    }
+
+    public AuthSessionItem resetCodeRequestCount(CodeRequestType requestType) {
         codeRequestCountMap.put(requestType, 0);
         LOG.info("CodeRequest count reset: {}", codeRequestCountMap);
         return this;

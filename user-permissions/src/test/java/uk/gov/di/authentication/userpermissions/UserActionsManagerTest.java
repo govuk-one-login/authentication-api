@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CodeRequestType.SupportedCodeType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -34,7 +35,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -430,102 +430,142 @@ class UserActionsManagerTest {
     @Nested
     class SentSmsOtpNotificationOperations {
 
-        @Test
-        void shouldIncrementCountWithoutBlockingOrResettingWhenUnderLimit() {
-            var result =
-                    userActionsManager.sentSmsOtpNotification(
-                            JourneyType.SIGN_IN, permissionContext);
+        @Nested
+        class StandardJourneys {
 
-            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-            verify(authSessionService).updateSession(captor.capture());
-            assertEquals(1, captor.getValue().getCodeRequestCount(MFA_SMS, JourneyType.SIGN_IN));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(anyString(), anyString(), anyLong());
-            assertTrue(result.isSuccess());
+            static Stream<JourneyType> journeyTypes() {
+                return Stream.of(JourneyType.SIGN_IN, JourneyType.REGISTRATION);
+            }
+
+            @ParameterizedTest
+            @MethodSource("journeyTypes")
+            void shouldIncrementCodeRequestCount(JourneyType journeyType) {
+                var result =
+                        userActionsManager.sentSmsOtpNotification(journeyType, permissionContext);
+
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(SupportedCodeType.MFA, journeyType);
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService).updateSession(captor.capture());
+                assertEquals(1, captor.getValue().getCodeRequestCount(codeRequestType));
+                verify(codeStorageService, never())
+                        .saveBlockedForEmail(anyString(), anyString(), anyLong());
+                assertTrue(result.isSuccess());
+            }
+
+            @ParameterizedTest
+            @MethodSource("journeyTypes")
+            void shouldBlockAndResetCountWhenMaxRetriesReached(JourneyType journeyType) {
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(SupportedCodeType.MFA, journeyType);
+                var sessionWithMaxCount = authSession;
+                for (int i = 0; i < 5; i++) {
+                    sessionWithMaxCount =
+                            sessionWithMaxCount.incrementCodeRequestCount(codeRequestType);
+                }
+                var contextWithMaxCount =
+                        PermissionContext.builder()
+                                .withEmailAddress(EMAIL)
+                                .withAuthSessionItem(sessionWithMaxCount)
+                                .build();
+
+                var result =
+                        userActionsManager.sentSmsOtpNotification(journeyType, contextWithMaxCount);
+
+                var expectedBlockedKey = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 900L);
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService, times(2)).updateSession(captor.capture());
+                assertEquals(0, captor.getAllValues().get(1).getCodeRequestCount(codeRequestType));
+                assertTrue(result.isSuccess());
+            }
         }
 
-        @Test
-        void shouldIncrementCountAndBlockAndResetWhenAtLimit() {
-            var sessionWithMaxCount = authSession;
-            for (int i = 0; i < 5; i++) {
-                sessionWithMaxCount =
-                        sessionWithMaxCount.incrementCodeRequestCount(MFA_SMS, JourneyType.SIGN_IN);
+        @Nested
+        class ReauthenticationJourney {
+            @Test
+            void shouldIncrementCodeRequestCount() {
+                var result =
+                        userActionsManager.sentSmsOtpNotification(
+                                JourneyType.REAUTHENTICATION, permissionContext);
+
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(
+                                SupportedCodeType.MFA, JourneyType.REAUTHENTICATION);
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService).updateSession(captor.capture());
+                assertEquals(1, captor.getValue().getCodeRequestCount(codeRequestType));
+                verify(codeStorageService, never())
+                        .saveBlockedForEmail(anyString(), anyString(), anyLong());
+                assertTrue(result.isSuccess());
             }
-            var contextWithMaxCount =
-                    PermissionContext.builder()
-                            .withEmailAddress(EMAIL)
-                            .withAuthSessionItem(sessionWithMaxCount)
-                            .build();
 
-            var result =
-                    userActionsManager.sentSmsOtpNotification(
-                            JourneyType.SIGN_IN, contextWithMaxCount);
+            @Test
+            void shouldBlockAndResetCountWhenReauthSignoutDisabled() {
+                when(configurationService.supportReauthSignoutEnabled()).thenReturn(false);
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(
+                                SupportedCodeType.MFA, JourneyType.REAUTHENTICATION);
+                var sessionWithMaxCount = authSession;
+                for (int i = 0; i < 5; i++) {
+                    sessionWithMaxCount =
+                            sessionWithMaxCount.incrementCodeRequestCount(codeRequestType);
+                }
+                var contextWithMaxCount =
+                        PermissionContext.builder()
+                                .withEmailAddress(EMAIL)
+                                .withAuthSessionItem(sessionWithMaxCount)
+                                .build();
 
-            var expectedBlockedKey =
-                    CODE_REQUEST_BLOCKED_KEY_PREFIX
-                            + CodeRequestType.getCodeRequestType(MFA_SMS, JourneyType.SIGN_IN);
-            verify(codeStorageService)
-                    .saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
-            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-            verify(authSessionService, times(2)).updateSession(captor.capture());
-            assertEquals(
-                    0,
-                    captor.getAllValues().get(1).getCodeRequestCount(MFA_SMS, JourneyType.SIGN_IN));
-            assertTrue(result.isSuccess());
-        }
+                var result =
+                        userActionsManager.sentSmsOtpNotification(
+                                JourneyType.REAUTHENTICATION, contextWithMaxCount);
 
-        @Test
-        void shouldBlockReauthUserWhenReauthSignoutDisabled() {
-            when(configurationService.supportReauthSignoutEnabled()).thenReturn(false);
-            var sessionWithMaxCount = authSession;
-            for (int i = 0; i < 5; i++) {
-                sessionWithMaxCount =
-                        sessionWithMaxCount.incrementCodeRequestCount(
-                                MFA_SMS, JourneyType.REAUTHENTICATION);
+                var expectedBlockedKey = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 900L);
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService, times(2)).updateSession(captor.capture());
+                assertEquals(0, captor.getAllValues().get(1).getCodeRequestCount(codeRequestType));
+                assertTrue(result.isSuccess());
             }
-            var contextWithMaxCount =
-                    PermissionContext.builder()
-                            .withEmailAddress(EMAIL)
-                            .withAuthSessionItem(sessionWithMaxCount)
-                            .build();
 
-            var result =
-                    userActionsManager.sentSmsOtpNotification(
-                            JourneyType.REAUTHENTICATION, contextWithMaxCount);
+            @Test
+            void shouldSetInMemoryLockoutStateHolderAndResetCountWhenReauthSignoutEnabled() {
+                when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(
+                                SupportedCodeType.MFA, JourneyType.REAUTHENTICATION);
+                var sessionWithMaxCount = authSession;
+                for (int i = 0; i < 5; i++) {
+                    sessionWithMaxCount =
+                            sessionWithMaxCount.incrementCodeRequestCount(codeRequestType);
+                }
+                var contextWithMaxCount =
+                        PermissionContext.builder()
+                                .withEmailAddress(EMAIL)
+                                .withAuthSessionItem(sessionWithMaxCount)
+                                .build();
+                var lockoutStateHolder = new InMemoryLockoutStateHolder();
 
-            var expectedBlockedKey =
-                    CODE_REQUEST_BLOCKED_KEY_PREFIX
-                            + CodeRequestType.getCodeRequestType(
-                                    MFA_SMS, JourneyType.REAUTHENTICATION);
-            verify(codeStorageService)
-                    .saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
-            assertTrue(result.isSuccess());
-        }
+                var result =
+                        userActionsManager.sentSmsOtpNotification(
+                                JourneyType.REAUTHENTICATION,
+                                contextWithMaxCount,
+                                lockoutStateHolder);
 
-        @Test
-        void shouldSetInMemoryLockoutStateHolderForReauthWhenReauthSignoutEnabled() {
-            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-            var sessionWithMaxCount = authSession;
-            for (int i = 0; i < 5; i++) {
-                sessionWithMaxCount =
-                        sessionWithMaxCount.incrementCodeRequestCount(
-                                MFA_SMS, JourneyType.REAUTHENTICATION);
+                verify(codeStorageService, never())
+                        .saveBlockedForEmail(anyString(), anyString(), anyLong());
+                assertTrue(lockoutStateHolder.isReauthSmsOtpLimitExceeded());
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService, times(2)).updateSession(captor.capture());
+                assertEquals(0, captor.getAllValues().get(1).getCodeRequestCount(codeRequestType));
+                assertTrue(result.isSuccess());
             }
-            var contextWithMaxCount =
-                    PermissionContext.builder()
-                            .withEmailAddress(EMAIL)
-                            .withAuthSessionItem(sessionWithMaxCount)
-                            .build();
-            var lockoutStateHolder = new InMemoryLockoutStateHolder();
-
-            var result =
-                    userActionsManager.sentSmsOtpNotification(
-                            JourneyType.REAUTHENTICATION, contextWithMaxCount, lockoutStateHolder);
-
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(anyString(), anyString(), anyLong());
-            assertTrue(lockoutStateHolder.isReauthSmsOtpLimitExceeded());
-            assertTrue(result.isSuccess());
         }
     }
 
