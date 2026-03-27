@@ -3,11 +3,15 @@ package uk.gov.di.authentication.userpermissions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -15,6 +19,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
+
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,6 +36,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 class UserActionsManagerTest {
@@ -147,77 +155,129 @@ class UserActionsManagerTest {
     @Nested
     class EmailOtpNotificationOperations {
 
-        @Test
-        void sentEmailOtpNotificationShouldIncrementPasswordResetCountForPasswordResetJourney() {
-            var result =
-                    userActionsManager.sentEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, permissionContext);
+        @Nested
+        class PasswordResetJourney {
 
-            verify(authSessionService).updateSession(any(AuthSessionItem.class));
-            assertTrue(result.isSuccess());
-        }
+            @Test
+            void shouldIncrementPasswordResetCount() {
+                var result =
+                        userActionsManager.sentEmailOtpNotification(
+                                JourneyType.PASSWORD_RESET, permissionContext);
 
-        @Test
-        void sentEmailOtpNotificationShouldBlockUserWhenMaxRetriesReached() {
-            var sessionWithMaxCount = authSession;
-            for (int i = 0; i < 5; i++) {
-                sessionWithMaxCount = sessionWithMaxCount.incrementPasswordResetCount();
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService).updateSession(captor.capture());
+                assertEquals(1, captor.getValue().getPasswordResetCount());
+                assertTrue(result.isSuccess());
             }
-            var contextWithMaxCount =
-                    PermissionContext.builder()
-                            .withEmailAddress(EMAIL)
-                            .withAuthSessionItem(sessionWithMaxCount)
-                            .build();
 
-            var result =
-                    userActionsManager.sentEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, contextWithMaxCount);
+            @Test
+            void shouldBlockAndResetCountWhenMaxRetriesReached() {
+                var sessionWithMaxCount = authSession;
+                for (int i = 0; i < 5; i++) {
+                    sessionWithMaxCount = sessionWithMaxCount.incrementPasswordResetCount();
+                }
+                var contextWithMaxCount =
+                        PermissionContext.builder()
+                                .withEmailAddress(EMAIL)
+                                .withAuthSessionItem(sessionWithMaxCount)
+                                .build();
 
-            var expectedBlockedKey =
-                    CODE_REQUEST_BLOCKED_KEY_PREFIX
-                            + CodeRequestType.getCodeRequestType(
-                                    RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            verify(codeStorageService)
-                    .saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
-            verify(authSessionService, times(2)).updateSession(any(AuthSessionItem.class));
-            assertTrue(result.isSuccess());
-        }
+                var result =
+                        userActionsManager.sentEmailOtpNotification(
+                                JourneyType.PASSWORD_RESET, contextWithMaxCount);
 
-        @Test
-        void sentEmailOtpNotificationShouldHandleExactlyMaxRetries() {
-            var sessionWithExactMaxCount = authSession;
-            for (int i = 0; i < 6; i++) {
-                sessionWithExactMaxCount = sessionWithExactMaxCount.incrementPasswordResetCount();
+                var expectedBlockedKey =
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getCodeRequestType(
+                                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+                verify(codeStorageService)
+                        .saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService, times(2)).updateSession(captor.capture());
+                assertEquals(0, captor.getAllValues().get(1).getPasswordResetCount());
+                assertTrue(result.isSuccess());
             }
-            var contextWithExactMaxCount =
-                    PermissionContext.builder()
-                            .withEmailAddress(EMAIL)
-                            .withAuthSessionItem(sessionWithExactMaxCount)
-                            .build();
-
-            var result =
-                    userActionsManager.sentEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, contextWithExactMaxCount);
-
-            var expectedBlockedKey =
-                    CODE_REQUEST_BLOCKED_KEY_PREFIX
-                            + CodeRequestType.getCodeRequestType(
-                                    RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            verify(codeStorageService)
-                    .saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
-            verify(authSessionService, times(2)).updateSession(any(AuthSessionItem.class));
-            assertTrue(result.isSuccess());
         }
 
-        @Test
-        void sentEmailOtpNotificationShouldNotBlockForNonPasswordResetJourney() {
-            var result =
-                    userActionsManager.sentEmailOtpNotification(
-                            JourneyType.SIGN_IN, permissionContext);
+        @Nested
+        class RegistrationAndAccountRecoveryJourneys {
 
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(anyString(), anyString(), anyLong());
-            assertTrue(result.isSuccess());
+            static Stream<Arguments> journeyTypeAndNotificationType() {
+                return Stream.of(
+                        Arguments.of(JourneyType.REGISTRATION, VERIFY_EMAIL),
+                        Arguments.of(
+                                JourneyType.ACCOUNT_RECOVERY,
+                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES));
+            }
+
+            @ParameterizedTest
+            @MethodSource("journeyTypeAndNotificationType")
+            void shouldIncrementCodeRequestCount(
+                    JourneyType journeyType, NotificationType notificationType) {
+                var result =
+                        userActionsManager.sentEmailOtpNotification(journeyType, permissionContext);
+
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService).updateSession(captor.capture());
+                assertEquals(
+                        1, captor.getValue().getCodeRequestCount(notificationType, journeyType));
+                assertTrue(result.isSuccess());
+            }
+
+            @ParameterizedTest
+            @MethodSource("journeyTypeAndNotificationType")
+            void shouldBlockAndResetCountWhenMaxRetriesReached(
+                    JourneyType journeyType, NotificationType notificationType) {
+                var sessionWithMaxCount = authSession;
+                for (int i = 0; i < 5; i++) {
+                    sessionWithMaxCount =
+                            sessionWithMaxCount.incrementCodeRequestCount(
+                                    notificationType, journeyType);
+                }
+                var contextWithMaxCount =
+                        PermissionContext.builder()
+                                .withEmailAddress(EMAIL)
+                                .withAuthSessionItem(sessionWithMaxCount)
+                                .build();
+
+                var result =
+                        userActionsManager.sentEmailOtpNotification(
+                                journeyType, contextWithMaxCount);
+
+                var expectedBlockedKey =
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getCodeRequestType(notificationType, journeyType);
+                verify(codeStorageService)
+                        .saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService, times(2)).updateSession(captor.capture());
+                assertEquals(
+                        0,
+                        captor.getAllValues()
+                                .get(1)
+                                .getCodeRequestCount(notificationType, journeyType));
+                assertTrue(result.isSuccess());
+            }
+        }
+
+        @Nested
+        class UnsupportedJourneys {
+
+            @Test
+            void shouldDoNothingForUnsupportedJourneyType() {
+                var result =
+                        userActionsManager.sentEmailOtpNotification(
+                                JourneyType.SIGN_IN, permissionContext);
+
+                verify(authSessionService, never()).updateSession(any());
+                verify(codeStorageService, never())
+                        .saveBlockedForEmail(anyString(), anyString(), anyLong());
+                assertTrue(result.isSuccess());
+            }
         }
     }
 

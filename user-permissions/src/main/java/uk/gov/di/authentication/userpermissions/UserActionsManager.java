@@ -2,9 +2,11 @@ package uk.gov.di.authentication.userpermissions;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -19,6 +21,8 @@ import java.time.temporal.ChronoUnit;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class UserActionsManager implements UserActions {
@@ -92,23 +96,59 @@ public class UserActionsManager implements UserActions {
         if (journeyType == JourneyType.PASSWORD_RESET) {
             var updatedSession = permissionContext.authSessionItem().incrementPasswordResetCount();
             getAuthSessionService().updateSession(updatedSession);
-            var codeRequestCount = updatedSession.getPasswordResetCount();
-            if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-                var codeRequestType =
-                        CodeRequestType.getCodeRequestType(
-                                RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-                var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-                LOG.info("Setting block for email as user has requested too many OTPs");
-                getCodeStorageService()
-                        .saveBlockedForEmail(
-                                permissionContext.emailAddress(),
-                                codeRequestBlockedKeyPrefix,
-                                configurationService.getLockoutDuration());
-                getAuthSessionService().updateSession(updatedSession.resetPasswordResetCount());
+            if (updatedSession.getPasswordResetCount()
+                    >= configurationService.getCodeMaxRetries()) {
+                blockAndResetForEmail(
+                        permissionContext.emailAddress(),
+                        RESET_PASSWORD_WITH_CODE,
+                        journeyType,
+                        updatedSession.resetPasswordResetCount());
             }
+            return Result.success(null);
+        }
+
+        var notificationType =
+                switch (journeyType) {
+                    case REGISTRATION -> VERIFY_EMAIL;
+                    case ACCOUNT_RECOVERY -> VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
+                    default -> null;
+                };
+
+        if (notificationType == null) {
+            return Result.success(null);
+        }
+
+        var updatedSession =
+                permissionContext
+                        .authSessionItem()
+                        .incrementCodeRequestCount(notificationType, journeyType);
+        getAuthSessionService().updateSession(updatedSession);
+
+        if (updatedSession.getCodeRequestCount(notificationType, journeyType)
+                >= configurationService.getCodeMaxRetries()) {
+            blockAndResetForEmail(
+                    permissionContext.emailAddress(),
+                    notificationType,
+                    journeyType,
+                    updatedSession.resetCodeRequestCount(notificationType, journeyType));
         }
 
         return Result.success(null);
+    }
+
+    private void blockAndResetForEmail(
+            String email,
+            NotificationType notificationType,
+            JourneyType journeyType,
+            AuthSessionItem resetSession) {
+        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        LOG.info("Setting block for email as user has requested too many OTPs");
+        getCodeStorageService()
+                .saveBlockedForEmail(
+                        email,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
+                        configurationService.getLockoutDuration());
+        getAuthSessionService().updateSession(resetSession);
     }
 
     @Override
