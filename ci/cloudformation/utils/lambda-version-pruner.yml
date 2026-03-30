@@ -1,0 +1,183 @@
+Resources:
+  LambdaPrunerPermissionsBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsLowerEnvOnly
+    Properties:
+      ManagedPolicyName: !Sub "${Environment}-lambda-pruner-permissions-boundary"
+      Description: "Permissions boundary for Lambda pruner roles"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:ListFunctions
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - lambda:ListVersionsByFunction
+              - lambda:DeleteFunction
+            Resource:
+              - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+          - Effect: Allow
+            Action:
+              - ssm:StartAutomationExecution
+            Resource:
+              - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/*"
+              - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:automation-execution/*"
+          - Effect: Allow
+            Action:
+              - iam:PassRole
+            Resource:
+              - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*"
+
+  SSMAutomationRole:
+    Type: AWS::IAM::Role
+    Condition: IsLowerEnvOnly
+    Properties:
+      RoleName: !Sub "${Environment}-lambda-pruner-ssm-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ssm.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaPrunerPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:ListFunctions
+                  - lambda:ListVersionsByFunction
+                  - lambda:DeleteFunction
+                Resource: "*"
+      PermissionsBoundary: !Ref LambdaPrunerPermissionsBoundary
+
+  SchedulerRole:
+    Type: AWS::IAM::Role
+    Condition: IsLowerEnvOnly
+    Properties:
+      RoleName: !Sub "${Environment}-lambda-pruner-scheduler-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StartAutomationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:StartAutomationExecution
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:document/${PrunerAutomationDocument}"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:automation-execution/*"
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt SSMAutomationRole.Arn
+      PermissionsBoundary: !Ref LambdaPrunerPermissionsBoundary
+
+  PrunerAutomationDocument:
+    Type: AWS::SSM::Document
+    Condition: IsLowerEnvOnly
+    Properties:
+      Name: !Sub "${Environment}-lambda-version-pruner"
+      DocumentType: Automation
+      Content:
+        schemaVersion: "0.3"
+        description: Prune old Lambda versions
+        assumeRole: !GetAtt SSMAutomationRole.Arn
+        parameters:
+          VersionsToKeep:
+            type: String
+            default: "5"
+          Environment:
+            type: String
+            default: !Ref Environment
+        mainSteps:
+          - name: PruneVersions
+            action: aws:executeScript
+            inputs:
+              Runtime: python3.11
+              Handler: handler
+              InputPayload:
+                VersionsToKeep: "{{ VersionsToKeep }}"
+              Script: |
+                import boto3
+
+                def handler(event, context):
+                    keep = int(event["VersionsToKeep"])
+                    if keep < 3:
+                        raise ValueError("Minimum versions to keep is 3")
+
+                    client = boto3.client("lambda")
+                    paginator = client.get_paginator("list_functions")
+                    functions = [f["FunctionName"] for f in paginator.paginate().build_full_result()["Functions"]]
+
+                    deleted_count = 0
+                    for fn in functions:
+                        try:
+                            versions = sorted([
+                                int(v["Version"])
+                                for v in client.get_paginator("list_versions_by_function")
+                                              .paginate(FunctionName=fn)
+                                              .build_full_result()["Versions"]
+                                if v["Version"] != "$LATEST"
+                            ])
+                            if len(versions) > keep:
+                                prune = versions[:-keep]
+                                for v in prune:
+                                    print(f"Deleting {fn} version {v}")
+                                    client.delete_function(FunctionName=fn, Qualifier=str(v))
+                                    deleted_count += 1
+                        except Exception as e:
+                            print(f"Error processing {fn}: {e}")
+
+                    return {"deleted_count": deleted_count}
+
+  DailySchedule:
+    Type: AWS::Scheduler::Schedule
+    Condition: IsLowerEnvOnly
+    Properties:
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      Name: !Sub "${Environment}-lambda-version-pruner-daily"
+      ScheduleExpression: !Ref ScheduleCron
+      Target:
+        Arn: "arn:aws:scheduler:::aws-sdk:ssm:startAutomationExecution"
+        Input: !Sub |
+          {
+            "DocumentName": "${PrunerAutomationDocument}",
+            "Parameters": {
+              "VersionsToKeep": ["${VersionsToKeep}"],
+              "Environment": ["${Environment}"]
+            }
+          }
+        RoleArn: !GetAtt SchedulerRole.Arn
+
+  AutomationFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsLowerEnvOnly
+    Properties:
+      AlarmName: !Sub "${Environment}-lambda-pruner-automation-failure"
+      AlarmDescription: "Alert when Lambda version pruner automation fails"
+      MetricName: "ExecutionsFailed"
+      Namespace: "AWS/SSM-RunCommand"
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: "DocumentName"
+          Value: !Ref PrunerAutomationDocument
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      TreatMissingData: notBreaching

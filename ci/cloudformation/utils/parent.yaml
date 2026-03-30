@@ -56,8 +56,16 @@ Parameters:
     Description: The ARN of the subscription endpoint to send logs to splunk
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
+  ScheduleCron:
+    Type: String
+    Description: Cron expression for scheduling
+    Default: "cron(0 10 ? * MON-FRI *)"
+  VersionsToKeep:
+    Type: String
+    Description: Number of Lambda versions to keep
+    Default: "5"
+
 Conditions:
-  # Environment Conditions
   NotSubEnvironment:
     Fn::Equals:
       - !Ref SubEnvironment
@@ -73,7 +81,22 @@ Conditions:
               - !Ref SubEnvironment
               - none
 
-  # Feature Conditions
+  IsLowerEnvOnly:
+    Fn::And:
+      - Fn::Or:
+          - Fn::Equals:
+              - !Ref Environment
+              - dev
+          - Fn::Equals:
+              - !Ref Environment
+              - build
+          - Fn::Equals:
+              - !Ref Environment
+              - staging
+      - Fn::Equals:
+          - !Ref SubEnvironment
+          - "none"
+
   AllowBulkTestUsers:
     Fn::Equals:
       - !FindInMap [
@@ -92,7 +115,6 @@ Conditions:
         ]
       - "true"
 
-  # Infrastructure Conditions
   UseCodeSigning:
     Fn::Not:
       - Fn::Equals:
