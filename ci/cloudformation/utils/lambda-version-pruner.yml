@@ -34,7 +34,7 @@ Resources:
     Type: AWS::IAM::Role
     Condition: IsLowerEnvOnly
     Properties:
-      RoleName: !Sub "${Environment}-lambda-pruner-ssm-role"
+      RoleName: !Sub "utils-lambda-pruner-ssm-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -59,7 +59,7 @@ Resources:
     Type: AWS::IAM::Role
     Condition: IsLowerEnvOnly
     Properties:
-      RoleName: !Sub "${Environment}-lambda-pruner-scheduler-role"
+      RoleName: !Sub "utils-lambda-pruner-scheduler-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
