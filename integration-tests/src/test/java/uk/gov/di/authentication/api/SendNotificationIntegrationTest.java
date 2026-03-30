@@ -52,7 +52,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
-    private static final ConfigurationService TXMA_WITH_INT_SMS_LIMIT_CONFIG =
+    private static final ConfigurationService CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
                     notificationsQueue,
                     tokenSigner,
@@ -64,6 +64,11 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 }
 
                 @Override
+                public String getPendingEmailCheckQueueUri() {
+                    return pendingEmailCheckQueue.getQueueUrl();
+                }
+
+                @Override
                 public int getInternationalSmsNumberSendLimit() {
                     return INTERNATIONAL_SMS_SEND_LIMIT;
                 }
@@ -72,9 +77,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @BeforeEach
     void setup() throws Json.JsonException {
         txmaAuditQueue.clear();
-        handler =
-                new SendNotificationHandler(
-                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new SendNotificationHandler(CONFIGURATION_SERVICE, redisConnectionService);
         SESSION_ID = IdGenerator.generate();
         authSessionExtension.addSession(SESSION_ID);
         authSessionStore.addEmailToSession(SESSION_ID, EMAIL);
@@ -106,6 +109,32 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         new AuditEventExpectation(
                                         FrontendAuditableEvent
                                                 .AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT)
+                                .withAttribute(USER_EMAIL_FIELD, EMAIL)));
+    }
+
+    @Test
+    void shouldSendEmailCodeForRegistrationJourney() {
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new SendNotificationRequest(
+                                        EMAIL,
+                                        NotificationType.VERIFY_EMAIL,
+                                        JourneyType.REGISTRATION)),
+                        constructFrontendHeaders(SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        var authSession = authSessionExtension.getSession(SESSION_ID).orElseThrow();
+        assertThat(
+                authSession.getCodeRequestCount(
+                        NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION),
+                equalTo(1));
+
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(FrontendAuditableEvent.AUTH_EMAIL_CODE_SENT)
                                 .withAttribute(USER_EMAIL_FIELD, EMAIL)));
     }
 
@@ -145,9 +174,6 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn400WhenInternationalNumberHasHitLimit() {
-        handler =
-                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
-
         for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
             internationalSmsSendCountStore.recordSmsSent(
                     INTERNATIONAL_MOBILE_NUMBER, TEST_REFERENCE);
@@ -173,9 +199,6 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn204WhenInternationalNumberIsBelowLimit() {
-        handler =
-                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
-
         var requestBody =
                 Map.of(
                         "email",
@@ -197,6 +220,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 txmaAuditQueue,
                 List.of(
                         new AuditEventExpectation(FrontendAuditableEvent.AUTH_PHONE_CODE_SENT)
+                                .withAttribute(USER_EMAIL_FIELD, EMAIL)
                                 .withAttribute(USER_PHONE, INTERNATIONAL_MOBILE_NUMBER)
                                 .withAttribute(EXTENSIONS_MFA_METHOD, "default")
                                 .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REGISTRATION")));
@@ -204,9 +228,6 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn204ForDomesticNumberRegardlessOfLimit() {
-        handler =
-                new SendNotificationHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
-
         var requestBody =
                 Map.of(
                         "email",
@@ -228,6 +249,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 txmaAuditQueue,
                 List.of(
                         new AuditEventExpectation(FrontendAuditableEvent.AUTH_PHONE_CODE_SENT)
+                                .withAttribute(USER_EMAIL_FIELD, EMAIL)
                                 .withAttribute(USER_PHONE, UK_MOBILE_NUMBER)
                                 .withAttribute(EXTENSIONS_MFA_METHOD, "default")
                                 .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REGISTRATION")));

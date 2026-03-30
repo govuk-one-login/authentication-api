@@ -1450,8 +1450,11 @@ class SendNotificationHandlerTest {
 
                 var body =
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_PHONE_NUMBER, REGISTRATION);
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL,
+                                VERIFY_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
+                                REGISTRATION);
                 var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
                 var result = handler.handleRequest(event, context);
@@ -1459,8 +1462,10 @@ class SendNotificationHandlerTest {
                 assertEquals(400, result.getStatusCode());
                 assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
                 verifyNoInteractions(emailSqsClient);
+                var expectedAuditContext =
+                        auditContext.withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
                 verify(auditService)
-                        .submitAuditEvent(AUTH_PHONE_INVALID_CODE_REQUEST, auditContext);
+                        .submitAuditEvent(AUTH_PHONE_INVALID_CODE_REQUEST, expectedAuditContext);
             }
 
             @Test
