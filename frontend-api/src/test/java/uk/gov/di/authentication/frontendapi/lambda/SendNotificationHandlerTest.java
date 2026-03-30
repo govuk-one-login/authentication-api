@@ -1123,7 +1123,7 @@ class SendNotificationHandlerTest {
         @Nested
         class UserBlockedErrors {
             @Test
-            void shouldReturn500WhenPermissionDecisionManagerReturnsError() {
+            void shouldReturn500WhenCanSendEmailOtpNotificationReturnsError() {
                 when(permissionDecisionManager.canSendEmailOtpNotification(
                                 any(JourneyType.class), any(PermissionContext.class)))
                         .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
@@ -1133,6 +1133,28 @@ class SendNotificationHandlerTest {
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_EMAIL, REGISTRATION);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertThat(result, hasStatus(500));
+                verifyNoInteractions(emailSqsClient);
+            }
+
+            @Test
+            void shouldReturn500WhenCanSendSmsOtpNotificationReturnsError() {
+                when(permissionDecisionManager.canSendSmsOtpNotification(
+                                any(JourneyType.class), any(PermissionContext.class)))
+                        .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+                usingValidSession();
+
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL,
+                                VERIFY_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
+                                REGISTRATION);
                 var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
                 var result = handler.handleRequest(event, context);
