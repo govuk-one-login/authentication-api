@@ -954,7 +954,6 @@ class SendNotificationHandlerTest {
 
         @Test
         void checkEmailInvalidCodeRequestAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-            maxOutCodeRequestCount(VERIFY_EMAIL, REGISTRATION);
             usingValidSession();
             when(permissionDecisionManager.canSendEmailOtpNotification(
                             eq(REGISTRATION), any(PermissionContext.class)))
@@ -1144,7 +1143,6 @@ class SendNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfUserHasReachedTheRegistrationEmailOtpRequestLimit() {
-                maxOutCodeRequestCount(VERIFY_EMAIL, REGISTRATION);
                 usingValidSession();
                 when(permissionDecisionManager.canSendEmailOtpNotification(
                                 eq(REGISTRATION), any(PermissionContext.class)))
@@ -1177,8 +1175,6 @@ class SendNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfUserHasReachedTheAccountRecoveryEmailOtpRequestLimit() {
-                maxOutCodeRequestCount(
-                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
                 usingValidSession();
                 when(permissionDecisionManager.canSendEmailOtpNotification(
                                 eq(JourneyType.ACCOUNT_RECOVERY), any(PermissionContext.class)))
@@ -1219,7 +1215,6 @@ class SendNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
-                maxOutCodeRequestCount(VERIFY_PHONE_NUMBER, REGISTRATION);
                 usingValidSession();
                 when(permissionDecisionManager.canSendSmsOtpNotification(
                                 eq(REGISTRATION), any(PermissionContext.class)))
@@ -1473,16 +1468,6 @@ class SendNotificationHandlerTest {
                 verifyNoInteractions(emailSqsClient);
             }
         }
-    }
-
-    private void maxOutCodeRequestCount(
-            NotificationType notificationType, JourneyType journeyType) {
-        authSession.resetCodeRequestCount(notificationType, journeyType);
-        authSession.incrementCodeRequestCount(notificationType, journeyType);
-        authSession.incrementCodeRequestCount(notificationType, journeyType);
-        authSession.incrementCodeRequestCount(notificationType, journeyType);
-        authSession.incrementCodeRequestCount(notificationType, journeyType);
-        authSession.incrementCodeRequestCount(notificationType, journeyType);
     }
 
     private void usingValidSession() {
