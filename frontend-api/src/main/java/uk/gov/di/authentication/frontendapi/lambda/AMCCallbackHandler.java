@@ -28,7 +28,9 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -91,14 +93,18 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         var persistentSessionId =
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
-        var additionalAmcHeaders =
-                Map.ofEntries(
-                        Map.entry("di-persistent-session-id", persistentSessionId),
-                        Map.entry("session-id", userContext.getAuthSession().getSessionId()),
-                        Map.entry("client-session-id", userContext.getClientSessionId()),
-                        Map.entry("txma-audit-encoded", userContext.getTxmaAuditEncoded()),
-                        Map.entry("x-forwarded-for", IpAddressHelper.extractIpAddress(input)),
-                        Map.entry("user-language", userContext.getUserLanguage().getLanguage()));
+        var additionalAmcHeaders = new HashMap<String, String>();
+        additionalAmcHeaders.put("di-persistent-session-id", persistentSessionId);
+        additionalAmcHeaders.put("session-id", userContext.getAuthSession().getSessionId());
+        additionalAmcHeaders.put("client-session-id", userContext.getClientSessionId());
+        additionalAmcHeaders.put("x-forwarded-for", IpAddressHelper.extractIpAddress(input));
+        additionalAmcHeaders.put("user-language", userContext.getUserLanguage().getLanguage());
+
+        if (Objects.nonNull(userContext.getTxmaAuditEncoded())) {
+            additionalAmcHeaders.put("txma-audit-encoded", userContext.getTxmaAuditEncoded());
+        } else {
+            LOG.warn("No txma audit header included");
+        }
 
         var tokenResponse = sendTokenRequest(requestResult.getSuccess(), additionalAmcHeaders);
 

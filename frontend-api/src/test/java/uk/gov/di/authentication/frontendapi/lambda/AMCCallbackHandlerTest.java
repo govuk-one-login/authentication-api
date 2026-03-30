@@ -25,7 +25,7 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -89,10 +89,6 @@ class AMCCallbackHandlerTest {
     @BeforeAll
     static void setUp() {
         tokenRequest = mock(TokenRequest.class);
-        when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
-        when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
-        when(USER_CONTEXT.getUserLanguage()).thenReturn(LocaleHelper.SupportedLanguage.EN);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         handler =
                 new AMCCallbackHandler(
@@ -105,6 +101,10 @@ class AMCCallbackHandlerTest {
     @BeforeEach
     void resetMocks() {
         reset(AMC_SERVICE);
+        when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
+        when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+        when(USER_CONTEXT.getUserLanguage()).thenReturn(LocaleHelper.SupportedLanguage.EN);
     }
 
     @Test
@@ -125,7 +125,42 @@ class AMCCallbackHandlerTest {
                                                 .getAccessToken()
                                                 .toString()
                                                 .equals(ACCESS_TOKEN)),
-                        anyMap()))
+                        any()))
+                .thenReturn(Result.success(successfulJourneyOutcomeHttpResponse));
+
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(200, result.getStatusCode());
+        assertEquals(JOURNEY_OUTCOME_RESULT, result.getBody());
+    }
+
+    @Test
+    void shouldTolerateANullTxmaEncodedValue() throws IOException, ParseException {
+        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(null);
+        HTTPRequest httpRequest = mock(HTTPRequest.class);
+        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
+                .thenReturn(Result.success(tokenRequest));
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
+
+        var successfulJourneyOutcomeHttpResponse = new HTTPResponse(200);
+        successfulJourneyOutcomeHttpResponse.setContent(JOURNEY_OUTCOME_RESULT);
+
+        when(AMC_SERVICE.requestJourneyOutcome(
+                        argThat(
+                                userInfoRequest ->
+                                        userInfoRequest
+                                                .getAccessToken()
+                                                .toString()
+                                                .equals(ACCESS_TOKEN)),
+                        any()))
                 .thenReturn(Result.success(successfulJourneyOutcomeHttpResponse));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
@@ -238,7 +273,7 @@ class AMCCallbackHandlerTest {
                                                 .getAccessToken()
                                                 .toString()
                                                 .equals(ACCESS_TOKEN)),
-                        anyMap()))
+                        any()))
                 .thenReturn(
                         Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME));
 
@@ -270,7 +305,7 @@ class AMCCallbackHandlerTest {
                                                 .getAccessToken()
                                                 .toString()
                                                 .equals(ACCESS_TOKEN)),
-                        anyMap()))
+                        any()))
                 .thenReturn(Result.failure(JourneyOutcomeError.IO_EXCEPTION));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
