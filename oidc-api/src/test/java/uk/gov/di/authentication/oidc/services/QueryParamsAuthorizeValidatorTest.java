@@ -23,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.oidc.validators.BaseAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -78,6 +79,10 @@ class QueryParamsAuthorizeValidatorTest {
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(QueryParamsAuthorizeValidator.class);
+
+    @RegisterExtension
+    public final CaptureLoggingExtension baseClassLogging =
+            new CaptureLoggingExtension(BaseAuthorizeValidator.class);
 
     @BeforeEach
     void setUp() {
@@ -487,6 +492,34 @@ class QueryParamsAuthorizeValidatorTest {
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "Request vtr is not permitted")
                                 .toJSONObject()));
+    }
+
+    @Test
+    void validatorLogsTheConflictWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse() {
+        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
+        List<String> clientLoCs = List.of("P0", "P2");
+        var vtr = jsonArrayOf("Cl.Cm.P2");
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                                REDIRECT_URI.toString(),
+                                                clientLoCs,
+                                                CLIENT_ID.toString())
+                                        .withIdentityVerificationSupported(false)));
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .customParameter("vtr", vtr)
+                        .build();
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+
+        assertFalse(errorObject.isPresent());
+        String expectedLogMessage =
+                "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.";
+        assertThat(baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
     }
 
     @Test

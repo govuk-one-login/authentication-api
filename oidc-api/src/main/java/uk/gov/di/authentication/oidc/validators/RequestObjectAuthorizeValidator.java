@@ -281,6 +281,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
             }
+            logIfIdentityLoCAndIdentityUnsupported(vtrList, client);
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
                 return Optional.of(OAuth2Error.TEMPORARILY_UNAVAILABLE);

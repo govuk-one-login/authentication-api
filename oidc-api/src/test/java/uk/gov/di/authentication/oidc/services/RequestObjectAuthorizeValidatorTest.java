@@ -18,10 +18,12 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.oidc.validators.BaseAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.Channel;
@@ -38,6 +40,7 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -49,6 +52,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -60,6 +64,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class RequestObjectAuthorizeValidatorTest {
@@ -118,6 +123,11 @@ class RequestObjectAuthorizeValidatorTest {
 
     @Nested
     class VtrClaim {
+
+        @RegisterExtension
+        public final CaptureLoggingExtension baseClassLogging =
+                new CaptureLoggingExtension(BaseAuthorizeValidator.class);
+
         @Test
         void shouldSuccessfullyValidateWhenVtrIsPresentAndVtrIsPermittedForClient()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
@@ -148,6 +158,33 @@ class RequestObjectAuthorizeValidatorTest {
                                             "Request vtr is not permitted")
                                     .toJSONObject()));
             assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        }
+
+        @Test
+        void validatorLogsTheConflictWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.P2")).build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
+            var clientRegistry =
+                    generateClientRegistry(
+                                    ClientType.APP.getValue(),
+                                    new Scope(
+                                            OIDCScopeValue.OPENID.getValue(),
+                                            CustomScopeValue.DOC_CHECKING_APP.getValue()))
+                            .withIdentityVerificationSupported(false);
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertFalse(requestObjectError.isPresent());
+            String expectedLogMessage =
+                    "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.";
+            assertThat(
+                    baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
         }
     }
 
@@ -862,12 +899,12 @@ class RequestObjectAuthorizeValidatorTest {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         var clientRegistry =
                 generateClientRegistry(
-                        ClientType.APP.getValue(),
-                        new Scope(
-                                OIDCScopeValue.OPENID.getValue(),
-                                CustomScopeValue.DOC_CHECKING_APP.getValue()));
-
-        clientRegistry.withPermitMissingNonce(true);
+                                ClientType.APP.getValue(),
+                                new Scope(
+                                        OIDCScopeValue.OPENID.getValue(),
+                                        CustomScopeValue.DOC_CHECKING_APP.getValue()))
+                        .withPermitMissingNonce(true)
+                        .withIdentityVerificationSupported(false);
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
 
