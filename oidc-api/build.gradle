@@ -51,12 +51,13 @@ test {
     exclude 'uk/gov/di/authentication/oidc/contract/**'
 }
 
-var pactDir = "$rootDir/oidc-api/src/test/pact"
+var pactDir = "$buildDir/pacts"
 
 task pactConsumerTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include '/uk/gov/di/authentication/oidc/contract/**'
     systemProperties['pact.rootDir'] = pactDir
+    outputs.dir pactDir
 }
 
 pact {
@@ -72,6 +73,9 @@ pact {
         ]
     }
 }
+
+// Make pactPublish depend on pactConsumerTests
+pactPublish.dependsOn pactConsumerTests
 
 task buildZip(type: Zip) {
     if (isDevDeployBuild) {
