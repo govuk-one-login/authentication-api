@@ -9,9 +9,9 @@ bulk_user_email_max_audience_load_user_batch_size = 200
 bulk_user_email_type                              = "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL"
 bulk_user_email_audience_load_pause_duration      = 30000
 
-bulk_user_email_send_schedule_enabled    = true
+bulk_user_email_send_schedule_enabled    = false
 bulk_user_email_send_schedule_expression = "cron(* 8-15 ? 4 3-5 2026)"
-bulk_user_email_email_sending_enabled    = true
+bulk_user_email_email_sending_enabled    = false
 bulk_user_email_batch_size               = 48
 bulk_user_email_send_mode                = "PENDING"
 bulk_user_email_sender_type              = "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET"
