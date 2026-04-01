@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.exceptions.CodeRequestTypeNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -84,23 +85,49 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canSendEmailOtpNotification(
             JourneyType journeyType, PermissionContext permissionContext) {
+        if (permissionContext.emailAddress() == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
+
+        var codeRequestType = getEmailCodeRequestType(journeyType);
+        if (codeRequestType == null) {
+            return Result.success(new Decision.Permitted(0));
+        }
+
+        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        if (getCodeStorageService()
+                .isBlockedForEmail(permissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
+            var reason =
+                    journeyType == JourneyType.PASSWORD_RESET
+                            ? ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST
+                            : ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT;
+            return Result.success(createTemporarilyLockedOut(reason, 0, false));
+        }
+
+        // PASSWORD_RESET has additional count-based check.
+        //
+        // This exists because ResetPasswordRequestHandler used to do one check of the count
+        // and figured out from that if the action is currently blocked, or would be as a
+        // result of this invocation. After the lockout refactor the handler calls
+        // canSendEmailOtpNotification() BEFORE incrementing the count and this method does
+        // the "as is" and "will be" block checks (hence the -1 comparison).
+        //
+        // This could be refactored to follow the pattern used in MfaHandler where:
+        //   1. Handler calls permissionDecisionManager to check if user is already blocked
+        //   2. Handler calls userActionsManager to record the action (which increments count
+        //      and sets block if limit exceeded)
+        //   3. Handler calls permissionDecisionManager again to check if the action caused a block
+        //
+        // This would simplify the logic here by removing the count-based prediction and making
+        // canSendEmailOtpNotification() a pure permission check (no count logic). After this
+        // refactoring, the ternary above deciding the error response may also be removed or
+        // moved to the handler, though more thought would be required to check this assumption.
         if (journeyType == JourneyType.PASSWORD_RESET) {
-            var codeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            var codeRequestCount = permissionContext.authSessionItem().getPasswordResetCount();
-            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-
-            // Check Redis block first - use different ForbiddenReason instead of -1
-            if (getCodeStorageService()
-                    .isBlockedForEmail(
-                            permissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
-                return Result.success(
-                        createTemporarilyLockedOut(
-                                ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST, 0, false));
+            if (permissionContext.authSessionItem() == null) {
+                return Result.failure(DecisionError.INVALID_USER_CONTEXT);
             }
-
-            // Check if count will reach limit after increment
+            var codeRequestCount = permissionContext.authSessionItem().getPasswordResetCount();
             if (codeRequestCount >= configurationService.getCodeMaxRetries() - 1) {
                 boolean isFirstTime =
                         (codeRequestCount == configurationService.getCodeMaxRetries() - 1);
@@ -110,7 +137,6 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 codeRequestCount,
                                 isFirstTime));
             }
-
             return Result.success(new Decision.Permitted(codeRequestCount));
         }
 
@@ -120,21 +146,25 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canVerifyEmailOtp(
             JourneyType journeyType, PermissionContext permissionContext) {
-        if (journeyType == JourneyType.PASSWORD_RESET) {
-            var codeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        if (permissionContext.emailAddress() == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
 
-            if (getCodeStorageService()
-                    .isBlockedForEmail(
-                            permissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
-                return Result.success(
-                        createTemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
-                                0,
-                                false));
-            }
+        var codeRequestType = getEmailCodeRequestType(journeyType);
+        if (codeRequestType == null) {
+            return Result.success(new Decision.Permitted(0));
+        }
+
+        var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        if (getCodeStorageService()
+                .isBlockedForEmail(
+                        permissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
+            return Result.success(
+                    createTemporarilyLockedOut(
+                            ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                            0,
+                            false));
         }
 
         return Result.success(new Decision.Permitted(0));
@@ -432,6 +462,19 @@ public class PermissionDecisionManager implements PermissionDecisions {
             case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
                     .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
         };
+    }
+
+    private CodeRequestType getEmailCodeRequestType(JourneyType journeyType) {
+        if (journeyType == JourneyType.PASSWORD_RESET) {
+            return CodeRequestType.getCodeRequestType(
+                    RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        }
+        try {
+            return CodeRequestType.getCodeRequestType(
+                    CodeRequestType.SupportedCodeType.EMAIL, journeyType);
+        } catch (CodeRequestTypeNotFoundException e) {
+            return null;
+        }
     }
 
     private Decision.TemporarilyLockedOut createTemporarilyLockedOut(

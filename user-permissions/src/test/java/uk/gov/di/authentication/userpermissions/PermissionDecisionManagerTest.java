@@ -74,108 +74,194 @@ class PermissionDecisionManagerTest {
     @Nested
     class CanSendEmailOtpNotification {
 
-        @Test
-        void shouldReturnPermittedForNonPasswordResetJourney() {
-            var userContext = createUserContext(0);
+        private static final List<JourneyType> HANDLED_JOURNEY_TYPES =
+                List.of(
+                        JourneyType.PASSWORD_RESET,
+                        JourneyType.REGISTRATION,
+                        JourneyType.ACCOUNT_RECOVERY);
 
-            var result =
-                    permissionDecisionManager.canSendEmailOtpNotification(
-                            JourneyType.SIGN_IN, userContext);
+        @Nested
+        class Validation {
+            @Test
+            void shouldReturnErrorWhenEmailAddressIsNull() {
+                var userContext =
+                        new PermissionContext(
+                                "subject", "pairwise", null, new AuthSessionItem(), null);
 
-            assertTrue(result.isSuccess(), "Expected result to be successful");
-            var decision =
-                    assertInstanceOf(
-                            Decision.Permitted.class,
-                            result.getSuccess(),
-                            "Expected Permitted decision");
-            assertEquals(0, decision.attemptCount());
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                JourneyType.REGISTRATION, userContext);
+
+                assertTrue(result.isFailure());
+                assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnErrorForPasswordResetWhenAuthSessionItemIsNull() {
+                var userContext = new PermissionContext("subject", "pairwise", EMAIL, null, null);
+
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                JourneyType.PASSWORD_RESET, userContext);
+
+                assertTrue(result.isFailure());
+                assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+            }
         }
 
-        @Test
-        void shouldReturnPermittedWhenWithinLimits() {
-            var userContext = createUserContext(3);
+        @Nested
+        class UnsupportedJourneyTypes {
+            static Stream<JourneyType> unsupportedJourneyTypes() {
+                return Arrays.stream(JourneyType.values())
+                        .filter(jt -> !HANDLED_JOURNEY_TYPES.contains(jt));
+            }
 
-            var result =
-                    permissionDecisionManager.canSendEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, userContext);
+            @ParameterizedTest
+            @MethodSource("unsupportedJourneyTypes")
+            void shouldReturnPermitted(JourneyType journeyType) {
+                var userContext = createUserContext(0);
 
-            assertTrue(result.isSuccess(), "Expected result to be successful");
-            var decision =
-                    assertInstanceOf(
-                            Decision.Permitted.class,
-                            result.getSuccess(),
-                            "Expected Permitted decision");
-            assertEquals(3, decision.attemptCount());
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                journeyType, userContext);
+
+                assertTrue(result.isSuccess());
+                assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            }
         }
 
-        @Test
-        void shouldReturnLockedOutWhenExceedsRequestCount() {
-            var userContext = createUserContext(6);
+        @Nested
+        class BlockChecks {
+            static Stream<JourneyType> handledJourneyTypes() {
+                return HANDLED_JOURNEY_TYPES.stream();
+            }
 
-            var result =
-                    permissionDecisionManager.canSendEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, userContext);
+            @ParameterizedTest
+            @MethodSource("handledJourneyTypes")
+            void shouldReturnPermittedWhenNotBlocked(JourneyType journeyType) {
+                var userContext = createUserContext(0);
 
-            assertTrue(result.isSuccess(), "Expected result to be successful");
-            var lockedOut =
-                    assertInstanceOf(
-                            Decision.TemporarilyLockedOut.class,
-                            result.getSuccess(),
-                            "Expected TemporarilyLockedOut decision");
-            assertEquals(
-                    ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
-                    lockedOut.forbiddenReason());
-            assertEquals(6, lockedOut.attemptCount());
-            assertEquals(false, lockedOut.isFirstTimeLimit());
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                journeyType, userContext);
+
+                assertTrue(result.isSuccess());
+                assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            }
+
+            @ParameterizedTest
+            @MethodSource("handledJourneyTypes")
+            void shouldReturnLockedOutWhenCodeRequestBlockExists(JourneyType journeyType) {
+                var userContext = createUserContext(0);
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(
+                                CodeRequestType.SupportedCodeType.EMAIL, journeyType);
+                when(codeStorageService.isBlockedForEmail(
+                                EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
+                        .thenReturn(true);
+
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                journeyType, userContext);
+
+                assertTrue(result.isSuccess());
+                var lockedOut =
+                        assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+                var expectedReason =
+                        journeyType == JourneyType.PASSWORD_RESET
+                                ? ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST
+                                : ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT;
+                assertEquals(expectedReason, lockedOut.forbiddenReason());
+            }
         }
 
-        @Test
-        void shouldReturnLockedOutWithFirstTimeFlagWhenReachingLimitForFirstTime() {
-            var userContext = createUserContext(5); // maxRetries - 1
+        @Nested
+        class PasswordResetCountChecks {
+            @Test
+            void shouldReturnPermittedWhenWithinLimits() {
+                var userContext = createUserContext(3);
 
-            var result =
-                    permissionDecisionManager.canSendEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, userContext);
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                JourneyType.PASSWORD_RESET, userContext);
 
-            assertTrue(result.isSuccess(), "Expected result to be successful");
-            var lockedOut =
-                    assertInstanceOf(
-                            Decision.TemporarilyLockedOut.class,
-                            result.getSuccess(),
-                            "Expected TemporarilyLockedOut decision");
-            assertEquals(
-                    ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
-                    lockedOut.forbiddenReason());
-            assertEquals(5, lockedOut.attemptCount());
-            assertEquals(true, lockedOut.isFirstTimeLimit());
-        }
+                assertTrue(result.isSuccess());
+                var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+                assertEquals(3, decision.attemptCount());
+            }
 
-        @Test
-        void shouldReturnLockedOutWhenBlockedForRequests() {
-            var userContext = createUserContext(0);
-            var codeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-            when(codeStorageService.isBlockedForEmail(EMAIL, codeRequestBlockedKeyPrefix))
-                    .thenReturn(true);
+            @Test
+            void shouldReturnLockedOutWhenCountExceedsLimit() {
+                var userContext = createUserContext(6);
 
-            var result =
-                    permissionDecisionManager.canSendEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, userContext);
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                JourneyType.PASSWORD_RESET, userContext);
 
-            assertTrue(result.isSuccess(), "Expected result to be successful");
-            var lockedOut =
-                    assertInstanceOf(
-                            Decision.TemporarilyLockedOut.class,
-                            result.getSuccess(),
-                            "Expected TemporarilyLockedOut decision");
-            assertEquals(ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST, lockedOut.forbiddenReason());
+                assertTrue(result.isSuccess());
+                var lockedOut =
+                        assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+                assertEquals(
+                        ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                        lockedOut.forbiddenReason());
+                assertEquals(6, lockedOut.attemptCount());
+                assertFalse(lockedOut.isFirstTimeLimit());
+            }
+
+            @Test
+            void shouldReturnLockedOutWithFirstTimeFlagWhenReachingLimit() {
+                var userContext = createUserContext(5); // maxRetries - 1
+
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                JourneyType.PASSWORD_RESET, userContext);
+
+                assertTrue(result.isSuccess());
+                var lockedOut =
+                        assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+                assertEquals(
+                        ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                        lockedOut.forbiddenReason());
+                assertEquals(5, lockedOut.attemptCount());
+                assertTrue(lockedOut.isFirstTimeLimit());
+            }
+
+            static Stream<JourneyType> nonPasswordResetJourneyTypes() {
+                return Arrays.stream(JourneyType.values())
+                        .filter(jt -> jt != JourneyType.PASSWORD_RESET);
+            }
+
+            @ParameterizedTest
+            @MethodSource("nonPasswordResetJourneyTypes")
+            void shouldReturnPermittedForOtherJourneyTypesEvenWithHighCount(
+                    JourneyType journeyType) {
+                var userContext = createUserContext(10);
+
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                journeyType, userContext);
+
+                assertTrue(result.isSuccess());
+                assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            }
         }
     }
 
     @Nested
     class CanVerifyEmailOtp {
+
+        @Test
+        void shouldReturnErrorWhenEmailAddressIsNull() {
+            var userContext =
+                    new PermissionContext("subject", "pairwise", null, new AuthSessionItem(), null);
+
+            var result =
+                    permissionDecisionManager.canVerifyEmailOtp(
+                            JourneyType.REGISTRATION, userContext);
+
+            assertTrue(result.isFailure());
+            assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+        }
 
         @Test
         void shouldReturnPermittedForNonPasswordResetJourney() {
@@ -236,6 +322,45 @@ class PermissionDecisionManagerTest {
                             Decision.TemporarilyLockedOut.class,
                             result.getSuccess(),
                             "Expected TemporarilyLockedOut decision");
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
+        }
+
+        @Test
+        void shouldReturnLockedOutForRegistrationWhenCodeEntryBlockExists() {
+            var userContext = createUserContext(0);
+            when(codeStorageService.isBlockedForEmail(
+                            EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
+                    .thenReturn(true);
+
+            var result =
+                    permissionDecisionManager.canVerifyEmailOtp(
+                            JourneyType.REGISTRATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
+        }
+
+        @Test
+        void shouldReturnLockedOutForAccountRecoveryWhenCodeEntryBlockExists() {
+            var userContext = createUserContext(0);
+            when(codeStorageService.isBlockedForEmail(
+                            EMAIL,
+                            CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
+                    .thenReturn(true);
+
+            var result =
+                    permissionDecisionManager.canVerifyEmailOtp(
+                            JourneyType.ACCOUNT_RECOVERY, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
             assertEquals(
                     ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
                     lockedOut.forbiddenReason());

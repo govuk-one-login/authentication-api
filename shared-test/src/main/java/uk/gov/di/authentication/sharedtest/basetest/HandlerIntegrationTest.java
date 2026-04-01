@@ -82,6 +82,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new SqsQueueExtension("notification-queue");
 
     @RegisterExtension
+    protected static final SqsQueueExtension pendingEmailCheckQueue =
+            new SqsQueueExtension("pending-email-check-queue");
+
+    @RegisterExtension
     protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
 
     @RegisterExtension
