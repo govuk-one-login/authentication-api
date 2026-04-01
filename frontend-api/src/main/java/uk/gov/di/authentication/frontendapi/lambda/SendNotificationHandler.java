@@ -239,15 +239,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                         : null)
                         .build();
 
-        var preActionBlockedResponse =
+        var preSendNotificationBlockResponse =
                 getResponseIfNotPermitted(
                         request.getNotificationType(),
                         request.getJourneyType(),
                         permissionContext,
                         auditContext,
                         false);
-        if (preActionBlockedResponse.isPresent()) {
-            return preActionBlockedResponse.get();
+        if (preSendNotificationBlockResponse.isPresent()) {
+            return preSendNotificationBlockResponse.get();
         }
 
         try {
@@ -259,15 +259,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         request.getJourneyType(), permissionContext);
             }
 
-            var postActionBlockedResponse =
+            var postSendNotificationBlockResponse =
                     getResponseIfNotPermitted(
                             request.getNotificationType(),
                             request.getJourneyType(),
                             permissionContext,
                             auditContext,
                             true);
-            if (postActionBlockedResponse.isPresent()) {
-                return postActionBlockedResponse.get();
+            if (postSendNotificationBlockResponse.isPresent()) {
+                return postSendNotificationBlockResponse.get();
             }
 
             switch (request.getNotificationType()) {
@@ -477,13 +477,17 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             canSendResult.getFailure()));
         }
 
-        if (canSendResult.getSuccess() instanceof Decision.IndefinitelyLockedOut) {
+        boolean isIndefinitelyLockedOutOfSendingNotification =
+                canSendResult.getSuccess() instanceof Decision.IndefinitelyLockedOut;
+        if (isIndefinitelyLockedOutOfSendingNotification) {
             return Optional.of(
                     generateApiGatewayProxyErrorResponse(
                             400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
         }
 
-        if (canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+        boolean isTemporarilyLockedOutOfSendingNotification =
+                canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
+        if (isTemporarilyLockedOutOfSendingNotification) {
             auditService.submitAuditEvent(
                     getInvalidCodeAuditEventFromNotificationType(notificationType), auditContext);
             var errorResponse =
@@ -505,7 +509,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             canVerifyResult.getFailure()));
         }
 
-        if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+        boolean isTemporarilyLockedOutOfVerifyingOtp =
+                canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
+        if (isTemporarilyLockedOutOfVerifyingOtp) {
             auditService.submitAuditEvent(
                     getInvalidCodeAuditEventFromNotificationType(notificationType), auditContext);
             return Optional.of(
