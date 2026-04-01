@@ -58,18 +58,23 @@ jobs:
           gradle-version: wrapper
           cache-read-only: false
 
+      - name: Clean pact directories
+        run: |
+          find . -name "pacts" -type d -path "*/build/*" -exec rm -rf {} + || true
+          echo "Cleaned pact build directories"
+
       - name: Run consumer contract tests
-        run: ./gradlew pactConsumerTests
+        run: ./gradlew --no-parallel pactConsumerTests
 
       - name: Upload pacts to broker
         if: github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' && github.event_name != 'push'
-        run: ./gradlew pactPublish
+        run: ./gradlew --no-parallel pactPublish
 
       - name: Upload pacts to broker on push to main
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
         env:
           CONSUMER_APP_VERSION: ${{ github.sha }}
-        run: ./gradlew pactPublish
+        run: ./gradlew --no-parallel pactPublish
 
       - name: Verify pacts
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
