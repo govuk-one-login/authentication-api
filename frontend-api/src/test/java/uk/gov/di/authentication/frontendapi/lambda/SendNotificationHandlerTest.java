@@ -1469,7 +1469,7 @@ class SendNotificationHandlerTest {
             }
 
             @Test
-            void shouldReturn400WhenInternationalSmsLimitReached() {
+            void shouldReturn400WhenInternationalSendLimitServiceBlocks() {
                 when(permissionDecisionManager.canSendSmsOtpNotification(
                                 any(JourneyType.class), any(PermissionContext.class)))
                         .thenReturn(

@@ -917,7 +917,7 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("mfaJourneyTypes")
-    void shouldReturn400WhenInternationalNumberHasHitSendLimit(JourneyType journeyType) {
+    void shouldReturn400WhenInternationalSendLimitServiceBlocks(JourneyType journeyType) {
         usingValidSession();
 
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -945,8 +945,7 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("mfaJourneyTypes")
-    void shouldReturn204WhenInternationalNumberIsBelowSendLimit(JourneyType journeyType)
-            throws Json.JsonException {
+    void shouldReturn204WhenInternationalSendLimitServiceAllows(JourneyType journeyType) {
         usingValidSession();
 
         when(mfaMethodsService.getMfaMethods(EMAIL))

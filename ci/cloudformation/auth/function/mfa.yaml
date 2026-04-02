@@ -71,6 +71,12 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               useStronglyConsistentReads,
             ]
+          INTERNATIONAL_SMS_SENDING_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              internationalSmsSendingEnabled,
+            ]
           INTERNATIONAL_SMS_NUMBER_SEND_LIMIT: !Sub
             - "{{resolve:ssm:${env}-sms-international-number-send-limit}}"
             - env:

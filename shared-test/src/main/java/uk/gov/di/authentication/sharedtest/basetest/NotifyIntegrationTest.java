@@ -106,5 +106,10 @@ public abstract class NotifyIntegrationTest {
         public String getContactUsLinkRoute() {
             return "contact-gov-uk-one-login";
         }
+
+        @Override
+        public boolean isInternationalSmsSendingEnabled() {
+            return true;
+        }
     }
 }
