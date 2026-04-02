@@ -603,7 +603,7 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void shouldReturnIndefinitelyLockedOutWhenInternationalSmsLimitExceeded() {
+        void shouldReturnIndefinitelyLockedOutWhenInternationalSendLimitServiceBlocks() {
             var userContext = createUserContext(0);
 
             when(internationalSmsSendLimitService.canSendSms(PHONE_NUMBER)).thenReturn(false);
@@ -625,7 +625,7 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void shouldReturnPermittedWhenInternationalSmsLimitNotExceeded() {
+        void shouldReturnPermittedWhenInternationalSendLimitServiceAllows() {
             var userContext = createUserContext(0);
 
             var result =
