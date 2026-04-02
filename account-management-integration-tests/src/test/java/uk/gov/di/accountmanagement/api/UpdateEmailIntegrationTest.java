@@ -54,7 +54,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "old.joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_EMAIL_ADDRESS = "new.joe.b@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_ID = "some-client-id";
     private static final String EXTENSIONS_JOURNEY_TYPE = "extensions.journey_type";
     private static final String EXTENSIONS_COMPONENT_ID = "component_id";
@@ -409,7 +409,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         byte[] salt = userStore.addSalt(EXISTING_EMAIL_ADDRESS);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         return internalCommonSubjectId;
     }
