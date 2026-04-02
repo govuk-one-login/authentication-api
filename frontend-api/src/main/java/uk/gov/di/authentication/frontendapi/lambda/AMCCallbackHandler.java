@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -32,11 +33,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_STATE_MISMATCH;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final AMCService amcService;
+    private final DynamoAmcStateService dynamoAmcStateService;
 
     private static final Logger LOG = LogManager.getLogger(AMCCallbackHandler.class);
 
@@ -51,19 +55,22 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         configurationService,
                         new NowHelper.NowClock(Clock.systemUTC()),
                         new JwtService(new KmsConnectionService(configurationService)));
+        this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
     }
 
     public AMCCallbackHandler(
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
-            AMCService amcService) {
+            AMCService amcService,
+            DynamoAmcStateService dynamoAmcStateService) {
         super(
                 AMCCallbackRequest.class,
                 configurationService,
                 authenticationService,
                 authSessionService);
         this.amcService = amcService;
+        this.dynamoAmcStateService = dynamoAmcStateService;
     }
 
     @SuppressWarnings("java:S1185")
@@ -81,6 +88,11 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             UserContext userContext) {
 
         LOG.info("Request received to AMCCallbackHandler");
+
+        var verifyStateResult = verifyState(request.state(), userContext);
+        if (verifyStateResult.isFailure()) {
+            return verifyStateResult.getFailure();
+        }
 
         var requestResult = amcService.buildTokenRequest(request.code(), request.usedRedirectUrl());
 
@@ -157,5 +169,21 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             LOG.warn("Parse exception when attempting to parse token response: {}", e.getMessage());
             return Result.failure(TokenResponseError.PARSE_EXCEPTION);
         }
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> verifyState(
+            String requestState, UserContext userContext) {
+        var amcStateMaybe = dynamoAmcStateService.get(requestState);
+        if (amcStateMaybe.isEmpty()) {
+            LOG.error("Cannot match received state to a recorded state");
+            return Result.failure(generateApiGatewayProxyErrorResponse(400, AMC_STATE_MISMATCH));
+        }
+
+        var amcState = amcStateMaybe.get();
+        if (!amcState.getClientSessionId().equals(userContext.getClientSessionId())) {
+            LOG.error("Received state belongs to a different session");
+            return Result.failure(generateApiGatewayProxyErrorResponse(400, AMC_STATE_MISMATCH));
+        }
+        return Result.success(null);
     }
 }

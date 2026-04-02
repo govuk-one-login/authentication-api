@@ -8,13 +8,17 @@ import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 
 public class AMCStateExtension extends DynamoExtension implements AfterEachCallback {
     public static final String TABLE_NAME = "local-amc-state";
     public static final String AUTHENTICATION_STATE_FIELD = "AuthenticationState";
+    private final DynamoAmcStateService dynamoAmcStateService;
 
     public AMCStateExtension() {
         createInstance();
+        dynamoAmcStateService = new DynamoAmcStateService(ConfigurationService.getInstance());
     }
 
     @Override
@@ -46,5 +50,9 @@ public class AMCStateExtension extends DynamoExtension implements AfterEachCallb
                                         .build())
                         .build();
         dynamoDB.createTable(request);
+    }
+
+    public void store(String state, String clientSessionId) {
+        dynamoAmcStateService.store(state, clientSessionId);
     }
 }

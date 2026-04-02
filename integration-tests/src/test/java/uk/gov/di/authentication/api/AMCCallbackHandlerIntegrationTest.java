@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.lambda.AMCCallbackHandler;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AMCStateExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -77,12 +78,16 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                             }
                     """;
     public static final String AUTH_CODE = "123456";
+    private static final String STATE = "abcdef";
 
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
 
     @RegisterExtension
     private static final KmsKeyExtension amcJwtSigningKey =
             new KmsKeyExtension("amc-jwt-signing-key", KeyUsageType.SIGN_VERIFY);
+
+    @RegisterExtension
+    private static final AMCStateExtension amcStateExtension = new AMCStateExtension();
 
     @BeforeAll
     static void setupEnvironment() {
@@ -106,6 +111,7 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         environment.set("AMC_TOKEN_URI", tokenUri);
         URI journeyOutcomeUri = URI.create(baseUri + "/amc/journeyoutcome");
         environment.set("AMC_JOURNEY_OUTCOME_URI", journeyOutcomeUri);
+        amcStateExtension.store(STATE, CLIENT_SESSION_ID);
     }
 
     @AfterAll
@@ -147,9 +153,12 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 makeRequest(
                         Optional.of(
                                 new AMCCallbackRequest(
-                                        AUTH_CODE, "state", "https://example.com/used-redirect")),
+                                        AUTH_CODE, STATE, "https://example.com/used-redirect")),
                         requestHeaders,
                         Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(response, hasBody(JOURNEY_OUTCOME_RESULT));
 
         var clientAssertionRegex = "eyJ[A-Za-z0-9+/=]+\\.[A-Za-z0-9+/=]+\\.[A-Za-z0-9+/=_-]+";
         WireMock.verify(
@@ -180,8 +189,5 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .withHeader("user-language", equalTo("en"))
                         .withHeader(
                                 "Authorization", containing("Bearer %s".formatted(ACCESS_TOKEN))));
-
-        assertThat(response, hasStatus(200));
-        assertThat(response, hasBody(JOURNEY_OUTCOME_RESULT));
     }
 }

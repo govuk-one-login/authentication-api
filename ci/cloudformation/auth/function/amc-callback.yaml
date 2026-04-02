@@ -62,6 +62,7 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref AuthToAMCSigningKeyPolicy
+        - !Ref DynamoAMCStateReadAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
