@@ -1,9 +1,15 @@
 package uk.gov.di.authentication.api;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,16 +29,22 @@ import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.util.Base64;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.google.gson.JsonParser.parseString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,7 +54,9 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 @ExtendWith(SystemStubsExtension.class)
 class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
-    private static KeyPair keyPair;
+    private static RSAKey rsaKey;
+
+    private static WireMockServer wireMockServer;
     private String sessionId;
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
 
@@ -63,27 +77,32 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         environment.set("AMC_AUTHORIZE_URI", "https://test-amc.account.gov.uk/authorize");
         environment.set("AMC_REDIRECT_URI", "https://test.account.gov.uk/amc/callback");
 
-        keyPair = generateKeyPair();
-        environment.set("AUTH_TO_AMC_PUBLIC_ENCRYPTION_KEY", formatPublicKey());
-    }
-
-    private static KeyPair generateKeyPair() {
+        KeyPair keyPair;
         try {
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
             keyPairGenerator.initialize(2048);
-            return keyPairGenerator.generateKeyPair();
+            keyPair = keyPairGenerator.generateKeyPair();
         } catch (Exception e) {
             throw new RuntimeException("Unable to create RSA key pair", e);
         }
+
+        rsaKey =
+                new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                        .privateKey((RSAPrivateKey) keyPair.getPrivate())
+                        .keyID("amc-test-key")
+                        .build();
+
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+        wireMockServer.start();
+        environment.set(
+                "AMC_JWKS_URL",
+                "http://localhost:" + wireMockServer.port() + "/.well-known/jwks.json");
     }
 
-    private static String formatPublicKey() {
-        try {
-            String base64PublicKey =
-                    Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
-            return "-----BEGIN PUBLIC KEY-----\n" + base64PublicKey + "\n-----END PUBLIC KEY-----";
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to format public key", e);
+    @AfterAll
+    static void afterAll() {
+        if (wireMockServer != null) {
+            wireMockServer.stop();
         }
     }
 
@@ -95,6 +114,17 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         new Subject().getValue(),
                         "test.account.gov.uk",
                         SaltHelper.generateNewSalt());
+
+        wireMockServer.resetAll();
+        wireMockServer.stubFor(
+                get(urlPathMatching("/.well-known/jwks.json"))
+                        .willReturn(
+                                aResponse()
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                new JWKSet(List.of(rsaKey))
+                                                        .toPublicJWKSet()
+                                                        .toString())));
 
         authSessionStore.addSession(sessionId);
         authSessionStore.addEmailToSession(sessionId, USER_EMAIL);
@@ -138,9 +168,13 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertTrue(redirectUrl.contains("client_id=test-amc-client"));
         assertTrue(redirectUrl.contains("request="));
 
-        String requestParam = redirectUrl.split("request=")[1];
-        String decodedJwe = URLDecoder.decode(requestParam, StandardCharsets.UTF_8);
-        EncryptedJWT encryptedJWT = EncryptedJWT.parse(decodedJwe);
+        String requestParam =
+                Arrays.stream(new URI(redirectUrl).getQuery().split("&"))
+                        .filter(p -> p.startsWith("request="))
+                        .map(p -> p.substring("request=".length()))
+                        .findFirst()
+                        .orElseThrow();
+        EncryptedJWT encryptedJWT = EncryptedJWT.parse(requestParam);
 
         assertNotNull(encryptedJWT.getHeader());
         assertEquals(JWEAlgorithm.RSA_OAEP_256, encryptedJWT.getHeader().getAlgorithm());
@@ -148,6 +182,8 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         String amcCookie = jsonObject.get("amcCookie").getAsString();
         assertFalse(amcCookie.isEmpty());
+        RSADecrypter decrypter = new RSADecrypter(rsaKey.toPrivateKey());
+        assertDoesNotThrow(() -> encryptedJWT.decrypt(decrypter));
     }
 
     @Test

@@ -19,6 +19,12 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcAuthorizeUri,
             ]
+          AMC_JWKS_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcJwksUrl,
+            ]
           AMC_CLIENT_ID:
             !FindInMap [
               EnvironmentConfiguration,
@@ -55,10 +61,6 @@ Resources:
             ]
           AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY: !Sub
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-amc-signing-key
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          AUTH_TO_AMC_PUBLIC_ENCRYPTION_KEY: !Sub
-            - "{{resolve:secretsmanager:/deploy/${env}/auth_to_amc_public_encryption_key}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           AUTH_TO_ACCOUNT_MANAGEMENT_API_AUDIENCE: !If
@@ -101,7 +103,6 @@ Resources:
         LogGroup: !Ref AMCAuthorizeFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref AuthToAMCPublicEncryptionKeyParameterPolicy
         - !Ref AuthToAMCSigningKeyPolicy
         - !Ref AuthToAccountManagementSigningKeyPolicy
         - !Ref DynamoAuthSessionStoreReadAccessPolicy

@@ -2,6 +2,10 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.KeySourceException;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,6 +31,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
+import java.security.interfaces.RSAPublicKey;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -48,12 +54,14 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMA
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class AMCAuthorizeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
     private final AMCService amcService = mock(AMCService.class);
     private AMCAuthorizeHandler handler;
     private final Context context = mock(Context.class);
@@ -68,15 +76,19 @@ class AMCAuthorizeHandlerTest {
     private final UserContext userContext = mock(UserContext.class);
 
     private static final String AMC_COOKIE = "some-cookie";
+    private static final RSAKey TEST_RSA_JWK =
+            new RSAKey.Builder((RSAPublicKey) GENERATE_RSA_KEY_PAIR().getPublic()).build();
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws KeySourceException {
         handler =
                 new AMCAuthorizeHandler(
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        amcService);
+                        amcService,
+                        jwkSource);
+        when(jwkSource.get(any(), any())).thenReturn(List.of(TEST_RSA_JWK));
         when(configurationService.getAMCSfadRedirectURI())
                 .thenReturn("https://example.com/callback");
         when(configurationService.getAuthToAMApiAudience())
@@ -112,7 +124,8 @@ class AMCAuthorizeHandlerTest {
                         eq(authSession),
                         eq(PUBLIC_SUBJECT_ID),
                         anyString(),
-                        anyList()))
+                        anyList(),
+                        any(RSAPublicKey.class)))
                 .thenReturn(
                         Result.success(new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
 
@@ -128,16 +141,20 @@ class AMCAuthorizeHandlerTest {
         var expectedResponse = new AMCAuthorizeResponse(expectedUrl, AMC_COOKIE);
         assertEquals(200, result.getStatusCode());
         assertThat(result, hasJsonBody(expectedResponse));
+
+        var expectedRedirectUri =
+                request.amcJourneyType().getTransportJwtConfig(configurationService).redirectUri();
+        var expectedAccessTokenConfigs =
+                request.amcJourneyType().getAccessTokenConfigs(configurationService);
         verify(amcService)
                 .buildAuthorizationResult(
-                        INTERNAL_COMMON_SUBJECT_ID,
-                        expectedAmcScope,
-                        authSession,
-                        PUBLIC_SUBJECT_ID,
-                        request.amcJourneyType()
-                                .getTransportJwtConfig(configurationService)
-                                .redirectUri(),
-                        request.amcJourneyType().getAccessTokenConfigs(configurationService));
+                        eq(INTERNAL_COMMON_SUBJECT_ID),
+                        eq(expectedAmcScope),
+                        eq(authSession),
+                        eq(PUBLIC_SUBJECT_ID),
+                        eq(expectedRedirectUri),
+                        eq(expectedAccessTokenConfigs),
+                        any(RSAPublicKey.class));
     }
 
     @Test
@@ -157,13 +174,62 @@ class AMCAuthorizeHandlerTest {
         assertTrue(result.getBody().contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
     }
 
+    @Test
+    void shouldReturnJwksRetrievalErrorWhenKeySourceExceptionThrown() throws KeySourceException {
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(jwkSource.get(any(), any()))
+                .thenThrow(new KeySourceException("JWKS endpoint unreachable"));
+
+        var event =
+                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                        CommonTestVariables.VALID_HEADERS,
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
+
+        var httpResponse =
+                AMCFailureHttpMapper.toHttpResponse(JwtFailureReason.JWKS_RETRIEVAL_ERROR);
+        assertEquals(httpResponse.statusCode(), result.getStatusCode());
+        assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
+    }
+
+    @Test
+    void shouldReturnJwksRetrievalErrorWhenNoRsaKeyFound() throws KeySourceException {
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(jwkSource.get(any(), any())).thenReturn(List.of());
+
+        var event =
+                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                        CommonTestVariables.VALID_HEADERS,
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
+
+        var httpResponse =
+                AMCFailureHttpMapper.toHttpResponse(JwtFailureReason.JWKS_RETRIEVAL_ERROR);
+        assertEquals(httpResponse.statusCode(), result.getStatusCode());
+        assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
+    }
+
     @ParameterizedTest
     @EnumSource(JwtFailureReason.class)
     void shouldHandleAllFailureReasons(JwtFailureReason failureReason) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(amcService.buildAuthorizationResult(
-                        anyString(), any(), any(), anyString(), anyString(), anyList()))
+                        anyString(),
+                        any(),
+                        any(),
+                        anyString(),
+                        anyString(),
+                        anyList(),
+                        any(RSAPublicKey.class)))
                 .thenReturn(Result.failure(failureReason));
 
         var event =

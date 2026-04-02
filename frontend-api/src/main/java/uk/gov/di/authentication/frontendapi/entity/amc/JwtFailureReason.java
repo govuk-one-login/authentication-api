@@ -6,7 +6,8 @@ public enum JwtFailureReason {
     TRANSCODING_ERROR("transcoding_error"),
     SIGNING_ERROR("signing_error"),
     ENCRYPTION_ERROR("encryption_error"),
-    UNKNOWN_JWT_ENCRYPTING_ERROR("unknown_jwt_encrypting_error");
+    UNKNOWN_JWT_ENCRYPTING_ERROR("unknown_jwt_encrypting_error"),
+    JWKS_RETRIEVAL_ERROR("jwks_retrieval_error");
 
     private final String value;
 
