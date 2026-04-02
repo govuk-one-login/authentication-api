@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// QualityGateUnitTest
 class DocAppSubjectIdHelperTest {
 
     private static final String REDIRECT_URI = "https://localhost:8080";
@@ -39,6 +40,7 @@ class DocAppSubjectIdHelperTest {
     private static final URI DOC_APP_DOMAIN = URI.create("https://doc-app-domain.gov.uk");
     private static final String AUDIENCE = "https://localhost/authorize";
 
+    // QualityGateRegressionTest
     @Test
     void shouldUseSubjectFromRequestObjectWhenPresentAndCustomDocAppClaimEnabled()
             throws JOSEException {
@@ -52,6 +54,7 @@ class DocAppSubjectIdHelperTest {
         assertThat(docAppSubjectId, equalTo(expectedSubject));
     }
 
+    // QualityGateRegressionTest
     @Test
     void
             shouldUsePairwiseSubjectWhenSubjectInRequestObjectIsPresentButCustomDocAppClaimIsNotEnabled()
@@ -67,6 +70,7 @@ class DocAppSubjectIdHelperTest {
         assertTrue(docAppSubjectId.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldUsePairwiseSubjectWhenSubjectNotPresentInRequestObjectAndCustomAppClaimIsNotEnabled()
             throws JOSEException {
@@ -79,6 +83,7 @@ class DocAppSubjectIdHelperTest {
         assertTrue(docAppSubjectId.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldUsePairwiseSubjectWhenCustomAppClaimIsEnabledButSubjectNotPresentInRequestObject()
             throws JOSEException {

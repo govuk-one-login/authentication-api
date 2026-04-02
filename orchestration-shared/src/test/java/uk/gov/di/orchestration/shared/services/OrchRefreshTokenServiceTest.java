@@ -28,6 +28,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshTokenItem> {
 
     private static final String JWT_ID = "test-jwt-id";
@@ -53,6 +54,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
                         Clock.fixed(CREATION_INSTANT, ZoneId.systemDefault()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldStoreOrchRefreshTokenItem() {
         orchRefreshTokenService.saveRefreshToken(
@@ -75,6 +77,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
                 refreshTokenFromCapturedRequest.getTimeToLive());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenFailsToStoreOrchRefreshToken() {
         doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
@@ -94,6 +97,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertEquals("Failed to save Orch refresh token item to Dynamo", exception.getMessage());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetOrchRefreshTokenForJwtId() {
         var orchRefreshTokenItem =
@@ -116,6 +120,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertTrue(orchRefreshTokenItem.getIsUsed());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnEmptyWhenNoRefreshTokenForJwtId() {
         when(table.getItem(any(GetItemEnhancedRequest.class))).thenReturn(null);
@@ -125,6 +130,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertTrue(actualOrchRefreshToken.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnEmptyWhenRefreshTokenIsAlreadyUsed() {
         var orchRefreshTokenItem =
@@ -142,6 +148,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertTrue(actualOrchRefreshToken.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenFailsToGetOrchRefreshToken() {
         doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
@@ -155,6 +162,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertEquals("Failed to get Orch refresh token from Dynamo", exception.getMessage());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetOrchRefreshTokensForAuthCode() {
         var orchRefreshTokenItems =
@@ -194,6 +202,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertTrue(orchRefreshTokenItems.get(1).getIsUsed());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnEmptyListWhenNoRefreshTokenForAuthCode() {
         var spyService = spy(orchRefreshTokenService);
@@ -204,6 +213,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertTrue(orchRefreshTokenItems.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenFailsToGetOrchRefreshTokenForAuthCode() {
         var spyService = spy(orchRefreshTokenService);

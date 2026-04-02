@@ -6,8 +6,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsMapContaining.hasEntry;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 
+// QualityGateUnitTest
 class RequestBodyHelperTest {
 
+    // QualityGateRegressionTest
     @Test
     void takesLastValueIfMultipleInstancesOfKey() {
 
