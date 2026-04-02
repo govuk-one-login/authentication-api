@@ -142,6 +142,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                                 redirectURI,
                                 state));
             }
+            logIfIdentityLoCAndIdentityUnsupported(vtrList, client);
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
