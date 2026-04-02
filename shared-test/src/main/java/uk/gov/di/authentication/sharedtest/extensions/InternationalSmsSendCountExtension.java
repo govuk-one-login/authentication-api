@@ -25,15 +25,24 @@ public class InternationalSmsSendCountExtension extends DynamoExtension
             "local-international-sms-send-count";
 
     private final InternationalSmsSendLimitService internationalSmsSendLimitService;
-    private final ConfigurationService configuration;
 
     public InternationalSmsSendCountExtension(int sendLimit) {
+        this(sendLimit, true);
+    }
+
+    public InternationalSmsSendCountExtension(
+            int sendLimit, boolean internationalSmsSendingEnabled) {
         createInstance();
-        this.configuration =
+        ConfigurationService configuration =
                 new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
                     @Override
                     public int getInternationalSmsNumberSendLimit() {
                         return sendLimit;
+                    }
+
+                    @Override
+                    public boolean isInternationalSmsSendingEnabled() {
+                        return internationalSmsSendingEnabled;
                     }
                 };
         internationalSmsSendLimitService = new InternationalSmsSendLimitService(configuration);

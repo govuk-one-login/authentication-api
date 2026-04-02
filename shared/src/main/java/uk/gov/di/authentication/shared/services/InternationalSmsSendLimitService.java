@@ -38,6 +38,11 @@ public class InternationalSmsSendLimitService extends BaseDynamoService<Internat
             return true;
         }
 
+        if (!configurationService.isInternationalSmsSendingEnabled()) {
+            LOG.info("Skipping international SMS: sending disabled by feature flag.");
+            return false;
+        }
+
         int sentCount = getSentCount(formattedPhoneNumber);
 
         return !hasReachedSendLimit(sentCount);
