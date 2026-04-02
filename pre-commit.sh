@@ -16,21 +16,19 @@ function usage() {
     -u  run the unit tests
     -i  run all integration tests
     -g  running in GitHub actions
-    -s  run against sandpit
 USAGE
 }
 RUN_UNIT=0
 RUN_INTEGRATION=0
 IN_GITHUB_ACTIONS=0
 TF_ACCOUNT_MANAGEMENT=0
-SANDPIT=0
 
 if [[ $# -eq 0 ]] || [[ ( $# -eq 1 && ${1} == "-l" ) ]]; then
   RUN_UNIT=1
   RUN_INTEGRATION=1
 fi
 
-while getopts "uigts" opt; do
+while getopts "uigt" opt; do
   case ${opt} in
     u)
       RUN_UNIT=1
