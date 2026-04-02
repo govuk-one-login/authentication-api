@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.State;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
@@ -88,6 +89,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                 request.amcJourneyType().getAccessTokenConfigs(configurationService);
         TransportJWTConfig transportJwtConfig =
                 request.amcJourneyType().getTransportJwtConfig(configurationService);
+        var state = new State();
 
         Result<JwtFailureReason, AMCAuthorizationUrlAndCookie> result =
                 amcService.buildAuthorizationResult(
@@ -96,7 +98,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         authSessionItem,
                         userProfile.getPublicSubjectID(),
                         transportJwtConfig.redirectUri(),
-                        accessTokenConfigsForJourneyType);
+                        accessTokenConfigsForJourneyType,
+                        state);
 
         return result.fold(
                 AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,

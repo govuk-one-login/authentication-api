@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.State;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -112,7 +113,8 @@ class AMCAuthorizeHandlerTest {
                         eq(authSession),
                         eq(PUBLIC_SUBJECT_ID),
                         anyString(),
-                        anyList()))
+                        anyList(),
+                        any(State.class)))
                 .thenReturn(
                         Result.success(new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
 
@@ -128,16 +130,20 @@ class AMCAuthorizeHandlerTest {
         var expectedResponse = new AMCAuthorizeResponse(expectedUrl, AMC_COOKIE);
         assertEquals(200, result.getStatusCode());
         assertThat(result, hasJsonBody(expectedResponse));
+
+        var expectedRedirectUri =
+                request.amcJourneyType().getTransportJwtConfig(configurationService).redirectUri();
+        var expectedAccessTokenConfigs =
+                request.amcJourneyType().getAccessTokenConfigs(configurationService);
         verify(amcService)
                 .buildAuthorizationResult(
-                        INTERNAL_COMMON_SUBJECT_ID,
-                        expectedAmcScope,
-                        authSession,
-                        PUBLIC_SUBJECT_ID,
-                        request.amcJourneyType()
-                                .getTransportJwtConfig(configurationService)
-                                .redirectUri(),
-                        request.amcJourneyType().getAccessTokenConfigs(configurationService));
+                        eq(INTERNAL_COMMON_SUBJECT_ID),
+                        eq(expectedAmcScope),
+                        eq(authSession),
+                        eq(PUBLIC_SUBJECT_ID),
+                        eq(expectedRedirectUri),
+                        eq(expectedAccessTokenConfigs),
+                        any(State.class));
     }
 
     @Test
@@ -163,7 +169,7 @@ class AMCAuthorizeHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(amcService.buildAuthorizationResult(
-                        anyString(), any(), any(), anyString(), anyString(), anyList()))
+                        anyString(), any(), any(), anyString(), anyString(), anyList(), any()))
                 .thenReturn(Result.failure(failureReason));
 
         var event =
