@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
@@ -43,6 +44,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
@@ -56,6 +58,7 @@ class AMCAuthorizeHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final AMCService amcService = mock(AMCService.class);
+    private final DynamoAmcStateService dynamoAmcStateService = mock(DynamoAmcStateService.class);
     private AMCAuthorizeHandler handler;
     private final Context context = mock(Context.class);
     private final AuthSessionItem authSession =
@@ -77,7 +80,8 @@ class AMCAuthorizeHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        amcService);
+                        amcService,
+                        dynamoAmcStateService);
         when(configurationService.getAMCSfadRedirectURI())
                 .thenReturn("https://example.com/callback");
         when(configurationService.getAuthToAMApiAudience())
@@ -135,6 +139,7 @@ class AMCAuthorizeHandlerTest {
                 request.amcJourneyType().getTransportJwtConfig(configurationService).redirectUri();
         var expectedAccessTokenConfigs =
                 request.amcJourneyType().getAccessTokenConfigs(configurationService);
+        var stateCaptor = ArgumentCaptor.forClass(State.class);
         verify(amcService)
                 .buildAuthorizationResult(
                         eq(INTERNAL_COMMON_SUBJECT_ID),
@@ -143,7 +148,9 @@ class AMCAuthorizeHandlerTest {
                         eq(PUBLIC_SUBJECT_ID),
                         eq(expectedRedirectUri),
                         eq(expectedAccessTokenConfigs),
-                        any(State.class));
+                        stateCaptor.capture());
+
+        verify(dynamoAmcStateService).store(stateCaptor.getValue().getValue(), CLIENT_SESSION_ID);
     }
 
     @Test

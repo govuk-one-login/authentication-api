@@ -216,7 +216,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
         handler = new MfaResetAuthorizeHandler(redisConnectionService);
 
-        idReverificationStateExtension.store("orch-redirect-url", "client-session-id");
+//        idReverificationStateExtension.store("orch-redirect-url", "client-session-id");
 
         wireMockServer.stubFor(
                 post(urlEqualTo("/"))
