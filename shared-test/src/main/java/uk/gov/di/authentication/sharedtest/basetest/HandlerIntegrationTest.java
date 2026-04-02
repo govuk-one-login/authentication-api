@@ -289,6 +289,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
                         public boolean isInternalApiNewInternationalSmsEnabled() {
                             return false;
                         }
+
+                        @Override
+                        public boolean isInternationalSmsSendingEnabled() {
+                            return true;
+                        }
                     };
 
     protected static final ConfigurationService BULK_DELETION_TXMA_ENABLED_CONFIGUARION_SERVICE =

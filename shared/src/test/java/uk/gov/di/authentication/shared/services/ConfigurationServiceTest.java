@@ -699,6 +699,11 @@ class ConfigurationServiceTest {
                 result, configurationService.commaSeparatedListContains(searchTerm, searchString));
     }
 
+    @Test
+    void isInternationalSmsSendingEnabledShouldDefaultToTrue() {
+        assertTrue(configurationService.isInternationalSmsSendingEnabled());
+    }
+
     private GetParameterRequest parameterRequest(String name) {
         return GetParameterRequest.builder().withDecryption(true).name(name).build();
     }
