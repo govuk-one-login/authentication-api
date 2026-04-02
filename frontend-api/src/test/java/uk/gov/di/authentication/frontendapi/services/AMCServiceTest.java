@@ -25,6 +25,7 @@ import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -125,6 +126,7 @@ class AMCServiceTest {
             Date.from(NOW_INSTANT.plus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES));
     private static final NowHelper.NowClock NOW_CLOCK =
             new NowHelper.NowClock(Clock.fixed(NOW_INSTANT, ZoneOffset.UTC));
+    private static final State STATE = new State();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final JwtService jwtService = mock(JwtService.class);
@@ -203,7 +205,8 @@ class AMCServiceTest {
                             authSessionItem,
                             PUBLIC_SUBJECT,
                             REDIRECT_URI,
-                            accessTokenConfigs);
+                            accessTokenConfigs,
+                            STATE);
 
             assertTrue(result.isSuccess());
             String authorizationUrl = result.getSuccess().url();
@@ -248,7 +251,8 @@ class AMCServiceTest {
                             authSessionItem,
                             PUBLIC_SUBJECT,
                             REDIRECT_URI,
-                            ACCESS_TOKEN_CONFIG);
+                            ACCESS_TOKEN_CONFIG,
+                            STATE);
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
@@ -269,7 +273,8 @@ class AMCServiceTest {
                             authSessionItem,
                             PUBLIC_SUBJECT,
                             REDIRECT_URI,
-                            ACCESS_TOKEN_CONFIG);
+                            ACCESS_TOKEN_CONFIG,
+                            STATE);
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.TRANSCODING_ERROR, result.getFailure());
@@ -310,7 +315,8 @@ class AMCServiceTest {
                             authSessionItem,
                             PUBLIC_SUBJECT,
                             REDIRECT_URI,
-                            ACCESS_TOKEN_CONFIG);
+                            ACCESS_TOKEN_CONFIG,
+                            STATE);
 
             assertTrue(result.isFailure());
             assertEquals(expectedFailureReason, result.getFailure());
@@ -343,7 +349,8 @@ class AMCServiceTest {
                             authSessionItem,
                             PUBLIC_SUBJECT,
                             REDIRECT_URI,
-                            ACCESS_TOKEN_CONFIG);
+                            ACCESS_TOKEN_CONFIG,
+                            STATE);
 
             assertTrue(result.isFailure());
             assertEquals(expectedFailureReason, result.getFailure());
@@ -361,7 +368,8 @@ class AMCServiceTest {
                             authSessionItem,
                             PUBLIC_SUBJECT,
                             REDIRECT_URI,
-                            ACCESS_TOKEN_CONFIG);
+                            ACCESS_TOKEN_CONFIG,
+                            STATE);
 
             assertTrue(result.isFailure());
             assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
@@ -382,7 +390,7 @@ class AMCServiceTest {
                             assertEquals(
                                     AMCScope.ACCOUNT_DELETE.getValue(),
                                     compositeClaims.getClaim("scope")),
-                    () -> assertDoesNotThrow(() -> compositeClaims.getClaim("state")),
+                    () -> assertEquals(STATE.getValue(), compositeClaims.getClaim("state")),
                     () -> assertEquals(INTERNAL_PAIRWISE_ID, compositeClaims.getSubject()),
                     () -> assertEquals(EMAIL, compositeClaims.getClaim("email")),
                     () -> assertEquals(PUBLIC_SUBJECT, compositeClaims.getClaim("public_sub")),

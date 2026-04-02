@@ -71,7 +71,8 @@ public class AMCService {
             AuthSessionItem authSessionItem,
             String publicSubject,
             String amcRedirectUri,
-            List<AccessTokenConfig> accessTokenConfigs) {
+            List<AccessTokenConfig> accessTokenConfigs,
+            State state) {
         LOG.info("Building AMC authorization URL");
 
         return createTransportJWTAndAmcCookie(
@@ -80,7 +81,8 @@ public class AMCService {
                         amcRedirectUri,
                         authSessionItem,
                         publicSubject,
-                        accessTokenConfigs)
+                        accessTokenConfigs,
+                        state)
                 .map(
                         encryptedJWTAndAmcCookie -> {
                             AuthorizationRequest authRequest =
@@ -167,7 +169,8 @@ public class AMCService {
             String amcRedirectUri,
             AuthSessionItem authSessionItem,
             String publicSubject,
-            List<AccessTokenConfig> accessTokenConfigs) {
+            List<AccessTokenConfig> accessTokenConfigs,
+            State state) {
         Date issueTime = nowClock.now();
         Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
 
@@ -191,7 +194,7 @@ public class AMCService {
                                             .claim("response_type", "code")
                                             .claim("redirect_uri", amcRedirectUri)
                                             .claim("scope", amcScope.getValue())
-                                            .claim("state", new State().getValue())
+                                            .claim("state", state.getValue())
                                             .jwtID(UUID.randomUUID().toString())
                                             .issueTime(issueTime)
                                             .notBeforeTime(issueTime)
