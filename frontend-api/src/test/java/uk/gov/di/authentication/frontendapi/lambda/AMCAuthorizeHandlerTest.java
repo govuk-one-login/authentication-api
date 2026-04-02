@@ -2,12 +2,14 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.State;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
@@ -24,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
@@ -55,6 +58,7 @@ class AMCAuthorizeHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final AMCService amcService = mock(AMCService.class);
+    private final DynamoAmcStateService dynamoAmcStateService = mock(DynamoAmcStateService.class);
     private AMCAuthorizeHandler handler;
     private final Context context = mock(Context.class);
     private final AuthSessionItem authSession =
@@ -76,7 +80,8 @@ class AMCAuthorizeHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        amcService);
+                        amcService,
+                        dynamoAmcStateService);
         when(configurationService.getAMCSfadRedirectURI())
                 .thenReturn("https://example.com/callback");
         when(configurationService.getAuthToAMApiAudience())
@@ -112,7 +117,8 @@ class AMCAuthorizeHandlerTest {
                         eq(authSession),
                         eq(PUBLIC_SUBJECT_ID),
                         anyString(),
-                        anyList()))
+                        anyList(),
+                        any(State.class)))
                 .thenReturn(
                         Result.success(new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
 
@@ -128,16 +134,23 @@ class AMCAuthorizeHandlerTest {
         var expectedResponse = new AMCAuthorizeResponse(expectedUrl, AMC_COOKIE);
         assertEquals(200, result.getStatusCode());
         assertThat(result, hasJsonBody(expectedResponse));
+
+        var expectedRedirectUri =
+                request.amcJourneyType().getTransportJwtConfig(configurationService).redirectUri();
+        var expectedAccessTokenConfigs =
+                request.amcJourneyType().getAccessTokenConfigs(configurationService);
+        var stateCaptor = ArgumentCaptor.forClass(State.class);
         verify(amcService)
                 .buildAuthorizationResult(
-                        INTERNAL_COMMON_SUBJECT_ID,
-                        expectedAmcScope,
-                        authSession,
-                        PUBLIC_SUBJECT_ID,
-                        request.amcJourneyType()
-                                .getTransportJwtConfig(configurationService)
-                                .redirectUri(),
-                        request.amcJourneyType().getAccessTokenConfigs(configurationService));
+                        eq(INTERNAL_COMMON_SUBJECT_ID),
+                        eq(expectedAmcScope),
+                        eq(authSession),
+                        eq(PUBLIC_SUBJECT_ID),
+                        eq(expectedRedirectUri),
+                        eq(expectedAccessTokenConfigs),
+                        stateCaptor.capture());
+
+        verify(dynamoAmcStateService).store(stateCaptor.getValue().getValue(), CLIENT_SESSION_ID);
     }
 
     @Test
@@ -163,7 +176,7 @@ class AMCAuthorizeHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(amcService.buildAuthorizationResult(
-                        anyString(), any(), any(), anyString(), anyString(), anyList()))
+                        anyString(), any(), any(), anyString(), anyString(), anyList(), any()))
                 .thenReturn(Result.failure(failureReason));
 
         var event =

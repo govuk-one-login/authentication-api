@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AMCStateExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -51,6 +52,9 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
     @RegisterExtension
     private static final KmsKeyExtension amcJwtSigningKey =
             new KmsKeyExtension("amc-jwt-signing-key", KeyUsageType.SIGN_VERIFY);
+
+    @RegisterExtension
+    private static final AMCStateExtension amcStateExtension = new AMCStateExtension();
 
     @BeforeAll
     static void setupEnvironment() {
