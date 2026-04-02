@@ -13,15 +13,19 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.shared.entity.AMCState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,6 +54,8 @@ class AMCCallbackHandlerTest {
     private static final AuthSessionItem authSession =
             new AuthSessionItem().withSessionId(SESSION_ID);
     private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private static final DynamoAmcStateService dynamoAmcStateService =
+            mock(DynamoAmcStateService.class);
     private static final AMCService AMC_SERVICE = mock(AMCService.class);
     private static TokenRequest tokenRequest;
     private static AMCCallbackHandler handler;
@@ -85,6 +91,8 @@ class AMCCallbackHandlerTest {
                               ]
                             }
                     """;
+    private static final AMCState AMC_STATE =
+            new AMCState().withAuthenticationState(STATE).withClientSessionId(CLIENT_SESSION_ID);
 
     @BeforeAll
     static void setUp() {
@@ -95,7 +103,9 @@ class AMCCallbackHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        AMC_SERVICE);
+                        AMC_SERVICE,
+                        dynamoAmcStateService);
+        when(dynamoAmcStateService.get(STATE)).thenReturn(Optional.of(AMC_STATE));
     }
 
     @BeforeEach
@@ -174,6 +184,44 @@ class AMCCallbackHandlerTest {
 
         assertEquals(200, result.getStatusCode());
         assertEquals(JOURNEY_OUTCOME_RESULT, result.getBody());
+    }
+
+    @Test
+    void shouldReturn400WhenStateParamDoesNotExist() {
+        when(dynamoAmcStateService.get(STATE)).thenReturn(Optional.empty());
+        AMCCallbackRequest request =
+                new AMCCallbackRequest(AUTH_CODE, "invalid-state", USED_REDIRECT_URL);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.AMC_STATE_MISMATCH));
+    }
+
+    @Test
+    void shouldReturn400WhenStateParamBelongsToDifferentClientSessionId() {
+        var stateWithDifferentClientSessionId =
+                new AMCState()
+                        .withAuthenticationState(STATE)
+                        .withClientSessionId("another-clientSession");
+        when(dynamoAmcStateService.get(STATE))
+                .thenReturn(Optional.of(stateWithDifferentClientSessionId));
+        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                        CONTEXT,
+                        request,
+                        USER_CONTEXT);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.AMC_STATE_MISMATCH));
     }
 
     @Test
