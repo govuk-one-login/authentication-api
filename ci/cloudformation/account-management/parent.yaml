@@ -295,6 +295,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
+      internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     authdev2:
@@ -327,6 +328,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
+      internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     authdev3:
@@ -359,6 +361,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
+      internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     dev:
@@ -398,6 +401,7 @@ Mappings:
       supportReauthSignoutEnabled: false
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
+      internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
     build:
@@ -439,6 +443,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
+      internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.build.account.gov.uk/.well-known/jwks.json
     staging:
@@ -479,6 +484,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
+      internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
     integration:
@@ -520,6 +526,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3fd823db-5980-4853-bd9b-ed674ea8719e
       accountManagementInternationalSmsEnabled: false
+      internationalSmsSendingEnabled: false
       testSigningKeyEnabled: false
       accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
     production:
@@ -561,6 +568,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6269785d-3811-487d-af5a-a732d318c6ca
       accountManagementInternationalSmsEnabled: false
+      internationalSmsSendingEnabled: false
       legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:172348255554:legacy-account-deletion-topic
       testSigningKeyEnabled: false
       accessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
