@@ -296,6 +296,23 @@ public abstract class HandlerIntegrationTest<Q, S> {
                         }
                     };
 
+    protected static final ConfigurationService INT_SMS_SENDING_DISABLED_CONFIGURATION_SERVICE =
+            new IntegrationTestConfigurationService(
+                    notificationsQueue,
+                    tokenSigner,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+
+                @Override
+                public boolean isInternationalSmsSendingEnabled() {
+                    return false;
+                }
+            };
+
     protected static final ConfigurationService BULK_DELETION_TXMA_ENABLED_CONFIGUARION_SERVICE =
             new IntegrationTestConfigurationService(
                     notificationsQueue,
