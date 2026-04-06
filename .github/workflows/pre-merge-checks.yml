@@ -56,7 +56,7 @@ jobs:
           cache-read-only: false
       - name: Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             .gradle/
@@ -91,7 +91,7 @@ jobs:
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             .gradle/
@@ -127,7 +127,7 @@ jobs:
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             .gradle/
@@ -143,7 +143,7 @@ jobs:
 
       - name: Cache Unit Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
           path: |
@@ -158,7 +158,7 @@ jobs:
             !account-data-api-integration-tests/build/jacoco/
             !account-data-api-integration-tests/build/reports/
       - name: Upload Unit Test Reports
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: unit-test-reports
@@ -225,7 +225,7 @@ jobs:
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             .gradle/
@@ -240,14 +240,14 @@ jobs:
 
       - name: Cache Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
           path: |
             integration-tests/build/jacoco/
             integration-tests/build/reports/
       - name: Upload Integration Test Reports
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: integration-test-reports
@@ -310,7 +310,7 @@ jobs:
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             .gradle/
@@ -324,7 +324,7 @@ jobs:
         run: |
           ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: account-management-integration-test-reports
@@ -337,7 +337,7 @@ jobs:
 
       - name: Cache Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
           path: |
@@ -347,7 +347,7 @@ jobs:
             delivery-receipts-integration-tests/build/reports/
 
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: delivery-receipts-integration-test-reports
@@ -418,7 +418,7 @@ jobs:
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             .gradle/
@@ -432,7 +432,7 @@ jobs:
         run: |
           ./gradlew :account-data-api-integration-tests:test :account-data-api-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: account-data-api-integration-test-reports
@@ -468,7 +468,7 @@ jobs:
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             .gradle/
@@ -479,7 +479,7 @@ jobs:
 
       - name: Restore Cached Unit Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
           path: |
@@ -495,7 +495,7 @@ jobs:
             !account-data-api-integration-tests/build/reports/
       - name: Restore Cached Integration Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
           path: |
@@ -503,7 +503,7 @@ jobs:
             integration-tests/build/reports/
       - name: Restore Cached AM DR Integration Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
           path: |
