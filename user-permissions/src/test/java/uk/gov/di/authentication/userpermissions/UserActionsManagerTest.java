@@ -588,6 +588,107 @@ class UserActionsManagerTest {
     }
 
     @Nested
+    class IncorrectSmsOtpReceived {
+
+        @Nested
+        class StandardJourneys {
+
+            @Test
+            void shouldIncrementCount() {
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(1);
+
+                var result =
+                        userActionsManager.incorrectSmsOtpReceived(
+                                JourneyType.SIGN_IN, permissionContext);
+
+                verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL);
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldBlockWhenMaxRetriesReached() {
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(6);
+
+                var result =
+                        userActionsManager.incorrectSmsOtpReceived(
+                                JourneyType.SIGN_IN, permissionContext);
+
+                verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL);
+                var expectedBlockedKey =
+                        CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getCodeRequestType(
+                                        SupportedCodeType.MFA, JourneyType.SIGN_IN);
+                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 900L);
+                verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+                assertTrue(result.isSuccess());
+            }
+
+            @ParameterizedTest
+            @MethodSource("reducedLockoutJourneyTypes")
+            void shouldUseReducedLockoutDurationForReducedLockoutJourneys(JourneyType journeyType) {
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(6);
+                when(configurationService.getReducedLockoutDuration()).thenReturn(300L);
+
+                var result =
+                        userActionsManager.incorrectSmsOtpReceived(journeyType, permissionContext);
+
+                var expectedBlockedKey =
+                        CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getCodeRequestType(
+                                        SupportedCodeType.MFA, journeyType);
+                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 300L);
+                assertTrue(result.isSuccess());
+            }
+
+            static Stream<JourneyType> reducedLockoutJourneyTypes() {
+                return Stream.of(JourneyType.REGISTRATION, JourneyType.ACCOUNT_RECOVERY);
+            }
+        }
+
+        @Nested
+        class ReauthenticationJourney {
+
+            @Test
+            void shouldIncrementCountViaAuthAttemptsService() {
+                var context =
+                        PermissionContext.builder().withInternalSubjectId("subject-123").build();
+                when(configurationService.getReauthEnterSMSCodeCountTTL()).thenReturn(120L);
+
+                var result =
+                        userActionsManager.incorrectSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                verify(authenticationAttemptsService)
+                        .createOrIncrementCount(
+                                eq("subject-123"),
+                                anyLong(),
+                                eq(JourneyType.REAUTHENTICATION),
+                                eq(CountType.ENTER_MFA_CODE));
+                verify(codeStorageService, never())
+                        .increaseIncorrectMfaCodeAttemptsCount(anyString());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldReturnErrorWhenAuthAttemptsServiceThrows() {
+                var context =
+                        PermissionContext.builder().withInternalSubjectId("subject-123").build();
+                when(configurationService.getReauthEnterSMSCodeCountTTL()).thenReturn(120L);
+                doThrow(new RuntimeException("Storage error"))
+                        .when(authenticationAttemptsService)
+                        .createOrIncrementCount(anyString(), anyLong(), any(), any());
+
+                var result =
+                        userActionsManager.incorrectSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.STORAGE_SERVICE_ERROR, result.getFailure());
+            }
+        }
+    }
+
+    @Nested
     class NoOpMethods {
 
         @Test
@@ -612,8 +713,6 @@ class UserActionsManagerTest {
                     userActionsManager.correctPasswordReceived(journeyType, context).isSuccess());
             assertTrue(userActionsManager.passwordReset(journeyType, context).isSuccess());
             assertTrue(userActionsManager.sentSmsOtpNotification(journeyType, context).isSuccess());
-            assertTrue(
-                    userActionsManager.incorrectSmsOtpReceived(journeyType, context).isSuccess());
             assertTrue(userActionsManager.correctSmsOtpReceived(journeyType, context).isSuccess());
             assertTrue(
                     userActionsManager

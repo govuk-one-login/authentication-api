@@ -284,8 +284,10 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(null);
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
 
+        int count = codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
+
+        assertThat(count, is(1));
         verify(redisConnectionService)
                 .saveWithExpiry(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash(),
@@ -298,8 +300,10 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(String.valueOf(3));
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
 
+        int count = codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
+
+        assertThat(count, is(4));
         verify(redisConnectionService)
                 .saveWithExpiry(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash(),
