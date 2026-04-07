@@ -171,6 +171,23 @@ Mappings:
       aisUriSecretId: bfd50b92-6ea2-40c7-9125-f7e27ca9b896
       authStubEnabled: false
       syncWaitForSpotTimeout: 20000
+      oldIdTokenECPublicKeys: '[{
+        "kty": "EC",
+        "use": "sig",
+        "crv": "P-256",
+        "kid": "e44ca187e5f3fee60c2d772cc9743f1175899ddc53fcc1178587a2fbd8d20081",
+        "x": "ccziorFA2LGN3Jdd8pAQNNLjYkTM5DqD2bXiHb62HF4",
+        "y": "nd02oQv8Uz9mjy3-EUG6nzuzdhW4TwYh6RA94n8RAJc",
+        "alg": "ES256"
+        }]'
+      oldIdTokenRSAPublicKeys: '[{
+        "kty": "RSA",
+        "e": "AQAB",
+        "use": "sig",
+        "kid": "646cbe13a3af45842a4a5b6c95e9cbc96e31b8fd393f0e971d54c58863ed34f2",
+        "alg": "RS256",
+        "n": "mUCN8SxuAHLa-oEqoKACK3aSd7Vlt4X6sIsVcVpvYix6FoHDHayj4Wj3q2isW3VR8b-Ej-_7u982GEklK5APvhwTI8EzrnObfBORppdqjB_yrqPMjIdRNtPKYa1EEG-acCbKYbdDundUPHRW7CAXZjREh1nthRsDJlxkkNYyqd4JEX3EkPaH5xEavUCbPLI4a4WTf63iuycWsXNTTyvUHFN8kelBq6gGzu4PY5u7eRXoc9IXuqV0sMwJOaXwveIP6X2k2I7PdF6TWG77IOU9y5QYrGrfmDwbxEboGJ3NMaLE2eNyAQ0GOEZ64_eveSa-hEJrRR7lzZe4Ty1R2WuGE2piTAt94vxz5FHwXrWZorB7I6y6ykau20_QCVcotI6htlp8JmGw-EzHRKwh4qDeje43tgfqQ0KbPysy-miK7AaUIi_ExwRWHxaRdwq5Hu08Y8-qNwqGggHI-g5go-fPobnk_uIUjm3TKjHGg06xCCRVmBiBgbfw2wvM0O4RdlZEDAsjEGPmfU7--LvxFHLoBskNBWzjuhNbOQNi3wuAX4b8IVZaD-94DLDXGldfaIUkuOSLz9Nero17GV7qgIQaKmf_bEgk_J1ZyT1M3eLGOaJzT2FousQf9QZTuGMeQDsK64uII_OVna5PqouMjLjSePWWsVltw7ooujB5Gvj9ojs"
+        }]'
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -198,6 +215,23 @@ Mappings:
       aisUriSecretId: 79692761-0248-4f13-8f1a-39b91596b24f
       authStubEnabled: false
       syncWaitForSpotTimeout: 20000
+      oldIdTokenECPublicKeys: '[{
+        "kty": "EC",
+        "use": "sig",
+        "crv": "P-256",
+        "kid": "d979391a6cbe7b04fe99c1110beb427cdaea34a766299333305f620a30f5b83b",
+        "x": "CzgXTqLUvx0P06QkOujQwTBSs8v47F3wl3eGLkvmC7E",
+        "y": "7UOFJn9pipVDB1PlAbD57wk6a7RzjjyjIvJTbPGIfNw",
+        "alg": "ES256"
+        }]'
+      oldIdTokenRSAPublicKeys: '[{
+        "kty": "RSA",
+        "e": "AQAB",
+        "use": "sig",
+        "kid": "4cc61ab001586d3c310a4ab672bbc78f73fe90b4258c7ccf5f54d0b629d0b8db",
+        "alg": "RS256",
+        "n": "ri1u9loetZ_j4J4YH4pUmE0-M0LCUK6eWIqfGOo5H5A629hvcnaH3NU0mbs0-e_0UTe3ASb82pP6SEOmqoqVl6dbcuhmBSQuAWCs3q7puQ7EyL5FoSCr_kf9Kizv6lTC9XW5VfMVzIYKuDCr2fmTqxZolu6gjejczGkq7sGTCjf_fpgc_AkagsjjRcNobhVz1IpROAmFNz5fLGmKewiKv7qX7D2Aqt8dWDMFuDq9kq8IbgeO2T88PntUps5QVRZsW1VXUAa1JaQ1Eq99a6Ji2KsDM0y_x-_2MBRSRcg2Z83FNZd8qvzhlAeW3IGC7GzYTRSfnuLURoSO1c-pQiEEXWoWrTTSLBegnmm_5ukN29uRfCu-hhHZWOuf_J08H9cc4J2M9BMMUi6dQw8slVnIlwt5hjSHvTJqK386C89WQiiRPF4sXqadfLedSdDG5DnincCZSjO061vMGI6v4UiygMY6BnVsb1wsuk7ABWXd2QfrtbFXMnW_Im4kKz2W7SPtTjApEy81LwTo-3eyTDQhRLl9k0Muu3fA0T9oXGPOn2ns6Xpth6gSV7bQWKPfpE5KteSe42VR4LVOwtPeFQURrzj7zSv7F4VESayQzoV0IEbuXlC0Q5sMJTjXRj6Gk8yxIXNGkz2QCN4rx_vXcnY3-m368XAGrwh8OAWXWc0H0yU"
+        }]'
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -227,6 +261,23 @@ Mappings:
       globalLogoutQueueKmsKeyArn: arn:aws:kms:eu-west-2:178023842775:key/7cf407f9-958e-4039-a095-c46ba0a08d82
       authStubEnabled: false
       syncWaitForSpotTimeout: 20000
+      oldIdTokenECPublicKeys: '[{
+        "kty": "EC",
+        "use": "sig",
+        "crv": "P-256",
+        "kid": "40bba36134a31c07fabefcca869dc13d0a0cdd8054a18582e5dc36a671633fe5",
+        "x": "OojcuT6SOTltMzoyO_G4bLXeMvETBTBVUoBnG6YRuBA",
+        "y": "KCkzB3M9l4tcDchHM8agucY05giwCvSuNTB0M-W3--Y",
+        "alg": "ES256"
+        }]'
+      oldIdTokenRSAPublicKeys: '[{
+        "kty": "RSA",
+        "e": "AQAB",
+        "use": "sig",
+        "kid": "c190f0cc30cd9667376607ce52d1e084a6856054dc4e599fbb30b49894730903",
+        "alg": "RS256",
+        "n": "srLfKCgyRr5XfngmCRAqnBS4TyEksaw49Jd1VKMeVZ79BuIdnezeZH3GENbfVkyJnpuKjmQcbnF2ANi_FZOIbt-sxcQZ_R28CBppBExUbahZ9jJW2DASCnYsu90cSqI342fjgGo_Qi0UbKXeSgsYtHI-GlHExC2wtfsro9_E6oZm27M6cqS040nNPJi8iXlVmdinAD-NdFvdacxsBpv6iBoDFCQf2rx_9MNWW3kOf8GTRzve0H0I4wIqjTPqCmTRyxSfRz-J9TJcECe2MUN8jy7X0p1jM0V4m67vUnZsCASqEV4fUDulzzSR3lc4qFRFGKDKh17a0jpGBbrh3YBIFCowX-Vln__5DasHtJKU4ZAc98Nmih23sGMpAF5KqKOjWiQVgDfzRAbZQtrHdRRuetji5uHOJM567zGSmrgr9hIVzsuS1d2F0fI5TwwXSh8iNyMcT0uWuuPOwS47S944BGUf3CmxOBK5v3uiYEJvDOlkc5940OzAAwijZt4Cd35d6FO19h03eC-Ht-W3qh9GaRaoa0DW_0vB7OAkr6D0PJPFotP8mu1Su5kYwTjWgV23btU-sNKF3qMHO6aljme9lwCgye-hDUXMPBbArKXNt0R5QkanypCFJQ1E2cqzm_ZOYIEq3k-oRJsYARMTDTWuqmG3cjGP7cANWV3Wvz8Ui60"
+        }]'
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -254,6 +305,23 @@ Mappings:
       aisUriSecretId: ""
       authStubEnabled: false
       syncWaitForSpotTimeout: 5000
+      oldIdTokenECPublicKeys: '[{
+        "kty": "EC",
+        "use": "sig",
+        "crv": "P-256",
+        "kid": "644af598b780f54106ca0f3c017341bc230c4f8373f35f32e18e3e40cc7acff6",
+        "x": "5URVCgH4HQgkg37kiipfOGjyVft0R5CdjFJahRoJjEw",
+        "y": "QzrvsnDy3oY1yuz55voaAq9B1M5tfhgW3FBjh_n_F0U",
+        "alg": "ES256"
+        }]'
+      oldIdTokenRSAPublicKeys: '[{
+        "kty": "RSA",
+        "e": "AQAB",
+        "use": "sig",
+        "kid": "76e79bfc350137593e5bd992b202e248fc97e7a20988a5d4fbe9a0273e54844e",
+        "alg": "RS256",
+        "n": "lGac-hw2cW5_amtNiDI-Nq2dEXt1x0nwOEIEFd8NwtYz7ha1GzNwO2LyFEoOvqIAcG0NFCAxgjkKD5QwcsThGijvMOLG3dPRMjhyB2S4bCmlkwLpW8vY4sJjc4bItdfuBtUxDA0SWqepr5h95RAsg9UP1LToJecJJR_duMzN-Nutu9qwbpIJph8tFjOFp_T37bVFk4vYkWfX-d4-TOImOOD75G0kgYoAJLS2SRovQAkbJwC1bdn_N8yw7RL9WIqZCwzqMqANdo3dEgSb04XD_CUzL0Y2zU3onewH9PhaMfb11JhsuijH3zRA0dwignDHp7pBw8uMxYSqhoeVO6V0jz8vYo27LyySR1ZLMg13bPNrtMnEC-LlRtZpxkcDLm7bkO-mPjYLrhGpDy7fSdr-6b2rsHzE_YerkZA_RgX_Qv-dZueX5tq2VRZu66QJAgdprZrUx34QBitSAvHL4zcI_Qn2aNl93DR-bT8lrkwB6UBz7EghmQivrwK84BjPircDWdivT4GcEzRdP0ed6PmpAmerHaalyWpLUNoIgVXLa_Px07SweNzyb13QFbiEaJ8p1UFT05KzIRxO8p18g7gWpH8-6jfkZtTOtJJKseNRSyKHgUK5eO9kgvy9sRXmmflV6pl4AMOEwMf4gZpbKtnLh4NETdGg5oSXEuTiF2MjmXE"
+        }]'
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -281,6 +349,23 @@ Mappings:
       aisUriSecretId: ""
       authStubEnabled: false
       syncWaitForSpotTimeout: 5000
+      oldIdTokenECPublicKeys: '[{
+        "kty": "EC",
+        "use": "sig",
+        "crv": "P-256",
+        "kid": "f02aec21220ef7b502e6396304345a7b87cffbdc4239ed09a136b164c6cf8e30",
+        "x": "qBwa5L5ZA33RortEjaQ8_lwrVd-EE2eVsgOC84VwyVQ",
+        "y": "ONF88GoP9xQJtq8RRV6zquggcd7xtggzZ20yW-PljHE",
+        "alg": "ES256"
+        }]'
+      oldIdTokenRSAPublicKeys: '[{
+        "kty": "RSA",
+        "e": "AQAB",
+        "use": "sig",
+        "kid": "9523e2842d6da6d5ab8cf860c9972edc4dd9931e78191863a423c8e0a3672edc",
+        "alg": "RS256",
+        "n": "szPJQdwSk6hfrForvDfxi8NUp64nN2svpQIY1yqO80FH7N-YLe0U5lBRAtMMDd0J0PeL5lqn11fIMMRZv0qgx6V5vTOZPALNMHIVvFFqqJISUi56975jzdMn5og-I35bgmNuupLwtmQQWezFoZK7Y21iNK21Iz82wLbfQf7vJiHbtq7eGtOEAzzayH_0OgEk0TyeULErMZy3_GN12njmNiBDxDw5hC8r3euoGCBVlC68Jc8Id7QSn7QMsakXWfnyboVQQtdzvbSfHFNf4jW6lqsb-3lMZxDOSBkPmrJTnGbFauJDXArnTk7YAprDnnoc_S5pXvwNZWJPX7IFugwGbqsFRwTPqWL8iWBc0JXsx02T5p6wf1ZEuyjNVZn4FMT_EHjYnFVIkaFhR9Ad3NZikHkNMDCf_1l8JOXiZ-l0BWqwfAiz9eiFAwM4LgdQviZmFdJZ7-A82lQwNzeqj8L4g5EB_DECWMVVD8YHXy7gs8FLfnuj9QRCDaConl0RkZfgoFeK8ayhbVhfQlDRTrDb9yrpK8RRS3vvfcImoj26gqWphMXcbEagfriTYLg5AZLzT1svraGnqS5cu6_XbDjzP-62tMRA_9-QSoCZqwBqjxd04cZZIanHJXBzVDNfcDFBFPwQ4Rt_ZifC8G0SvxleXXlRxeceq4rj3gNUYQugK4s"
+        }]'
 
 Globals:
   Function:
