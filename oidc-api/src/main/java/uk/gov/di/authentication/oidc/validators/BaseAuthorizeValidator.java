@@ -13,7 +13,9 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
@@ -145,6 +147,25 @@ public abstract class BaseAuthorizeValidator {
         }
 
         return Optional.empty();
+    }
+
+    protected void logIfIdentityLoCAndIdentityUnsupported(
+            List<VectorOfTrust> vtrList, ClientRegistry client) {
+        List<LevelOfConfidence> identityLoCs =
+                List.of(
+                        LevelOfConfidence.LOW_LEVEL,
+                        LevelOfConfidence.MEDIUM_LEVEL,
+                        LevelOfConfidence.HIGH_LEVEL,
+                        LevelOfConfidence.VERY_HIGH_LEVEL);
+        boolean hasRequestedIdentityLoC =
+                vtrList.stream()
+                        .map(VectorOfTrust::getLevelOfConfidence)
+                        .filter(Objects::nonNull)
+                        .anyMatch(identityLoCs::contains);
+        if (hasRequestedIdentityLoC && !client.isIdentityVerificationSupported()) {
+            LOG.info(
+                    "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.");
+        }
     }
 
     protected void validateResponseMode(String responseMode) throws InvalidResponseModeException {
