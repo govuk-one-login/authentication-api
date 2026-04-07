@@ -161,7 +161,29 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void validatorLogsTheConflictWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse()
+        void validatorReturnsErrorWhenCannotParseVtr()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+                var invalidVtr = false;
+                var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                        .claim("vtr", invalidVtr).build();
+
+                var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+                var requestObjectError = validator.validate(authRequest);
+
+                assertTrue(requestObjectError.isPresent());
+                assertThat(
+                    requestObjectError.get().errorObject().toJSONObject(),
+                    equalTo(
+                            new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "Request vtr not valid")
+                                    .toJSONObject()));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        }
+
+        @Test
+        void validatorReturnsErrorWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.P2")).build();
