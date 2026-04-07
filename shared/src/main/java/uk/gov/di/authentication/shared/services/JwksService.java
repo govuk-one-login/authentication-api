@@ -81,10 +81,14 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getAuthToAMCTransportJWTSigningKey());
     }
 
-    public JWK getPublicAuthToAMCDownstreamServiceSigningJwkWithOpaqueId() {
-        LOG.info("Retrieving Auth to AMC Downstream service signing public key");
-        return getPublicJWKWithKeyId(
-                configurationService.getAuthToAMCDownstreamServiceSigningKey());
+    public JWK getPublicAuthToAccountManagementSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Auth to Account Management API signing public key");
+        return getPublicJWKWithKeyId(configurationService.getAuthToAccountManagementSigningKey());
+    }
+
+    public JWK getPublicAuthToAccountDataSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Auth to Account Data API signing public key");
+        return getPublicJWKWithKeyId(configurationService.getAuthToAccountDataSigningKey());
     }
 
     private JWK getPublicJWKWithKeyId(String keyId) {
