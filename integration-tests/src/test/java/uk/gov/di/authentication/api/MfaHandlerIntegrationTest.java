@@ -443,6 +443,11 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     public int getInternationalSmsNumberSendLimit() {
                         return INTERNATIONAL_SMS_SEND_LIMIT;
                     }
+
+                    @Override
+                    public boolean isInternationalSmsSendingEnabled() {
+                        return true;
+                    }
                 };
 
         private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
@@ -518,6 +523,38 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                     .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
                                     .withAttribute(EXTENSIONS_MFA_METHOD, "default")
                                     .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
+        }
+    }
+
+    @Nested
+    class WhenInternationalSmsSendingDisabled {
+        private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
+
+        @BeforeEach
+        void setup() {
+            SESSION_ID = IdGenerator.generate();
+            authSessionStore.addSession(SESSION_ID);
+            authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
+            userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject("new-subject"));
+            handler =
+                    new MfaHandler(
+                            INT_SMS_SENDING_DISABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        }
+
+        @Test
+        void shouldReturn400ForInternationalNumber() {
+            userStore.addVerifiedPhoneNumber(USER_EMAIL, INTERNATIONAL_PHONE_NUMBER);
+
+            var response =
+                    makeRequest(
+                            Optional.of(new MfaRequest(USER_EMAIL, false)),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    response,
+                    hasJsonBody(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
         }
     }
 
