@@ -768,6 +768,42 @@ class PermissionDecisionManagerTest {
             assertTrue(result.isFailure());
             assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
         }
+
+        @Test
+        void shouldReturnLockedOutWhenAuthAppDeprecatedKeyIsBlocked() {
+            var userContext = createUserContext(0);
+            long blockTtl = 1234567890L;
+            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "MFA_SIGN_IN"))
+                    .thenReturn(0L);
+            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "SMS_SIGN_IN"))
+                    .thenReturn(0L);
+            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "AUTH_APP_SIGN_IN"))
+                    .thenReturn(blockTtl);
+
+            var result =
+                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isSuccess());
+            assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+        }
+
+        @Test
+        void shouldReturnLockedOutWhenSmsDeprecatedKeyIsBlocked() {
+            var userContext = createUserContext(0);
+            long blockTtl = 1234567890L;
+            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "MFA_SIGN_IN"))
+                    .thenReturn(0L);
+            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "SMS_SIGN_IN"))
+                    .thenReturn(blockTtl);
+            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "AUTH_APP_SIGN_IN"))
+                    .thenReturn(0L);
+
+            var result =
+                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isSuccess());
+            assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+        }
     }
 
     @Nested
