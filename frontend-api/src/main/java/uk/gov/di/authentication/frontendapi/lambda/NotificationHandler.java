@@ -176,7 +176,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
         if (isPhoneNotification(request.getNotificationType())) {
             if (!internationalSmsSendLimitService.canSendSms(request.getDestination())) {
                 LOG.warn(
-                        "International SMS send limit reached. NotificationType: {}, reference: {}",
+                        "Skipping international SMS send. NotificationType: {}, reference: {}",
                         request.getNotificationType(),
                         reference);
                 return;
