@@ -17,6 +17,7 @@ sequenceDiagram
     account_interventions ->> auth_internal_api : Response from Account Interventions containing blocked=true
     auth_internal_api ->> auth_internal_api : Generates audit event for "blocked" Account Intervention
     auth_internal_api ->> auth_internal_api : Sets authenticated to false in session
+    auth_internal_api ->> auth_frontend: AccountInterventions.java object returned containing blocked intervention
     auth_frontend ->> auth_internal_api : Request to /account-recovery (AccountRecoveryHandler.java)
     auth_internal_api ->> auth_internal_api : Calculates whether account recovery is permitted
     auth_internal_api ->> auth_frontend: AccountRecovery.java object returned
@@ -29,5 +30,4 @@ sequenceDiagram
     auth_frontend ->> auth_internal_api : Request to /verify-code (VerifyCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Validates whether SMS MFA code is valid
     auth_internal_api ->> auth_frontend: 204 response
-    auth_internal_api ->> auth_frontend: AccountInterventions.java object returned containing blocked intervention
     auth_frontend ->> auth_frontend : Displays Blocked intervention screen
