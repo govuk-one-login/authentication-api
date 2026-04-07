@@ -269,6 +269,52 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectSmsOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            try {
+                getAuthenticationAttemptsService()
+                        .createOrIncrementCount(
+                                permissionContext.internalSubjectId(),
+                                NowHelper.nowPlus(
+                                                configurationService
+                                                        .getReauthEnterSMSCodeCountTTL(),
+                                                ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond(),
+                                journeyType,
+                                CountType.ENTER_MFA_CODE);
+            } catch (RuntimeException e) {
+                LOG.error(
+                        "Failed to store incorrect SMS OTP count in AuthenticationAttemptsService",
+                        e);
+                return Result.failure(TrackingError.STORAGE_SERVICE_ERROR);
+            }
+        } else {
+            var updatedCount =
+                    getCodeStorageService()
+                            .increaseIncorrectMfaCodeAttemptsCount(
+                                    permissionContext.emailAddress());
+            if (updatedCount >= configurationService.getCodeMaxRetries()) {
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(SupportedCodeType.MFA, journeyType);
+                LOG.info("Setting block for email as user has exceeded max MFA code retries");
+
+                boolean reducedLockout =
+                        journeyType == JourneyType.REGISTRATION
+                                || journeyType == JourneyType.ACCOUNT_RECOVERY;
+                long blockDuration =
+                        reducedLockout
+                                ? configurationService.getReducedLockoutDuration()
+                                : configurationService.getLockoutDuration();
+
+                getCodeStorageService()
+                        .saveBlockedForEmail(
+                                permissionContext.emailAddress(),
+                                CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType,
+                                blockDuration);
+                getCodeStorageService()
+                        .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+            }
+        }
         return Result.success(null);
     }
 
