@@ -36,7 +36,7 @@ sequenceDiagram
     auth_frontend ->> auth_internal_api : Request to /orch-auth-code (AuthenticationAuthCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Generates and store Authorization Code with 5 min TTL
     auth_internal_api ->> auth_frontend: AuthCodeResponse.java object returned
-    auth_frontend ->> orch_api : Authorisation response via to /orchestration-redirect URL
+    auth_frontend ->> orch_api : Authorisation response via browser to /orchestration-redirect URL
     orch_api ->> auth_external_api: Token request to /token (TokenHandler.java)
     auth_external_api ->> auth_external_api : Validates token request, then generates and stores access token with 3 min TTL
     auth_external_api ->> orch_api : Token response containing access token
