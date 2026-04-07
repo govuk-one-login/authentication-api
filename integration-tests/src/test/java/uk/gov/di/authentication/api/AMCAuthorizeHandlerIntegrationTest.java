@@ -73,7 +73,8 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
     @BeforeAll
     static void setupEnvironment() {
         environment.set("AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY", amcJwtSigningKey.getKeyId());
-        environment.set("AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY", amcJwtSigningKey.getKeyId());
+        environment.set("AUTH_TO_ACCOUNT_MANAGEMENT_SIGNING_KEY", amcJwtSigningKey.getKeyId());
+        environment.set("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", amcJwtSigningKey.getKeyId());
         environment.set("AUTH_ISSUER_CLAIM", "https://test.account.gov.uk");
         environment.set("AUTH_TO_AUTH_AUDIENCE", "https://test.account.gov.uk");
         environment.set("AUTH_TO_AMC_PUBLIC_AUDIENCE", "https://manage.account.gov.uk/authorize");

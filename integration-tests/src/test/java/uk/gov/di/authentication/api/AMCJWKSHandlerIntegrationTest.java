@@ -48,7 +48,7 @@ class AMCJWKSHandlerIntegrationTest extends HandlerIntegrationTest<Object, Strin
     static void beforeAll() {
         environmentVariables.set("AMC_JWKS_BUCKET_NAME", AMC_JWKS_BUCKET);
         environmentVariables.set(
-                "AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY",
+                "AUTH_TO_ACCOUNT_MANAGEMENT_SIGNING_KEY",
                 authToAccountManagementSigningKey.getKeyAlias());
         environmentVariables.set(
                 "AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY", authToAMCSigningKey.getKeyAlias());

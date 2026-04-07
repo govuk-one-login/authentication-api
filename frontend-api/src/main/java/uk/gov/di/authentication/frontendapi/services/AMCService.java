@@ -240,7 +240,8 @@ public class AMCService {
                             authSessionItem,
                             issueTime,
                             expiryDate,
-                            config.audience());
+                            config.audience(),
+                            config.signingKey());
 
             if (result.isFailure()) {
                 return Result.failure(result.getFailure());
@@ -257,7 +258,8 @@ public class AMCService {
             AuthSessionItem authSessionItem,
             Date issueTime,
             Date expiryDate,
-            String audience) {
+            String audience,
+            String signingKey) {
         var claims =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scope.getValue())
@@ -272,7 +274,7 @@ public class AMCService {
                         .jwtID(UUID.randomUUID().toString())
                         .build();
 
-        return signJWT(claims, configurationService.getAuthToAMCDownstreamServiceSigningKey())
+        return signJWT(claims, signingKey)
                 .map(
                         signedJWT ->
                                 new BearerAccessToken(
