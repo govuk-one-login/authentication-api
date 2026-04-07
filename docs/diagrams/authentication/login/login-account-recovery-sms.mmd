@@ -27,7 +27,7 @@ sequenceDiagram
     auth_frontend ->> auth_internal_api : Request to /verify-code (VerifyCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Validates whether account recovery email OTP code is valid
     auth_internal_api ->> auth_frontend: 204 response
-    auth_frontend ->> auth_internal_api : Request to /send-notificaiton (SendNotificationHandler.java)
+    auth_frontend ->> auth_internal_api : Request to /send-notification (SendNotificationHandler.java)
     auth_internal_api ->> auth_internal_api : Generates and stores OTP
     auth_internal_api -->> notification_queue : Sends NotifyRequest.java object via SQS
     notification_queue -->> notify : Request to send SMS containing OTP and phone number

@@ -33,7 +33,7 @@ sequenceDiagram
     alt MFA SMS
         note over auth_frontend, auth_frontend: 'Text message'
         auth_frontend ->> auth_frontend : [/enter-phone-number]
-        auth_frontend ->> auth_internal_api : Request to /send-notificaiton (SendNotificationHandler.java)
+        auth_frontend ->> auth_internal_api : Request to /send-notification (SendNotificationHandler.java)
         auth_internal_api ->> auth_internal_api : Generates and stores OTP
         auth_internal_api -->> notification_queue : Sends NotifyRequest.java object via SQS
         notification_queue -->> notify : Request to send SMS containing OTP and phone number
