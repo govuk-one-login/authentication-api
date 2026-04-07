@@ -663,6 +663,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             setupForAuthJourney();
             String sessionId = givenAnExistingSession();
 
+            var queryParams = constructQueryStringParameters(
+                    CLIENT_ID, null, "openid", "[P2.Cl.Cm,Cl.Cm]");
+            queryParams.put("vtr", jsonArrayOf("P2.Cl.Cm", "Cl.Cm"));
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -671,8 +674,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
                                         new HttpCookie("bsid", BROWSER_SESSION_ID)
                                     }),
-                            constructQueryStringParameters(
-                                    CLIENT_ID, null, "openid", "[P2.Cl.Cm,Cl.Cm]"),
+                            queryParams,
                             Optional.of("GET"));
 
             assertThat(response, hasStatus(302));
