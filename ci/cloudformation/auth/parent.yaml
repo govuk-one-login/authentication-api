@@ -2768,6 +2768,48 @@ Resources:
               - kms:GetPublicKey
             Resource: !GetAtt AuthToAccountManagementSigningKey.Arn
 
+  AuthToAccountDataSigningKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS signing key for Auth to Account Data access token signing
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      MultiRegion: false
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+
+  AuthToAccountDataSigningKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - "alias/${env}-auth-to-account-data-signing-key"
+        - env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref AuthToAccountDataSigningKey
+
+  AuthToAccountDataSigningKeyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for Auth to Account Data access token signing"
+      Path: !Sub
+        - "/${Env}/auth-to-account-data/"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToKmsSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !GetAtt AuthToAccountDataSigningKey.Arn
+
   AuthToAMCPublicEncryptionKeyParameterPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
