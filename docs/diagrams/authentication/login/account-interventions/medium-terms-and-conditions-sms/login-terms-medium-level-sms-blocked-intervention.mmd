@@ -38,7 +38,7 @@ sequenceDiagram
     auth_internal_api ->> auth_internal_api : Validates whether SMS MFA code is valid
     auth_internal_api ->> auth_frontend: 204 response
     auth_frontend ->> auth_frontend: Users accepts latest terms and conditions
-    auth_frontend ->> auth_internal_api : Request to /update-profile (UpdateProfile.java)
+    auth_frontend ->> auth_internal_api : Request to /update-profile (UpdateProfileHandler.java)
     auth_internal_api ->> auth_internal_api : Terms and Conditions version is updated
     auth_internal_api ->> auth_frontend: 204 response
     auth_frontend ->> auth_frontend : Displays Blocked intervention screen
