@@ -51,6 +51,7 @@ sequenceDiagram
         auth_frontend ->> auth_frontend : [/setup-authenticator-app]
         auth_frontend ->> auth_internal_api : Request to /verify-mfa-code (VerifyMfaCodeHandler.java)
         auth_internal_api ->> auth_internal_api : Validates whether Auth App MFA code is valid and saves the secret in the database
+        auth_internal_api ->> auth_frontend: 204 response
         auth_frontend ->> auth_internal_api : Request to /send-notification (SendNotificationHandler.java)
         auth_internal_api -->> notification_queue : Sends NotifyRequest.java object via SQS
         notification_queue -->> notify : Request to send Account Created Confirmation email
