@@ -94,6 +94,11 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             return verifyStateResult.getFailure();
         }
 
+        LOG.info("State matches journey id, deleting state from dynamo");
+        dynamoAmcStateService.delete(request.state());
+
+        LOG.info("Building token request");
+
         var requestResult = amcService.buildTokenRequest(request.code(), request.usedRedirectUrl());
 
         if (requestResult.isFailure()) {

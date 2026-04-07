@@ -6,6 +6,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_TOKEN_RESPONSE_ERROR;
@@ -105,16 +108,21 @@ class AMCCallbackHandlerTest {
                         authSessionService,
                         AMC_SERVICE,
                         dynamoAmcStateService);
-        when(dynamoAmcStateService.get(STATE)).thenReturn(Optional.of(AMC_STATE));
     }
 
     @BeforeEach
-    void resetMocks() {
-        reset(AMC_SERVICE);
+    void setup() {
+        when(dynamoAmcStateService.get(STATE)).thenReturn(Optional.of(AMC_STATE));
         when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
         when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(USER_CONTEXT.getUserLanguage()).thenReturn(LocaleHelper.SupportedLanguage.EN);
+    }
+
+    @AfterEach
+    void resetMocks() {
+        reset(AMC_SERVICE);
+        reset(dynamoAmcStateService);
     }
 
     @Test
@@ -149,6 +157,8 @@ class AMCCallbackHandlerTest {
 
         assertEquals(200, result.getStatusCode());
         assertEquals(JOURNEY_OUTCOME_RESULT, result.getBody());
+
+        verify(dynamoAmcStateService).delete(STATE);
     }
 
     @Test
@@ -222,6 +232,8 @@ class AMCCallbackHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.AMC_STATE_MISMATCH));
+
+        verify(dynamoAmcStateService, never()).delete(STATE);
     }
 
     @Test
