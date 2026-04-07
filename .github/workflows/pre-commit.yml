@@ -40,7 +40,7 @@ jobs:
           cache: "pip"
 
       - name: 📦 Cache Go modules
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             ~/go/pkg/mod
@@ -56,7 +56,7 @@ jobs:
         shell: bash
 
       - name: 🏗️ Set Up Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
 
       - name: 🏗️ Install Pre-commit
         run: python -m pip install pre-commit
@@ -65,7 +65,7 @@ jobs:
         run: python -m pip freeze --local
         shell: bash
       - name: 📦 Cache Pre-commit tools
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-3|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
