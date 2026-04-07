@@ -301,15 +301,27 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                     CODE_BLOCKED_KEY_PREFIX + codeRequestType);
 
             // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-            var deprecatedCodeRequestType =
+            var deprecatedSmsCodeRequestType =
                     CodeRequestType.getDeprecatedCodeRequestTypeString(
                             MFAMethodType.SMS, journeyType);
-            if (deprecatedCodeRequestType != null) {
+            if (deprecatedSmsCodeRequestType != null) {
                 long deprecatedTtl =
                         getCodeStorageService()
                                 .getTTL(
                                         permissionContext.emailAddress(),
-                                        CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
+                                        CODE_BLOCKED_KEY_PREFIX + deprecatedSmsCodeRequestType);
+                ttl = Math.max(ttl, deprecatedTtl);
+            }
+
+            var deprecatedAuthAppCodeRequestType =
+                    CodeRequestType.getDeprecatedCodeRequestTypeString(
+                            MFAMethodType.AUTH_APP, journeyType);
+            if (deprecatedAuthAppCodeRequestType != null) {
+                long deprecatedTtl =
+                        getCodeStorageService()
+                                .getTTL(
+                                        permissionContext.emailAddress(),
+                                        CODE_BLOCKED_KEY_PREFIX + deprecatedAuthAppCodeRequestType);
                 ttl = Math.max(ttl, deprecatedTtl);
             }
 
