@@ -72,6 +72,11 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 public int getInternationalSmsNumberSendLimit() {
                     return INTERNATIONAL_SMS_SEND_LIMIT;
                 }
+
+                @Override
+                public boolean isInternationalSmsSendingEnabled() {
+                    return true;
+                }
             };
 
     @BeforeEach
@@ -142,8 +147,8 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @EnumSource(
             value = JourneyType.class,
             names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
-    void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled(JourneyType journeyType)
-            throws Json.JsonException {
+    void shouldReturn400WhenInternationalNumberAndInternalApiInternationalSmsFeatureFlagDisabled(
+            JourneyType journeyType) throws Json.JsonException {
         handler =
                 new SendNotificationHandler(
                         INTERNAL_API_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE,
@@ -253,5 +258,35 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .withAttribute(USER_PHONE, UK_MOBILE_NUMBER)
                                 .withAttribute(EXTENSIONS_MFA_METHOD, "default")
                                 .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REGISTRATION")));
+    }
+
+    @Test
+    void shouldReturn400ForInternationalNumberWhenIntSmsSendingDisabled()
+            throws Json.JsonException {
+        handler =
+                new SendNotificationHandler(
+                        INT_SMS_SENDING_DISABLED_CONFIGURATION_SERVICE, redisConnectionService);
+
+        var requestBody =
+                Map.of(
+                        "email",
+                        EMAIL,
+                        "notificationType",
+                        NotificationType.VERIFY_PHONE_NUMBER,
+                        "phoneNumber",
+                        INTERNATIONAL_MOBILE_NUMBER,
+                        "journeyType",
+                        JourneyType.REGISTRATION);
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody), constructFrontendHeaders(SESSION_ID), Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(
+                response,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS)));
     }
 }
