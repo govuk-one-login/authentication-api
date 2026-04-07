@@ -1163,6 +1163,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withPublicKey(
                             Base64.getMimeEncoder()
                                     .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
+                    .withIdentityVerificationSupported(true)
                     .saveToDynamo();
             handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
@@ -1341,6 +1342,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withPublicKey(
                             Base64.getMimeEncoder()
                                     .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
+                    .withIdentityVerificationSupported(true)
                     .saveToDynamo();
             handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
@@ -2178,6 +2180,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 .withPublicKey(
                         Base64.getMimeEncoder()
                                 .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
+                .withIdentityVerificationSupported(true)
                 .saveToDynamo();
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();

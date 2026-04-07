@@ -149,7 +149,7 @@ public abstract class BaseAuthorizeValidator {
         return Optional.empty();
     }
 
-    protected void logIfIdentityLoCAndIdentityUnsupported(
+    protected Optional<ErrorObject> errorIfIdentityLoCAndIdentityUnsupported(
             List<VectorOfTrust> vtrList, ClientRegistry client) {
         List<LevelOfConfidence> identityLoCs =
                 List.of(
@@ -163,9 +163,13 @@ public abstract class BaseAuthorizeValidator {
                         .filter(Objects::nonNull)
                         .anyMatch(identityLoCs::contains);
         if (hasRequestedIdentityLoC && !client.isIdentityVerificationSupported()) {
-            LOG.info(
+            logErrorInProdElseWarn(
                     "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.");
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
         }
+        return Optional.empty();
     }
 
     protected void validateResponseMode(String responseMode) throws InvalidResponseModeException {

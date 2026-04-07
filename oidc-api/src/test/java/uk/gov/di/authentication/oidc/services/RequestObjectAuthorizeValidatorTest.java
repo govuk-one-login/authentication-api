@@ -179,8 +179,14 @@ class RequestObjectAuthorizeValidatorTest {
                     .thenReturn(Optional.of(clientRegistry));
 
             var requestObjectError = validator.validate(authRequest);
-
-            assertFalse(requestObjectError.isPresent());
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject().toJSONObject(),
+                    equalTo(
+                            new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "Request vtr is not permitted")
+                                    .toJSONObject()));
             String expectedLogMessage =
                     "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.";
             assertThat(
@@ -916,7 +922,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("scope", SCOPE)
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
-                        .claim("vtr", List.of("P2.Cl.Cm"))
+                        .claim("vtr", List.of("Cl.Cm"))
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -993,7 +999,8 @@ class RequestObjectAuthorizeValidatorTest {
                                 ValidClaims.ADDRESS.getValue(),
                                 ValidClaims.CORE_IDENTITY_JWT.getValue(),
                                 ValidClaims.PASSPORT.getValue(),
-                                ValidClaims.RETURN_CODE.getValue()));
+                                ValidClaims.RETURN_CODE.getValue()))
+                .withIdentityVerificationSupported(true);
     }
 
     private AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {
