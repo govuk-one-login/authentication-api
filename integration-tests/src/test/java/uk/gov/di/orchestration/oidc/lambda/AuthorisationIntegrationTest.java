@@ -687,6 +687,34 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
+        void
+        shouldReturnRequestVtrNotValidErrorToRPWhenIdentityLoCRequestedAndIdentityNotSupported() {
+            setupForAuthJourney(false);
+            String sessionId = givenAnExistingSession();
+
+            var queryParams = constructQueryStringParameters(
+                    CLIENT_ID, null, "openid", "P2.Cl.Cm");
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[]{
+                                            buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
+                                            new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            queryParams,
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            var redirectUri = getLocationResponseHeader(response);
+            assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
+            assertThat(URI.create(redirectUri).getQuery(), containsString("error=invalid_request"));
+            assertThat(
+                    URI.create(redirectUri).getQuery(),
+                    containsString("error_description=Request+vtr+is+not+permitted"));
+        }
+
+        @Test
         void shouldRedirectToFrontendWhenPromptNoneAndUserUnauthenticated() {
             setupForAuthJourney();
             var response =
@@ -2169,8 +2197,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         return queryStringParameters;
     }
-
     private void setupForAuthJourney() {
+        setupForAuthJourney(true);
+    }
+
+    private void setupForAuthJourney(boolean identityVerificationSupported) {
         clientStore
                 .createClient()
                 .withClientId(CLIENT_ID)
@@ -2182,7 +2213,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 .withPublicKey(
                         Base64.getMimeEncoder()
                                 .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
-                .withIdentityVerificationSupported(true)
+                .withIdentityVerificationSupported(identityVerificationSupported)
                 .saveToDynamo();
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
