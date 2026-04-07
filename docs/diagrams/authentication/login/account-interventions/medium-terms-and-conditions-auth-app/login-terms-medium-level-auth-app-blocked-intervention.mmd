@@ -2,10 +2,10 @@ sequenceDiagram
     participant orch_api as Orchestration
     participant auth_frontend as Authentication Frontend
     participant auth_external_api as Authentication External API
-    participant auth_internal_api as Authentication Internal API 
-    participant account_interventions as Account Interventions API   
+    participant auth_internal_api as Authentication Internal API
+    participant account_interventions as Account Interventions API
     orch_api ->> auth_frontend : OAuth 2.0 Authorization request 302 redirect to /authorize
-    auth_frontend ->> auth_frontend : Decrypt and validate request and create session    
+    auth_frontend ->> auth_frontend : Decrypt and validate request and create session
     auth_frontend ->> auth_internal_api : Request to /start (StartHandler.java)
     auth_internal_api ->> auth_internal_api : Start helps calculate current state
     auth_internal_api ->> auth_frontend : StartResponse.java object returned
@@ -33,5 +33,5 @@ sequenceDiagram
     auth_frontend ->> auth_frontend: Users accepts latest terms and conditions
     auth_frontend ->> auth_internal_api : Request to /update-profile (UpdateProfile.java)
     auth_internal_api ->> auth_internal_api : Terms and Conditions version is updated
-    auth_internal_api ->> auth_frontend: 204 response 
+    auth_internal_api ->> auth_frontend: 204 response
     auth_frontend ->> auth_frontend : Displays Blocked intervention screen

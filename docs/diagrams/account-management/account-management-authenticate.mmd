@@ -21,7 +21,7 @@ sequenceDiagram
     orch_api ->> rp : Token response containing access, refresh and id tokens
     rp ->> orch_api : UserInfo request to /userinfo (UserInfoHandler.java)
     orch_api ->> orch_api : Validates Access Token
-    orch_api ->> rp : UserInfo response containing user information 
+    orch_api ->> rp : UserInfo response containing user information
     rp ->> rp : Checks validity of access token
     alt if access token has expired
     rp ->> orch_api : Makes request to /token endpoint with refresh token to request new access token

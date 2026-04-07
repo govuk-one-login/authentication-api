@@ -2,10 +2,10 @@ sequenceDiagram
     participant orch_api as Orchestration
     participant auth_frontend as Authentication Frontend
     participant auth_external_api as Authentication External API
-    participant auth_internal_api as Authentication Internal API 
-    participant account_interventions as Account Interventions API   
+    participant auth_internal_api as Authentication Internal API
+    participant account_interventions as Account Interventions API
     orch_api ->> auth_frontend : OAuth 2.0 Authorization request 302 redirect to /authorize
-    auth_frontend ->> auth_frontend : Decrypt and validate request and create session    
+    auth_frontend ->> auth_frontend : Decrypt and validate request and create session
     auth_frontend ->> auth_internal_api : Request to /start (StartHandler.java)
     auth_internal_api ->> auth_internal_api : Start helps calculate current state
     auth_internal_api ->> auth_frontend : StartResponse.java object returned
@@ -28,7 +28,7 @@ sequenceDiagram
     auth_internal_api ->> auth_frontend: AccountRecovery.java object returned
     auth_frontend ->> auth_internal_api : Request to /verify-mfa-code (VerifyMfaCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Validates whether Auth App MFA code is valid
-    auth_internal_api ->> auth_frontend: 204 response 
+    auth_internal_api ->> auth_frontend: 204 response
     auth_frontend ->> auth_internal_api : Request to /orch-auth-code (AuthenticationAuthCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Generates and store Authorization Code with 5 min TTL
     auth_internal_api ->> auth_frontend: AuthCodeResponse.java object returned
