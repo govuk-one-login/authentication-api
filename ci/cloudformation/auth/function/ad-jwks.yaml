@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Conditions:
+  DeployADJWKSWithSplunk: !Condition IsSplunkEnabled
+
+Resources:
+  ADJWKSFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-ad-jwks-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Environment:
+        Variables:
+          AD_JWKS_BUCKET_NAME: !Ref ADJWKSBucket
+          AUTH_TO_ACCOUNT_DATA_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-data-signing-key
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.ADJWKSHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref ADJWKSFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref ADJWKSFunctionPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder: ""
+
+  ADJWKSFunctionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for AD JWKS lambda to write to S3 and use KMS"
+      Path: !Sub
+        - /${Env}/frontend-api/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowS3Write
+            Effect: Allow
+            Action:
+              - s3:PutObject
+            Resource: !Sub "${ADJWKSBucket.Arn}/.well-known/ad-jwks.json"
+          - Sid: AllowFetchingPublicKeys
+            Effect: Allow
+            Action:
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt AuthToAccountDataSigningKey.Arn
+
+  ADJWKSFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-ad-jwks-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-ADJWKSFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/ad-jwks.yaml
+
+  ADJWKSFunctionSubscriptionFilter:
+    Condition: "DeployADJWKSWithSplunk"
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref ADJWKSFunctionLogGroup
+
+  ADJWKSBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub
+        - ${Env}-ad-jwks
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "aws:kms"
+              KMSMasterKeyID: "alias/aws/s3"
+      VersioningConfiguration:
+        Status: Enabled

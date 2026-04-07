@@ -73,6 +73,47 @@ paths:
             selectionPattern: "5\\d{2}" # Regex for any 5XX status
           default:
             statusCode: "200"
+  /.well-known/ad-jwks.json:
+    get:
+      responses:
+        "200":
+          description: "Successfully retrieved JWKS"
+          content:
+            application/json:
+              schema:
+                type: string
+        "400":
+          description: "Bad Request / Forbidden"
+        "404":
+          description: "JWKS file not found"
+        "500":
+          description: "Internal Server Error"
+      x-amazon-apigateway-integration:
+        type: "aws"
+        httpMethod: "GET"
+        credentials:
+          Fn::GetAtt: [AuthInternalApiS3ExecutionRole, Arn]
+        uri:
+          Fn::Sub:
+            - "arn:aws:apigateway:${AWS::Region}:s3:path/${Env}-ad-jwks/.well-known/ad-jwks.json"
+            - Env:
+                Fn::If:
+                  - UseSubEnvironment
+                  - Ref: SubEnvironment
+                  - Ref: Environment
+        passthroughBehavior: "when_no_match"
+        responses:
+          "404":
+            statusCode: "404"
+            selectionPattern: "404"
+          "400":
+            statusCode: "400"
+            selectionPattern: "4\\d{2}" # Regex for any 4XX status
+          "500":
+            statusCode: "500"
+            selectionPattern: "5\\d{2}" # Regex for any 5XX status
+          default:
+            statusCode: "200"
   /account-interventions:
     post:
       responses:
