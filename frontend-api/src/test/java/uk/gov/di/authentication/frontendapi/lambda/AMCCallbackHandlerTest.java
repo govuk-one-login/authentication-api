@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -26,6 +27,8 @@ import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.io.IOException;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -94,8 +97,12 @@ class AMCCallbackHandlerTest {
                               ]
                             }
                     """;
+    private static final Date NOW = NowHelper.now();
     private static final AMCState AMC_STATE =
-            new AMCState().withAuthenticationState(STATE).withClientSessionId(CLIENT_SESSION_ID);
+            new AMCState()
+                    .withAuthenticationState(STATE)
+                    .withClientSessionId(CLIENT_SESSION_ID)
+                    .withTimeToExist(NOW.toInstant().plus(2L, ChronoUnit.HOURS).getEpochSecond());
 
     @BeforeAll
     static void setUp() {
@@ -112,7 +119,7 @@ class AMCCallbackHandlerTest {
 
     @BeforeEach
     void setup() {
-        when(dynamoAmcStateService.get(STATE)).thenReturn(Optional.of(AMC_STATE));
+        when(dynamoAmcStateService.getNonExpiredState(STATE)).thenReturn(Optional.of(AMC_STATE));
         when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
         when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
@@ -219,7 +226,7 @@ class AMCCallbackHandlerTest {
                 new AMCState()
                         .withAuthenticationState(STATE)
                         .withClientSessionId("another-clientSession");
-        when(dynamoAmcStateService.get(STATE))
+        when(dynamoAmcStateService.getNonExpiredState(STATE))
                 .thenReturn(Optional.of(stateWithDifferentClientSessionId));
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 

@@ -8,6 +8,7 @@ import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import uk.gov.di.authentication.shared.entity.AMCState;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 
@@ -54,5 +55,14 @@ public class AMCStateExtension extends DynamoExtension implements AfterEachCallb
 
     public void store(String state, String clientSessionId) {
         dynamoAmcStateService.store(state, clientSessionId);
+    }
+
+    public void storeWithTTl(String state, String clientSessionId, Long ttl) {
+        var databaseEntry =
+                new AMCState()
+                        .withAuthenticationState(state)
+                        .withClientSessionId(clientSessionId)
+                        .withTimeToExist(ttl);
+        dynamoAmcStateService.put(databaseEntry);
     }
 }

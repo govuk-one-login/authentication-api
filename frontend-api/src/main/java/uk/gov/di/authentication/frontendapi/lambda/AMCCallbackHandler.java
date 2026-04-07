@@ -178,7 +178,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
 
     private Result<APIGatewayProxyResponseEvent, Void> verifyState(
             String requestState, UserContext userContext) {
-        var amcStateMaybe = dynamoAmcStateService.get(requestState);
+        var amcStateMaybe = dynamoAmcStateService.getNonExpiredState(requestState);
         if (amcStateMaybe.isEmpty()) {
             LOG.error("Cannot match received state to a recorded state");
             return Result.failure(generateApiGatewayProxyErrorResponse(400, AMC_STATE_MISMATCH));
