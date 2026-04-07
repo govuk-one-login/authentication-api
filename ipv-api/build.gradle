@@ -45,12 +45,13 @@ test {
     exclude 'uk/gov/di/authentication/ipv/contract/**'
 }
 
-var pactDir = "$rootDir/ipv-api/src/test/pact"
+var pactDir = "$buildDir/pacts"
 
 task pactConsumerTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include 'uk/gov/di/authentication/ipv/contract/**'
     systemProperties['pact.rootDir'] = pactDir
+    outputs.dir pactDir
 }
 
 pact {
@@ -66,6 +67,9 @@ pact {
         ]
     }
 }
+
+// Make pactPublish depend on pactConsumerTests
+pactPublish.dependsOn pactConsumerTests
 
 task buildZip(type: Zip) {
     if (isDevDeployBuild) {
