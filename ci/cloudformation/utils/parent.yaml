@@ -1127,10 +1127,18 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource:
-              - !FindInMap
-                - EnvironmentConfiguration
-                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-                - emailCheckResultTableEncryptionKey
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    emailCheckResultTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    emailCheckResultTableEncryptionKey,
+                  ]
 
   # Policy for SQS queue KMS encryption key access
   SqsQueueKmsAccessPolicy:
@@ -1148,10 +1156,18 @@ Resources:
               - kms:Decrypt
               - kms:GenerateDataKey*
             Resource:
-              - !FindInMap
-                - EnvironmentConfiguration
-                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-                - sqsEncryptionKey
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    sqsEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    sqsEncryptionKey,
+                  ]
 
   # Policy for S3 bucket KMS encryption key access for bulk test users
   S3BucketKmsAccessPolicyForBulkTestUsers:
@@ -1170,10 +1186,18 @@ Resources:
               - kms:Decrypt
               - kms:GenerateDataKey*
             Resource:
-              - !FindInMap
-                - EnvironmentConfiguration
-                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-                - s3EncryptionKey
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    s3EncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    s3EncryptionKey,
+                  ]
 
   # Policy for S3 bucket KMS encryption key access for common passwords
   S3BucketKmsAccessPolicyForCommonPasswords:
@@ -1191,10 +1215,18 @@ Resources:
               - kms:Decrypt
               - kms:GenerateDataKey*
             Resource:
-              - !FindInMap
-                - EnvironmentConfiguration
-                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-                - s3EncryptionKey
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    s3EncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    s3EncryptionKey,
+                  ]
 
   # Policy for CloudWatch Logs KMS encryption key access
   CloudWatchLogsKmsAccessPolicy:
@@ -1216,10 +1248,18 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource:
-              - !FindInMap
-                - EnvironmentConfiguration
-                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-                - cloudwatchEncryptionKey
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    cloudwatchEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    cloudwatchEncryptionKey,
+                  ]
 
   # Policy for CloudWatch Logs KMS encryption key access for conditional bulk test user roles
   CloudWatchLogsKmsAccessPolicyForBulkTestUsers:
@@ -1242,10 +1282,18 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource:
-              - !FindInMap
-                - EnvironmentConfiguration
-                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-                - cloudwatchEncryptionKey
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    cloudwatchEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    cloudwatchEncryptionKey,
+                  ]
 
   # ============================================================================
   # S3 Buckets

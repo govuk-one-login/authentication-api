@@ -24,32 +24,72 @@ Resources:
         Variables:
           ENVIRONMENT:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailMaxAudienceLoadUserCount
-          BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailMaxAudienceLoadUserBatchSize
-          BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailIncludedTermsAndConditions
+          BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                bulkEmailMaxAudienceLoadUserCount,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                bulkEmailMaxAudienceLoadUserCount,
+              ]
+          BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                bulkEmailMaxAudienceLoadUserBatchSize,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                bulkEmailMaxAudienceLoadUserBatchSize,
+              ]
+          BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                bulkEmailIncludedTermsAndConditions,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                bulkEmailIncludedTermsAndConditions,
+              ]
       Events:
         ScheduledEvent:
           Type: Schedule
           Properties:
-            Schedule: !FindInMap
-              - EnvironmentConfiguration
-              - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-              - bulkEmailAudienceLoaderScheduleExpression
+            Schedule: !If
+              - UseSubEnvironment
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref SubEnvironment,
+                  bulkEmailAudienceLoaderScheduleExpression,
+                ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  bulkEmailAudienceLoaderScheduleExpression,
+                ]
             Description: Triggers bulk user email audience loader Lambda on schedule
             Enabled: !Equals
-              - !FindInMap
-                - EnvironmentConfiguration
-                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-                - bulkEmailAudienceLoaderScheduleState
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    bulkEmailAudienceLoaderScheduleState,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    bulkEmailAudienceLoaderScheduleState,
+                  ]
               - ENABLED
       Tags:
         Name: !Sub
@@ -67,10 +107,18 @@ Resources:
         - "/aws/lambda/${EnvironmentName}-bulk-user-email-audience-loader-lambda"
         - EnvironmentName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      RetentionInDays: !FindInMap
-        - EnvironmentConfiguration
-        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - logRetentionDays
+      RetentionInDays: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            logRetentionDays,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            logRetentionDays,
+          ]
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   BulkUserEmailAudienceLoaderLogSubscription:
@@ -95,10 +143,18 @@ Resources:
       Statistic: Sum
       Period: 900
       EvaluationPeriods: 1
-      Threshold: !FindInMap
-        - EnvironmentConfiguration
-        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - lambdaErrorThreshold
+      Threshold: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            lambdaErrorThreshold,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaErrorThreshold,
+          ]
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: FunctionName
