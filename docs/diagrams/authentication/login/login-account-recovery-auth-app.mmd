@@ -27,7 +27,7 @@ sequenceDiagram
     auth_frontend ->> auth_internal_api : Request to /verify-code (VerifyCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Validates whether account recovery email OTP code is valid
     auth_internal_api ->> auth_frontend: 204 response
-    auth_frontend ->> auth_internal_api : Request to /verify-mf-code (VerifyMfaCodeHandler.java)
+    auth_frontend ->> auth_internal_api : Request to /verify-mfa-code (VerifyMfaCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Validates whether Auth App MFA code is valid, removes old MFA method and sets verified Auth App secret in the database
     auth_internal_api ->> auth_frontend: 204 response
     auth_frontend ->> auth_internal_api : Request to /orch-auth-code (AuthenticationAuthCodeHandler.java)
