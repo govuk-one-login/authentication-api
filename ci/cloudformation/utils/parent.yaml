@@ -338,7 +338,7 @@ Mappings:
       sqsEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       dataStoreAccountId: 761723964695
       lambdaMinConcurrency: 3
-      emailCheckResultsWriterProvisionedConcurrency: 7
+      emailCheckResultsWriterProvisionedConcurrency: "7"
       logRetentionDays: 90
       lambdaErrorThreshold: 2
       notifyUrl: https://api.notifications.service.gov.uk
@@ -370,7 +370,7 @@ Mappings:
       sqsEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/dc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
       dataStoreAccountId: 172348255554
       lambdaMinConcurrency: 5
-      emailCheckResultsWriterProvisionedConcurrency: 10
+      emailCheckResultsWriterProvisionedConcurrency: "10"
       logRetentionDays: 90
       lambdaErrorThreshold: 1
       notifyUrl: https://api.notifications.service.gov.uk
