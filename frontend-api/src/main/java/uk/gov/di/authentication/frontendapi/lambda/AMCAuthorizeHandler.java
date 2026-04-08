@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.State;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -32,6 +34,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 
 public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest> {
     private final AMCService amcService;
+    private final DynamoAmcStateService dynamoAmcStateService;
 
     public AMCAuthorizeHandler() {
         this(ConfigurationService.getInstance());
@@ -44,6 +47,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         configurationService,
                         new NowHelper.NowClock(Clock.systemUTC()),
                         new JwtService(new KmsConnectionService(configurationService)));
+        this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
     }
 
     @SuppressWarnings("java:S1185")
@@ -57,13 +61,15 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
-            AMCService amcService) {
+            AMCService amcService,
+            DynamoAmcStateService amcStateService) {
         super(
                 AMCAuthorizeRequest.class,
                 configurationService,
                 authenticationService,
                 authSessionService);
         this.amcService = amcService;
+        this.dynamoAmcStateService = amcStateService;
     }
 
     @Override
@@ -88,6 +94,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                 request.amcJourneyType().getAccessTokenConfigs(configurationService);
         TransportJWTConfig transportJwtConfig =
                 request.amcJourneyType().getTransportJwtConfig(configurationService);
+        var state = new State();
+        dynamoAmcStateService.store(state.getValue(), userContext.getClientSessionId());
 
         Result<JwtFailureReason, AMCAuthorizationUrlAndCookie> result =
                 amcService.buildAuthorizationResult(
@@ -96,7 +104,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         authSessionItem,
                         userProfile.getPublicSubjectID(),
                         transportJwtConfig.redirectUri(),
-                        accessTokenConfigsForJourneyType);
+                        accessTokenConfigsForJourneyType,
+                        state);
 
         return result.fold(
                 AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,

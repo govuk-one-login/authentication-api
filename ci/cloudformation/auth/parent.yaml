@@ -214,6 +214,7 @@ Mappings:
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a3297748-71d5-49d5-9e04-672ac9c470bd
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/0888e5aa-0e8c-4110-a3c6-7c96bcb42861
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
@@ -263,6 +264,7 @@ Mappings:
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1f27239b-10fe-42cb-9506-626d40880443
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3a65110d-64de-42fb-b278-f78b48f3a864
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
@@ -312,6 +314,7 @@ Mappings:
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7aad276-068b-4c6d-ab87-973cb70b92ad
       orchStubToAuthSigningPublicKey: "" # No orch Stub in Authdev3, Authdev3 uses RP Stubs
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6e26328c-9121-4247-a5a3-6ac3f28fca3f
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ca06a07f-ca2c-433f-8101-b77dffbc7b88
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
@@ -363,6 +366,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ef0a54ec-1a99-4f8a-b52a-83b69c209550
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e8a10aac-beea-4d93-a4ce-3b84da6a5abd
       frontendApiFMSTagValue: "authfrontenddev"
       frontendBaseUrl: https://signin.dev.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
@@ -423,6 +427,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/29a0ed62-d58d-4361-8f5d-8f2580848d03
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c8a62e1f-eec6-47c3-b4e3-b7b455b58b75
       frontendApiFMSTagValue: "authfrontendbuild"
       frontendBaseUrl: https://signin.build.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
@@ -486,6 +491,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/8dd5e3c6-8c95-41ff-825a-c6d65191945d
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8f6f82bd-d138-4df6-8b0e-e7ba5d4e96dc
       frontendApiFMSTagValue: "authfrontendstaging"
       frontendBaseUrl: https://signin.staging.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
@@ -554,6 +560,7 @@ Mappings:
       frontendBaseUrl: https://signin.integration.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/0d7dd107-1937-4573-ac38-1abb8f58cc0c
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
@@ -618,6 +625,7 @@ Mappings:
       frontendBaseUrl: https://signin.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/102bf244-2608-49f8-94f7-5faffa346c9e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
@@ -1602,6 +1610,159 @@ Resources:
                     EnvironmentConfiguration,
                     !Ref Environment,
                     idReverificationStateTableEncryptionKey,
+                  ]
+
+  DynamoAMCStateWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - "IAM policy for managing write permissions to the ${Env}-amc-state table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWrite
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-amc-state
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    amcStateTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    amcStateTableEncryptionKey,
+                  ]
+
+  DynamoAMCStateReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-amc-state table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWrite
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-amc-state
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    amcStateTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    amcStateTableEncryptionKey,
+                  ]
+
+  DynamoAMCStateDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - "IAM policy for managing delete item permissions to the ${Env}-amc-state table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWrite
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-amc-state
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    amcStateTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    amcStateTableEncryptionKey,
                   ]
 
   DynamoUserReadAccessPolicy:
