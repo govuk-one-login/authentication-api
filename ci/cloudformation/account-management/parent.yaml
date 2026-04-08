@@ -264,7 +264,7 @@ Conditions:
     ]
 
   ShouldCreateAccountDeletionPolicy: !Or
-    - !Equals [!Ref Environment, dev]
+    - !Equals [!Ref Environment, production]
     - !Equals [!Ref Environment, integration]
     - !Equals [!Ref Environment, staging]
 
