@@ -383,43 +383,7 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctSmsOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        if (permissionContext == null) {
-            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
-        }
-        var authSession = permissionContext.authSessionItem();
-        if (authSession == null) {
-            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
-        }
-
-        if (journeyType == JourneyType.REAUTHENTICATION) {
-            // TODO remove comment
-            // rpPairwiseId is optional in handlers - may not be present for email OTP verification
-            // but should be present for SMS verification
-            var internalSubjectId = permissionContext.internalSubjectId();
-            var rpPairwiseId = permissionContext.rpPairwiseId();
-            if (internalSubjectId == null || rpPairwiseId == null) {
-                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
-            }
-
-            for (String identifier : List.of(internalSubjectId, rpPairwiseId)) {
-                for (CountType countType : CountType.values()) {
-                    getAuthenticationAttemptsService()
-                            .deleteCount(identifier, JourneyType.REAUTHENTICATION, countType);
-                }
-            }
-        } else {
-            if (permissionContext.emailAddress() == null) {
-                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
-            }
-
-            getCodeStorageService()
-                    .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
-        }
-
-        var updatedSession = authSession.withHasVerifiedMfa(true);
-        getAuthSessionService().updateSession(updatedSession);
-
-        return Result.success(null);
+        return correctMfaOtpReceived(journeyType, permissionContext);
     }
 
     @Override
@@ -477,8 +441,44 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        return correctMfaOtpReceived(journeyType, permissionContext);
+    }
+
+    private Result<TrackingError, Void> correctMfaOtpReceived(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        if (permissionContext == null) {
+            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+        }
+        var authSession = permissionContext.authSessionItem();
+        if (authSession == null) {
+            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+        }
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            var internalSubjectId = permissionContext.internalSubjectId();
+            var rpPairwiseId = permissionContext.rpPairwiseId();
+            if (internalSubjectId == null || rpPairwiseId == null) {
+                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+            }
+
+            for (String identifier : List.of(internalSubjectId, rpPairwiseId)) {
+                for (CountType countType : CountType.values()) {
+                    getAuthenticationAttemptsService()
+                            .deleteCount(identifier, JourneyType.REAUTHENTICATION, countType);
+                }
+            }
+        } else {
+            if (permissionContext.emailAddress() == null) {
+                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+            }
+
+            getCodeStorageService()
+                    .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        }
+
+        var updatedSession = authSession.withHasVerifiedMfa(true);
         getAuthSessionService().updateSession(updatedSession);
+
         return Result.success(null);
     }
 

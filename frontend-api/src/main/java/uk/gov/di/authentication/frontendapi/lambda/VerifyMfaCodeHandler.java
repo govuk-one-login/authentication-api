@@ -597,8 +597,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                 result.getFailure()));
             }
         } else if (codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
-            userActionsManager.correctAuthAppOtpReceived(
-                    codeRequest.getJourneyType(), permissionContext);
+            var result =
+                    userActionsManager.correctAuthAppOtpReceived(
+                            codeRequest.getJourneyType(), permissionContext);
+            if (result.isFailure()) {
+                LOG.error("Failed to record correct Auth App OTP: {}", result.getFailure());
+                return Optional.of(
+                        TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                                result.getFailure()));
+            }
         }
         return Optional.empty();
     }
