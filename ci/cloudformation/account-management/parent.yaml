@@ -263,6 +263,11 @@ Conditions:
       !Equals [!Ref Environment, integration],
     ]
 
+  ShouldCreateAccountDeletionPolicy: !Or
+    - !Equals [!Ref Environment, production]
+    - !Equals [!Ref Environment, integration]
+    - !Equals [!Ref Environment, staging]
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -917,6 +922,47 @@ Resources:
         - "alias/${Env}-test-id-token-signing-key-alias"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TargetKeyId: !Ref TestIdTokenSigningKey
+
+  # ----------------
+  # TSD Account Deletion role
+  # ----------------
+  InvokeAccountDeletionLambdaPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: ShouldCreateAccountDeletionPolicy
+    Properties:
+      ManagedPolicyName: manual-account-deletion-user-policy
+      Path: /control-tower/am/
+      Description: Policy for use in Control Tower to be attached to the role assumed by support users to perform account deletions
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: permitInvokeLambda
+            Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+              - lambda:GetFunctionConfiguration
+            Resource:
+              - !GetAtt ManuallyDeleteAccountFunction.Arn
+
+  AccountDeletionRole:
+    Type: AWS::IAM::Role
+    Condition: ShouldCreateAccountDeletionPolicy
+    Properties:
+      RoleName: support-account-deletion-role
+      Path: /runbooks/
+      Description: Role for support users to perform account deletions using lambda exec action
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: sts:AssumeRole
+            Condition:
+              StringLike:
+                aws:PrincipalArn: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedServiceSupport*
+      ManagedPolicyArns:
+        - !Ref InvokeAccountDeletionLambdaPolicy
 
   # ----------------
   # Managed policies
