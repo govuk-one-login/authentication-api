@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -263,6 +264,18 @@ class UserActionsManagerTest {
                                 .get(1)
                                 .getCodeRequestCount(notificationType, journeyType));
                 assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldClearIncorrectEmailOtpBlockWhenNewCodeRequestedForRegistration() {
+                userActionsManager.sentEmailOtpNotification(
+                        JourneyType.REGISTRATION, permissionContext);
+
+                verify(codeStorageService)
+                        .deleteBlockForEmail(
+                                EMAIL,
+                                CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                                        + CodeRequestType.EMAIL_REGISTRATION);
             }
         }
 
@@ -809,6 +822,168 @@ class UserActionsManagerTest {
     }
 
     @Nested
+    class IncorrectEmailOtpReceived {
+
+        @Nested
+        class PasswordResetAndAccountRecoveryJourneys {
+
+            @ParameterizedTest
+            @EnumSource(
+                    value = JourneyType.class,
+                    names = {"PASSWORD_RESET", "ACCOUNT_RECOVERY"})
+            void shouldIncrementCount(JourneyType journeyType) {
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(1);
+
+                var result =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                journeyType, permissionContext);
+
+                verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL);
+                verify(codeStorageService, never())
+                        .saveBlockedForEmail(anyString(), anyString(), anyLong());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldBlockWithStandardLockoutForPasswordReset() {
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(6);
+
+                var result =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                JourneyType.PASSWORD_RESET, permissionContext);
+
+                var expectedBlockedKey =
+                        CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getCodeRequestType(
+                                        CodeRequestType.SupportedCodeType.EMAIL,
+                                        JourneyType.PASSWORD_RESET);
+                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 900L);
+                verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldBlockWithReducedLockoutForAccountRecovery() {
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(6);
+                when(configurationService.getReducedLockoutDuration()).thenReturn(300L);
+
+                var result =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                JourneyType.ACCOUNT_RECOVERY, permissionContext);
+
+                var expectedBlockedKey =
+                        CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getCodeRequestType(
+                                        CodeRequestType.SupportedCodeType.EMAIL,
+                                        JourneyType.ACCOUNT_RECOVERY);
+                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 300L);
+                verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+                assertTrue(result.isSuccess());
+            }
+        }
+
+        @Nested
+        class RegistrationJourney {
+
+            @Test
+            void shouldIncrementCountUsingAccountCreationMethodWhenConfigEnabled() {
+                when(configurationService.supportAccountCreationTTL()).thenReturn(true);
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(EMAIL))
+                        .thenReturn(1);
+
+                var result =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                JourneyType.REGISTRATION, permissionContext);
+
+                verify(codeStorageService)
+                        .increaseIncorrectMfaCodeAttemptsCountAccountCreation(EMAIL);
+                verify(codeStorageService, never())
+                        .increaseIncorrectMfaCodeAttemptsCount(anyString());
+                verify(codeStorageService, never())
+                        .saveBlockedForEmail(anyString(), anyString(), anyLong());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldIncrementCountUsingStandardMethodWhenConfigDisabled() {
+                when(configurationService.supportAccountCreationTTL()).thenReturn(false);
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(1);
+
+                var result =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                JourneyType.REGISTRATION, permissionContext);
+
+                verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL);
+                verify(codeStorageService, never())
+                        .increaseIncorrectMfaCodeAttemptsCountAccountCreation(anyString());
+                verify(codeStorageService, never())
+                        .saveBlockedForEmail(anyString(), anyString(), anyLong());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldBlockWithReducedLockoutWhenConfigEnabled() {
+                when(configurationService.supportAccountCreationTTL()).thenReturn(true);
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(EMAIL))
+                        .thenReturn(6);
+                when(configurationService.getReducedLockoutDuration()).thenReturn(300L);
+
+                var result =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                JourneyType.REGISTRATION, permissionContext);
+
+                var expectedBlockedKey =
+                        CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getCodeRequestType(
+                                        CodeRequestType.SupportedCodeType.EMAIL,
+                                        JourneyType.REGISTRATION);
+                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 300L);
+                verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldBlockWithReducedLockoutWhenConfigDisabled() {
+                when(configurationService.supportAccountCreationTTL()).thenReturn(false);
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(6);
+                when(configurationService.getReducedLockoutDuration()).thenReturn(300L);
+
+                var result =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                JourneyType.REGISTRATION, permissionContext);
+
+                var expectedBlockedKey =
+                        CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getCodeRequestType(
+                                        CodeRequestType.SupportedCodeType.EMAIL,
+                                        JourneyType.REGISTRATION);
+                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 300L);
+                verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+                assertTrue(result.isSuccess());
+            }
+        }
+
+        @Nested
+        class ReauthenticationJourney {
+
+            @Test
+            void shouldDoNothingForReauthentication() {
+                var result =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                JourneyType.REAUTHENTICATION, permissionContext);
+
+                verify(codeStorageService, never())
+                        .increaseIncorrectMfaCodeAttemptsCount(anyString());
+                verify(codeStorageService, never())
+                        .increaseIncorrectMfaCodeAttemptsCountAccountCreation(anyString());
+                verify(authenticationAttemptsService, never())
+                        .createOrIncrementCount(anyString(), anyLong(), any(), any());
+                assertTrue(result.isSuccess());
+            }
+        }
+    }
+
+    @Nested
     class NoOpMethods {
 
         @Test
@@ -822,8 +997,6 @@ class UserActionsManagerTest {
                             .isSuccess());
             assertTrue(
                     userActionsManager.sentEmailOtpNotification(journeyType, context).isSuccess());
-            assertTrue(
-                    userActionsManager.incorrectEmailOtpReceived(journeyType, context).isSuccess());
             assertTrue(
                     userActionsManager.correctEmailOtpReceived(journeyType, context).isSuccess());
             assertTrue(

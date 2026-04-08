@@ -312,17 +312,36 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    void shouldIncrementCountForIncorrectMfaCodeAttemptsCountAccountCreation() {
+    void shouldCreateCountAndReturnOneForIncorrectMfaCodeAttemptsCountAccountCreation() {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
-                .thenReturn(String.valueOf(0));
+                .thenReturn(null);
 
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(TEST_EMAIL);
+        int count =
+                codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(TEST_EMAIL);
 
+        assertThat(count, is(1));
         verify(redisConnectionService)
                 .saveWithExpiry(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash(),
                         String.valueOf(1),
+                        ACCOUNT_CREATION_CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    void shouldIncrementCountAndReturnNewValueForIncorrectMfaCodeAttemptsCountAccountCreation() {
+        when(redisConnectionService.getValue(
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
+                .thenReturn(String.valueOf(3));
+
+        int count =
+                codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(TEST_EMAIL);
+
+        assertThat(count, is(4));
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash(),
+                        String.valueOf(4),
                         ACCOUNT_CREATION_CODE_EXPIRY_TIME);
     }
 
