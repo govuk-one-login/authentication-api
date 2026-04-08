@@ -43,6 +43,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -410,6 +411,12 @@ public class SendOtpNotificationHandler
                 pair("test-user", isTestUserRequest));
 
         if (notificationType == NotificationType.VERIFY_PHONE_NUMBER) {
+            PriorityIdentifier priorityIdentifier;
+            if (Objects.isNull(sendNotificationRequest.getPriorityIdentifier())) {
+                priorityIdentifier = PriorityIdentifier.DEFAULT;
+            } else {
+                priorityIdentifier = sendNotificationRequest.getPriorityIdentifier();
+            }
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
                     auditContext,
@@ -419,7 +426,7 @@ public class SendOtpNotificationHandler
                             JourneyType.ACCOUNT_MANAGEMENT.name()),
                     pair(
                             AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                            PriorityIdentifier.DEFAULT.name().toLowerCase()));
+                            priorityIdentifier.name().toLowerCase()));
         }
 
         LOG.info("Generating successful API response");

@@ -16,7 +16,8 @@ public class SendNotificationRequest {
     @SerializedName("phoneNumber")
     private String phoneNumber;
 
-    @Expose @SerializedName("priorityIdentifier")
+    @Expose
+    @SerializedName("priorityIdentifier")
     PriorityIdentifier priorityIdentifier;
 
     @Expose @Required private String email;
@@ -42,7 +43,9 @@ public class SendNotificationRequest {
         return phoneNumber;
     }
 
-    public PriorityIdentifier getPriorityIdentifier() { return priorityIdentifier; }
+    public PriorityIdentifier getPriorityIdentifier() {
+        return priorityIdentifier;
+    }
 
     @Override
     public String toString() {
