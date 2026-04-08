@@ -310,8 +310,19 @@ class SendOtpNotificationHandlerTest {
         }
     }
 
-    @Test
-    void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws Json.JsonException {
+    private static Stream<String> validPhoneRequests() {
+        var eventWithoutPriorityIdentifier = format(
+                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
+                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER);
+        var eventWithPriorityIdentifier = format(
+                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"%s\"  }",
+                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER, "DEFAULT");
+        return Stream.of(eventWithoutPriorityIdentifier, eventWithPriorityIdentifier);
+    }
+
+    @MethodSource("validPhoneRequests")
+    @ParameterizedTest
+    void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest(String phoneRequestBody) throws Json.JsonException {
         when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                         TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                 .thenReturn(Result.success(false));
@@ -328,10 +339,7 @@ class SendOtpNotificationHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         var event = createEmptyEvent();
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+        event.setBody(phoneRequestBody);
 
         var result = handler.handleRequest(event, context);
 

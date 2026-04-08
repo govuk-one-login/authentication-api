@@ -1180,6 +1180,12 @@ components:
           type: string
           description: Required when notificationType is VERIFY_PHONE_NUMBER
           example: "+447700900000"
+        priorityIdentifier:
+          type: string
+          enum:
+            - DEFAULT
+            - BACKUP
+          description: Whether the notification is intended for a default or backup mfa method when the notification type is VERIFY_PHONE_NUMBER
     UserAccountBlocked:
       allOf:
         - $ref: "#/components/schemas/SimpleError"
