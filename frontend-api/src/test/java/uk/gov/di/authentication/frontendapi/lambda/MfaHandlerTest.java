@@ -756,6 +756,36 @@ class MfaHandlerTest {
                                 .withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
+    @Test
+    void shouldReturn400IfUserIsBlockedFromRequestingMfaCodesWithReauthLockedOut() {
+        usingValidSession();
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.ReauthLockedOut(
+                                        ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                        6,
+                                        Instant.now(),
+                                        false,
+                                        java.util.Map.of(),
+                                        List.of())));
+
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        EMAIL, JourneyType.REAUTHENTICATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(BLOCKED_FOR_SENDING_MFA_OTPS));
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST),
+                        any(AuditContext.class));
+    }
+
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
     void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(

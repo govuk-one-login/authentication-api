@@ -693,7 +693,7 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void shouldReturnLockedOutWhenInMemoryLockoutStateHolderIsSet() {
+        void shouldReturnReauthLockedOutWhenInMemoryLockoutStateHolderIsSet() {
             var userContext = createUserContext(0);
             var lockoutStateHolder = new InMemoryLockoutStateHolder();
             lockoutStateHolder.setReauthSmsOtpLimitExceeded();
@@ -703,8 +703,7 @@ class PermissionDecisionManagerTest {
                             JourneyType.REAUTHENTICATION, userContext, lockoutStateHolder);
 
             assertTrue(result.isSuccess());
-            var lockedOut =
-                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
             assertEquals(
                     ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
                     lockedOut.forbiddenReason());

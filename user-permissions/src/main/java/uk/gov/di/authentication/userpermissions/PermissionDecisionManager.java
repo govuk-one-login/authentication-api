@@ -25,6 +25,7 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -241,11 +242,13 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 && lockoutStateHolder.isReauthSmsOtpLimitExceeded()) {
             LOG.info("Reauth user exceeded SMS OTP limit (from InMemoryLockoutStateHolder)");
             return Result.success(
-                    new Decision.TemporarilyLockedOut(
+                    new Decision.ReauthLockedOut(
                             ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
                             configurationService.getCodeMaxRetries(),
                             Instant.now(),
-                            false));
+                            false,
+                            Map.of(),
+                            List.of()));
         }
 
         try {
