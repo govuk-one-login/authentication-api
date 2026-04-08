@@ -20,6 +20,7 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -382,8 +383,42 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctSmsOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        if (permissionContext == null) {
+            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+        }
+        var authSession = permissionContext.authSessionItem();
+        if (authSession == null) {
+            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+        }
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            // TODO remove comment
+            // rpPairwiseId is optional in handlers - may not be present for email OTP verification
+            // but should be present for SMS verification
+            var internalSubjectId = permissionContext.internalSubjectId();
+            var rpPairwiseId = permissionContext.rpPairwiseId();
+            if (internalSubjectId == null || rpPairwiseId == null) {
+                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+            }
+
+            for (String identifier : List.of(internalSubjectId, rpPairwiseId)) {
+                for (CountType countType : CountType.values()) {
+                    getAuthenticationAttemptsService()
+                            .deleteCount(identifier, JourneyType.REAUTHENTICATION, countType);
+                }
+            }
+        } else {
+            if (permissionContext.emailAddress() == null) {
+                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+            }
+
+            getCodeStorageService()
+                    .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        }
+
+        var updatedSession = authSession.withHasVerifiedMfa(true);
         getAuthSessionService().updateSession(updatedSession);
+
         return Result.success(null);
     }
 

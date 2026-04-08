@@ -61,6 +61,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+    private static final String RP_SECTOR_HOST = "test.com";
     private String sessionId;
 
     @RegisterExtension
@@ -357,6 +358,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
+        authSessionExtension.addRpSectorIdentifierHostToSession(this.sessionId, RP_SECTOR_HOST);
         setUpTestWithoutSignUp(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
@@ -429,6 +431,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
+        authSessionExtension.addRpSectorIdentifierHostToSession(this.sessionId, RP_SECTOR_HOST);
         setUpTestWithoutSignUp(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);

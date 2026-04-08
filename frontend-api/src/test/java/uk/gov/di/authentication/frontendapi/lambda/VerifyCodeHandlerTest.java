@@ -49,6 +49,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -225,6 +226,8 @@ class VerifyCodeHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
     }
 
     @Test
@@ -1202,6 +1205,8 @@ class VerifyCodeHandlerTest {
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
 
         // Act
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
@@ -1210,6 +1215,25 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verify(userActionsManager)
                 .correctSmsOtpReceived(any(), argThat(pc -> pc.authSessionItem() != null));
+    }
+
+    @Test
+    void shouldReturn500WhenCorrectSmsOtpReceivedReturnsInvalidUserContext() {
+        // Arrange
+        when(codeStorageService.getOtpCode(
+                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
+                .thenReturn(Optional.of(CODE));
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.failure(TrackingError.INVALID_USER_CONTEXT));
+
+        // Act
+        var result = makeCallWithCode(CODE, MFA_SMS.toString());
+
+        // Assert
+        assertThat(result, hasStatus(500));
     }
 
     private void withReauthTurnedOn() {

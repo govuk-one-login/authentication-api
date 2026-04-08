@@ -11,6 +11,7 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
+import uk.gov.di.authentication.frontendapi.errormapper.TrackingErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
@@ -399,14 +400,18 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         } else {
             auditSuccess(codeRequest, authSession, auditContext, activeMfaMethod);
 
-            processSuccessfulCodeSession(
-                    userContext.getAuthSession(),
-                    input,
-                    subjectId,
-                    codeRequest,
-                    mfaCodeProcessor,
-                    maybeRpPairwiseId,
-                    userProfile);
+            var successProcessingErrorResponse =
+                    processSuccessfulCodeSession(
+                            userContext.getAuthSession(),
+                            input,
+                            subjectId,
+                            codeRequest,
+                            mfaCodeProcessor,
+                            maybeRpPairwiseId,
+                            userProfile);
+            if (successProcessingErrorResponse.isPresent()) {
+                return successProcessingErrorResponse.get();
+            }
         }
 
         authSessionService.updateSession(authSession);
@@ -544,7 +549,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         return ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse();
     }
 
-    private void processSuccessfulCodeSession(
+    private Optional<APIGatewayProxyResponseEvent> processSuccessfulCodeSession(
             AuthSessionItem authSession,
             APIGatewayProxyRequestEvent input,
             String subjectId,
@@ -574,15 +579,28 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
 
         LOG.info("Setting hasVerifiedMfa to true");
-        PermissionContext permissionContext =
-                PermissionContext.builder().withAuthSessionItem(authSession).build();
+        var permissionContextBuilder =
+                PermissionContext.builder()
+                        .withAuthSessionItem(authSession)
+                        .withEmailAddress(authSession.getEmailAddress())
+                        .withInternalSubjectId(subjectId)
+                        .withRpPairwiseId(maybeRpPairwiseId.orElse(null));
+        var permissionContext = permissionContextBuilder.build();
         if (codeRequest.getMfaMethodType() == MFAMethodType.SMS) {
-            userActionsManager.correctSmsOtpReceived(
-                    codeRequest.getJourneyType(), permissionContext);
+            var result =
+                    userActionsManager.correctSmsOtpReceived(
+                            codeRequest.getJourneyType(), permissionContext);
+            if (result.isFailure()) {
+                LOG.error("Failed to record correct SMS OTP: {}", result.getFailure());
+                return Optional.of(
+                        TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                                result.getFailure()));
+            }
         } else if (codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
             userActionsManager.correctAuthAppOtpReceived(
                     codeRequest.getJourneyType(), permissionContext);
         }
+        return Optional.empty();
     }
 
     private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(
