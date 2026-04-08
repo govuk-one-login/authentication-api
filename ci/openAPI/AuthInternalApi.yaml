@@ -51,7 +51,7 @@ paths:
         type: "aws"
         httpMethod: "GET"
         credentials:
-          Fn::GetAtt: [AuthInternalApiS3ExecutionRole, Arn]
+          Fn::GetAtt: [AuthInternalApiAMCJWKSS3ExecutionRole, Arn]
         uri:
           Fn::Sub:
             - "arn:aws:apigateway:${AWS::Region}:s3:path/${Env}-amc-jwks/.well-known/amc-jwks.json"
@@ -92,7 +92,7 @@ paths:
         type: "aws"
         httpMethod: "GET"
         credentials:
-          Fn::GetAtt: [AuthInternalApiS3ExecutionRole, Arn]
+          Fn::GetAtt: [AuthInternalApiADJWKSS3ExecutionRole, Arn]
         uri:
           Fn::Sub:
             - "arn:aws:apigateway:${AWS::Region}:s3:path/${Env}-ad-jwks/.well-known/ad-jwks.json"
