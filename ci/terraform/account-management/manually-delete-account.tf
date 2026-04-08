@@ -20,142 +20,58 @@ module "account_management_manually_delete_account_role" {
   }
 }
 
-resource "aws_lambda_function" "manually_delete_account_lambda" {
-  function_name = replace("${var.environment}-manually-delete-account-lambda", ".", "")
-  role          = module.account_management_manually_delete_account_role.arn
-  handler       = "uk.gov.di.accountmanagement.lambda.ManuallyDeleteAccountHandler::handleRequest"
-  timeout       = 30
-  publish       = true
+module "manually_delete_account" {
+  source = "../modules/endpoint-lambda"
 
+  endpoint_name         = "manually-delete-account"
+  handler_function_name = "uk.gov.di.accountmanagement.lambda.ManuallyDeleteAccountHandler::handleRequest"
 
-  s3_bucket               = aws_s3_bucket.source_bucket.bucket
-  s3_key                  = aws_s3_object.account_management_api_release_zip.key
-  s3_object_version       = aws_s3_object.account_management_api_release_zip.version_id
+  memory_size                 = lookup(var.performance_tuning, "manually-delete-account", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "manually-delete-account", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "manually-delete-account", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "manually-delete-account", local.default_performance_parameters).scaling_trigger
+
+  source_bucket           = aws_s3_bucket.source_bucket.bucket
+  lambda_zip_file         = aws_s3_object.account_management_api_release_zip.key
+  lambda_zip_file_version = aws_s3_object.account_management_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  vpc_config {
-    security_group_ids = [
-      local.allow_aws_service_access_security_group_id,
-      aws_security_group.allow_access_to_am_redis.id,
-    ]
-    subnet_ids = local.private_subnet_ids
+  security_group_ids = concat([
+    local.allow_aws_service_access_security_group_id,
+  ], var.environment == "production" ? [aws_security_group.allow_access_to_am_redis.id] : [])
+  subnet_id = local.private_subnet_ids
+
+  environment                            = var.environment
+  lambda_role_arn                        = module.account_management_manually_delete_account_role.arn
+  logging_endpoint_arns                  = var.logging_endpoint_arns
+  cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  cloudwatch_log_retention               = var.cloudwatch_log_retention
+  lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
+
+  lambda_error_alarm_disabled      = true
+  lambda_error_rate_alarm_disabled = true
+
+  handler_environment_variables = {
+    JAVA_TOOL_OPTIONS                 = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+    ENVIRONMENT                       = var.environment
+    EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
+    TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI               = var.internal_sector_uri
+    LEGACY_ACCOUNT_DELETION_TOPIC_ARN = local.account_deletion_topic_arn
   }
-
-  environment {
-    variables = {
-      JAVA_TOOL_OPTIONS                 = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
-      ENVIRONMENT                       = var.environment
-      EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
-      TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
-      INTERNAl_SECTOR_URI               = var.internal_sector_uri
-      LEGACY_ACCOUNT_DELETION_TOPIC_ARN = local.account_deletion_topic_arn
-    }
-  }
-
-  kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
-  runtime     = "java17"
-
   depends_on = [module.account_management_manually_delete_account_role]
-}
-
-resource "aws_cloudwatch_log_group" "manually_delete_account_lambda_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.manually_delete_account_lambda.function_name}"
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-  retention_in_days = var.cloudwatch_log_retention
-
-  depends_on = [
-    aws_lambda_function.manually_delete_account_lambda
-  ]
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "manually_delete_account-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.manually_delete_account_lambda_log_group.name
-  filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arns[count.index]
-
-  lifecycle {
-    create_before_destroy = false
-  }
-}
-
-data "aws_iam_policy_document" "permit_send_email_queue_policy_document" {
-  statement {
-    sid    = "SendSQS"
-    effect = "Allow"
-
-
-    actions = [
-      "sqs:SendMessage",
-      "sqs:ChangeMessageVisibility",
-      "sqs:GetQueueAttributes",
-    ]
-
-    resources = [
-      aws_sqs_queue.email_queue.arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "permit_send_email_queue_policy" {
-  name_prefix = "permit-send-email-queue-policy"
-  path        = "/${var.environment}/am/"
-  description = "IAM policy to allow sending messages to the account management email queue"
-
-  policy = data.aws_iam_policy_document.permit_send_email_queue_policy_document.json
-}
-
-data "aws_iam_policy_document" "legacy_account_deletion_topic" {
-  statement {
-    sid    = "SendAccountDeletionSNS"
-    effect = "Allow"
-
-    actions = [
-      "sns:Publish"
-    ]
-
-    resources = [
-      local.account_deletion_topic_arn
-    ]
-  }
-}
-
-data "aws_iam_policy_document" "legacy_account_deletion_key" {
-  statement {
-    sid    = "KMSAccessForAccountDeletionSNS"
-    effect = "Allow"
-    actions = [
-      "kms:GenerateDataKey*",
-      "kms:Decrypt"
-    ]
-    resources = [var.legacy_account_deletion_topic_key_arn]
-  }
-}
-
-data "aws_iam_policy_document" "legacy_account_deletion_access" {
-  source_policy_documents = var.legacy_account_deletion_topic_key_arn == "" ? [data.aws_iam_policy_document.legacy_account_deletion_topic.json] : [data.aws_iam_policy_document.legacy_account_deletion_topic.json, data.aws_iam_policy_document.legacy_account_deletion_key.json]
-}
-
-resource "aws_iam_policy" "legacy_account_deletion_topic" {
-  name_prefix = "permit-send-legacy-account-deletion-topic"
-  path        = "/${var.environment}/am/"
-  description = "Allow the manual account deletion lambda to post to the SNS topic owned by Home"
-  policy      = data.aws_iam_policy_document.legacy_account_deletion_access.json
-}
-
-resource "aws_sns_topic" "mock_account_deletion_topic" {
-  count = var.legacy_account_deletion_topic_arn == null ? 1 : 0
-  name  = "${var.environment}-mock-account-deletion-topic"
 }
 
 data "aws_iam_policy_document" "invoke_account_deletion_lambda" {
   statement {
     sid       = "permitInvokeLambda"
     effect    = "Allow"
-    actions   = ["lambda:InvokeFunction"]
-    resources = [aws_lambda_function.manually_delete_account_lambda.arn]
-
+    actions   = ["lambda:InvokeFunction", "lambda:GetFunctionConfiguration"]
+    resources = [module.manually_delete_account.function_arn]
   }
 }
 
@@ -165,6 +81,35 @@ resource "aws_iam_policy" "invoke_account_deletion_lambda" {
   path        = "/control-tower/am/"
   description = "Policy for use in Control Tower to be attached to the role assumed by support users to perform account deletions"
   policy      = data.aws_iam_policy_document.invoke_account_deletion_lambda.json
+}
+
+resource "aws_iam_role" "account_deletion_role" {
+  count       = local.should_create_account_deletion_policy ? 1 : 0
+  name        = "support-account-deletion-role"
+  path        = "/runbooks/"
+  description = "Role for support users to perform account deletions using lambda exec action"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      }
+      Action = "sts:AssumeRole"
+      Condition = {
+        StringLike = {
+          "aws:PrincipalArn" = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedServiceSupport*"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "account_deletion_policy" {
+  count      = local.should_create_account_deletion_policy ? 1 : 0
+  role       = aws_iam_role.account_deletion_role[0].name
+  policy_arn = aws_iam_policy.invoke_account_deletion_lambda[0].arn
 }
 
 locals {

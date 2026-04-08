@@ -17,7 +17,7 @@ resource "aws_sqs_queue" "email_queue" {
   visibility_timeout_seconds = 180
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.email_dead_letter_queue.arn
-    maxReceiveCount     = 3
+    maxReceiveCount     = 1
   })
 
   kms_master_key_id                 = "alias/aws/sqs"
@@ -137,8 +137,9 @@ resource "aws_sqs_queue_policy" "email_dlq_queue_policy" {
 }
 
 resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
-  event_source_arn = aws_sqs_queue.email_queue.arn
-  function_name    = aws_lambda_function.email_sqs_lambda.arn
+  event_source_arn        = aws_sqs_queue.email_queue.arn
+  function_name           = aws_lambda_function.email_sqs_lambda.arn
+  function_response_types = ["ReportBatchItemFailures"]
 
   depends_on = [
     aws_sqs_queue.email_queue,
@@ -176,7 +177,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       NOTIFY_API_KEY            = var.notify_api_key
       NOTIFY_URL                = var.notify_url
       NOTIFY_TEST_DESTINATIONS  = var.notify_test_destinations
-      SMOKETEST_SMS_BUCKET_NAME = local.sms_bucket_name
+      SMOKETEST_SMS_BUCKET_NAME = "${var.environment}-smoke-new-test-sms-codes"
       JAVA_TOOL_OPTIONS         = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
       ENVIRONMENT               = var.environment
     })
@@ -239,6 +240,18 @@ data "aws_iam_policy_document" "s3_smoketest_policy_document" {
     resources = [
       data.aws_s3_bucket.smoketest_sms_bucket.arn,
       "${data.aws_s3_bucket.smoketest_sms_bucket.arn}/*",
+    ]
+  }
+  statement {
+    sid    = "AllowAccessToNewSmokestestBucket"
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.environment}-smoke-new-test-sms-codes/*",
+      "arn:aws:s3:::${var.environment}-smoke-new-test-sms-codes",
     ]
   }
 }

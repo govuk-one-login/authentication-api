@@ -20,11 +20,16 @@ import java.util.List;
 public class TokenValidationService {
 
     private final JwksService jwksService;
+    private final RemoteJwksService accessTokenJwksService;
     private final ConfigurationService configuration;
     private static final Logger LOG = LogManager.getLogger(TokenValidationService.class);
 
-    public TokenValidationService(JwksService jwksService, ConfigurationService configuration) {
+    public TokenValidationService(
+            JwksService jwksService,
+            RemoteJwksService accessTokenJwksService,
+            ConfigurationService configuration) {
         this.jwksService = jwksService;
+        this.accessTokenJwksService = accessTokenJwksService;
         this.configuration = configuration;
     }
 
@@ -66,12 +71,24 @@ public class TokenValidationService {
                     && configuration.isRsaSigningAvailable()) {
                 return jwt.verify(
                         new RSASSAVerifier(
-                                jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
+                                accessTokenJwksService
+                                        .retrieveJwkFromURLWithKeyId(jwt.getHeader().getKeyID())
+                                        .toRSAKey()));
             } else {
+                if (configuration.isTestSigningKeyEnabled()) {
+                    var acceptanceTestKey = jwksService.getPublicTestTokenJwkWithOpaqueId();
+                    boolean isValid = jwt.verify(new ECDSAVerifier(acceptanceTestKey.toECKey()));
+                    if (isValid) {
+                        LOG.info("Token signature validated using test key");
+                        return isValid;
+                    }
+                }
                 return jwt.verify(
-                        new ECDSAVerifier(jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
+                        new ECDSAVerifier(
+                                accessTokenJwksService
+                                        .retrieveJwkFromURLWithKeyId(jwt.getHeader().getKeyID())
+                                        .toECKey()));
             }
-
         } catch (JOSEException | java.text.ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;

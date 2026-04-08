@@ -70,21 +70,17 @@ variable "notify_url" {
 variable "notify_template_map" {
   type = map(string)
   default = {
-    TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID = "067548f2-420d-4da9-923f-ec9a941706cf"
+    TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID                   = "067548f2-420d-4da9-923f-ec9a941706cf"
+    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL_TEMPLATE_ID = "fcc5cc49-f896-4887-9ce2-567f93721bc4"
   }
 }
 
-variable "bulk_user_email_batch_query_limit" {
+variable "bulk_user_email_batch_size" {
   type    = number
-  default = null
+  default = 108
 }
 
-variable "bulk_user_email_max_batch_count" {
-  type    = number
-  default = null
-}
-
-variable "bulk_user_email_batch_pause_duration" {
+variable "bulk_user_email_audience_load_pause_duration" {
   type    = number
   default = null
 }
@@ -109,6 +105,11 @@ variable "bulk_user_email_send_schedule_enabled" {
   default = false
 }
 
+variable "bulk_user_email_type" {
+  type    = string
+  default = null
+}
+
 variable "bulk_user_email_included_terms_and_conditions" {
   type    = string
   default = null
@@ -117,6 +118,11 @@ variable "bulk_user_email_included_terms_and_conditions" {
 variable "bulk_user_email_send_mode" {
   type    = string
   default = "PENDING"
+}
+
+variable "bulk_user_email_sender_type" {
+  type    = string
+  default = "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET"
 }
 
 variable "bulk_user_email_send_schedule_expression" {
@@ -142,7 +148,12 @@ variable "performance_tuning" {
     timeout : number,
   }))
   description = "A map of performance tuning parameters per lambda"
-  default     = {}
+  default = {
+    bulk-user-email-send = {
+      memory  = 512
+      timeout = 110
+    }
+  }
 }
 
 variable "lambda_log_alarm_error_rate_threshold" {
@@ -172,8 +183,8 @@ variable "email_check_results_sqs_queue_encryption_key_arn" {
   type        = string
 }
 
-variable "support_email_check_enabled" {
-  default     = true
-  type        = bool
-  description = "Feature flag which toggles the Experian email check on and off"
+variable "vpc_environment" {
+  description = "The name of the environment this environment is sharing the VPC , this var is only for Authdevs env and must be overide using Authdevs.tfvars, default value should be null always."
+  type        = string
+  default     = null
 }

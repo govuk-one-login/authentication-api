@@ -24,36 +24,32 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.approvaltests.Approvals;
 import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
+import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.helper.TestClockHelper;
 
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -73,6 +69,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.ipv.services.IPVAuthorisationService.STATE_STORAGE_PREFIX;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class IPVAuthorisationServiceTest {
 
@@ -89,46 +86,44 @@ class IPVAuthorisationServiceTest {
     private static final String SERIALIZED_JWT =
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.eyJhdWQiOlsiaHR0cHM6Ly9jcmVkZW50aWFsLXN0b3JlLmFjY291bnQuZ292LnVrIiwiaHR0cHM6Ly9pZGVudGl0eS50ZXN0LmFjY291bnQuZ292LnVrIl0sInN1YiI6InVybjpmZGM6Z292LnVrOjIwMjI6VEpMdDNXYWlHa0xoOFVxZWlzSDJ6VktHQVAwIiwic2NvcGUiOiJwcm92aW5nIiwiaXNzIjoiaHR0cHM6Ly9vaWRjLnRlc3QuYWNjb3VudC5nb3YudWsiLCJleHAiOjE3MTgxOTU3NjMsImlhdCI6MTcxODE5NTQ2MywianRpIjoiMWQyZTdmODgtYWIwNy00NWU5LThkYTAtOWEyMzIyMWFhZjM3In0.6MpC8IZbOICVjvf_97ySj6yOO6khQGhkEGHvYB6kXGMroSQgF0z0-Z1EVJi5sVXwmbe4X6eDRTIYtM07xItiMg";
 
-    private static final Json objectMapper = SerializationService.getInstance();
-
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksService jwksService = mock(JwksService.class);
+    private final JwksCacheService jwksCacheService = mock(JwksCacheService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final IPVAuthorisationService authorisationService =
             new IPVAuthorisationService(
                     configurationService,
-                    redisConnectionService,
                     kmsConnectionService,
                     jwksService,
+                    jwksCacheService,
+                    stateStorageService,
                     TestClockHelper.getInstance());
     private PrivateKey privateKey;
 
     @BeforeEach
-    void setUp() throws Json.JsonException, MalformedURLException {
+    void setUp() throws MalformedURLException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(objectMapper.writeValueAsString(STATE));
+        when(stateStorageService.getState(STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                new StateItem(STATE_STORAGE_PREFIX + SESSION_ID)
+                                        .withState(STATE.getValue())));
         when(configurationService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configurationService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configurationService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
         when(configurationService.getIPVAudience()).thenReturn(IPV_URI.toString());
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
-        var certpem =
-                "-----BEGIN PUBLIC KEY-----\n"
-                        + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
-                        + "\n-----END PUBLIC KEY-----\n";
-        when(configurationService.getIPVAuthEncryptionPublicKey()).thenReturn(certpem);
         var rsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
                         .keyID(KEY_ID)
                         .build();
-        when(configurationService.getIPVJwksUrl())
-                .thenReturn(new URL("http://localhost/.well-known/jwks.json"));
-        when(jwksService.getIpvJwk()).thenReturn(rsaKey);
+        var jwksUrl = new URL("http://localhost/.well-known/jwks.json");
+        when(configurationService.getIPVJwksUrl()).thenReturn(jwksUrl);
+        when(jwksCacheService.getOrGenerateIpvJwksCacheItem())
+                .thenReturn(new JwksCacheItem(jwksUrl.toString(), rsaKey, 300));
         when(configurationService.getIPVTokenSigningKeyAlias()).thenReturn(IPV_SIGNING_KEY_ID);
         when(jwksService.getPublicIpvTokenJwkWithOpaqueId())
                 .thenReturn(
@@ -162,7 +157,24 @@ class IPVAuthorisationServiceTest {
 
         assertThat(
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
-                equalTo(Optional.of(new ErrorObject(errorObject.getCode()))));
+                equalTo(Optional.of(new IpvCallbackValidationError(errorObject.getCode(), null))));
+    }
+
+    @Test
+    void shouldReturnSessionInvalidationErrorObjectWhenErrorCodeIsSessionInvalidated() {
+        ErrorObject errorObject =
+                new ErrorObject("session_invalidated", "Session invalidated for security reasons");
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("error", errorObject.toString());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(
+                        Optional.of(
+                                new IpvCallbackValidationError(
+                                        errorObject.getCode(), null, true))));
     }
 
     @Test
@@ -171,7 +183,7 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(Collections.emptyMap(), SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "No query parameters present"))));
     }
@@ -185,7 +197,7 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "No state param present in Authorisation response"))));
     }
@@ -199,17 +211,31 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "No code param present in Authorisation response"))));
     }
 
     @Test
-    void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState()
-            throws Json.JsonException {
+    void shouldReturnErrorObjectWhenNoStateFoundInDynamo() {
+        when(stateStorageService.getState(
+                        DocAppAuthorisationService.STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(Optional.empty());
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(
+                        Optional.of(
+                                new IpvCallbackValidationError(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Invalid state param present in Authorisation response"))));
+    }
+
+    @Test
+    void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState() {
         State differentState = new State();
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(objectMapper.writeValueAsString(STATE));
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", differentState.getValue());
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -218,21 +244,17 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "Invalid state param present in Authorisation response"))));
     }
 
     @Test
-    void shouldSaveStateToRedis() throws Json.JsonException {
+    void shouldSaveStateToRedisAndDynamo() {
         var sessionId = "session-id";
         authorisationService.storeState(sessionId, STATE);
 
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        STATE_STORAGE_PREFIX + sessionId,
-                        objectMapper.writeValueAsString(STATE),
-                        SESSION_EXPIRY);
+        verify(stateStorageService).storeState(STATE_STORAGE_PREFIX + sessionId, STATE.getValue());
     }
 
     @Nested
@@ -262,11 +284,8 @@ class IPVAuthorisationServiceTest {
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         }
 
-        @ParameterizedTest(name = "With useIpvJwksEndpointEnabled = {0}")
-        @ValueSource(booleans = {true, false})
-        void shouldConstructASignedRequestJWT(boolean useIpvJwksEndpoint)
-                throws JOSEException, ParseException {
-            when(configurationService.isUseIPVJwksEndpointEnabled()).thenReturn(useIpvJwksEndpoint);
+        @Test
+        void shouldConstructASignedRequestJWT() throws JOSEException, ParseException {
             var state = new State("test-state");
             var scope = new Scope(OIDCScopeValue.OPENID);
             var pairwise = new Subject("pairwise-identifier");
@@ -299,19 +318,16 @@ class IPVAuthorisationServiceTest {
                                 claims,
                                 "journey-id",
                                 "test@test.com",
-                                List.of("P2", "PCL200"),
+                                List.of("P2", "P1"),
                                 true);
             }
-            if (useIpvJwksEndpoint) {
-                assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(KEY_ID));
-            }
+            assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(KEY_ID));
+
             var signedJWTResponse = decryptJWT(encryptedJWT);
 
             JsonApprovals.verifyAsJson(
                     signedJWTResponse.getJWTClaimsSet().toJSONObject(),
-                    GsonBuilder::serializeNulls,
-                    Approvals.NAMES.withParameters(
-                            useIpvJwksEndpoint ? "usingJwksEndpoint" : "usingSSM"));
+                    GsonBuilder::serializeNulls);
 
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("client_id"),
@@ -343,7 +359,7 @@ class IPVAuthorisationServiceTest {
                     equalTo("journey-id"));
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("vtr"),
-                    equalTo(List.of("P2", "PCL200")));
+                    equalTo(List.of("P2", "P1")));
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("reprove_identity"),
                     equalTo(true));
@@ -437,16 +453,5 @@ class IPVAuthorisationServiceTest {
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
         encryptedJWT.decrypt(new RSADecrypter(privateKey));
         return encryptedJWT.getPayload().toSignedJWT();
-    }
-
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 }

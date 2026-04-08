@@ -23,12 +23,10 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -75,10 +73,8 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 class LogoutServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -86,8 +82,7 @@ class LogoutServiceTest {
 
     private final APIGatewayProxyRequestEvent event = mock(APIGatewayProxyRequestEvent.class);
 
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final BackChannelLogoutService backChannelLogoutService =
             mock(BackChannelLogoutService.class);
 
@@ -161,13 +156,11 @@ class LogoutServiceTest {
 
         logoutService =
                 new LogoutService(
-                        sessionService,
                         orchSessionService,
                         dynamoClientService,
-                        clientSessionService,
                         orchClientSessionService,
                         auditService,
-                        cloudwatchMetricsService,
+                        metrics,
                         backChannelLogoutService,
                         authFrontend,
                         new NowClock(Clock.systemUTC()));
@@ -184,7 +177,6 @@ class LogoutServiceTest {
         orchSession = new OrchSessionItem(SESSION_ID);
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID, rpPairwiseId.get());
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(new Session()));
         destroySessionsRequest = new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID));
     }
 
@@ -207,11 +199,8 @@ class LogoutServiceTest {
                         Optional.of(audience.get()),
                         rpPairwiseId);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -222,7 +211,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -242,11 +231,8 @@ class LogoutServiceTest {
                         audience,
                         rpPairwiseId);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -257,7 +243,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -277,11 +263,8 @@ class LogoutServiceTest {
                         audience,
                         rpPairwiseId);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -292,7 +275,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -313,11 +296,8 @@ class LogoutServiceTest {
                         Optional.of(CLIENT_ID),
                         rpPairwiseId);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -328,7 +308,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
 
@@ -348,7 +328,7 @@ class LogoutServiceTest {
                 Optional.of(audience.get()),
                 rpPairwiseId);
 
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -363,11 +343,8 @@ class LogoutServiceTest {
                         CLIENT_ID,
                         intervention);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -377,8 +354,7 @@ class LogoutServiceTest {
                         pair("logoutReason", "intervention"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -399,11 +375,8 @@ class LogoutServiceTest {
                         CLIENT_ID,
                         intervention);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -413,8 +386,7 @@ class LogoutServiceTest {
                         pair("logoutReason", "intervention"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -423,7 +395,7 @@ class LogoutServiceTest {
     }
 
     @Test
-    void shouldDeleteSessionFromRedisWhenNoCookieExists() {
+    void shouldDeleteSessionFromDynamoWhenNoCookieExists() {
         APIGatewayProxyRequestEvent input = new APIGatewayProxyRequestEvent();
         input.setQueryStringParameters(
                 Map.of(
@@ -442,15 +414,12 @@ class LogoutServiceTest {
                 Optional.empty(),
                 rpPairwiseId);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
+        verify(metrics).incrementLogout(Optional.empty());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -518,15 +487,10 @@ class LogoutServiceTest {
                         Optional.of(audience.get()),
                         rpPairwiseId);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(clientSessionService).deleteStoredClientSession("client-session-id-2");
-        verify(clientSessionService).deleteStoredClientSession("client-session-id-3");
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService).deleteStoredClientSession("client-session-id-2");
         verify(orchClientSessionService).deleteStoredClientSession("client-session-id-3");
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -545,7 +509,7 @@ class LogoutServiceTest {
                         argThat(withClientId("client-id-3")), eq("rp-pairwise-id-client-3"));
         verify(backChannelLogoutService, never())
                 .sendLogoutMessage(argThat(withClientId("client-id-4")), anyString());
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -577,15 +541,12 @@ class LogoutServiceTest {
                         CLIENT_ID,
                         REAUTH_FAILURE_URI);
 
-        verify(clientSessionService)
-                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(metrics).incrementLogout(Optional.of(CLIENT_ID));
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -618,11 +579,8 @@ class LogoutServiceTest {
                 .handleMaxAgeLogout(
                         destroySessionsRequestForClients, previousOrchSession, auditUser);
 
-        verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
-        verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);
         verify(orchClientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
         verify(orchClientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId(clientId1)), eq("rp-pairwise-id-client-1"));
@@ -639,15 +597,40 @@ class LogoutServiceTest {
                         expectedExtensions.toArray(AuditService.MetadataPair[]::new));
     }
 
+    @Test
+    void handlesASessionInvalidatedLogout() {
+        APIGatewayProxyResponseEvent response =
+                logoutService.handleSessionInvalidationLogout(
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
+                        SUBJECT.getValue(),
+                        event,
+                        CLIENT_ID);
+
+        verify(orchClientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
+        verify(orchSessionService).deleteSession(SESSION_ID);
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        CLIENT_ID,
+                        auditUser,
+                        pair("logoutReason", "intervention"));
+        verify(backChannelLogoutService)
+                .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(FRONTEND_BASE_URL + "signed-out"));
+    }
+
     private LogoutService logoutServiceWithClock(Clock clock) {
         return new LogoutService(
-                sessionService,
                 orchSessionService,
                 dynamoClientService,
-                clientSessionService,
                 orchClientSessionService,
                 auditService,
-                cloudwatchMetricsService,
+                metrics,
                 backChannelLogoutService,
                 authFrontend,
                 new NowClock(clock));
@@ -676,22 +659,12 @@ class LogoutServiceTest {
                         "redirect_uri",
                         List.of("http://localhost:8080"),
                         "scope",
-                        List.of("email,openid,profile"),
+                        List.of("email openid profile"),
                         "response_type",
                         List.of("code"),
                         "state",
                         List.of("some-state"));
         var creationTime = LocalDateTime.now();
-        var clientSession =
-                new ClientSession(
-                        authRequestParams,
-                        creationTime,
-                        List.of(VectorOfTrust.getDefaults()),
-                        "client_name");
-        clientSession.setIdTokenHint(idToken.serialize());
-        clientSession.setRpPairwiseId(rpPairwiseId.get());
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
         var orchClientSession =
                 new OrchClientSessionItem(
                         clientId,
@@ -708,15 +681,6 @@ class LogoutServiceTest {
     private void setUpClientSession(String clientSessionId, String clientId, String rpPairwiseId) {
         orchSession.getClientSessions().add(clientSessionId);
         var creationDate = LocalDateTime.now();
-        when(clientSessionService.getClientSession(clientSessionId))
-                .thenReturn(
-                        Optional.of(
-                                new ClientSession(
-                                                Map.of("client_id", List.of(clientId)),
-                                                creationDate,
-                                                List.of(VectorOfTrust.getDefaults()),
-                                                "client_name")
-                                        .setRpPairwiseId(rpPairwiseId)));
         when(orchClientSessionService.getClientSession(clientSessionId))
                 .thenReturn(
                         Optional.of(

@@ -5,21 +5,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
-import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -28,90 +21,72 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static java.util.function.Predicate.not;
 
 public class StartService {
 
-    private final ClientService clientService;
     private final DynamoService dynamoService;
-    private final SessionService sessionService;
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
     public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
     private static final Logger LOG = LogManager.getLogger(StartService.class);
 
-    public StartService(
-            ClientService clientService,
-            DynamoService dynamoService,
-            SessionService sessionService) {
-        this.clientService = clientService;
+    public StartService(DynamoService dynamoService) {
         this.dynamoService = dynamoService;
-        this.sessionService = sessionService;
     }
 
-    public UserContext buildUserContext(Session session, AuthSessionItem authSession) {
-        var builder = UserContext.builder(session).withAuthSession(authSession);
+    public UserContext buildUserContext(AuthSessionItem authSession) {
+        var builder = UserContext.builder(authSession);
         UserContext userContext;
-        try {
-            var clientRegistry = getClient(authSession.getClientId());
-            Optional.of(authSession)
-                    .map(AuthSessionItem::getEmailAddress)
-                    .flatMap(dynamoService::getUserProfileByEmailMaybe)
-                    .ifPresent(
-                            t ->
-                                    builder.withUserProfile(t)
-                                            .withUserCredentials(
-                                                    Optional.of(
-                                                            dynamoService
-                                                                    .getUserCredentialsFromEmail(
-                                                                            authSession
-                                                                                    .getEmailAddress()))));
-            userContext = builder.withClient(clientRegistry).build();
-        } catch (ClientNotFoundException e) {
-            LOG.error("Error creating UserContext");
-            throw new RuntimeException("Error when creating UserContext", e);
-        }
+        Optional.of(authSession)
+                .map(AuthSessionItem::getEmailAddress)
+                .flatMap(dynamoService::getUserProfileByEmailMaybe)
+                .ifPresent(
+                        t ->
+                                builder.withUserProfile(t)
+                                        .withUserCredentials(
+                                                Optional.of(
+                                                        dynamoService.getUserCredentialsFromEmail(
+                                                                authSession.getEmailAddress()))));
+        userContext = builder.build();
         return userContext;
     }
 
     public ClientStartInfo buildClientStartInfo(
-            ClientRegistry clientRegistry, List<String> scopes, URI redirectURI, State state) {
+            String serviceType,
+            String clientName,
+            List<String> scopes,
+            URI redirectURI,
+            State state,
+            boolean isCookieConsentShared,
+            boolean isOneLoginService) {
         var clientInfo =
                 new ClientStartInfo(
-                        clientRegistry.getClientName(),
+                        clientName,
                         scopes,
-                        clientRegistry.getServiceType(),
-                        clientRegistry.isCookieConsentShared(),
+                        serviceType,
+                        isCookieConsentShared,
                         redirectURI,
                         state,
-                        clientRegistry.isOneLoginService());
+                        isOneLoginService);
         LOG.info(
                 "Found ClientStartInfo for ClientName: {} Scopes: {} ServiceType: {}",
-                clientRegistry.getClientName(),
+                clientName,
                 scopes,
-                clientRegistry.getServiceType());
+                serviceType);
 
         return clientInfo;
     }
 
     public UserStartInfo buildUserStartInfo(
             UserContext userContext,
-            LevelOfConfidence levelOfConfidence,
             String cookieConsent,
             String gaTrackingId,
-            boolean identityEnabled,
+            boolean identityRequired,
             boolean reauthenticate,
             boolean isBlockedForReauth,
             boolean isAuthenticated,
             boolean upliftRequired) {
-        var identityRequired = false;
-        var clientRegistry = userContext.getClient().orElseThrow();
-        identityRequired =
-                IdentityHelper.identityRequired(
-                        levelOfConfidence,
-                        clientRegistry.isIdentityVerificationSupported(),
-                        identityEnabled);
 
         var userIsAuthenticated = isAuthenticated && !reauthenticate;
 
@@ -145,17 +120,12 @@ public class StartService {
                 .anyMatch(MFAMethodType.AUTH_APP.getValue()::equals);
     }
 
-    public String getCookieConsentValue(String cookieConsentValue, String clientID) {
-        try {
-            if (validCookieConsentValueIsPresent(cookieConsentValue)
-                    && isClientCookieConsentShared(clientID)) {
-                LOG.info("Sharing cookie_consent");
-                return cookieConsentValue;
-            }
-            return null;
-        } catch (ClientNotFoundException e) {
-            throw new RuntimeException("Client not found", e);
+    public String getCookieConsentValue(String cookieConsentValue, boolean isCookieConsentShared) {
+        if (validCookieConsentValueIsPresent(cookieConsentValue) && isCookieConsentShared) {
+            LOG.info("Sharing cookie_consent");
+            return cookieConsentValue;
         }
+        return null;
     }
 
     public boolean isUserProfileEmpty(AuthSessionItem authSession) {
@@ -173,15 +143,6 @@ public class StartService {
         return currentCredentialStrength.isLowerThan(requestedCredentialStrength);
     }
 
-    public ClientRegistry getClient(String clientId) throws ClientNotFoundException {
-        return clientService
-                .getClient(clientId)
-                .orElseThrow(
-                        () ->
-                                new ClientNotFoundException(
-                                        "Could not find client for start service"));
-    }
-
     public MFAMethodType getMfaMethodType(UserContext userContext) {
         var maybeUserProfile = userContext.getUserProfile();
         if (maybeUserProfile.isEmpty()) {
@@ -189,7 +150,7 @@ public class StartService {
         }
 
         var userProfile = maybeUserProfile.get();
-        if (userProfile.getMfaMethodsMigrated()) {
+        if (userProfile.isMfaMethodsMigrated()) {
             var maybeUserCredentials = userContext.getUserCredentials();
             if (maybeUserCredentials.isPresent()) {
                 var userCredentials = maybeUserCredentials.get();
@@ -213,18 +174,6 @@ public class StartService {
         } else if (authApp(userContext)) {
             return MFAMethodType.AUTH_APP;
         } else return null;
-    }
-
-    private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {
-        return clientService
-                .getClient(clientID)
-                .map(ClientRegistry::isCookieConsentShared)
-                .orElseThrow(
-                        () ->
-                                new ClientNotFoundException(
-                                        format(
-                                                "Could not find client for clientID: %s",
-                                                clientID)));
     }
 
     private boolean validCookieConsentValueIsPresent(String cookieConsent) {

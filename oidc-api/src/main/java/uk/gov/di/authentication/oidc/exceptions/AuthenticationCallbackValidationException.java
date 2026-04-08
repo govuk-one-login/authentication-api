@@ -12,6 +12,10 @@ public class AuthenticationCallbackValidationException extends Exception {
         this(OAuth2Error.SERVER_ERROR, false);
     }
 
+    public AuthenticationCallbackValidationException(ErrorObject error) {
+        this(error, false);
+    }
+
     public AuthenticationCallbackValidationException(ErrorObject error, boolean logoutRequired) {
         this.error = error;
         this.logoutRequired = logoutRequired;

@@ -12,28 +12,32 @@ import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -42,14 +46,12 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
-import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
+import static uk.gov.di.authentication.frontendapi.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -60,28 +62,36 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
+    private final MFAMethodsService mfaMethodsService;
+    private final PermissionDecisionManager permissionDecisionManager;
+    private final UserActionsManager userActionsManager;
+    private final TestUserHelper testUserHelper;
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             AuditService auditService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            MFAMethodsService mfaMethodsService,
+            PermissionDecisionManager permissionDecisionManager,
+            UserActionsManager userActionsManager,
+            TestUserHelper testUserHelper) {
         super(
                 ResetPasswordRequest.class,
                 configurationService,
-                sessionService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.mfaMethodsService = mfaMethodsService;
+        this.permissionDecisionManager = permissionDecisionManager;
+        this.userActionsManager = userActionsManager;
+        this.testUserHelper = testUserHelper;
     }
 
     public ResetPasswordRequestHandler() {
@@ -98,11 +108,18 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(configurationService, codeStorageService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService, codeStorageService, authSessionService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(ResetPasswordRequest.class, configurationService, redis);
+        super(ResetPasswordRequest.class, configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -111,6 +128,13 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(configurationService, codeStorageService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService, codeStorageService, authSessionService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     @Override
@@ -131,34 +155,29 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         try {
             if (Objects.isNull(userContext.getAuthSession().getEmailAddress())
                     || !userContext.getAuthSession().validateSession(request.getEmail())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
             }
 
-            var userIsAlreadyLockedOutOfPasswordReset =
-                    hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
+            var permissionContext =
+                    PermissionContext.builder()
+                            .withInternalSubjectId(
+                                    userContext.getAuthSession().getInternalCommonSubjectId())
+                            .withEmailAddress(request.getEmail())
+                            .withAuthSessionItem(userContext.getAuthSession())
+                            .build();
 
-            if (userIsAlreadyLockedOutOfPasswordReset.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, userIsAlreadyLockedOutOfPasswordReset.get());
+            var permissionCheckResult = checkUserPermissions(request.getEmail(), userContext);
+            if (permissionCheckResult.isFailure()) {
+                return permissionCheckResult.getFailure();
             }
 
-            var isTestClient =
-                    TestClientHelper.isTestClientWithAllowedEmail(
-                            userContext, configurationService);
+            var isTestClient = testUserHelper.isTestJourney(userContext);
 
             emitPasswordResetRequestedAuditEvent(input, request, userContext, isTestClient);
 
-            authSessionService.updateSession(
-                    userContext.getAuthSession().incrementPasswordResetCount());
-
-            var userIsNewlyLockedOutOfPasswordReset =
-                    hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
-
-            if (userIsNewlyLockedOutOfPasswordReset.isPresent()) {
-                lockUserOutOfPasswordReset(userContext);
-                return generateApiGatewayProxyErrorResponse(
-                        400, userIsNewlyLockedOutOfPasswordReset.get());
-            }
+            // Call the action to increment the count
+            userActionsManager.sentEmailOtpNotification(
+                    JourneyType.PASSWORD_RESET, permissionContext);
 
             authSessionService.updateSession(
                     userContext
@@ -169,23 +188,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (ClientNotFoundException e) {
-            LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
-    }
-
-    private void lockUserOutOfPasswordReset(UserContext userContext) {
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        LOG.info("Setting block for email as user has requested too many OTPs");
-        codeStorageService.saveBlockedForEmail(
-                userContext.getAuthSession().getEmailAddress(),
-                codeRequestBlockedKeyPrefix,
-                configurationService.getLockoutDuration());
-        authSessionService.updateSession(userContext.getAuthSession().resetPasswordResetCount());
     }
 
     private void emitPasswordResetRequestedAuditEvent(
@@ -259,60 +262,146 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         }
 
         LOG.info("Successfully processed request");
-        var credentialTrustLevel = userContext.getAuthSession().getRequestedCredentialStrength();
-        var maybeResponse =
-                generateResponseWithMfaDetail(resetPasswordRequest, credentialTrustLevel);
-        if (maybeResponse.isPresent()) {
-            try {
-                return generateApiGatewayProxyResponse(200, maybeResponse.get());
-            } catch (JsonException e) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-            }
-        } else {
-            LOG.error("Could not find user profile for reset password request");
-            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+
+        var retrieveMfaMethods = mfaMethodsService.getMfaMethods(resetPasswordRequest.getEmail());
+        if (retrieveMfaMethods.isFailure()) {
+            return switch (retrieveMfaMethods.getFailure()) {
+                case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
+                case USER_DOES_NOT_HAVE_ACCOUNT -> {
+                    LOG.error("Could not find user profile for reset password request");
+                    yield generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
+                }
+                case UNKNOWN_MFA_IDENTIFIER -> {
+                    yield generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.INVALID_MFA_METHOD);
+                }
+            };
+        }
+
+        var retrievedMfaMethods = retrieveMfaMethods.getSuccess();
+
+        var defaultMfaMethod =
+                MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
+        String defaultMfaType = defaultMfaMethod.map(MFAMethod::getMfaMethodType).orElse(null);
+        String defaultMfaPhoneNumber =
+                defaultMfaType != null
+                                && MFAMethodType.valueOf(defaultMfaType).equals(MFAMethodType.SMS)
+                        ? defaultMfaMethod.map(MFAMethod::getDestination).orElse(null)
+                        : null;
+
+        var maybeMfaMethodResponses = convertMfaMethodsToMfaMethodResponse(retrievedMfaMethods);
+        if (maybeMfaMethodResponses.isFailure()) {
+            LOG.error(maybeMfaMethodResponses.getFailure());
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
+        }
+
+        var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
+
+        try {
+            return generateApiGatewayProxyResponse(
+                    200,
+                    new ResetPasswordRequestHandlerResponse(
+                            defaultMfaType != null ? MFAMethodType.valueOf(defaultMfaType) : null,
+                            mfaMethodResponses,
+                            defaultMfaPhoneNumber != null
+                                    ? getLastDigitsOfPhoneNumber(defaultMfaPhoneNumber)
+                                    : null));
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
-    Optional<ResetPasswordRequestHandlerResponse> generateResponseWithMfaDetail(
-            ResetPasswordRequest resetPasswordRequest, CredentialTrustLevel credentialTrustLevel) {
-        return authenticationService
-                .getUserProfileByEmailMaybe(resetPasswordRequest.getEmail())
-                .map(
-                        userProfile -> {
-                            var userMfaDetail =
-                                    getUserMFADetail(
-                                            credentialTrustLevel,
-                                            authenticationService.getUserCredentialsFromEmail(
-                                                    resetPasswordRequest.getEmail()),
-                                            userProfile);
+    private Result<APIGatewayProxyResponseEvent, Void> checkUserPermissions(
+            String email, UserContext userContext) {
+        var permissionContext =
+                PermissionContext.builder()
+                        .withInternalSubjectId(
+                                userContext.getAuthSession().getInternalCommonSubjectId())
+                        .withEmailAddress(email)
+                        .withAuthSessionItem(userContext.getAuthSession())
+                        .build();
 
-                            return new ResetPasswordRequestHandlerResponse(
-                                    userMfaDetail.mfaMethodType(),
-                                    getLastDigitsOfPhoneNumber(userMfaDetail));
-                        });
+        var canSendResult =
+                permissionDecisionManager.canSendEmailOtpNotification(
+                        JourneyType.PASSWORD_RESET, permissionContext);
+
+        if (canSendResult.isSuccess()) {
+            var decision = canSendResult.getSuccess();
+            if (decision instanceof Decision.TemporarilyLockedOut lockedOut) {
+                var result = handleTemporarilyLockedOut(lockedOut, permissionContext);
+                if (result.isFailure()) {
+                    return result;
+                }
+            }
+        }
+
+        var userIsAlreadyLockedOutOfPasswordReset =
+                hasUserExceededMaxAllowedRequests(email, userContext);
+        if (userIsAlreadyLockedOutOfPasswordReset.isPresent()) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(
+                            400, userIsAlreadyLockedOutOfPasswordReset.get()));
+        }
+
+        return Result.success(null);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> handleTemporarilyLockedOut(
+            Decision.TemporarilyLockedOut lockedOut, PermissionContext permissionContext) {
+        if (lockedOut.forbiddenReason()
+                == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
+            userActionsManager.sentEmailOtpNotification(
+                    JourneyType.PASSWORD_RESET, permissionContext);
+            var errorResponse =
+                    lockedOut.isFirstTimeLimit()
+                            ? ErrorResponse.TOO_MANY_PW_RESET_REQUESTS
+                            : ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
+            return Result.failure(generateApiGatewayProxyErrorResponse(400, errorResponse));
+        }
+        return Result.success(null);
     }
 
     private Optional<ErrorResponse> hasUserExceededMaxAllowedRequests(
             String email, UserContext userContext) {
         LOG.info("Validating Password Reset Count");
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestCount = userContext.getAuthSession().getPasswordResetCount();
-        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-            return Optional.of(ErrorResponse.ERROR_1022);
+        var permissionContext =
+                PermissionContext.builder()
+                        .withInternalSubjectId(
+                                userContext.getAuthSession().getInternalCommonSubjectId())
+                        .withEmailAddress(email)
+                        .withAuthSessionItem(userContext.getAuthSession())
+                        .build();
+
+        var canSendResult =
+                permissionDecisionManager.canSendEmailOtpNotification(
+                        JourneyType.PASSWORD_RESET, permissionContext);
+
+        if (canSendResult.isSuccess()
+                && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
+
+            if (lockedOut.forbiddenReason() == ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST) {
+                LOG.info("Code is blocked for email as user has requested too many OTPs");
+                return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+            } else if (lockedOut.forbiddenReason()
+                    == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
+                return lockedOut.isFirstTimeLimit()
+                        ? Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS)
+                        : Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+            }
         }
-        if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedKeyPrefix)) {
-            LOG.info("Code is blocked for email as user has requested too many OTPs");
-            return Optional.of(ErrorResponse.ERROR_1023);
-        }
-        if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedKeyPrefix)) {
+
+        var canVerifyResult =
+                permissionDecisionManager.canVerifyEmailOtp(
+                        JourneyType.PASSWORD_RESET, permissionContext);
+
+        if (canVerifyResult.isSuccess()
+                && canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
             LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
-            return Optional.of(ErrorResponse.ERROR_1039);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
         }
+
         return Optional.empty();
     }
 

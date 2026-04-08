@@ -7,7 +7,6 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.InputSanitiser;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -67,9 +66,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
     }
 
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
-            Optional<String> previousSessionId,
-            String newSessionId,
-            CredentialTrustLevel currentCredentialStrength) {
+            Optional<String> previousSessionId, String newSessionId) {
 
         try {
             Optional<AuthSessionItem> previousAuthSession = Optional.empty();
@@ -82,7 +79,6 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                         previousAuthSession
                                 .get()
                                 .withSessionId(newSessionId)
-                                .withCurrentCredentialStrength(currentCredentialStrength)
                                 .withResetPasswordState(AuthSessionItem.ResetPasswordState.NONE)
                                 .withResetMfaState(AuthSessionItem.ResetMfaState.NONE)
                                 .withTimeToLive(
@@ -99,8 +95,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 return updatedSession;
             } else {
                 LOG.info("New Auth session item created with sessionId: {}", newSessionId);
-                return generateNewAuthSession(newSessionId)
-                        .withCurrentCredentialStrength(currentCredentialStrength);
+                return generateNewAuthSession(newSessionId);
             }
         } catch (Exception e) {
             LOG.error(

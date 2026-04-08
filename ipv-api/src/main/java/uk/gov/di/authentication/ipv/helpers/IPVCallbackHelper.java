@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.ipv.helpers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -19,9 +20,9 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -29,15 +30,12 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,45 +56,30 @@ public class IPVCallbackHelper {
     private final AuditService auditService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final OrchAuthCodeService orchAuthCodeService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final DynamoClientService dynamoClientService;
+    private final Metrics metrics;
+    private final ConfigurationService configurationService;
     private final DynamoIdentityService dynamoIdentityService;
-    private final SessionService sessionService;
     private final AwsSqsClient sqsClient;
+    private final AwsSqsClient spotSqsClient;
     private final OidcAPI oidcAPI;
     private final OrchSessionService orchSessionService;
 
     public IPVCallbackHelper(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.objectMapper = SerializationService.getInstance();
-        this.sessionService = new SessionService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueURI(),
                         configurationService.getSqsEndpointURI());
-        this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
-        this.oidcAPI = new OidcAPI(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-    }
-
-    public IPVCallbackHelper(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
-        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.objectMapper = SerializationService.getInstance();
-        this.sessionService = new SessionService(configurationService, redis);
-        this.sqsClient =
+        this.spotSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
-                        configurationService.getSpotQueueURI(),
+                        configurationService.getSpotRequestQueueURI(),
                         configurationService.getSqsEndpointURI());
         this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         this.oidcAPI = new OidcAPI(configurationService);
@@ -107,23 +90,23 @@ public class IPVCallbackHelper {
             AuditService auditService,
             AuthCodeResponseGenerationService authCodeResponseService,
             OrchAuthCodeService orchAuthCodeService,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            DynamoClientService dynamoClientService,
+            Metrics metrics,
+            ConfigurationService configurationService,
             DynamoIdentityService dynamoIdentityService,
             SerializationService objectMapper,
-            SessionService sessionService,
             AwsSqsClient sqsClient,
+            AwsSqsClient spotSqsClient,
             OidcAPI oidcApi,
             OrchSessionService orchSessionService) {
         this.auditService = auditService;
         this.authCodeResponseService = authCodeResponseService;
         this.orchAuthCodeService = orchAuthCodeService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.dynamoClientService = dynamoClientService;
+        this.metrics = metrics;
+        this.configurationService = configurationService;
         this.dynamoIdentityService = dynamoIdentityService;
         this.objectMapper = objectMapper;
-        this.sessionService = sessionService;
         this.sqsClient = sqsClient;
+        this.spotSqsClient = spotSqsClient;
         this.oidcAPI = oidcApi;
         this.orchSessionService = orchSessionService;
     }
@@ -178,13 +161,8 @@ public class IPVCallbackHelper {
 
     public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
             AuthenticationRequest authRequest,
-            String clientSessionId,
-            Session session,
-            String sessionId,
             OrchSessionItem orchSession,
-            String clientName,
-            Subject rpPairwiseSubject,
-            String internalPairwiseSubjectId,
+            OrchClientSessionItem clientSession,
             UserInfo userIdentityUserInfo,
             String ipAddress,
             String persistentSessionId,
@@ -192,15 +170,48 @@ public class IPVCallbackHelper {
             String email,
             String subjectId) {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
+        var clientSessionId = clientSession.getClientSessionId();
+        var clientName = clientSession.getClientName();
+        var rpPairwiseSubject = new Subject(clientSession.getRpPairwiseId());
+        var internalPairwiseSubjectId = orchSession.getInternalCommonSubjectId();
         segmentedFunctionCall(
                 "saveIdentityClaims",
                 () ->
                         saveIdentityClaimsToDynamo(
-                                clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+                                clientSessionId, rpPairwiseSubject, userIdentityUserInfo, null));
+        return generateAuthenticationResponse(
+                authRequest,
+                orchSession,
+                clientSessionId,
+                ipAddress,
+                persistentSessionId,
+                clientId,
+                clientName,
+                email,
+                subjectId,
+                rpPairwiseSubject.getValue(),
+                internalPairwiseSubjectId);
+    }
 
+    public AuthenticationSuccessResponse generateAuthenticationResponse(
+            AuthenticationRequest authRequest,
+            OrchSessionItem orchSession,
+            String clientSessionId,
+            String ipAddress,
+            String persistentSessionId,
+            String clientId,
+            String clientName,
+            String email,
+            String subjectId,
+            String rpPairwiseSubjectId,
+            String internalPairwiseSubjectId) {
         var authCode =
                 orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        clientId, clientSessionId, email, orchSession.getAuthTime());
+                        clientId,
+                        clientSessionId,
+                        email,
+                        orchSession.getAuthTime(),
+                        internalPairwiseSubjectId);
 
         var authenticationResponse =
                 new AuthenticationSuccessResponse(
@@ -211,15 +222,37 @@ public class IPVCallbackHelper {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
+        sendAuditEvent(
+                authRequest,
+                orchSession,
+                clientSessionId,
+                ipAddress,
+                persistentSessionId,
+                email,
+                subjectId,
+                rpPairwiseSubjectId,
+                internalPairwiseSubjectId,
+                authCode);
+        sendCloudwatchMetrics(orchSession, clientId, clientName);
+        authCodeResponseService.saveSession(false, orchSessionService, orchSession);
+        return authenticationResponse;
+    }
 
-        var dimensions =
-                authCodeResponseService.getDimensions(
-                        orchSession, clientName, clientSessionId, false, false);
-
+    private void sendAuditEvent(
+            AuthenticationRequest authRequest,
+            OrchSessionItem orchSession,
+            String clientSessionId,
+            String ipAddress,
+            String persistentSessionId,
+            String email,
+            String subjectId,
+            String rpPairwiseSubjectId,
+            String internalPairwiseSubjectId,
+            AuthorizationCode authCode) {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
         metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
-        metadataPairs.add(pair("rpPairwiseId", rpPairwiseSubject.getValue()));
+        metadataPairs.add(pair("rpPairwiseId", rpPairwiseSubjectId));
         metadataPairs.add(pair("authCode", authCode));
         if (authRequest.getNonce() != null) {
             metadataPairs.add(pair("nonce", authRequest.getNonce().getValue()));
@@ -230,24 +263,28 @@ public class IPVCallbackHelper {
                 authRequest.getClientID().getValue(),
                 TxmaAuditUser.user()
                         .withGovukSigninJourneyId(clientSessionId)
-                        .withSessionId(sessionId)
+                        .withSessionId(orchSession.getSessionId())
                         .withUserId(internalPairwiseSubjectId)
                         .withEmail(Optional.ofNullable(email).orElse(AuditService.UNKNOWN))
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
+    }
 
-        var isTestJourney = dynamoClientService.isTestJourney(clientSessionId, email);
-        LOG.info("Is journey a test journey: {}", isTestJourney);
+    private void sendCloudwatchMetrics(
+            OrchSessionItem orchSession, String clientId, String clientName) {
+        var dimensions =
+                authCodeResponseService.getDimensions(orchSession, clientName, clientId, false);
 
-        cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+        metrics.increment("SignIn", dimensions);
 
-        cloudwatchMetricsService.incrementSignInByClient(
-                orchSession.getIsNewAccount(), clientId, clientName, isTestJourney);
-
-        authCodeResponseService.saveSession(
-                false, sessionService, session, sessionId, orchSessionService, orchSession);
-        return authenticationResponse;
+        metrics.incrementSignInByClient(orchSession.getIsNewAccount(), clientId, clientName);
+        metrics.increment(
+                "orchIdentityJourneyCompleted",
+                Map.of(
+                        "clientName", clientName,
+                        "clientId", clientId));
+        metrics.increment("orchJourneyCompleted", Map.of("journeyType", "identity"));
     }
 
     public void queueSPOTRequest(
@@ -284,12 +321,20 @@ public class IPVCallbackHelper {
                         logIds,
                         clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);
-        sqsClient.send(spotRequestString);
+        if (configurationService.isOldSpotRequestQueueWritingEnabled()) {
+            sqsClient.send(spotRequestString);
+        }
+        if (configurationService.isNewSpotRequestQueueWritingEnabled()) {
+            spotSqsClient.send(spotRequestString);
+        }
         LOG.info("SPOT request placed on queue");
     }
 
     public void saveIdentityClaimsToDynamo(
-            String clientSessionId, Subject rpPairwiseSubject, UserInfo userIdentityUserInfo) {
+            String clientSessionId,
+            Subject rpPairwiseSubject,
+            UserInfo userIdentityUserInfo,
+            Long spotQueuedAt) {
         LOG.info("Checking for additional identity claims to save to dynamo");
         var additionalClaims = new HashMap<String, String>();
         ValidClaims.getAllValidClaims().stream()
@@ -314,6 +359,7 @@ public class IPVCallbackHelper {
                 rpPairwiseSubject.getValue(),
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),
-                ipvCoreIdentityString);
+                ipvCoreIdentityString,
+                spotQueuedAt);
     }
 }

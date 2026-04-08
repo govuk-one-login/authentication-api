@@ -1,4 +1,4 @@
-module "ipv_callback_role" {
+module "ipv_callback_role_2" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "ipv-callback-role"
@@ -9,14 +9,11 @@ module "ipv_callback_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
-    aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
-    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.spot_queue_encryption_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.identity_credentials_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     local.user_profile_encryption_policy_arn,
     aws_iam_policy.spot_queue_write_access_policy.arn
@@ -53,7 +50,6 @@ module "ipv-callback" {
     SPOT_QUEUE_URL                              = aws_sqs_queue.spot_request_queue.id
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
-    ORCH_FRONTEND_ENABLED                       = var.orch_frontend_enabled
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 
@@ -73,7 +69,7 @@ module "ipv-callback" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.ipv_callback_role.arn
+  lambda_role_arn                        = module.ipv_callback_role_2.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention

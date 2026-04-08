@@ -1,0 +1,237 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AuthTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-auth-token-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./auth-external-api/build/distributions/auth-external-api.zip
+      Handler: uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest
+      Environment:
+        Variables:
+          AUTHENTICATION_AUTHORIZATION_CALLBACK_URI: ""
+          AUTHENTICATION_BACKEND_URI: !Sub
+            - "https://${AuthExternalApi}-${AuthApiVpcEndpointId}.execute-api.${AWS::Region}.amazonaws.com/${Env}/"
+            - AuthApiVpcEndpointId:
+                Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+              Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          ORCHESTRATION_BACKEND_URI: !Sub
+            - "https://${AuthExternalApi}-${orchApiVpcEndpointId}.execute-api.${AWS::Region}.amazonaws.com/${Env}/"
+            - orchApiVpcEndpointId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  orchApiVpcEndpointId,
+                  DefaultValue: "",
+                ]
+              Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ORCH_CLIENT_ID: "orchestrationAuth"
+          ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                orchStubToAuthSigningPublicKey,
+                DefaultValue: "",
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                orchStubToAuthSigningPublicKey,
+                DefaultValue: "",
+              ]
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthExternalApiTxMAAuditQueue.QueueUrl
+          AUTH_JWKS_URL: !Sub
+            - "${OrchApiBaseUrl}/.well-known/auth-jwks.json"
+            - OrchApiBaseUrl: !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    OrchApiBaseUrl,
+                    DefaultValue: "",
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    OrchApiBaseUrl,
+                    DefaultValue: "",
+                  ]
+      LoggingConfig:
+        LogGroup: !Ref AuthTokenFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditEventsSnsPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref DynamoAuthCodeStoreAccessPolicy
+        - !Ref DynamoAccessTokenStoreAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref AuthExternalApiTxMAAuditQueueAccessPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+
+  AuthTokenFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AuthTokenFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  AuthTokenEndpointResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AuthExternalApi
+      ParentId: !GetAtt AuthExternalApi.RootResourceId
+      PathPart: "token"
+
+  AuthTokenEndpointMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref AuthTokenEndpointResource
+      RestApiId: !Ref AuthExternalApi
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthTokenFunction.Arn}:active/invocations
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+
+  AuthTokenFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-auth-token-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AuthTokenFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/auth-token.yaml
+
+  AuthTokenFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-auth-token-lambda. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ErrorRateThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmErrorRateThreshold,
+              DefaultValue: 10,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "auth-token",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-auth-token-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-auth-token-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-auth-token-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmErrorRateThreshold,
+          DefaultValue: 10,
+        ]
+
+  AuthTokenFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthTokenFunctionLogGroup

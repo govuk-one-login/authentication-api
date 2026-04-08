@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import org.apache.logging.log4j.LogManager;
@@ -12,20 +13,24 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.authentication.entity.Application.AUTHENTICATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
@@ -34,8 +39,10 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.maybeGetCountry;
 
-public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
+public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
     private static final Logger LOG = LogManager.getLogger(NotificationHandler.class);
 
@@ -43,14 +50,20 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private final Json objectMapper = SerializationService.getInstance();
     private final S3Client s3Client;
     private final ConfigurationService configurationService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService;
 
     public NotificationHandler(
             NotificationService notificationService,
             ConfigurationService configurationService,
-            S3Client s3Client) {
+            S3Client s3Client,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            InternationalSmsSendLimitService internationalSmsSendLimitService) {
         this.notificationService = notificationService;
         this.configurationService = configurationService;
         this.s3Client = s3Client;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
     }
 
     public NotificationHandler() {
@@ -70,16 +83,22 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         this.notificationService = new NotificationService(client, configurationService);
         this.s3Client =
                 S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
     }
 
     @Override
-    public Void handleRequest(SQSEvent event, Context context) {
+    public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
         return segmentedFunctionCall(
                 "frontend-api::" + getClass().getSimpleName(),
-                () -> notificationRequestHandler(event, context));
+                () -> notificationRequestHandler(event));
     }
 
-    public Void notificationRequestHandler(SQSEvent event, Context context) {
+    public SQSBatchResponse notificationRequestHandler(SQSEvent event) {
+        attachTraceId();
+
+        var failures = new ArrayList<SQSBatchResponse.BatchItemFailure>();
 
         if (event != null && event.getRecords() != null) {
             LOG.info("Processing Notification batch size: {}", event.getRecords().size());
@@ -90,9 +109,17 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             LOG.info(
                     "Processing NotifyRequest with reference: {}",
                     request.getUniqueNotificationReference());
-            sendNotifyMessage(request);
+            try {
+                sendNotifyMessage(request);
+            } catch (Exception e) {
+                LOG.error(
+                        "Error processing NotifyRequest with reference: {}",
+                        request.getUniqueNotificationReference(),
+                        e);
+                failures.add(new SQSBatchResponse.BatchItemFailure(msg.getMessageId()));
+            }
         }
-        return null;
+        return new SQSBatchResponse(failures);
     }
 
     private NotifyRequest parseNotifyRequest(SQSMessage msg) {
@@ -125,23 +152,39 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     notifyRequest.getCode(),
                     "email-address",
                     notifyRequest.getDestination());
-            case TERMS_AND_CONDITIONS_BULK_EMAIL -> Collections.emptyMap();
+            case TERMS_AND_CONDITIONS_BULK_EMAIL,
+                    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL -> Collections.emptyMap();
         };
     }
 
     private void sendNotifyMessage(NotifyRequest request) {
 
-        if (request.getNotificationType() == TERMS_AND_CONDITIONS_BULK_EMAIL) {
-            LOG.info("Not dispatching terms and conditions bulk email.");
+        if (request.getNotificationType() == TERMS_AND_CONDITIONS_BULK_EMAIL
+                || request.getNotificationType()
+                        == INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL) {
+            LOG.info("Not dispatching bulk email via NotificationHandler.");
             return;
+        }
+
+        var reference =
+                String.format(
+                        "%s/%s",
+                        request.getUniqueNotificationReference(), request.getClientSessionId());
+        var isTestDestination =
+                isTestDestination(request.getNotificationType(), request.getDestination());
+
+        if (isPhoneNotification(request.getNotificationType())) {
+            if (!internationalSmsSendLimitService.canSendSms(request.getDestination())) {
+                LOG.warn(
+                        "International SMS send limit reached. NotificationType: {}, reference: {}",
+                        request.getNotificationType(),
+                        reference);
+                return;
+            }
         }
 
         try {
             var personalisation = getPersonalisation(request);
-            var reference =
-                    String.format(
-                            "%s/%s",
-                            request.getUniqueNotificationReference(), request.getClientSessionId());
 
             if (request.getNotificationType().isEmail()) {
                 notificationService.sendEmail(
@@ -155,29 +198,59 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         personalisation,
                         request.getNotificationType(),
                         reference);
+                internationalSmsSendLimitService.recordSmsSent(request.getDestination(), reference);
             }
-            writeTestClientOtpToS3(
-                    request.getNotificationType(), request.getCode(), request.getDestination());
+
+            if (isTestDestination) {
+                writeTestClientOtpToS3(
+                        request.getNotificationType(), request.getCode(), request.getDestination());
+            }
+            cloudwatchMetricsService.emitMetricForNotification(
+                    request.getNotificationType(),
+                    request.getDestination(),
+                    isTestDestination,
+                    AUTHENTICATION);
         } catch (NotificationClientException e) {
             LOG.error(
-                    "Error sending with Notify using NotificationType: {}",
-                    request.getNotificationType());
+                    "Error sending with Notify using NotificationType: {}, reference: {}",
+                    request.getNotificationType(),
+                    reference,
+                    e);
+
+            if (e.getHttpResult() == 429 && isPhoneNotification(request.getNotificationType())) {
+                LOG.error("Notify response was a 429");
+
+                String destinationType =
+                        maybeGetCountry(request.getDestination())
+                                .map(country -> "44".equals(country) ? "DOMESTIC" : "INTERNATIONAL")
+                                .orElse("UNKNOWN");
+
+                cloudwatchMetricsService.emitSmsLimitExceededMetric(
+                        isTestDestination, AUTHENTICATION, destinationType);
+            }
+
+            cloudwatchMetricsService.emitMetricForNotificationError(
+                    request.getNotificationType(),
+                    request.getDestination(),
+                    isTestDestination,
+                    AUTHENTICATION,
+                    e);
 
             if (isPhoneNotification(request.getNotificationType())) {
-                String countryCode =
-                        PhoneNumberHelper.maybeGetCountry(request.getDestination())
-                                .orElse("unable to parse country");
                 throw new RuntimeException(
                         String.format(
-                                "Error sending Notify SMS with NotificationType: %s and country code: %s",
-                                request.getNotificationType(), countryCode),
+                                "Error sending Notify SMS with NotificationType: %s and country code: %s, reference: %s",
+                                request.getNotificationType(),
+                                maybeGetCountry(request.getDestination())
+                                        .orElse("unable to parse country"),
+                                reference),
                         e);
             }
 
             throw new RuntimeException(
                     String.format(
-                            "Error sending Notify email with NotificationType: %s",
-                            request.getNotificationType()),
+                            "Error sending Notify email with NotificationType: %s, reference: %s",
+                            request.getNotificationType(), reference),
                     e);
         }
     }
@@ -200,7 +273,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 .toString();
     }
 
-    void writeTestClientOtpToS3(NotificationType notificationType, String otp, String destination) {
+    private boolean isTestDestination(NotificationType notificationType, String destination) {
         var isNotifyDestination =
                 configurationService.getNotifyTestDestinations().contains(destination);
         var isOTPNotificationType =
@@ -211,23 +284,26 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                 RESET_PASSWORD_WITH_CODE,
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                         .contains(notificationType);
-        if (isNotifyDestination && isOTPNotificationType) {
-            LOG.info(
-                    "Notify Test Destination used in request. Writing to S3 bucket for notification type {}",
-                    notificationType);
-            String bucketName = configurationService.getSmoketestBucketName();
-            try {
-                var putObjectRequest =
-                        PutObjectRequest.builder().bucket(bucketName).key(destination).build();
-                s3Client.putObject(putObjectRequest, RequestBody.fromString(otp));
-                if ("integration".equals(configurationService.getEnvironment())) {
-                    LOG.info("Writing OTP to S3 bucket: {}", otp);
-                }
-            } catch (Exception e) {
-                LOG.error(
-                        "Exception thrown when writing to S3 bucket: {}",
-                        Arrays.toString(e.getStackTrace()));
+        return isNotifyDestination && isOTPNotificationType;
+    }
+
+    private void writeTestClientOtpToS3(
+            NotificationType notificationType, String otp, String destination) {
+        LOG.info(
+                "Notify Test Destination used in request. Writing to S3 bucket for notification type {}",
+                notificationType);
+        String bucketName = configurationService.getSmoketestBucketName();
+        try {
+            var putObjectRequest =
+                    PutObjectRequest.builder().bucket(bucketName).key(destination).build();
+            s3Client.putObject(putObjectRequest, RequestBody.fromString(otp));
+            if ("integration".equals(configurationService.getEnvironment())) {
+                LOG.info("Writing OTP to S3 bucket: {}", otp);
             }
+        } catch (Exception e) {
+            LOG.error(
+                    "Exception thrown when writing to S3 bucket: {}",
+                    Arrays.toString(e.getStackTrace()));
         }
     }
 }

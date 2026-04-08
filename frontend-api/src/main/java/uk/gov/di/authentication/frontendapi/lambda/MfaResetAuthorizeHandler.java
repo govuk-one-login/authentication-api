@@ -23,20 +23,19 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.MalformedURLException;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.MFA_RESET_JAR_GENERATION_ERROR;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -52,8 +51,6 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
 
     public MfaResetAuthorizeHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             IPVReverificationService ipvReverificationService,
             AuditService auditService,
@@ -63,8 +60,6 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         super(
                 MfaResetRequest.class,
                 configurationService,
-                sessionService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.ipvReverificationService = ipvReverificationService;
@@ -83,7 +78,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
 
     public MfaResetAuthorizeHandler(RedisConnectionService redisConnectionService)
             throws MalformedURLException {
-        super(MfaResetRequest.class, ConfigurationService.getInstance(), redisConnectionService);
+        super(MfaResetRequest.class, ConfigurationService.getInstance());
         KmsConnectionService kmsConnectionService = new KmsConnectionService(configurationService);
         JwtService jwtService = new JwtService(kmsConnectionService);
         TokenService tokenService =
@@ -143,17 +138,9 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     userContext
                             .getUserProfile()
                             .orElseThrow(() -> new RuntimeException("UserProfile not found"));
-            var clientRegistry =
-                    userContext
-                            .getClient()
-                            .orElseThrow(() -> new RuntimeException("ClientRegistry not found"));
 
             String rpPairwiseId =
-                    ClientSubjectHelper.getSubject(
-                                    userProfile,
-                                    clientRegistry,
-                                    authenticationService,
-                                    configurationService.getInternalSectorUri())
+                    ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService)
                             .toString();
 
             authSessionService.updateSession(
@@ -165,14 +152,17 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     AUTH_REVERIFY_AUTHORISATION_REQUESTED,
                     auditContext,
                     pair("rpPairwiseId", rpPairwiseId),
-                    pair("journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+                    pair(
+                            AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                            JourneyType.ACCOUNT_RECOVERY.getValue()));
             cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
             return generateApiGatewayProxyResponse(
                     200, new MfaResetResponse(ipvReverificationRequestURI));
         } catch (Json.JsonException | RuntimeException e) {
             LOG.error("Error building the IPV reverification request.", e);
-            return generateApiGatewayProxyResponse(500, ERROR_1060.getMessage());
+            return generateApiGatewayProxyResponse(
+                    500, MFA_RESET_JAR_GENERATION_ERROR.getMessage());
         }
     }
 }

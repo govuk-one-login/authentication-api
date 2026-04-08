@@ -1,0 +1,330 @@
+openapi: "3.0.1"
+
+info:
+  title: "account-data-api"
+  version: 0.0.3
+  description: Account Data API
+
+paths:
+  /accounts/{publicSubjectId}/authenticators/passkeys:
+    parameters:
+      - name: publicSubjectId
+        in: path
+        description: Public Subject ID
+        required: true
+        schema:
+          type: string
+    get:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysRetrieveFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - Passkey
+      summary: Retrieve all passkeys for a user
+      description: Get all passkeys registered to a user account
+      responses:
+        "200":
+          description: Passkeys retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  passkeys:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PasskeyAuthenticatorRead"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysCreateFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - Passkey
+      summary: Create a passkey for a user
+      description: Register a new passkey authenticator for a user account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyAuthenticatorCreate"
+      responses:
+        "201":
+          description: Passkey created successfully
+        "400":
+          description: Bad request - malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 4000
+                    message: "Invalid request body"
+                missing_subject_id:
+                  value:
+                    code: 4001
+                    message: "Missing required subject id"
+        "409":
+          description: Passkey already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                passkey_already_exists:
+                  value:
+                    code: 4090
+                    message: "Passkey already exists"
+        "422":
+          description: Unprocessable entity - invalid field values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_credential_format:
+                  value:
+                    code: 4220
+                    message: "Invalid credential format"
+                invalid_aaguid_format:
+                  value:
+                    code: 4221
+                    message: "Invalid AAGUID format"
+                invalid_attestation_signature:
+                  value:
+                    code: 4222
+                    message: "Invalid attestation signature"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
+
+  /accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}:
+    parameters:
+      - name: publicSubjectId
+        in: path
+        description: Public Subject ID
+        required: true
+        schema:
+          type: string
+      - name: passkeyId
+        in: path
+        description: Passkey ID
+        required: true
+        schema:
+          type: string
+    patch:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysUpdateFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - Passkey
+      summary: Update a passkey
+      description: Update passkey metadata such as last used timestamp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyAuthenticatorUpdate"
+      responses:
+        "204":
+          description: Passkey updated successfully
+        "400":
+          description: Bad request - malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 4000
+                    message: "Invalid request body"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                passkey_not_found:
+                  value:
+                    code: 4040
+                    message: "Passkey not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
+    delete:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PasskeysDeleteFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - Passkey
+      summary: Delete a passkey
+      description: Remove a passkey authenticator from a user account
+      responses:
+        "204":
+          description: Passkey deleted successfully
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                passkey_not_found:
+                  value:
+                    code: 4040
+                    message: "Passkey not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
+
+components:
+  securitySchemes:
+    authorise-access-token:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+  schemas:
+    PasskeyAuthenticatorCreate:
+      type: object
+      required:
+        - id
+        - credential
+        - aaguid
+        - isAttested
+        - signCount
+        - transports
+        - isBackUpEligible
+        - isBackedUp
+        - isResidentKey
+      properties:
+        id:
+          type: string
+          description: Credential ID
+        credential:
+          type: string
+          description: Public key in COSE format, encoded in Base64URL
+        aaguid:
+          type: string
+          description: Authenticator Attestation GUID (AAGUID)
+        isAttested:
+          type: boolean
+          description: Has attestation been provided and verified
+        signCount:
+          type: integer
+          description: Sign counter provided with passkey (usually attestable ones only)
+        transports:
+          type: array
+          items:
+            type: string
+          description: Transport mechanisms supported (e.g. ble, usb, internal, nfc)
+        isBackUpEligible:
+          type: boolean
+          description: Is the passkey eligible for cloud-sync
+        isBackedUp:
+          type: boolean
+          description: Is the passkey currently synced
+        isResidentKey:
+          type: boolean
+          description: Is the passkey a resident key (stored on the device)
+
+    PasskeyAuthenticatorUpdate:
+      type: object
+      properties:
+        signCount:
+          type: integer
+          description: Updated sign counter
+        lastUsedAt:
+          type: string
+          format: date-time
+          description: The timestamp for when the passkey was last used
+
+    PasskeyAuthenticatorRead:
+      allOf:
+        - $ref: "#/components/schemas/PasskeyAuthenticatorCreate"
+        - type: object
+          properties:
+            createdAt:
+              type: string
+              format: date-time
+              description: The timestamp the passkey was created
+            lastUsedAt:
+              type: string
+              format: date-time
+              description: The timestamp for when the passkey was last used
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: Error code
+          example: 1001
+        message:
+          type: string
+          description: Error message
+          example: User not found
+      required:
+        - code
+        - message

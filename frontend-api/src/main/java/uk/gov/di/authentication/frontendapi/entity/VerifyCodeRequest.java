@@ -9,8 +9,5 @@ import uk.gov.di.authentication.shared.validation.Required;
 public record VerifyCodeRequest(
         @SerializedName("notificationType") @Expose @Required NotificationType notificationType,
         @SerializedName("code") @Expose @Required String code,
-        @SerializedName("journeyType") @Expose JourneyType journeyType) {
-    public VerifyCodeRequest(NotificationType notificationType, String code) {
-        this(notificationType, code, null);
-    }
-}
+        @SerializedName("journeyType") @Expose JourneyType journeyType,
+        @SerializedName("mfaMethodId") @Expose String mfaMethodId) {}

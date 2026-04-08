@@ -13,6 +13,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_CAPACITY_REQUESTED;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class IPVCapacityHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -38,7 +39,7 @@ public class IPVCapacityHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-
+        attachTraceId();
         LOG.info("Request received to IPVCapacityHandler");
         auditService.submitAuditEvent(
                 IPV_CAPACITY_REQUESTED, AuditService.UNKNOWN, TxmaAuditUser.user());

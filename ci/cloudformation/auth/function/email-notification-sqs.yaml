@@ -1,0 +1,446 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  EmailNotificationQueueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-email-notification-sqs-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.NotificationHandler::handleRequest
+      Environment:
+        Variables:
+          VERIFY_EMAIL_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/verify_email_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          VERIFY_PHONE_NUMBER_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/verify_phone_number_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MFA_SMS_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/mfa_sms_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/password_reset_confirmation_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/account_created_confirmation_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RESET_PASSWORD_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/reset_password_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RESET_PASSWORD_WITH_CODE_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/reset_password_with_code_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          PASSWORD_RESET_CONFIRMATION_SMS_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/password_reset_confirmation_sms_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/verify_change_how_get_security_codes_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/change_how_get_security_codes_confirmation_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          FRONTEND_BASE_URL: !Sub
+            - "${BaseUrl}/"
+            - BaseUrl:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  frontendBaseUrl,
+                ]
+          ACCOUNT_MANAGEMENT_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://${SubEnvironment}.dev.account.gov.uk/"
+              - !Sub "https://${Environment}.account.gov.uk/"
+            - "https://account.gov.uk/"
+          RESET_PASSWORD_ROUTE: "reset-password?code="
+          CONTACT_US_LINK_ROUTE: "contact-us"
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          GOV_UK_ACCOUNTS_URL: "https://www.gov.uk/account"
+          NOTIFY_API_KEY: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/notify_api_key}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          NOTIFY_TEST_DESTINATIONS: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/notify_test_destinations}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          SMOKETEST_SMS_BUCKET_NAME: !Sub
+            - ${env}-smoke-new-test-sms-codes
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          INTERNATIONAL_SMS_NUMBER_SEND_LIMIT: !Sub
+            - "{{resolve:ssm:${env}-sms-international-number-send-limit}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EmailNotificationQueue.Arn
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+      LoggingConfig:
+        LogGroup: !Ref EmailNotificationQueueFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref S3SmokeTestPolicy
+        - !Ref DynamoInternationalNumberSendCountReadWriteAccessPolicy
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
+            ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref HttpsEgressSecurityGroup
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder:
+          !If [
+            EnforceLambdaDeploymentOrder,
+            !Ref OrchAuthCodeFunctionAliasactive,
+            "",
+          ]
+
+  EmailNotificationQueueFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-email-notification-sqs-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EmailNotificationQueueFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/email-notification-sqs.yaml
+
+  EmailNotificationQueueFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-email-notification-sqs-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref EmailNotificationQueueFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-email-notification-sqs-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  EmailNotificationQueueFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-email-notification-sqs-lambda function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 20,
+            ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "email-notification-sqs",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-email-notification-sqs-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-email-notification-sqs-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 20,
+        ]
+
+  EmailNotificationQueueFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-email-notification-sqs-lambda. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ErrorRateThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmErrorRateThreshold,
+              DefaultValue: 10,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "email-notification-sqs",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-email-notification-sqs-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-email-notification-sqs-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-email-notification-sqs-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmErrorRateThreshold,
+          DefaultValue: 10,
+        ]
+
+  EmailNotificationQueueFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref EmailNotificationQueueFunctionLogGroup
+
+  DomesticSmsLimitExceededAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-${Prefix}domestic-sms-limit-exceeded-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          Prefix: !If [IsProduction, "P1-", ""]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 15
+      MetricName: SmsLimitExceeded
+      Namespace: Authentication
+      Period: 60
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Name: Application
+          Value: Authentication
+        - Name: IsTest
+          Value: false
+        - Name: SmsDestinationType
+          Value: DOMESTIC
+        - Name: LogGroup
+          Value: !Ref EmailNotificationQueueFunction
+        - Name: ServiceName
+          Value: !Ref EmailNotificationQueueFunction
+        - Name: ServiceType
+          Value: "AWS::Lambda::Function"
+      AlarmDescription: !Sub
+        - "${Prefix}Domestic SMS daily limit exceeded (${Env}). Received HTTP 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          Prefix: !If [IsProduction, "CRITICAL: ", ""]
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !If
+            - IsProduction
+            - !Sub "arn:aws:sns:eu-west-2:${AWS::AccountId}:production-pagerduty-p1-alerts"
+            - !Sub
+              - "{{resolve:ssm:/deploy/${Env}/slack_alert_notification_topic_arn}}"
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - !Ref AWS::NoValue
+
+  InternationalSmsLimitExceededAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-${Prefix}international-sms-limit-exceeded-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          Prefix: !If [IsProduction, "P1-", ""]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 20
+      MetricName: SmsLimitExceeded
+      Namespace: Authentication
+      Period: 60
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Name: Application
+          Value: Authentication
+        - Name: IsTest
+          Value: false
+        - Name: SmsDestinationType
+          Value: INTERNATIONAL
+        - Name: LogGroup
+          Value: !Ref EmailNotificationQueueFunction
+        - Name: ServiceName
+          Value: !Ref EmailNotificationQueueFunction
+        - Name: ServiceType
+          Value: "AWS::Lambda::Function"
+      AlarmDescription: !Sub
+        - "${Prefix}International SMS daily limit exceeded (${Env}). Received HTTP 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          Prefix: !If [IsProduction, "CRITICAL: ", ""]
+
+  EmailNotificationQueueFunctionScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Condition: NotSubEnvironment
+    # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
+    DependsOn: EmailNotificationQueueFunctionAliasactive
+    Properties:
+      MinCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMinConcurrency,
+          DefaultValue: 0,
+        ]
+      MaxCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMaxConcurrency,
+          DefaultValue: 5,
+        ]
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency"
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [
+              6,
+              !Split [":", !GetAtt EmailNotificationQueueFunction.Arn],
+            ]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+
+  EmailNotificationQueueFunctionAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Condition: NotSubEnvironment
+    DependsOn: EmailNotificationQueueFunctionScalableTarget
+    Properties:
+      PolicyName: !Sub
+        - "LambdaProvisionedConcurrency:${Env}-email-notification-sqs-lambda"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyType: TargetTrackingScaling
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [
+              6,
+              !Split [":", !GetAtt EmailNotificationQueueFunction.Arn],
+            ]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
+        TargetValue:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaAutoscalingTargetValue,
+            DefaultValue: "0.6",
+          ]

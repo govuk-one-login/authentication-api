@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
@@ -14,24 +15,32 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class TokenValidationServiceTest {
 
     private final JwksService jwksService = mock(JwksService.class);
+    private final RemoteJwksService accessTokenJwksService = mock(RemoteJwksService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final TokenValidationService tokenValidationService =
-            new TokenValidationService(jwksService, configurationService);
+            new TokenValidationService(jwksService, accessTokenJwksService, configurationService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final List<String> REFRESH_SCOPES = List.of("openid", "email", "offline_access");
@@ -41,11 +50,17 @@ class TokenValidationServiceTest {
     private JWSSigner signer;
     private ECKey ecJWK;
 
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(TokenValidationService.class);
+
     @BeforeEach
     void setUp() throws JOSEException {
         ecJWK = generateECKeyPair();
         signer = new ECDSASigner(ecJWK);
-        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(ecJWK.toPublicJWK());
+        when(accessTokenJwksService.retrieveJwkFromURLWithKeyId(any()))
+                .thenReturn(ecJWK.toPublicJWK());
+        when(configurationService.getEnvironment()).thenReturn("dev");
     }
 
     @Test
@@ -63,8 +78,71 @@ class TokenValidationServiceTest {
     }
 
     @Test
+    void shouldSuccessfullyValidateTestAccessToken() throws JOSEException {
+        ECKey testEcJWK = generateECKeyPair();
+        JWSSigner signer = new ECDSASigner(testEcJWK);
+        SignedJWT signedTestAccessToken = createSignedAccessToken(signer);
+
+        when(configurationService.isTestSigningKeyEnabled()).thenReturn(true);
+        when(jwksService.getPublicTestTokenJwkWithOpaqueId()).thenReturn(testEcJWK.toPublicJWK());
+
+        assertTrue(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedTestAccessToken.serialize())));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Token signature validated using test key")));
+    }
+
+    @Test
+    void shouldSuccessfullyValidateRealAccessTokenWhenTestAccessTokenExists() {
+        ECKey testEcJWK = generateECKeyPair();
+        SignedJWT signedAccessToken = createSignedAccessToken(signer);
+
+        when(configurationService.isTestSigningKeyEnabled()).thenReturn(true);
+        when(jwksService.getPublicTestTokenJwkWithOpaqueId()).thenReturn(testEcJWK.toPublicJWK());
+
+        assertTrue(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedAccessToken.serialize())));
+        assertThat(
+                logging.events(),
+                not(hasItem(withMessageContaining("Token signature validated using test key"))));
+    }
+
+    @Test
+    void shouldFailToValidateTokenSignedWithDifferentKeyWhenTestAccessTokenExists()
+            throws JOSEException {
+        ECKey testEcJWK = generateECKeyPair();
+
+        ECKey someOtherJwk = generateECKeyPair();
+        JWSSigner signer = new ECDSASigner(someOtherJwk);
+        SignedJWT signedAccessTokenWithDifferentKey = createSignedAccessToken(signer);
+
+        when(configurationService.isTestSigningKeyEnabled()).thenReturn(true);
+        when(jwksService.getPublicTestTokenJwkWithOpaqueId()).thenReturn(testEcJWK.toPublicJWK());
+
+        assertFalse(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedAccessTokenWithDifferentKey.serialize())));
+    }
+
+    @Test
+    void shouldFailToValidateTokenWhenNoKeysFoundOnJwksEndpoint() throws KeySourceException {
+        when(accessTokenJwksService.retrieveJwkFromURLWithKeyId(any()))
+                .thenThrow(new KeySourceException("No keys found"));
+
+        SignedJWT signedTestAccessToken = createSignedAccessToken(signer);
+
+        assertFalse(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedTestAccessToken.serialize())));
+    }
+
+    @Test
     void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
+
         assertTrue(
                 tokenValidationService.validateAccessTokenSignature(
                         new BearerAccessToken(signedAccessToken.serialize())));
@@ -76,7 +154,7 @@ class TokenValidationServiceTest {
         var rsaSigner = new RSASSASigner(rsaKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+        when(accessTokenJwksService.retrieveJwkFromURLWithKeyId(any())).thenReturn(rsaKey);
 
         SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(

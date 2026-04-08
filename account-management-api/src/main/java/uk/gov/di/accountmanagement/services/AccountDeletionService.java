@@ -20,8 +20,10 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
@@ -57,6 +59,16 @@ public class AccountDeletionService {
             Optional<String> txmaAuditEncoded,
             AccountDeletionReason reason)
             throws Json.JsonException {
+        removeAccount(input, userProfile, txmaAuditEncoded, reason, true);
+    }
+
+    public void removeAccount(
+            Optional<APIGatewayProxyRequestEvent> input,
+            UserProfile userProfile,
+            Optional<String> txmaAuditEncoded,
+            AccountDeletionReason reason,
+            boolean sendNotification)
+            throws Json.JsonException {
         LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -69,16 +81,18 @@ public class AccountDeletionService {
         LOG.info("Deleting user account");
         dynamoDeleteService.deleteAccount(email, internalCommonSubjectIdentifier.getValue());
 
-        try {
-            LOG.info("User account removed. Adding message to SQS queue");
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            email,
-                            NotificationType.DELETE_ACCOUNT,
-                            LocaleHelper.SupportedLanguage.EN);
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-        } catch (Exception e) {
-            LOG.error("Failed to send account deletion email: ", e);
+        if (sendNotification) {
+            try {
+                LOG.info("User account removed. Adding notification message to SQS queue");
+                NotifyRequest notifyRequest =
+                        new NotifyRequest(
+                                email,
+                                NotificationType.DELETE_ACCOUNT,
+                                LocaleHelper.SupportedLanguage.EN);
+                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            } catch (Exception e) {
+                LOG.error("Failed to send account deletion email: ", e);
+            }
         }
 
         String persistentSessionID = AuditService.UNKNOWN;
@@ -121,9 +135,13 @@ public class AccountDeletionService {
                             ipAddress,
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
-                            txmaAuditEncoded);
+                            txmaAuditEncoded,
+                            new ArrayList<>());
             auditService.submitAuditEvent(
-                    AUTH_DELETE_ACCOUNT, auditContext, pair("account_deletion_reason", reason));
+                    AUTH_DELETE_ACCOUNT,
+                    auditContext,
+                    AUDIT_EVENT_COMPONENT_ID_AUTH,
+                    pair("account_deletion_reason", reason));
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

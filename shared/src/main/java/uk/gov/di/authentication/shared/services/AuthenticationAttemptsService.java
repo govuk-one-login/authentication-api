@@ -7,7 +7,9 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class AuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
@@ -48,21 +50,57 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
         if (authenticationAttemptRecord.isEmpty()) {
             return 0;
         }
-        return authenticationAttemptRecord.get().getCount();
+
+        int count = authenticationAttemptRecord.get().getCount();
+
+        // TODO remove temporary ZDD measure to sum deprecated count types
+        if (countType.equals(CountType.ENTER_MFA_CODE)) {
+            count +=
+                    get(internalSubjectId, buildSortKey(journeyType, CountType.ENTER_SMS_CODE))
+                                    .filter(t -> t.getTimeToLive() > currentTimestamp)
+                                    .map(AuthenticationAttempts::getCount)
+                                    .orElse(0)
+                            + get(
+                                            internalSubjectId,
+                                            buildSortKey(
+                                                    journeyType, CountType.ENTER_AUTH_APP_CODE))
+                                    .filter(t -> t.getTimeToLive() > currentTimestamp)
+                                    .map(AuthenticationAttempts::getCount)
+                                    .orElse(0);
+        }
+
+        return count;
     }
 
-    public Map<CountType, Integer> getCountsByJourney(
-            String internalSubjectId, JourneyType journeyType) {
+    public Map<CountType, Integer> getCountsByJourneyForIdentifiers(
+            List<String> identifiers, JourneyType journeyType) {
         Map<CountType, Integer> results = new EnumMap<>(CountType.class);
+        var identifierList = identifiers.stream().filter(Objects::nonNull).distinct().toList();
         Arrays.stream(CountType.values())
+                // TODO remove temporary ZDD measure to sum deprecated count types
+                .filter(t -> t != CountType.ENTER_SMS_CODE && t != CountType.ENTER_AUTH_APP_CODE)
                 .forEach(
                         countType -> {
-                            var count = getCount(internalSubjectId, journeyType, countType);
+                            var count =
+                                    identifierList.stream()
+                                            .mapToInt(
+                                                    identifier ->
+                                                            getCount(
+                                                                    identifier,
+                                                                    journeyType,
+                                                                    countType))
+                                            .sum();
                             if (count > 0) {
                                 results.put(countType, count);
                             }
                         });
+
         return results;
+    }
+
+    public Map<CountType, Integer> getCountsByJourney(
+            String internalSubjectId, JourneyType journeyType) {
+        return getCountsByJourneyForIdentifiers(Arrays.asList(internalSubjectId), journeyType);
     }
 
     // This should only be used in specific journeys (e.g. reauth) where it's possible that a
@@ -70,18 +108,8 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
     // can go through a journey, and have counts initially stored against a pairwise id
     public Map<CountType, Integer> getCountsByJourneyForSubjectIdAndRpPairwiseId(
             String internalSubjectId, String rpPairwiseId, JourneyType journeyType) {
-        Map<CountType, Integer> results = new EnumMap<>(CountType.class);
-        Arrays.stream(CountType.values())
-                .forEach(
-                        countType -> {
-                            var count =
-                                    getCount(internalSubjectId, journeyType, countType)
-                                            + getCount(rpPairwiseId, journeyType, countType);
-                            if (count > 0) {
-                                results.put(countType, count);
-                            }
-                        });
-        return results;
+        return getCountsByJourneyForIdentifiers(
+                Arrays.asList(internalSubjectId, rpPairwiseId), journeyType);
     }
 
     public void deleteCount(

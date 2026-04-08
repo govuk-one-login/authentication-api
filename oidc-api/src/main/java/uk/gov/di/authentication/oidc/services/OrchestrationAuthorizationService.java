@@ -38,10 +38,11 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -59,46 +60,50 @@ public class OrchestrationAuthorizationService {
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private final ConfigurationService configurationService;
     private final DynamoClientService dynamoClientService;
-    private final IPVCapacityService ipvCapacityService;
     private final KmsConnectionService kmsConnectionService;
-    private final RedisConnectionService redisConnectionService;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
+    private final StateStorageService stateStorageService;
+    private final JwksService jwksService;
     private static final Logger LOG = LogManager.getLogger(OrchestrationAuthorizationService.class);
 
     public OrchestrationAuthorizationService(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
-            IPVCapacityService ipvCapacityService,
             KmsConnectionService kmsConnectionService,
-            RedisConnectionService redisConnectionService,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
+            StateStorageService stateStorageService,
+            JwksService jwksService) {
         this.configurationService = configurationService;
         this.dynamoClientService = dynamoClientService;
-        this.ipvCapacityService = ipvCapacityService;
         this.kmsConnectionService = kmsConnectionService;
-        this.redisConnectionService = redisConnectionService;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
+        this.stateStorageService = stateStorageService;
+        this.jwksService = jwksService;
     }
 
     public OrchestrationAuthorizationService(ConfigurationService configurationService) {
         this(
                 configurationService,
                 new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService),
                 new KmsConnectionService(configurationService),
-                new RedisConnectionService(configurationService),
-                new NoSessionOrchestrationService(configurationService));
+                new CrossBrowserOrchestrationService(configurationService),
+                new StateStorageService(configurationService),
+                new JwksService(
+                        configurationService, new KmsConnectionService(configurationService)));
     }
 
     public OrchestrationAuthorizationService(
-            ConfigurationService configurationService, RedisConnectionService redis) {
+            ConfigurationService configurationService,
+            KmsConnectionService kmsConnectionService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
+            StateStorageService stateStorageService) {
         this(
                 configurationService,
                 new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService),
-                new KmsConnectionService(configurationService),
-                redis,
-                new NoSessionOrchestrationService(configurationService));
+                kmsConnectionService,
+                crossBrowserOrchestrationService,
+                stateStorageService,
+                new JwksService(configurationService, kmsConnectionService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -138,7 +143,10 @@ public class OrchestrationAuthorizationService {
 
     public SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet) {
         LOG.info("Generating signed and encrypted JWT");
-        var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
+        var signingKey = jwksService.getPublicAuthSigningJwkWithOpaqueId();
+        var signingKeyAlias = configurationService.getAuthSigningKeyAlias();
+        var jwsHeader =
+                new JWSHeader.Builder(SIGNING_ALGORITHM).keyID(signingKey.getKeyID()).build();
 
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(jwtClaimsSet.toString());
@@ -146,9 +154,7 @@ public class OrchestrationAuthorizationService {
 
         var signRequestBuilder =
                 SignRequest.builder()
-                        .keyId(
-                                configurationService
-                                        .getOrchestrationToAuthenticationTokenSigningKeyAlias())
+                        .keyId(signingKeyAlias)
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256);
 
         SignRequest signRequest =
@@ -243,19 +249,11 @@ public class OrchestrationAuthorizationService {
         return PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(headers);
     }
 
-    public boolean isTestJourney(ClientID clientID, String emailAddress) {
-        var isTestJourney = dynamoClientService.isTestJourney(clientID.toString(), emailAddress);
-        LOG.info("Is journey a test journey: {}", isTestJourney);
-        return isTestJourney;
-    }
-
     public void storeState(String sessionId, String clientSessionId, State state) {
         LOG.info("Storing state");
-        redisConnectionService.saveWithExpiry(
-                AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId,
-                state.getValue(),
-                configurationService.getSessionExpiry());
-        noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
+        stateStorageService.storeState(
+                AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId, state.getValue());
+        crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
     }
 
     public boolean isJarValidationRequired(ClientRegistry client) {

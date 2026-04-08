@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
@@ -21,31 +22,30 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
-import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
+import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
+import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
+import uk.gov.di.orchestration.shared.helpers.ApiResponse;
+import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.Metrics;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
@@ -54,15 +54,17 @@ import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidatorFactory
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_GRANT_CODE;
 import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL_TOKEN_ISSUED;
+import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.OIDC_TOKEN_GENERATED;
 import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
@@ -71,64 +73,63 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(TokenHandler.class);
-
+    private static final String INTERNAL_SERVER_ERROR = "Internal server error";
     private final TokenService tokenService;
-    private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final OrchAuthCodeService orchAuthCodeService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
+    private final OrchAccessTokenService orchAccessTokenService;
+    private final OrchRefreshTokenService orchRefreshTokenService;
     private final TokenValidationService tokenValidationService;
-    private final RedisConnectionService redisConnectionService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final Json objectMapper = SerializationService.getInstance();
-
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private final Metrics metrics;
+    private final AuditService auditService;
 
     public TokenHandler(
             TokenService tokenService,
-            DynamoService dynamoService,
             ConfigurationService configurationService,
+            OrchAccessTokenService orchAccessTokenService,
+            OrchRefreshTokenService orchRefreshTokenService,
             OrchAuthCodeService orchAuthCodeService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
-            RedisConnectionService redisConnectionService,
             TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            Metrics metrics,
+            AuditService auditService) {
         this.tokenService = tokenService;
-        this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.orchAuthCodeService = orchAuthCodeService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
+        this.orchAccessTokenService = orchAccessTokenService;
+        this.orchRefreshTokenService = orchRefreshTokenService;
         this.tokenValidationService = tokenValidationService;
-        this.redisConnectionService = redisConnectionService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
+        this.auditService = auditService;
     }
 
     public TokenHandler(ConfigurationService configurationService) {
         var kms = new KmsConnectionService(configurationService);
         var oidcApi = new OidcAPI(configurationService);
-
         this.configurationService = configurationService;
-        this.redisConnectionService = new RedisConnectionService(configurationService);
+        this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
+        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
-        this.dynamoService = new DynamoService(configurationService);
+                new TokenService(
+                        configurationService,
+                        kms,
+                        orchAccessTokenService,
+                        orchRefreshTokenService,
+                        oidcApi);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.clientSessionService =
-                new ClientSessionService(configurationService, redisConnectionService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
@@ -137,30 +138,8 @@ public class TokenHandler
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
                         new ClientSignatureValidationService(configurationService));
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-    }
-
-    public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        var kms = new KmsConnectionService(configurationService);
-        var oidcApi = new OidcAPI(configurationService);
-
-        this.configurationService = configurationService;
-        this.redisConnectionService = redis;
-        this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
-        this.dynamoService = new DynamoService(configurationService);
-        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.clientSessionService =
-                new ClientSessionService(configurationService, redisConnectionService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.tokenValidationService =
-                new TokenValidationService(
-                        new JwksService(configurationService, kms), configurationService);
-        this.tokenClientAuthValidatorFactory =
-                new TokenClientAuthValidatorFactory(
-                        new DynamoClientService(configurationService),
-                        new ClientSignatureValidationService(configurationService));
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public TokenHandler() {
@@ -171,6 +150,7 @@ public class TokenHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(), () -> tokenRequestHandler(input));
@@ -192,8 +172,7 @@ public class TokenHandler
             tokenAuthenticationValidator = getTokenAuthenticationMethod(requestBody);
         } catch (TokenAuthUnsupportedMethodException e) {
             LOG.warn("Unsupported token authentication method used");
-            return generateApiGatewayProxyResponse(
-                    400, e.getErrorObject().toJSONObject().toJSONString());
+            return ApiResponse.badRequest(e.getErrorObject());
         }
 
         ClientRegistry clientRegistry;
@@ -201,8 +180,7 @@ public class TokenHandler
             clientRegistry = getClientRegistry(tokenAuthenticationValidator, input);
         } catch (TokenAuthInvalidException e) {
             LOG.warn("Unable to validate token auth method", e);
-            return generateApiGatewayProxyResponse(
-                    400, e.getErrorObject().toJSONObject().toJSONString());
+            return ApiResponse.badRequest(e.getErrorObject());
         }
 
         if (refreshTokenRequest(requestBody)) {
@@ -217,51 +195,40 @@ public class TokenHandler
                                     getSigningAlgorithm(clientRegistry)));
         }
 
+        String authCode = requestBody.get("code");
         Optional<AuthCodeExchangeData> authCodeExchangeDataMaybe;
 
         try {
-            authCodeExchangeDataMaybe =
-                    orchAuthCodeService.getExchangeDataForCode(requestBody.get("code"));
+            authCodeExchangeDataMaybe = orchAuthCodeService.getExchangeDataForCode(authCode);
         } catch (Exception e) {
             LOG.error(
                     "Failed to retrieve authorisation code from orch auth code DynamoDB store. Error: {}",
                     e.getMessage());
-            return generateApiGatewayProxyResponse(500, "Internal server error");
+            return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
         }
 
         if (authCodeExchangeDataMaybe.isEmpty()) {
             LOG.warn("Could not retrieve session data from code");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_GRANT);
         }
 
         AuthCodeExchangeData authCodeExchangeData = authCodeExchangeDataMaybe.get();
 
         if (!Objects.equals(authCodeExchangeData.getClientId(), clientRegistry.getClientID())) {
             LOG.warn("Client ID from auth code does not match client ID from request body");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_GRANT);
         }
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
         updateAttachedLogFieldToLogs(
                 GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
 
         var clientSessionId = authCodeExchangeData.getClientSessionId();
-        var clientSessionOpt = clientSessionService.getClientSession(clientSessionId);
-        if (clientSessionOpt.isEmpty()) {
-            LOG.warn("No client session found for auth code client session id");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
-        }
-        var clientSession = clientSessionOpt.get();
         var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
         if (orchClientSessionOpt.isEmpty()) {
             LOG.warn("No orch client session found for auth code client session id");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_GRANT);
         }
         var orchClientSession = orchClientSessionOpt.get();
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
@@ -273,30 +240,33 @@ public class TokenHandler
                             "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
                             orchClientSession.getAuthRequestParams(), e));
         } catch (InvalidRedirectUriException e) {
-            return generateApiGatewayProxyResponse(
-                    400, e.getErrorObject().toJSONObject().toJSONString());
+            return ApiResponse.badRequest(e.getErrorObject());
         }
 
-        if (configurationService.isPkceEnabled()) {
-            if (!isPKCEValid(
-                    Optional.ofNullable(authRequest.getCodeChallenge()),
-                    Optional.ofNullable(requestBody.get("code_verifier")))) {
-                LOG.warn("PKCE validation failed, returning invalid_grant error");
-                return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
-            }
+        if (!isPKCEValid(
+                Optional.ofNullable(authRequest.getCodeChallenge()),
+                Optional.ofNullable(requestBody.get("code_verifier")))) {
+            LOG.warn("PKCE validation failed, returning invalid_grant error");
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "PKCE code verification failed"));
         }
 
-        var tokenResponse =
-                getTokenResponse(
-                        orchClientSession,
-                        clientRegistry,
-                        authRequest,
-                        getSigningAlgorithm(clientRegistry),
-                        authCodeExchangeData);
+        OIDCTokenResponse tokenResponse;
+        try {
+            tokenResponse =
+                    getTokenResponse(
+                            orchClientSession,
+                            clientRegistry,
+                            authRequest,
+                            getSigningAlgorithm(clientRegistry),
+                            authCodeExchangeData,
+                            authCode);
+        } catch (OrchAccessTokenException | OrchRefreshTokenException e) {
+            LOG.error("Failed to process token request", e);
+            return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
+        }
 
         var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
-        clientSessionService.updateStoredClientSession(
-                clientSessionId, clientSession.setIdTokenHint(idTokenHint));
         orchClientSessionService.updateStoredClientSession(
                 orchClientSession.withIdTokenHint(idTokenHint));
 
@@ -304,11 +274,12 @@ public class TokenHandler
                 new HashMap<>(
                         Map.of(
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
-                                CLIENT.getValue(), clientRegistry.getClientID()));
-        cloudwatchMetricsService.incrementCounter(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
+                                CLIENT.getValue(), clientRegistry.getClientID(),
+                                CLIENT_NAME.getValue(), clientRegistry.getClientName()));
+        metrics.increment(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
 
         LOG.info("Successfully generated tokens");
-        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+        return ApiResponse.ok(tokenResponse);
     }
 
     private static boolean isPKCEValid(
@@ -351,8 +322,7 @@ public class TokenHandler
                 "Invalid Token Request. ErrorCode: {}. ErrorDescription: {}",
                 invalidRequestParamError.getCode(),
                 invalidRequestParamError.getDescription());
-        return generateApiGatewayProxyResponse(
-                400, invalidRequestParamError.toJSONObject().toJSONString());
+        return ApiResponse.badRequest(invalidRequestParamError);
     }
 
     private APIGatewayProxyResponseEvent processRefreshTokenRequest(
@@ -363,53 +333,66 @@ public class TokenHandler
         boolean refreshTokenSignatureValid =
                 tokenValidationService.validateRefreshTokenSignatureAndExpiry(currentRefreshToken);
         if (!refreshTokenSignatureValid) {
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_GRANT);
         }
         Subject rpPairwiseSubject;
         List<String> scopes;
-        String jti;
+        String jwtId;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
             rpPairwiseSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
-            jti = signedJwt.getJWTClaimsSet().getJWTID();
+            jwtId = signedJwt.getJWTClaimsSet().getJWTID();
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse RefreshToken");
-            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
         boolean areScopesValid =
                 tokenValidationService.validateRefreshTokenScopes(clientScopes, scopes);
         if (!areScopesValid) {
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_SCOPE);
         }
 
-        String redisKey = REFRESH_TOKEN_PREFIX + jti;
-        Optional<String> refreshToken =
-                Optional.ofNullable(redisConnectionService.popValue(redisKey));
-        RefreshTokenStore tokenStore;
+        LOG.info("Retrieving stored refresh token with jwt id {}", jwtId);
+        Optional<OrchRefreshTokenItem> orchRefreshTokenItemMaybe;
         try {
-            tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
-        } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
-            LOG.warn("Refresh token not found with given key");
-            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
-        }
-        if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
-            LOG.warn("Refresh token store does not contain Refresh token in request");
-            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
+            orchRefreshTokenItemMaybe = orchRefreshTokenService.getRefreshToken(jwtId);
+        } catch (OrchRefreshTokenException e) {
+            return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
         }
 
-        OIDCTokenResponse tokenResponse =
-                tokenService.generateRefreshTokenResponse(
-                        clientId,
-                        new Subject(tokenStore.getInternalSubjectId()),
-                        scopes,
-                        rpPairwiseSubject,
-                        new Subject(tokenStore.getInternalPairwiseSubjectId()),
-                        signingAlgorithm);
+        if (orchRefreshTokenItemMaybe.isEmpty()) {
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
+        }
+
+        OrchRefreshTokenItem orchRefreshTokenItem = orchRefreshTokenItemMaybe.get();
+        if (!orchRefreshTokenItem.getToken().equals(currentRefreshToken.getValue())) {
+            LOG.warn("Refresh token store does not contain Refresh token in request");
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
+        }
+
+        OIDCTokenResponse tokenResponse;
+        try {
+            var clientSessionId = orchRefreshTokenItem.getClientSessionId();
+            tokenResponse =
+                    tokenService.generateRefreshTokenResponse(
+                            clientId,
+                            scopes,
+                            rpPairwiseSubject,
+                            new Subject(orchRefreshTokenItem.getInternalPairwiseSubjectId()),
+                            signingAlgorithm,
+                            orchRefreshTokenItem.getAuthCode(),
+                            clientSessionId);
+        } catch (OrchAccessTokenException | OrchRefreshTokenException e) {
+            LOG.error("Failed to process refresh token", e);
+            return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
+        }
+
         LOG.info("Generating successful RefreshToken response");
-        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+        return ApiResponse.ok(tokenResponse);
     }
 
     private TokenClientAuthValidator getTokenAuthenticationMethod(Map<String, String> requestBody)
@@ -471,7 +454,8 @@ public class TokenHandler
             ClientRegistry clientRegistry,
             AuthenticationRequest authRequest,
             JWSAlgorithm signingAlgorithm,
-            AuthCodeExchangeData authCodeExchangeData) {
+            AuthCodeExchangeData authCodeExchangeData,
+            String authCode) {
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         if (authRequest.getNonce() != null) {
             additionalTokenClaims.put("nonce", authRequest.getNonce());
@@ -482,55 +466,48 @@ public class TokenHandler
 
         final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(vtr, authRequest);
 
+        String userId;
+        var clientSessionId = authCodeExchangeData.getClientSessionId();
+
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(orchClientSessionItem)) {
-            var clientDocAppSubjectId = new Subject(orchClientSessionItem.getDocAppSubjectId());
+            userId = orchClientSessionItem.getDocAppSubjectId();
+            var clientDocAppSubjectId = new Subject(userId);
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",
-                            () ->
-                                    tokenService.generateTokenResponse(
-                                            clientRegistry.getClientID(),
-                                            clientDocAppSubjectId,
-                                            authRequest.getScope(),
-                                            additionalTokenClaims,
-                                            clientDocAppSubjectId,
-                                            clientDocAppSubjectId,
-                                            finalClaimsRequest,
-                                            true,
-                                            signingAlgorithm,
-                                            authCodeExchangeData.getClientSessionId(),
-                                            vot,
-                                            null));
+                            () -> {
+                                String clientID = clientRegistry.getClientID();
+                                Scope authRequestScopes = authRequest.getScope();
+                                return tokenService.generateTokenResponse(
+                                        clientID,
+                                        authRequestScopes,
+                                        additionalTokenClaims,
+                                        clientDocAppSubjectId,
+                                        clientDocAppSubjectId,
+                                        finalClaimsRequest,
+                                        true,
+                                        signingAlgorithm,
+                                        clientSessionId,
+                                        vot,
+                                        null,
+                                        authCode);
+                            });
         } else {
-            UserProfile userProfile =
-                    dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
-            Subject rpPairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            clientRegistry,
-                            dynamoService,
-                            configurationService.getInternalSectorURI());
+            String rpPairwiseSubjectId =
+                    orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
+                            clientRegistry.getSubjectType());
+            Subject rpPairwiseSubject = new Subject(rpPairwiseSubjectId);
 
-            LOG.info(
-                    "is correct pairwiseId for client the same on clientSession as calculated: {}",
-                    Objects.equals(
-                            rpPairwiseSubject.getValue(),
-                            orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
-                                    clientRegistry.getSubjectType())));
+            userId = authCodeExchangeData.getInternalPairwiseSubjectId();
+            Subject internalPairwiseSubject = new Subject(userId);
 
-            Subject internalPairwiseSubject =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorURI(),
-                            dynamoService);
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",
                             () ->
                                     tokenService.generateTokenResponse(
                                             clientRegistry.getClientID(),
-                                            new Subject(userProfile.getSubjectID()),
                                             authRequest.getScope(),
                                             additionalTokenClaims,
                                             rpPairwiseSubject,
@@ -538,29 +515,17 @@ public class TokenHandler
                                             finalClaimsRequest,
                                             false,
                                             signingAlgorithm,
-                                            authCodeExchangeData.getClientSessionId(),
+                                            clientSessionId,
                                             vot,
-                                            authCodeExchangeData.getAuthTime()));
+                                            authCodeExchangeData.getAuthTime(),
+                                            authCode));
         }
+
+        var user =
+                TxmaAuditUser.user().withUserId(userId).withGovukSigninJourneyId(clientSessionId);
+
+        auditService.submitAuditEvent(OIDC_TOKEN_GENERATED, clientRegistry.getClientID(), user);
+
         return tokenResponse;
-    }
-
-    private APIGatewayProxyResponseEvent
-            generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse() {
-        return generateInvalidGrantCodeApiGatewayProxyResponse("Invalid Refresh token");
-    }
-
-    private APIGatewayProxyResponseEvent
-            generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse() {
-        return generateInvalidGrantCodeApiGatewayProxyResponse("PKCE code verification failed");
-    }
-
-    private APIGatewayProxyResponseEvent generateInvalidGrantCodeApiGatewayProxyResponse(
-            String description) {
-        return generateApiGatewayProxyResponse(
-                400,
-                new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, description)
-                        .toJSONObject()
-                        .toJSONString());
     }
 }

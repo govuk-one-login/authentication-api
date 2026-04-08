@@ -8,14 +8,28 @@
 For example:
 
 1. Code Review
-1. Deploy to sandpit with `./deploy-sandpit.sh -a`
+1. Deploy to a dev environment using the most appropriate [GitHub dev deployment workflow](https://github.com/govuk-one-login/authentication-api/actions), or using the deployment scripts in this repo for the old account (e.g., `./deploy-authdevs.sh -c -b --all`).
 1. Ensure that resources `x`, `y` and `z` were not changed
-1. Visit [some url](https://some.sandpit.url/to/visit)
-1. Log in
+1. Visit [some url](https://some.dev.url/to/visit)
+1. Sign in
 1. Ensure `x` message appears in a modal
 -->
 
 ## Checklist
+
+<!-- Active user journey impact
+
+It’s crucial that deploying this change to production doesn’t disrupt users with active sessions.
+
+Existing sessions may contain data that this PR treats as invalid, potentially triggering errors. For example, if you remove support for an enum value that’s already stored in the database, casting the deprecated string back to an enum must handle any errors gracefully.
+
+When deprecating session data, split the work into two PRs:
+
+1. Remove all uses of the deprecated value.
+2. After any sessions containing that data have expired, remove the value’s definition.
+-->
+
+- [ ] Deployment of this PR will not break active user journeys
 
 <!-- 🚨⚠️ Orchestration and Authentication mutual dependencies ⚠️ 🚨
 
@@ -46,6 +60,14 @@ Delete this item if this PR does not need a UCD review.
 -->
 
 - [ ] A UCD review has been performed.
+
+<!-- Pairing
+We want to make sure ensemble commits are correctly attributed to the contributors, so everyone who is not the committer should have a separate `Co-authored-by` line in the trailer of the commit.
+
+See this page for more information: https://gds-way.digital.cabinet-office.gov.uk/standards/pair-programming.html#pair-programming-and-version-control
+-->
+
+- [ ] All commits contain one or more `Co-authored-by` lines where pairing or mobbing has taken place
 
 ## Related PRs
 

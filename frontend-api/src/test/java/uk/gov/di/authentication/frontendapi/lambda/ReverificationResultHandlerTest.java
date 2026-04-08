@@ -16,26 +16,24 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.IDReverificationState;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -53,17 +51,17 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1061;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.IPV_STATE_MISMATCH;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.REVERIFICATION_RESULT_GET_ERROR;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNSUCCESSFUL_IPV_TOKEN_RESPONSE;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -92,19 +90,16 @@ class ReverificationResultHandlerTest {
     private ReverificationResultHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ReverificationResultService reverificationResultService =
             mock(ReverificationResultService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final IDReverificationStateService idReverificationStateService =
             mock(IDReverificationStateService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final String subjectId = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
-    private final Session session = new Session();
     private final AuditContext auditContextWithAllUserInfo =
             new AuditContext(
                     CLIENT_ID,
@@ -115,7 +110,8 @@ class ReverificationResultHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -123,7 +119,10 @@ class ReverificationResultHandlerTest {
 
     private static final UserContext USER_CONTEXT = mock(UserContext.class);
     private final AuthSessionItem authSession =
-            new AuthSessionItem().withSessionId(SESSION_ID).withInternalCommonSubjectId(SUB);
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(SUB)
+                    .withClientId(CLIENT_ID);
 
     private static final String AUTHENTICATION_STATE = "abcdefg";
     private static final IDReverificationState ID_REVERIFICATION_STATE =
@@ -134,15 +133,11 @@ class ReverificationResultHandlerTest {
     @BeforeEach
     void setUp() throws URISyntaxException {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         when(configurationService.getIPVBackendURI())
                 .thenReturn(new URI("https://api.identity.account.gov.uk/token"));
-        when(USER_CONTEXT.getSession()).thenReturn(session);
         when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
-        when(USER_CONTEXT.getClientId()).thenReturn(CLIENT_ID);
         when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         var userProfile = mock(UserProfile.class);
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
@@ -151,8 +146,6 @@ class ReverificationResultHandlerTest {
         handler =
                 new ReverificationResultHandler(
                         configurationService,
-                        sessionService,
-                        clientService,
                         authenticationService,
                         reverificationResultService,
                         auditService,
@@ -275,7 +268,7 @@ class ReverificationResultHandlerTest {
                             USER_CONTEXT);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
+            assertThat(result, hasJsonBody(REVERIFICATION_RESULT_GET_ERROR));
 
             assertThat(
                     logging.events(),
@@ -319,7 +312,7 @@ class ReverificationResultHandlerTest {
                             USER_CONTEXT);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
+            assertThat(result, hasJsonBody(REVERIFICATION_RESULT_GET_ERROR));
 
             assertThat(
                     logging.events(),
@@ -458,7 +451,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1061));
+            assertThat(result, hasJsonBody(IPV_STATE_MISMATCH));
         }
 
         @Test
@@ -475,7 +468,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1061));
+            assertThat(result, hasJsonBody(IPV_STATE_MISMATCH));
         }
     }
 
@@ -498,7 +491,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1058));
+            assertThat(result, hasJsonBody(UNSUCCESSFUL_IPV_TOKEN_RESPONSE));
         }
     }
 
@@ -521,7 +514,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
+            assertThat(result, hasJsonBody(REVERIFICATION_RESULT_GET_ERROR));
         }
 
         @ParameterizedTest
@@ -549,7 +542,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
+            assertThat(result, hasJsonBody(REVERIFICATION_RESULT_GET_ERROR));
         }
     }
 

@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -12,10 +13,13 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.List;
 import java.util.Map;
@@ -28,14 +32,24 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_EMAIL_FIELD;
 
 class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
     private static final String USER_PASSWORD = "Password123!";
+    private static final int INTERNATIONAL_SMS_SEND_LIMIT = 3;
+    private static final String TEST_REFERENCE = "test-reference";
     private String SESSION_ID;
+
+    @RegisterExtension
+    protected static final InternationalSmsSendCountExtension internationalSmsSendCountStore =
+            new InternationalSmsSendCountExtension(INTERNATIONAL_SMS_SEND_LIMIT);
 
     @BeforeEach
     void setup() {
@@ -49,7 +63,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @BeforeEach
         void setup() throws Json.JsonException {
-            SESSION_ID = redis.createSession();
+            SESSION_ID = IdGenerator.generate();
             authSessionStore.addSession(SESSION_ID);
             authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
             userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject("new-subject"));
@@ -70,7 +84,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationNotificationTypeAndCode(
                     notificationsQueue,
                     USER_PHONE_NUMBER,
@@ -87,7 +108,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
 
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, USER_PHONE_NUMBER, MFA_SMS);
@@ -104,7 +132,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "PASSWORD_RESET_MFA")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, USER_PHONE_NUMBER, MFA_SMS);
         }
@@ -112,7 +147,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenReauthenticating()
                 throws Json.JsonException {
-            var authenticatedSessionId = redis.createSession();
+            var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
             authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
 
@@ -125,14 +160,21 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REAUTHENTICATION")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, USER_PHONE_NUMBER, MFA_SMS);
         }
 
         @Test
         void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
-            var authenticatedSessionId = redis.createSession();
+            var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
 
             var response =
@@ -143,7 +185,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
@@ -152,8 +194,9 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldReturn400WhenRequestingACodeForReauthenticationWhichBreachesTheMaxThreshold()
                 throws Json.JsonException {
-            var authenticatedSessionId = redis.createSession();
+            var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
+            authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
 
             aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 
@@ -166,8 +209,13 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1025));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_INVALID_CODE_REQUEST));
+            assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_MFA_OTPS_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_INVALID_CODE_REQUEST)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REAUTHENTICATION")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
@@ -187,11 +235,11 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         "mfa-id-1");
         private static final MFAMethod BACKUP_SMS_METHOD =
                 MFAMethod.smsMfaMethod(
-                        true, true, MIGRATED_PHONE_NUMBER_2, PriorityIdentifier.BACKUP, "mfa-id-1");
+                        true, true, MIGRATED_PHONE_NUMBER_2, PriorityIdentifier.BACKUP, "mfa-id-2");
 
         @BeforeEach
         void setup() throws Json.JsonException {
-            SESSION_ID = redis.createSession();
+            SESSION_ID = IdGenerator.generate();
             authSessionStore.addSession(SESSION_ID);
             authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
             userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject("new-subject"));
@@ -210,9 +258,42 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, MIGRATED_PHONE_NUMBER_1, MFA_SMS);
+        }
+
+        @Test
+        void shouldReturn204AndSendCodeToCorrectNumberWhenIdentifiedMfaMethodIsChosen() {
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    new MfaRequest(
+                                            USER_EMAIL,
+                                            false,
+                                            null,
+                                            BACKUP_SMS_METHOD.getMfaIdentifier())),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(204));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "backup")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
+            assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
+                    notificationsQueue, MIGRATED_PHONE_NUMBER_2, MFA_SMS);
         }
 
         @Test
@@ -229,7 +310,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationNotificationTypeAndCode(
                     notificationsQueue,
                     MIGRATED_PHONE_NUMBER_1,
@@ -248,7 +336,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "PASSWORD_RESET_MFA")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, MIGRATED_PHONE_NUMBER_1, MFA_SMS);
         }
@@ -256,7 +351,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenReauthenticating()
                 throws Json.JsonException {
-            var authenticatedSessionId = redis.createSession();
+            var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
             authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
 
@@ -269,14 +364,21 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(204));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REAUTHENTICATION")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, MIGRATED_PHONE_NUMBER_1, MFA_SMS);
         }
 
         @Test
         void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
-            var authenticatedSessionId = redis.createSession();
+            var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
 
             var response =
@@ -287,7 +389,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
@@ -296,8 +398,9 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldReturn400WhenRequestingACodeForReauthenticationWhichBreachesTheMaxThreshold()
                 throws Json.JsonException {
-            var authenticatedSessionId = redis.createSession();
+            var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
+            authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
 
             aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 
@@ -310,11 +413,111 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1025));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_INVALID_CODE_REQUEST));
+            assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_MFA_OTPS_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_INVALID_CODE_REQUEST)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REAUTHENTICATION")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
+        }
+    }
+
+    @Nested
+    class InternationalSmsSendLimitTests {
+        private static final ConfigurationService TXMA_WITH_INT_SMS_LIMIT_CONFIG =
+                new IntegrationTestConfigurationService(
+                        notificationsQueue,
+                        tokenSigner,
+                        docAppPrivateKeyJwtSigner,
+                        configurationParameters) {
+                    @Override
+                    public String getTxmaAuditQueueUrl() {
+                        return txmaAuditQueue.getQueueUrl();
+                    }
+
+                    @Override
+                    public int getInternationalSmsNumberSendLimit() {
+                        return INTERNATIONAL_SMS_SEND_LIMIT;
+                    }
+                };
+
+        private static final String INTERNATIONAL_PHONE_NUMBER = "+33612345678";
+
+        @BeforeEach
+        void setup() throws Json.JsonException {
+            SESSION_ID = IdGenerator.generate();
+            authSessionStore.addSession(SESSION_ID);
+            authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
+            userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject("new-subject"));
+            handler = new MfaHandler(TXMA_WITH_INT_SMS_LIMIT_CONFIG, redisConnectionService);
+        }
+
+        @Test
+        void shouldReturn400WhenInternationalNumberHasHitLimit() throws Json.JsonException {
+            userStore.addVerifiedPhoneNumber(USER_EMAIL, INTERNATIONAL_PHONE_NUMBER);
+
+            for (int i = 0; i < INTERNATIONAL_SMS_SEND_LIMIT; i++) {
+                internationalSmsSendCountStore.recordSmsSent(
+                        INTERNATIONAL_PHONE_NUMBER, TEST_REFERENCE);
+            }
+
+            var response =
+                    makeRequest(
+                            Optional.of(new MfaRequest(USER_EMAIL, false)),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    response,
+                    hasJsonBody(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
+        }
+
+        @Test
+        void shouldReturn204WhenInternationalNumberIsBelowLimit() {
+            userStore.addVerifiedPhoneNumber(USER_EMAIL, INTERNATIONAL_PHONE_NUMBER);
+
+            var response =
+                    makeRequest(
+                            Optional.of(new MfaRequest(USER_EMAIL, false)),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(204));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
+        }
+
+        @Test
+        void shouldReturn204ForDomesticNumberRegardlessOfLimit() {
+            String domesticNumber = "+447712345432";
+            userStore.addVerifiedPhoneNumber(USER_EMAIL, domesticNumber);
+
+            var response =
+                    makeRequest(
+                            Optional.of(new MfaRequest(USER_EMAIL, false)),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(204));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_MFA_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN")
+                                    .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(USER_EMAIL_FIELD, USER_EMAIL)));
         }
     }
 

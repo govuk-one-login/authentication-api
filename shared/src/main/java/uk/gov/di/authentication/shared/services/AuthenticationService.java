@@ -64,6 +64,8 @@ public interface AuthenticationService {
 
     UserCredentials getUserCredentialsFromEmail(String email);
 
+    UserCredentials getUserCredentialsFromEmailWithStronglyConsistentRead(String email);
+
     void migrateLegacyPassword(String email, String password);
 
     byte[] getOrGenerateSalt(UserProfile userProfile);
@@ -93,8 +95,10 @@ public interface AuthenticationService {
 
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
 
-    Result<String, List<MFAMethod>> updateMigratedDefaultMfaMethod(
-            String email, MFAMethodType type, String destination, String mfaMethodIdentifier);
+    void deleteMigratedMfaMethods(String email);
+
+    Result<String, List<MFAMethod>> updateMfaMethods(
+            List<MFAMethod> updatedMfaMethods, String email);
 
     Result<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods);

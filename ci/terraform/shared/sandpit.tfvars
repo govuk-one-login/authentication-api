@@ -69,3 +69,5 @@ enforce_code_signing = false
 
 # Sizing
 redis_node_size = "cache.t2.micro"
+
+provision_test_client_secret = true

@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.helpers;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,10 +13,27 @@ public final class RequestHeaderHelper {
 
     private RequestHeaderHelper() {}
 
+    public static boolean headersContainValidOptionalHeader(
+            Map<String, String> headers, String headerName, boolean matchLowerCase) {
+        return headersContainValidHeader(headers, headerName, matchLowerCase, false);
+    }
+
     public static boolean headersContainValidHeader(
             Map<String, String> headers, String headerName, boolean matchLowerCase) {
+        return headersContainValidHeader(headers, headerName, matchLowerCase, true);
+    }
+
+    private static boolean headersContainValidHeader(
+            Map<String, String> headers,
+            String headerName,
+            boolean matchLowerCase,
+            boolean warnOnMissing) {
+        var warnLevel = warnOnMissing ? Level.WARN : Level.TRACE;
         if (headers == null || headers.isEmpty()) {
-            LOG.warn("All headers are missing or empty when looking for header {}", headerName);
+            LOG.log(
+                    warnLevel,
+                    "All headers are missing or empty when looking for header {}",
+                    headerName);
             return false;
         } else if (!matchLowerCase && headers.containsKey(headerName)) {
             LOG.trace("Found header {}, matchLowerCase={}", headerName, matchLowerCase);
@@ -37,7 +55,11 @@ public final class RequestHeaderHelper {
                     matchLowerCase);
             return true;
         } else {
-            LOG.warn("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
+            LOG.log(
+                    warnLevel,
+                    "Header {} is missing, matchLowerCase={}",
+                    headerName,
+                    matchLowerCase);
             return false;
         }
     }

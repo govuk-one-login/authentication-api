@@ -1,10 +1,10 @@
-module "frontend_api_login_role" {
+module "frontend_api_login_role_with_combined_auth_attempts_table_policies" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "frontend-api-login-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
@@ -18,18 +18,16 @@ module "frontend_api_login_role" {
     local.common_passwords_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
-    aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
-    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
-    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_read_write_delete_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_write_policy.arn
-  ]
-  // The joint read/write policy above is required because we've reached the managed polices per role quota limit (20)
-  // Ticket raised to request quota increase (ATO-1056)
+    ],
+  var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
+  // The joint read/write policy above is required because we've reached the managed polices per role quota limit (20).
+  // This also applies for the combined read/write/delete policy for the authentication attempts table
   extra_tags = {
     Service = "login"
   }
 }
-
 
 module "login" {
   source = "../modules/endpoint-module-v2"
@@ -75,7 +73,7 @@ module "login" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.frontend_api_login_role.arn
+  lambda_role_arn                        = module.frontend_api_login_role_with_combined_auth_attempts_table_policies.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention

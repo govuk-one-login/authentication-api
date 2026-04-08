@@ -3,8 +3,26 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSAEncrypter;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -22,6 +40,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.AfterEach;
@@ -36,6 +55,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
+import uk.gov.di.authentication.oidc.entity.AuthErrorCodes;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
@@ -48,34 +68,35 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
-import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -83,7 +104,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -91,8 +111,10 @@ import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -115,7 +137,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -127,38 +148,41 @@ class AuthenticationCallbackHandlerTest {
     private static final AuthenticationAuthorizationService authorizationService =
             mock(AuthenticationAuthorizationService.class);
     private final AuthenticationTokenService tokenService = mock(AuthenticationTokenService.class);
-    private final SessionService sessionService = mock(SessionService.class);
+    private final OrchAccessTokenService orchAccessTokenService =
+            mock(OrchAccessTokenService.class);
+    private final OrchRefreshTokenService orchRefreshTokenService =
+            mock(OrchRefreshTokenService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
-    private static final NoSessionOrchestrationService noSessionOrchestrationService =
-            mock(NoSessionOrchestrationService.class);
+    private static final CrossBrowserOrchestrationService CROSS_BROWSER_ORCHESTRATION_SERVICE =
+            mock(CrossBrowserOrchestrationService.class);
     private static final LogoutService logoutService = mock(LogoutService.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final AuthFrontend authFrontend = mock(AuthFrontend.class);
-    private static final String TEST_FRONTEND_ERROR_URI = "test.orchestration.frontend.url/error";
+    private static final String TEST_FRONTEND_BASE_URI = "http://example.com";
+    private static final String TEST_FRONTEND_LOGIN_URI = "http://example.com/login";
+    private static final String TEST_FRONTEND_ERROR_URI = "http://example.com/error";
     private static final String TEST_AUTH_BACKEND_BASE_URL = "https://test.auth.backend.url";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String PERSISTENT_SESSION_ID =
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
 
-    private static final Session session = new Session().setCurrentCredentialStrength(null);
+    public static final String BROWSER_SESSION_ID = "test-browser-session-id";
     public static final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAuthenticated(false)
-                    .withCurrentCredentialStrength(null);
+                    .withBrowserSessionId(BROWSER_SESSION_ID);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -166,19 +190,11 @@ class AuthenticationCallbackHandlerTest {
     private static final Subject RP_PAIRWISE_ID = new Subject();
     private static final Subject PUBLIC_SUBJECT_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
-    private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
     private static final State RP_STATE = new State();
     private static final Nonce RP_NONCE = new Nonce();
+    private static final String ORCH_CLIENT_ID = "orch-client-id";
     private static final CredentialTrustLevel lowestCredentialTrustLevel =
             CredentialTrustLevel.LOW_LEVEL;
-    private static final ClientSession clientSession =
-            new ClientSession(
-                    generateRPAuthRequestForClientSession().toParameters(),
-                    null,
-                    List.of(
-                            VectorOfTrust.of(
-                                    lowestCredentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
-                    CLIENT_NAME);
     private static final OrchClientSessionItem orchClientSession =
             new OrchClientSessionItem(
                     CLIENT_SESSION_ID,
@@ -204,10 +220,15 @@ class AuthenticationCallbackHandlerTest {
     static void init() {
         when(configurationService.getEnvironment()).thenReturn("test-env");
         when(authFrontend.errorURI()).thenReturn(URI.create(TEST_FRONTEND_ERROR_URI));
+        when(authFrontend.baseURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URI));
+        when(authFrontend.authorizeURI(any(), any()))
+                .thenReturn(URI.create(TEST_FRONTEND_LOGIN_URI));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(false);
+        when(configurationService.isSingleFactorAccountDeletionEnabled()).thenReturn(false);
+        when(configurationService.getOrchestrationClientId()).thenReturn(ORCH_CLIENT_ID);
         when(accountInterventionService.getAccountIntervention(anyString(), any(), any()))
                 .thenReturn(
                         new AccountIntervention(
@@ -238,14 +259,11 @@ class AuthenticationCallbackHandlerTest {
         reset(initiateIPVAuthorisationService);
         reset(logoutService);
         reset(authorizationService);
-        reset(noSessionOrchestrationService);
+        reset(CROSS_BROWSER_ORCHESTRATION_SERVICE);
 
         clearInvocations(orchAuthCodeService);
 
-        session.setCurrentCredentialStrength(null);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
-        when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
-                .thenReturn(null);
         when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any(), any()))
                 .thenAnswer(
                         args -> {
@@ -259,7 +277,7 @@ class AuthenticationCallbackHandlerTest {
                         });
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        anyString(), anyString(), anyString(), anyLong()))
+                        anyString(), anyString(), anyString(), anyLong(), anyString()))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
 
         handler =
@@ -267,20 +285,20 @@ class AuthenticationCallbackHandlerTest {
                         configurationService,
                         authorizationService,
                         tokenService,
-                        sessionService,
+                        orchAccessTokenService,
+                        orchRefreshTokenService,
                         orchSessionService,
-                        clientSessionService,
                         orchClientSessionService,
                         auditService,
                         userInfoStorageService,
-                        cloudwatchMetricsService,
+                        metrics,
                         orchAuthCodeService,
                         clientService,
                         initiateIPVAuthorisationService,
                         accountInterventionService,
                         logoutService,
                         authFrontend,
-                        noSessionOrchestrationService);
+                        CROSS_BROWSER_ORCHESTRATION_SERVICE);
         orchSession.resetClientSessions();
     }
 
@@ -305,18 +323,16 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 redirectLocation,
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
+        assertThat(response.getHeaders().get("Cache-Control"), equalTo("no-store"));
         verifyUserInfoRequest();
 
-        assertSessionUpdatedAuthJourney();
-
-        verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
-        verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
-        verify(cloudwatchMetricsService)
+        verify(metrics).increment(eq("AuthenticationCallback"), any());
+        verify(metrics).increment(eq("SignIn"), any());
+        verify(metrics)
                 .incrementSignInByClient(
                         eq(OrchSessionItem.AccountState.NEW),
                         eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_NAME),
-                        eq(false));
+                        eq(CLIENT_NAME));
 
         verifyAuditEvents(
                 List.of(
@@ -339,7 +355,6 @@ class AuthenticationCallbackHandlerTest {
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
                         eq(pair("new_account", true)),
-                        eq(pair("test_user", false)),
                         eq(pair("credential_trust_level", "LOW_LEVEL")));
         verify(auditService)
                 .submitAuditEvent(
@@ -375,7 +390,7 @@ class AuthenticationCallbackHandlerTest {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
         doThrow(new AuthenticationCallbackValidationException())
                 .when(authorizationService)
-                .validateRequest(any(), any());
+                .validateRequest(any(), any(), anyBoolean());
 
         var response = handler.handleRequest(event, CONTEXT);
 
@@ -389,8 +404,7 @@ class AuthenticationCallbackHandlerTest {
                 List.of(OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED),
                 auditService);
 
-        verifyNoInteractions(
-                tokenService, userInfoStorageService, cloudwatchMetricsService, logoutService);
+        verifyNoInteractions(tokenService, userInfoStorageService, metrics, logoutService);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -408,9 +422,10 @@ class AuthenticationCallbackHandlerTest {
         event.setQueryStringParameters(queryParameters);
         event.setHeaders(Collections.emptyMap());
 
-        when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
+        when(CROSS_BROWSER_ORCHESTRATION_SERVICE.generateNoSessionOrchestrationEntity(
+                        queryParameters))
                 .thenReturn(
-                        new NoSessionEntity(
+                        new CrossBrowserEntity(
                                 CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, orchClientSession));
 
         var response = handler.handleRequest(event, CONTEXT);
@@ -431,7 +446,7 @@ class AuthenticationCallbackHandlerTest {
                         CLIENT_ID.getValue(),
                         TxmaAuditUser.user().withGovukSigninJourneyId(CLIENT_SESSION_ID));
 
-        verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(tokenService, userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -449,7 +464,7 @@ class AuthenticationCallbackHandlerTest {
         doThrow(
                         new NoSessionException(
                                 "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
-                .when(noSessionOrchestrationService)
+                .when(CROSS_BROWSER_ORCHESTRATION_SERVICE)
                 .generateNoSessionOrchestrationEntity(queryParameters);
 
         var response = handler.handleRequest(event, CONTEXT);
@@ -457,8 +472,7 @@ class AuthenticationCallbackHandlerTest {
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
-        verifyNoInteractions(
-                tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(tokenService, auditService, userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -473,7 +487,7 @@ class AuthenticationCallbackHandlerTest {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
         doThrow(new AuthenticationCallbackValidationException(OIDCError.LOGIN_REQUIRED, true))
                 .when(authorizationService)
-                .validateRequest(any(), any());
+                .validateRequest(any(), any(), anyBoolean());
 
         var response = handler.handleRequest(event, CONTEXT);
 
@@ -495,7 +509,7 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.toString()),
                         any());
 
-        verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(tokenService, userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -519,7 +533,7 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED),
                 auditService);
-        verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -547,7 +561,7 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
-        verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
+        verifyNoInteractions(userInfoStorageService, metrics);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
     }
@@ -592,10 +606,7 @@ class AuthenticationCallbackHandlerTest {
 
         handler.handleRequest(event, CONTEXT);
 
-        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-        verify(sessionService, times(2))
-                .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
         verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 OrchSessionItem.AccountState.UNKNOWN,
@@ -606,17 +617,6 @@ class AuthenticationCallbackHandlerTest {
     void shouldAuditMediumCredentialTrustLevelOn2FARequest()
             throws UnsuccessfulCredentialResponseException {
         usingValidSession();
-        var mediumRequestSession =
-                new ClientSession(
-                        generateRPAuthRequestForClientSession().toParameters(),
-                        null,
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.LOW_LEVEL)),
-                        CLIENT_NAME);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(mediumRequestSession));
         var mediumRequestOrchSession =
                 new OrchClientSessionItem(
                         CLIENT_SESSION_ID,
@@ -654,16 +654,12 @@ class AuthenticationCallbackHandlerTest {
                                 .withEmail(TEST_EMAIL_ADDRESS)
                                 .withPhone("1234"),
                         pair("new_account", true),
-                        pair("test_user", false),
                         pair("credential_trust_level", "MEDIUM_LEVEL"));
     }
 
     @Test
-    void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenPreviously2FA()
+    void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenAuthReportPreviouslyMediumLevel()
             throws UnsuccessfulCredentialResponseException {
-        Session mediumLevelSession =
-                new Session().setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
         when(orchSessionService.getSession(SESSION_ID))
                 .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
         usingValidClientSession();
@@ -675,6 +671,8 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+        when(USER_INFO.getStringClaim(AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH.getValue()))
+                .thenReturn(CredentialTrustLevel.MEDIUM_LEVEL.name());
 
         handler.handleRequest(event, CONTEXT);
 
@@ -691,52 +689,7 @@ class AuthenticationCallbackHandlerTest {
                                 .withEmail(TEST_EMAIL_ADDRESS)
                                 .withPhone("1234"),
                         pair("new_account", true),
-                        pair("test_user", false),
                         pair("credential_trust_level", "MEDIUM_LEVEL"));
-    }
-
-    private static Stream<Arguments> currentCredentialStrengthParams() {
-        return Stream.of(
-                Arguments.of(
-                        null, CredentialTrustLevel.MEDIUM_LEVEL, CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of(
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of(
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of(null, CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.LOW_LEVEL),
-                Arguments.of(
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.LOW_LEVEL),
-                Arguments.of(
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL));
-    }
-
-    @ParameterizedTest
-    @MethodSource("currentCredentialStrengthParams")
-    void shouldSetTheCurrentCredentialStrengthToTheLowestCredentialTrustLevel(
-            CredentialTrustLevel userInfoCurrentCredentialStrengthResponse,
-            CredentialTrustLevel credentialTrustLevel,
-            CredentialTrustLevel correctCurrentCredentialStrengthSet)
-            throws UnsuccessfulCredentialResponseException {
-        usingValidSession();
-        returnCurrentCredentialStrengthValue(userInfoCurrentCredentialStrengthResponse);
-        clientSessionWithCredentialTrustValue(credentialTrustLevel);
-        usingValidClient();
-        var event = new APIGatewayProxyRequestEvent();
-        setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
-
-        handler.handleRequest(event, CONTEXT);
-
-        assertCurrentCredentialSetCorrectly(correctCurrentCredentialStrengthSet);
     }
 
     // TODO: ATO-1218: Following the handler changes, update this method to test
@@ -759,7 +712,8 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        anyLong()))
+                        anyLong(),
+                        anyString()))
                 .thenThrow(new OrchAuthCodeException("Some generation error"));
 
         assertDoesNotThrow(() -> handler.handleRequest(event, CONTEXT));
@@ -769,7 +723,8 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        anyLong());
+                        anyLong(),
+                        anyString());
     }
 
     @Nested
@@ -789,7 +744,6 @@ class AuthenticationCallbackHandlerTest {
         void shouldSetOrNotSetAuthTimeDependingOnValuesOfAuthenticatedAndUpliftRequired(
                 Boolean authenticated, Boolean upliftRequired, boolean authTimeSet)
                 throws UnsuccessfulCredentialResponseException {
-            when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
             when(orchSessionService.getSession(SESSION_ID))
                     .thenReturn(
                             Optional.of(
@@ -1159,16 +1113,13 @@ class AuthenticationCallbackHandlerTest {
         void setup() {
             usingValidClientSession();
             usingValidClient();
-            when(configurationService.supportMaxAgeEnabled()).thenReturn(true);
         }
 
         @Test
         void itCopiesThePreviousClientSessionsToTheCurrentSessionIfInternalCommonSubjectIdsMatch()
                 throws UnsuccessfulCredentialResponseException {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            withMaxAgeSharedSession();
             withPreviousOrchSessionDueToMaxAge();
-            withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1193,7 +1144,6 @@ class AuthenticationCallbackHandlerTest {
                     expectedClientSessions.stream().toList());
             assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
                     .updateSession(
                             argThat(
@@ -1208,9 +1158,7 @@ class AuthenticationCallbackHandlerTest {
         void itDoesNotAssignClientSessionsIfItCannotFindThePreviousOrchSession()
                 throws UnsuccessfulCredentialResponseException {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            withMaxAgeSharedSession();
             withNoPreviousOrchSession();
-            withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1230,7 +1178,6 @@ class AuthenticationCallbackHandlerTest {
             assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
             assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
                     .updateSession(
                             argThat(
@@ -1239,45 +1186,6 @@ class AuthenticationCallbackHandlerTest {
                                                     && s.getClientSessions().size() == 1
                                                     && s.getClientSessions()
                                                             .equals(List.of(CLIENT_SESSION_ID))));
-            verify(sessionService, times(2)).storeOrUpdateSession(any(Session.class), anyString());
-        }
-
-        @Test
-        void itDoesNotAssignClientSessionsIfItCannotFindThePreviousSharedSession()
-                throws UnsuccessfulCredentialResponseException {
-            var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            withMaxAgeSharedSession();
-            withPreviousOrchSessionDueToMaxAge();
-            withNoPreviousSharedSession();
-
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
-                    .thenReturn(USER_INFO);
-            when(USER_INFO.getSubject()).thenReturn(new Subject(INTERNAL_COMMON_SUBJECT_ID));
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-            var response = handler.handleRequest(event, CONTEXT);
-
-            assertThat(response, hasStatus(302));
-            String redirectLocation = response.getHeaders().get("Location");
-            assertThat(
-                    redirectLocation,
-                    equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
-
-            assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
-            assertNull(maxAgeOrchSession.getPreviousSessionId());
-            verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(orchSessionService, times(3))
-                    .updateSession(
-                            argThat(
-                                    s ->
-                                            s.getPreviousSessionId() == null
-                                                    && s.getClientSessions().size() == 1
-                                                    && s.getClientSessions()
-                                                            .equals(List.of(CLIENT_SESSION_ID))));
-            verify(sessionService, times(2)).storeOrUpdateSession(any(Session.class), anyString());
         }
 
         @Test
@@ -1285,9 +1193,7 @@ class AuthenticationCallbackHandlerTest {
                 itSendsBackChannelLogoutNotificationForThePreviousSessionIfTheInternalCommonSubjectIdsDoNotMatch()
                         throws UnsuccessfulCredentialResponseException {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            withMaxAgeSharedSession();
             var previousOrchSession = withPreviousOrchSessionDueToMaxAge();
-            withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1308,14 +1214,12 @@ class AuthenticationCallbackHandlerTest {
             assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
             assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
                     .updateSession(
                             argThat(
                                     s ->
                                             s.getPreviousSessionId() == null
                                                     && s.getClientSessions().size() == 1));
-            verify(sessionService, times(2)).storeOrUpdateSession(any(Session.class), anyString());
 
             verify(logoutService, times(1))
                     .handleMaxAgeLogout(
@@ -1336,16 +1240,6 @@ class AuthenticationCallbackHandlerTest {
             return previousOrchSession;
         }
 
-        private void withPreviousSharedSessionDueToMaxAge() {
-            var previousSharedSession = new Session();
-            when(sessionService.getSession(PREVIOUS_SESSION_ID))
-                    .thenReturn(Optional.of(previousSharedSession));
-        }
-
-        private void withNoPreviousSharedSession() {
-            when(sessionService.getSession(PREVIOUS_SESSION_ID)).thenReturn(Optional.empty());
-        }
-
         private void withNoPreviousOrchSession() {
             when(orchSessionService.getSession(PREVIOUS_SESSION_ID)).thenReturn(Optional.empty());
         }
@@ -1360,10 +1254,187 @@ class AuthenticationCallbackHandlerTest {
                     .thenReturn(Optional.of(maxAgeOrchSession));
             return maxAgeOrchSession;
         }
+    }
 
-        private void withMaxAgeSharedSession() {
-            var session = new Session();
-            when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+    @Nested
+    class SingleFactorAccountDeletion {
+        static String NEW_SESSION_ID = "new-session-id";
+        static String NEW_CLIENT_SESSION_ID = "new-client-session-id";
+
+        @BeforeEach
+        void setup() {
+            when(configurationService.isSingleFactorAccountDeletionEnabled()).thenReturn(true);
+        }
+
+        @Test
+        void shouldGenerateNewSessionsAndRedirectToAuthWhenSfadErrorReceivedInNonReauthJourney()
+                throws Exception {
+            try (MockedStatic<LogLineHelper> mockLogHelper = mockStatic(LogLineHelper.class);
+                    MockedStatic<IdGenerator> mockIdGenerator = mockStatic(IdGenerator.class)) {
+                usingValidSession();
+                usingValidClientSession();
+                usingValidClient();
+                mockIdGenerator
+                        .when(IdGenerator::generate)
+                        .thenReturn(NEW_SESSION_ID)
+                        .thenReturn(NEW_CLIENT_SESSION_ID);
+                var encryptedJwt = createEncryptedJWT();
+                var rpClientId = new ClientID();
+                when(authorizationService.generateAuthRedirectRequest(
+                                anyString(),
+                                anyString(),
+                                any(),
+                                any(),
+                                anyBoolean(),
+                                any(),
+                                any(),
+                                any()))
+                        .thenReturn(
+                                new AuthorizationRequest.Builder(
+                                                new ResponseType(ResponseType.Value.CODE),
+                                                rpClientId)
+                                        .endpointURI(URI.create(TEST_FRONTEND_LOGIN_URI))
+                                        .requestObject(encryptedJwt)
+                                        .build());
+                var event = createRequestForSfadJourney();
+                when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+
+                when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                        .thenReturn(USER_INFO);
+                var response = handler.handleRequest(event, CONTEXT);
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        response.getHeaders().get("Location"),
+                        equalTo(
+                                TEST_FRONTEND_LOGIN_URI
+                                        + "?response_type=code&request="
+                                        + encryptedJwt.serialize()
+                                        + "&client_id="
+                                        + rpClientId.getValue()));
+                assertThat(
+                        response.getMultiValueHeaders().get("Set-Cookie"),
+                        hasItem(
+                                containsString(
+                                        String.format(
+                                                "gs=%s.%s",
+                                                NEW_SESSION_ID, NEW_CLIENT_SESSION_ID))));
+
+                mockLogHelper.verify(() -> LogLineHelper.attachSessionIdToLogs(NEW_SESSION_ID));
+                mockLogHelper.verify(
+                        () ->
+                                LogLineHelper.attachLogFieldToLogs(
+                                        LogLineHelper.LogFieldName.CLIENT_SESSION_ID,
+                                        NEW_CLIENT_SESSION_ID));
+                mockLogHelper.verify(
+                        () ->
+                                LogLineHelper.attachLogFieldToLogs(
+                                        LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID,
+                                        NEW_CLIENT_SESSION_ID));
+
+                verify(orchSessionService).deleteSession(SESSION_ID);
+                var sessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
+                verify(orchSessionService).addSession(sessionCaptor.capture());
+                var newSession = sessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, newSession.getSessionId());
+                assertEquals(BROWSER_SESSION_ID, newSession.getBrowserSessionId());
+                assertThat(newSession.getClientSessions(), contains(NEW_CLIENT_SESSION_ID));
+
+                verify(orchClientSessionService).deleteStoredClientSession(CLIENT_SESSION_ID);
+                var clientSessionCaptor = ArgumentCaptor.forClass(OrchClientSessionItem.class);
+                verify(orchClientSessionService).storeClientSession(clientSessionCaptor.capture());
+                var newClientSession = clientSessionCaptor.getValue();
+                assertEquals(NEW_CLIENT_SESSION_ID, newClientSession.getClientSessionId());
+                assertEquals(CLIENT_NAME, newClientSession.getClientName());
+                assertThat(orchClientSession.getVtrList(), equalTo(newClientSession.getVtrList()));
+                assertThat(
+                        orchClientSession.getAuthRequestParams(),
+                        equalTo(newClientSession.getAuthRequestParams()));
+                assertNotEquals(
+                        orchClientSession.getCreationDate(), newClientSession.getCreationDate());
+            }
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageWhenSfadErrorReceivedInReauthJourney() {
+            usingValidSession();
+            usingValidClientSessionOnReauthJourney();
+            var event = createRequestForSfadJourney();
+
+            var response = handler.handleRequest(event, CONTEXT);
+
+            assertThat(response, hasStatus(302));
+            assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
+
+            verifyNoInteractions(tokenService, auditService, userInfoStorageService, metrics);
+
+            assertNoAuthorisationCodeGeneratedAndSaved();
+        }
+
+        private EncryptedJWT createEncryptedJWT() throws Exception {
+            var ecdsaSigner = new ECDSASigner(generateECSigningKey());
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .claim("client-name", CLIENT_NAME)
+                            .claim("cookie-consent-shared", true)
+                            .claim("is-one-login-service", true)
+                            .claim("service-type", ServiceType.MANDATORY)
+                            .claim("state", STATE)
+                            .claim("scopes", "openid")
+                            .claim("redirect-uri", TEST_FRONTEND_BASE_URI)
+                            .build();
+            var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+            var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+            signedJWT.sign(ecdsaSigner);
+            var rsaEncryptionKey =
+                    new RSAKeyGenerator(2048)
+                            .keyID("encryption-key-id")
+                            .generate()
+                            .toRSAPublicKey();
+            var jweObject =
+                    new JWEObject(
+                            new JWEHeader.Builder(
+                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                                    .contentType("JWT")
+                                    .build(),
+                            new Payload(signedJWT));
+            jweObject.encrypt(new RSAEncrypter(rsaEncryptionKey));
+            return EncryptedJWT.parse(jweObject.serialize());
+        }
+
+        private static ECKey generateECSigningKey() {
+            try {
+                return new ECKeyGenerator(Curve.P_256)
+                        .keyID("key-id")
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+            } catch (JOSEException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private static APIGatewayProxyRequestEvent createRequestForSfadJourney() {
+            var event = new APIGatewayProxyRequestEvent();
+            Map<String, String> queryParameters = new HashMap<>();
+            queryParameters.put("error", AuthErrorCodes.SFAD_ERROR.toString());
+            event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
+            event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+            event.setQueryStringParameters(queryParameters);
+            return event;
+        }
+
+        private void usingValidClientSessionOnReauthJourney() {
+            OrchClientSessionItem orchClientSessionOnReauthJourney =
+                    new OrchClientSessionItem(
+                            CLIENT_SESSION_ID,
+                            generateRPAuthRequestForClientSessionOnReauthJourney().toParameters(),
+                            null,
+                            List.of(
+                                    VectorOfTrust.of(
+                                            lowestCredentialTrustLevel,
+                                            LevelOfConfidence.LOW_LEVEL)),
+                            CLIENT_NAME);
+            when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                    .thenReturn(Optional.of(orchClientSessionOnReauthJourney));
         }
     }
 
@@ -1378,12 +1449,6 @@ class AuthenticationCallbackHandlerTest {
         return intervention;
     }
 
-    private APIGatewayProxyResponseEvent createIPVApiResponse() {
-
-        return generateApiGatewayProxyResponse(
-                302, "", Map.of(ResponseHeaders.LOCATION, IPV_REDIRECT_URI.toString()), null);
-    }
-
     private static void setValidHeadersAndQueryParameters(APIGatewayProxyRequestEvent event) {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -1394,13 +1459,10 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
     private void usingValidClientSession() {
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(orchClientSession));
         orchSession.addClientSession(CLIENT_SESSION_ID);
@@ -1433,6 +1495,20 @@ class AuthenticationCallbackHandlerTest {
         return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                 .state(RP_STATE)
                 .nonce(RP_NONCE)
+                .build();
+    }
+
+    private static AuthenticationRequest generateRPAuthRequestForClientSessionOnReauthJourney() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        scope.add("phone");
+        scope.add("email");
+        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                .state(RP_STATE)
+                .nonce(RP_NONCE)
+                .prompt(Prompt.Type.LOGIN)
+                .customParameter("id_token_hint", "test")
                 .build();
     }
 
@@ -1487,21 +1563,14 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        anyLong());
+                        anyLong(),
+                        anyString());
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
-    }
-
-    private void assertSessionUpdatedAuthJourney() {
-        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2))
-                .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
-        assertThat(
-                sessionSaveCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                equalTo(lowestCredentialTrustLevel));
+                .generateAndSaveAuthorisationCode(
+                        anyString(), anyString(), anyString(), anyLong(), anyString());
     }
 
     private void assertOrchSessionUpdated() {
@@ -1509,18 +1578,11 @@ class AuthenticationCallbackHandlerTest {
         verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertTrue(orchSessionCaptor.getAllValues().get(0).getAuthenticated());
         assertThat(
-                orchSessionCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                equalTo(lowestCredentialTrustLevel));
-        assertThat(
                 orchSessionCaptor.getAllValues().get(0).getIsNewAccount(),
                 equalTo(OrchSessionItem.AccountState.NEW));
     }
 
     private void assertClientSessionUpdated() {
-        var clientSessionCaptor = ArgumentCaptor.forClass(ClientSession.class);
-        verify(clientSessionService, times(1))
-                .updateStoredClientSession(any(), clientSessionCaptor.capture());
-        assertEquals(RP_PAIRWISE_ID.getValue(), clientSessionCaptor.getValue().getRpPairwiseId());
         var orchClientSessionCaptor = ArgumentCaptor.forClass(OrchClientSessionItem.class);
         verify(orchClientSessionService, times(1))
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
@@ -1534,50 +1596,5 @@ class AuthenticationCallbackHandlerTest {
                 orchClientSessionCaptor
                         .getValue()
                         .getCorrectPairwiseIdGivenSubjectType(SubjectType.PUBLIC.toString()));
-    }
-
-    private void clientSessionWithCredentialTrustValue(CredentialTrustLevel credentialTrustLevel) {
-        ClientSession clientSessionWithCredentialTrustLevel =
-                createClientSession(credentialTrustLevel);
-
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSessionWithCredentialTrustLevel));
-        var orchClientSessionWithCredentialTrustLevel =
-                createOrchClientSession(credentialTrustLevel);
-        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(orchClientSessionWithCredentialTrustLevel));
-    }
-
-    private ClientSession createClientSession(CredentialTrustLevel credentialTrustLevel) {
-        return new ClientSession(
-                generateRPAuthRequestForClientSession().toParameters(),
-                null,
-                List.of(VectorOfTrust.of(credentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
-                CLIENT_NAME);
-    }
-
-    private OrchClientSessionItem createOrchClientSession(
-            CredentialTrustLevel credentialTrustLevel) {
-        return new OrchClientSessionItem(
-                CLIENT_SESSION_ID,
-                generateRPAuthRequestForClientSession().toParameters(),
-                null,
-                List.of(VectorOfTrust.of(credentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
-                CLIENT_NAME);
-    }
-
-    private void returnCurrentCredentialStrengthValue(CredentialTrustLevel credentialTrustLevel) {
-        when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
-                .thenReturn(Objects.toString(credentialTrustLevel, null));
-    }
-
-    private void assertCurrentCredentialSetCorrectly(
-            CredentialTrustLevel currentCredentialStrength) {
-        var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-
-        verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
-        assertThat(
-                orchSessionCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
-                equalTo(currentCredentialStrength));
     }
 }

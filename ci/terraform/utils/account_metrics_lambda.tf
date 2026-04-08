@@ -43,6 +43,7 @@ module "account_metrics_update_lambda_role" {
 
   environment = var.environment
   role_name   = "account-metrics-lambda-role"
+  vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
     aws_iam_policy.account_metrics_dynamo_access.arn,
@@ -62,13 +63,18 @@ resource "aws_lambda_function" "account_metrics_lambda" {
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
 
+  vpc_config {
+    security_group_ids = [local.allow_aws_service_access_security_group_id]
+    subnet_ids         = local.authentication_private_subnet_ids
+
+  }
+
   environment {
     variables = merge({
       ENVIRONMENT = var.environment
     })
   }
 }
-
 
 resource "aws_cloudwatch_log_group" "account_metrics_lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.account_metrics_lambda.function_name}"

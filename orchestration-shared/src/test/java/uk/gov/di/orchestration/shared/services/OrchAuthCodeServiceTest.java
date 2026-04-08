@@ -3,15 +3,12 @@ package uk.gov.di.orchestration.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.OrchAuthCodeItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -22,14 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class OrchAuthCodeServiceTest {
+class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
     private static final String EMAIL = "test-email";
@@ -39,23 +32,10 @@ class OrchAuthCodeServiceTest {
     private static final Instant CREATION_INSTANT = Instant.parse("2025-02-01T03:04:05.678Z");
     private static final long VALID_TTL = CREATION_INSTANT.plusSeconds(100).getEpochSecond();
     private static final long EXPIRED_TTL = CREATION_INSTANT.minusSeconds(100).getEpochSecond();
-    private static final Key AUTH_CODE_PARTITION_KEY =
-            Key.builder().partitionValue(AUTH_CODE).build();
-    private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST =
-            GetItemEnhancedRequest.builder()
-                    .key(AUTH_CODE_PARTITION_KEY)
-                    .consistentRead(false)
-                    .build();
-    private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ =
-            GetItemEnhancedRequest.builder()
-                    .key(AUTH_CODE_PARTITION_KEY)
-                    .consistentRead(true)
-                    .build();
+    private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST = getRequestFor(AUTH_CODE);
     private static final long AUTH_CODE_EXPIRY = 123L;
+    private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
 
-    private final DynamoDbTable<OrchAuthCodeItem> table = mock(DynamoDbTable.class);
-    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Json objectMapper = SerializationService.getInstance();
     private OrchAuthCodeService orchAuthCodeService;
 
@@ -74,7 +54,7 @@ class OrchAuthCodeServiceTest {
     @Test
     void shouldStoreOrchAuthCodeItem() throws Json.JsonException {
         orchAuthCodeService.generateAndSaveAuthorisationCode(
-                CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME);
+                CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME, INTERNAL_PAIRWISE_SUBJECT_ID);
 
         var orchAuthCodeItemCaptor = ArgumentCaptor.forClass(OrchAuthCodeItem.class);
         verify(table).putItem(orchAuthCodeItemCaptor.capture());
@@ -82,7 +62,7 @@ class OrchAuthCodeServiceTest {
 
         assertNotNull(capturedRequest.getAuthCode());
 
-        var expectedExchangeData = aAuthCodeExchangeDataEntity();
+        var expectedExchangeData = anAuthCodeExchangeDataEntity();
         var expectedExchangeDataSerialized = objectMapper.writeValueAsString(expectedExchangeData);
         assertEquals(expectedExchangeDataSerialized, capturedRequest.getAuthCodeExchangeData());
 
@@ -100,12 +80,16 @@ class OrchAuthCodeServiceTest {
                 OrchAuthCodeException.class,
                 () ->
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
-                                CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME));
+                                CLIENT_ID,
+                                CLIENT_SESSION_ID,
+                                EMAIL,
+                                AUTH_TIME,
+                                INTERNAL_PAIRWISE_SUBJECT_ID));
     }
 
     @Test
     void shouldGetOrchAuthCodeExchangeDataByAuthCode() throws Json.JsonException {
-        var exchangeData = aAuthCodeExchangeDataEntity();
+        var exchangeData = anAuthCodeExchangeDataEntity();
         withValidOrchAuthCode(exchangeData);
 
         var actualExchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
@@ -117,6 +101,9 @@ class OrchAuthCodeServiceTest {
                 exchangeData.getClientSessionId(), actualExchangeData.get().getClientSessionId());
         assertEquals(exchangeData.getEmail(), actualExchangeData.get().getEmail());
         assertEquals(exchangeData.getAuthTime(), actualExchangeData.get().getAuthTime());
+        assertEquals(
+                exchangeData.getInternalPairwiseSubjectId(),
+                actualExchangeData.get().getInternalPairwiseSubjectId());
     }
 
     @Test
@@ -126,45 +113,12 @@ class OrchAuthCodeServiceTest {
         assertTrue(exchangeData.isEmpty());
 
         verify(table).getItem(AUTH_CODE_GET_REQUEST);
-        assertGetItemCalledWithStronglyConsistentRead();
-    }
-
-    @Test
-    void
-            shouldRetryGetOrchAuthCodeExchangeDataByAuthCodeWithStronglyConsistentReadOnceWhenItemNotFound()
-                    throws Json.JsonException {
-        var exchangeData = aAuthCodeExchangeDataEntity();
-        var exchangeDataSerialized = objectMapper.writeValueAsString(exchangeData);
-
-        OrchAuthCodeItem orchAuthCodeItem =
-                new OrchAuthCodeItem()
-                        .withAuthCode(AUTH_CODE)
-                        .withAuthCodeExchangeData(exchangeDataSerialized)
-                        .withIsUsed(false)
-                        .withTimeToLive(VALID_TTL);
-
-        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(null);
-        when(table.getItem(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ))
-                .thenReturn(orchAuthCodeItem);
-
-        var actualExchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
-
-        assertTrue(actualExchangeData.isPresent());
-
-        assertEquals(exchangeData.getClientId(), actualExchangeData.get().getClientId());
-        assertEquals(
-                exchangeData.getClientSessionId(), actualExchangeData.get().getClientSessionId());
-        assertEquals(exchangeData.getEmail(), actualExchangeData.get().getEmail());
-        assertEquals(exchangeData.getAuthTime(), actualExchangeData.get().getAuthTime());
-
-        verify(table).getItem(AUTH_CODE_GET_REQUEST);
-        assertGetItemCalledWithStronglyConsistentRead();
     }
 
     @Test
     void shouldMarkAuthCodeAsUsedAfterSuccessfullyGettingOrchAuthCodeExchangeData()
             throws Json.JsonException {
-        var exchangeData = aAuthCodeExchangeDataEntity();
+        var exchangeData = anAuthCodeExchangeDataEntity();
         withValidOrchAuthCode(exchangeData);
 
         orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
@@ -183,18 +137,6 @@ class OrchAuthCodeServiceTest {
         assertThrows(
                 OrchAuthCodeException.class,
                 () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
-    }
-
-    @Test
-    void shouldThrowWhenFailingToGetAuthCodeExchangeDataByAuthCodeWithStronglyConsistentRead() {
-        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(null);
-        withFailedGetWithStronglyConsistentRead();
-
-        assertThrows(
-                OrchAuthCodeException.class,
-                () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
-
-        assertGetItemCalledWithStronglyConsistentRead();
     }
 
     @Test
@@ -220,7 +162,7 @@ class OrchAuthCodeServiceTest {
     @Test
     void shouldThrowWhenFailingToUpdateOrchAuthCodeItemWhenMarkingAsUsed()
             throws Json.JsonException {
-        var exchangeData = aAuthCodeExchangeDataEntity();
+        var exchangeData = anAuthCodeExchangeDataEntity();
         withValidOrchAuthCode(exchangeData);
 
         withFailedUpdate();
@@ -230,16 +172,13 @@ class OrchAuthCodeServiceTest {
                 () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
     }
 
-    private AuthCodeExchangeData aAuthCodeExchangeDataEntity() {
+    private AuthCodeExchangeData anAuthCodeExchangeDataEntity() {
         return new AuthCodeExchangeData()
-                .setClientId(CLIENT_ID)
-                .setClientSessionId(CLIENT_SESSION_ID)
-                .setEmail(EMAIL)
-                .setAuthTime(AUTH_TIME);
-    }
-
-    private void assertGetItemCalledWithStronglyConsistentRead() {
-        verify(table).getItem(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ);
+                .withClientId(CLIENT_ID)
+                .withClientSessionId(CLIENT_SESSION_ID)
+                .withEmail(EMAIL)
+                .withAuthTime(AUTH_TIME)
+                .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID);
     }
 
     private void withValidOrchAuthCode(AuthCodeExchangeData exchangeData)
@@ -257,7 +196,7 @@ class OrchAuthCodeServiceTest {
     }
 
     private void withUsedOrchAuthCode() throws Json.JsonException {
-        var exchangeData = aAuthCodeExchangeDataEntity();
+        var exchangeData = anAuthCodeExchangeDataEntity();
         var exchangeDataSerialized = objectMapper.writeValueAsString(exchangeData);
 
         OrchAuthCodeItem orchAuthCodeItem =
@@ -271,7 +210,7 @@ class OrchAuthCodeServiceTest {
     }
 
     private void withExpiredOrchAuthCode() throws Json.JsonException {
-        var exchangeData = aAuthCodeExchangeDataEntity();
+        var exchangeData = anAuthCodeExchangeDataEntity();
         var exchangeDataSerialized = objectMapper.writeValueAsString(exchangeData);
 
         OrchAuthCodeItem orchAuthCodeItem =
@@ -282,32 +221,5 @@ class OrchAuthCodeServiceTest {
                         .withTimeToLive(EXPIRED_TTL);
 
         when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(orchAuthCodeItem);
-    }
-
-    private void withFailedPut() {
-        doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
-                .when(table)
-                .putItem(any(OrchAuthCodeItem.class));
-    }
-
-    private void withFailedGet() {
-        doThrow(DynamoDbException.builder().message("Failed to get from table").build())
-                .when(table)
-                .getItem(eq(AUTH_CODE_GET_REQUEST));
-    }
-
-    private void withFailedGetWithStronglyConsistentRead() {
-        doThrow(
-                        DynamoDbException.builder()
-                                .message("Failed to get from table with strongly consistent read")
-                                .build())
-                .when(table)
-                .getItem(eq(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ));
-    }
-
-    private void withFailedUpdate() {
-        doThrow(DynamoDbException.builder().message("Failed to update item in table").build())
-                .when(table)
-                .updateItem(any(OrchAuthCodeItem.class));
     }
 }

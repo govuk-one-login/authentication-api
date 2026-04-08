@@ -17,5 +17,6 @@ di_tools_signing_profile_version_arn = "arn:aws:signer:eu-west-2:114407264696:/s
 orch_stub_deployed                   = false
 
 # Sizing
-redis_node_size  = "cache.m4.xlarge"
-provision_dynamo = false
+redis_node_size              = "cache.m4.xlarge"
+provision_dynamo             = false
+provision_test_client_secret = true

@@ -10,13 +10,17 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED;
@@ -27,12 +31,14 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
     private final Json objectMapper = SerializationService.getInstance();
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
+    private final Metrics metrics;
 
     private static final Logger LOG = LogManager.getLogger(SPOTResponseHandler.class);
 
@@ -43,12 +49,16 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
     public SPOTResponseHandler(ConfigurationService configurationService) {
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.metrics = new Metrics(configurationService);
     }
 
     public SPOTResponseHandler(
-            DynamoIdentityService dynamoIdentityService, AuditService auditService) {
+            DynamoIdentityService dynamoIdentityService,
+            AuditService auditService,
+            Metrics metrics) {
         this.dynamoIdentityService = dynamoIdentityService;
         this.auditService = auditService;
+        this.metrics = metrics;
     }
 
     @Override
@@ -56,6 +66,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
         for (SQSMessage msg : event.getRecords()) {
             try {
                 ThreadContext.clearMap();
+                attachTraceId();
                 var spotResponse = objectMapper.readValue(msg.getBody(), SPOTResponse.class);
                 var logIds = spotResponse.getLogIds();
 
@@ -82,13 +93,17 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                             spotResponse.getStatus());
                     auditService.submitAuditEvent(
                             IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED, logIds.getClientId(), user);
-                    dynamoIdentityService.addCoreIdentityJWT(
-                            logIds.getClientSessionId(),
-                            spotResponse.getSub(),
-                            spotResponse.getClaims().values().stream()
-                                    .map(Object::toString)
-                                    .findFirst()
-                                    .orElseThrow());
+                    var updatedIdentityCredentials =
+                            dynamoIdentityService.addCoreIdentityJWT(
+                                    logIds.getClientSessionId(),
+                                    spotResponse.getSub(),
+                                    spotResponse.getClaims().values().stream()
+                                            .map(Object::toString)
+                                            .findFirst()
+                                            .orElseThrow());
+
+                    emitSpotLatencyMetric(updatedIdentityCredentials);
+
                     return null;
                 } else {
                     LOG.warn(
@@ -109,5 +124,22 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
             }
         }
         return null;
+    }
+
+    private void emitSpotLatencyMetric(OrchIdentityCredentials identityCredentials) {
+        try {
+            if (identityCredentials.getSpotQueuedAtMs() == null) {
+                LOG.warn(
+                        "Orch identity credentials does not contain SPOT Queued at timestamp, continuing without metric");
+                return;
+            }
+            metrics.emit(
+                    "SpotLatencyMs",
+                    (double) NowHelper.now().toInstant().toEpochMilli()
+                            - identityCredentials.getSpotQueuedAtMs().doubleValue(),
+                    Map.of());
+        } catch (Exception e) {
+            LOG.warn("Failed to emit SPOT latency metric, continuing as normal", e);
+        }
     }
 }

@@ -28,6 +28,7 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
 
 public class ClientRegistrationHandler
@@ -68,6 +69,7 @@ public class ClientRegistrationHandler
 
     public APIGatewayProxyResponseEvent clientRegistrationRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        attachTraceId();
         String ipAddress = IpAddressHelper.extractIpAddress(input);
 
         var user =
@@ -121,7 +123,9 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.getClientLoCs(),
                     clientRegistrationRequest.getChannel(),
                     clientRegistrationRequest.isMaxAgeEnabled(),
-                    clientRegistrationRequest.isPkceEnforced());
+                    clientRegistrationRequest.isPkceEnforced(),
+                    clientRegistrationRequest.getLandingPageUrl(),
+                    2000);
 
             var clientRegistrationResponse =
                     new ClientRegistrationResponse(
@@ -144,7 +148,8 @@ public class ClientRegistrationHandler
                             clientRegistrationRequest.getIdTokenSigningAlgorithm(),
                             clientRegistrationRequest.getChannel(),
                             clientRegistrationRequest.isMaxAgeEnabled(),
-                            clientRegistrationRequest.isPkceEnforced());
+                            clientRegistrationRequest.isPkceEnforced(),
+                            clientRegistrationRequest.getLandingPageUrl());
             LOG.info("Generating successful Client registration response");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonException e) {

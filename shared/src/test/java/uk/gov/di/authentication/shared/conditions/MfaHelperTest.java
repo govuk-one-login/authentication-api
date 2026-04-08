@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -26,21 +27,52 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class MfaHelperTest {
     private static final UserCredentials userCredentials = mock(UserCredentials.class);
     private static final String PHONE_NUMBER = "+44123456789";
     private static final UserProfile userProfile = mock(UserProfile.class);
+    private static final MFAMethod defaultPriorityAuthApp =
+            MFAMethod.authAppMfaMethod(
+                    "some-credential-1",
+                    true,
+                    true,
+                    PriorityIdentifier.DEFAULT,
+                    "some-auth-app-identifier-1");
+    private static final MFAMethod backupPriorityAuthApp =
+            MFAMethod.authAppMfaMethod(
+                    "some-credential-2",
+                    true,
+                    true,
+                    PriorityIdentifier.BACKUP,
+                    "some-auth-app-identifier-1");
+    private static final MFAMethod defaultPrioritySms =
+            MFAMethod.smsMfaMethod(
+                    true, true, PHONE_NUMBER, PriorityIdentifier.DEFAULT, "some-sms-identifier-1");
+    private static final MFAMethod backupPrioritySms =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    "+447900000100",
+                    PriorityIdentifier.BACKUP,
+                    "some-sms-identifier-2");
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHelper.class);
+
+    @RegisterExtension
+    private final CaptureLoggingExtension noDefaultMfaMethodLogging =
+            new CaptureLoggingExtension(NoDefaultMfaMethodLogHelper.class);
 
     @Nested
     class GetUserMFADetail {
@@ -183,7 +215,7 @@ class MfaHelperTest {
 
         @Test
         void shouldReturnRelevantMethodForAMigratedUser() {
-            when(userProfile.getMfaMethodsMigrated()).thenReturn(true);
+            when(userProfile.isMfaMethodsMigrated()).thenReturn(true);
 
             var phoneNumberOfMigratedMethod = "+447900000000";
             var isPhoneNumberVerifiedOnUserProfile = false;
@@ -218,7 +250,7 @@ class MfaHelperTest {
 
         @Test
         void shouldHandleErrorsRetrievingADefaultMethodForAMigratedUser() {
-            when(userProfile.getMfaMethodsMigrated()).thenReturn(true);
+            when(userProfile.isMfaMethodsMigrated()).thenReturn(true);
 
             var isPhoneNumberVerifiedOnUserProfile = false;
             setupUserProfile(userProfile, null, isPhoneNumberVerifiedOnUserProfile, true);
@@ -240,44 +272,15 @@ class MfaHelperTest {
             assertEquals(expectedResult, result);
 
             assertThat(
-                    logging.events(),
+                    noDefaultMfaMethodLogging.events(),
                     hasItem(
                             withMessageContaining(
-                                    "Unexpected error retrieving default mfa method for migrated user: no default method exists")));
+                                    "No default mfa method found for user. Is user migrated: true, user MFA method count: 1, MFA method priority-type pairs: (BACKUP,AUTH_APP).")));
         }
     }
 
     @Nested
     class RetrieveDefaultMethodForMigratedUser {
-        private static final MFAMethod defaultPriorityAuthApp =
-                MFAMethod.authAppMfaMethod(
-                        "some-credential-1",
-                        true,
-                        true,
-                        PriorityIdentifier.DEFAULT,
-                        "some-auth-app-identifier-1");
-        private static final MFAMethod backupPriorityAuthApp =
-                MFAMethod.authAppMfaMethod(
-                        "some-credential-2",
-                        true,
-                        true,
-                        PriorityIdentifier.BACKUP,
-                        "some-auth-app-identifier-1");
-        private static final MFAMethod defaultPrioritySms =
-                MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        PHONE_NUMBER,
-                        PriorityIdentifier.DEFAULT,
-                        "some-sms-identifier-1");
-        private static final MFAMethod backupPrioritySms =
-                MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        "+447900000100",
-                        PriorityIdentifier.BACKUP,
-                        "some-sms-identifier-2");
-
         private static Stream<Arguments> mfaMethodsCombinations() {
             return Stream.of(
                     Arguments.of(
@@ -320,6 +323,70 @@ class MfaHelperTest {
         }
     }
 
+    @Nested
+    class HasInternationalPhoneNumber {
+        private static final MFAMethod defaultPriorityInternationalSms =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        INTERNATIONAL_MOBILE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        "intl-sms-id");
+        private static final MFAMethod backupPriorityInternationalSms =
+                MFAMethod.smsMfaMethod(
+                        true, true, "+77777777778", PriorityIdentifier.BACKUP, "intl-sms-id-2");
+
+        @Test
+        void shouldReturnFalseForEmptyList() {
+            assertFalse(MfaHelper.hasInternationalPhoneNumber(List.of()));
+        }
+
+        @Test
+        void shouldReturnFalseWhenOnlyDomesticSmsMethod() {
+            assertFalse(MfaHelper.hasInternationalPhoneNumber(List.of(defaultPrioritySms)));
+        }
+
+        @Test
+        void shouldReturnFalseWhenOnlyAuthAppMethod() {
+            assertFalse(MfaHelper.hasInternationalPhoneNumber(List.of(defaultPriorityAuthApp)));
+        }
+
+        @Test
+        void shouldReturnFalseWhenMultipleDomesticSmsMethods() {
+            assertFalse(
+                    MfaHelper.hasInternationalPhoneNumber(
+                            List.of(defaultPrioritySms, backupPrioritySms)));
+        }
+
+        @Test
+        void shouldReturnFalseWhenDomesticSmsAndAuthApp() {
+            assertFalse(
+                    MfaHelper.hasInternationalPhoneNumber(
+                            List.of(defaultPrioritySms, backupPriorityAuthApp)));
+        }
+
+        @Test
+        void shouldReturnTrueWhenMixOfMethodsIncludesInternationalSms() {
+            assertTrue(
+                    MfaHelper.hasInternationalPhoneNumber(
+                            List.of(defaultPriorityAuthApp, backupPriorityInternationalSms)));
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldReturnTrueWhenOnlyInternationalSmsMethodRegardlessOfVerifiedState(
+                boolean isVerified) {
+            var sms =
+                    MFAMethod.smsMfaMethod(
+                            isVerified,
+                            true,
+                            INTERNATIONAL_MOBILE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            "sms-id");
+            assertTrue(MfaHelper.hasInternationalPhoneNumber(List.of(sms)));
+        }
+    }
+
     private static MFAMethod authAppMfaMethod(boolean isAuthAppVerified, boolean enabled) {
         return new MFAMethod(
                 MFAMethodType.AUTH_APP.getValue(),
@@ -336,6 +403,6 @@ class MfaHelperTest {
             boolean areMfaMethodsMigrated) {
         when(userProfile.getPhoneNumber()).thenReturn(phoneNumber);
         when(userProfile.isPhoneNumberVerified()).thenReturn(isPhoneNumberVerified);
-        when(userProfile.getMfaMethodsMigrated()).thenReturn(areMfaMethodsMigrated);
+        when(userProfile.isMfaMethodsMigrated()).thenReturn(areMfaMethodsMigrated);
     }
 }

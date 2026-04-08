@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
@@ -20,10 +19,7 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -46,16 +42,12 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     protected UpdateProfileHandler(
             AuthenticationService authenticationService,
-            SessionService sessionService,
             ConfigurationService configurationService,
             AuditService auditService,
-            ClientService clientService,
             AuthSessionService authSessionService) {
         super(
                 UpdateProfileRequest.class,
                 configurationService,
-                sessionService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;
@@ -67,12 +59,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     public UpdateProfileHandler(ConfigurationService configurationService) {
         super(UpdateProfileRequest.class, configurationService);
-        auditService = new AuditService(configurationService);
-    }
-
-    public UpdateProfileHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(UpdateProfileRequest.class, configurationService, redis);
         auditService = new AuditService(configurationService);
     }
 
@@ -103,7 +89,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UpdateProfileRequest request,
             UserContext userContext) {
 
-        Session session = userContext.getSession();
         AuthSessionItem authSession = userContext.getAuthSession();
 
         String persistentSessionId =
@@ -118,7 +103,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");
             return generateErrorResponse(
-                    ErrorResponse.ERROR_1000,
+                    ErrorResponse.SESSION_ID_MISSING,
                     auditContextWithOnlyClientSessionId(
                             userContext.getClientSessionId(), userContext.getTxmaAuditEncoded()));
         }
@@ -149,7 +134,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             LOG.error(
                     "Encountered unexpected error while processing session: {}",
                     userContext.getAuthSession().getSessionId());
-            return generateErrorResponse(ErrorResponse.ERROR_1013, auditContext);
+            return generateErrorResponse(ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
         }
 
         auditService.submitAuditEvent(auditableEvent, auditContext);

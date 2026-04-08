@@ -56,7 +56,7 @@ public class DeleteSyntheticsUserHandler
         String email = configurationService.getSyntheticsUsers();
         if (email == null || email.isBlank()) {
             LOG.info("Synthetics user account not configured.");
-            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1010);
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ACCT_DOES_NOT_EXIST);
         }
 
         var auditContext =
@@ -84,7 +84,7 @@ public class DeleteSyntheticsUserHandler
                                     AUTH_SYNTHETICS_USER_NOT_FOUND_FOR_DELETION, auditContext);
 
                             return generateApiGatewayProxyErrorResponse(
-                                    404, ErrorResponse.ERROR_1010);
+                                    404, ErrorResponse.ACCT_DOES_NOT_EXIST);
                         });
     }
 }

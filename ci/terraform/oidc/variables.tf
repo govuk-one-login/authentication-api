@@ -406,11 +406,6 @@ variable "doc_app_cri_data_endpoint" {
   description = "The endpoint path to the protected resource on the Doc App CRI (this is appended to the doc_app_backend_uri variable)"
 }
 
-variable "doc_app_encryption_key_id" {
-  type    = string
-  default = "undefined"
-}
-
 variable "doc_app_jwks_endpoint" {
   type    = string
   default = "undefined"
@@ -478,14 +473,6 @@ variable "txma_account_id" {
 variable "orch_client_id" {
   type    = string
   default = "orchestrationAuth"
-}
-
-variable "orch_frontend_api_gateway_integration_enabled" {
-  # When this flag is enabled in a particular environment, the corresponding orchestration-frontend flag
-  # (OidcApiGatewayIntegrationEnabled) should also be enabled for that environment.
-  description = "Flag to enable API Gateway integration with the Orchestration frontend"
-  type        = bool
-  default     = false
 }
 
 variable "orch_openid_configuration_enabled" {
@@ -566,12 +553,6 @@ variable "orch_storage_token_jwk_enabled" {
   default     = false
 }
 
-variable "orch_frontend_enabled" {
-  description = "Flag to enable redirecting to orch frontend instead of auth frontend"
-  type        = bool
-  default     = false
-}
-
 variable "orch_ipv_jwks_enabled" {
   description = "Flag to enable routing IPV jwk traffic to the orchestration account"
   type        = bool
@@ -632,12 +613,6 @@ variable "authorize_protected_subnet_enabled" {
   default     = false
 }
 
-variable "support_email_check_enabled" {
-  default     = true
-  type        = bool
-  description = "Feature flag which toggles the Experian email check on and off"
-}
-
 variable "send_storage_token_to_ipv_enabled" {
   default     = false
   type        = bool
@@ -648,6 +623,11 @@ variable "support_reauth_signout_enabled" {
   default     = false
   type        = bool
   description = "Feature flag which toggles sign-out instead of lockout for reauth journeys"
+}
+
+variable "auth_new_account_id" {
+  type    = string
+  default = ""
 }
 
 variable "orch_account_id" {
@@ -676,6 +656,10 @@ variable "orch_client_session_table_encryption_key_arn" {
 }
 
 variable "orch_identity_credentials_table_encryption_key_arn" {
+  type    = string
+  default = ""
+}
+variable "orch_client_registry_table_encryption_key_arn" {
   type    = string
   default = ""
 }

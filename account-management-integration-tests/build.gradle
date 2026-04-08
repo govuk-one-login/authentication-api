@@ -3,37 +3,48 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di"
-version "unspecified"
+group = "uk.gov.di"
+version = "unspecified"
 
 dependencies {
-    testImplementation configurations.bouncycastle,
-            configurations.apache,
-            configurations.nimbus,
-            configurations.gson,
-            configurations.tests,
-            configurations.sqs,
-            configurations.dynamodb,
-            configurations.lambda,
-            configurations.lettuce,
-            configurations.libphonenumber
+    testImplementation libs.bouncyCastle,
+            libs.bundles.apache,
+            libs.bundles.nimbus,
+            libs.gson,
+            libs.bundles.test,
+            libs.awsKms,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.bundles.awsDynamoDb,
+            libs.bundles.awsLambda,
+            libs.bundles.lettuce,
+            libs.libphonenumber
+
+    implementation project(':audit-events')
 
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
     testImplementation project(":shared-test"), noXray
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
-    testImplementation 'net.javacrumbs.json-unit:json-unit-assertj:4.1.1'
+    testImplementation libs.jetbrainsKotlin
+    testImplementation libs.jacksonDatabind
+    testImplementation libs.jsonAssertJ
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+    testRuntimeOnly libs.bundles.testRuntime
+
+    constraints {
+        testImplementation('org.assertj:assertj-core:[3.27.7,)') {
+            because 'CVE-2026-24400 is fixed in org.assertj:assertj-core:3.27.7 and higher'
+        }
+    }
 }
 
 test {
     useJUnitPlatform()
 
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
-    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
     environment "AWS_REGION", "eu-west-2"
-    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
@@ -41,8 +52,10 @@ test {
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "account-management"
     environment "SQS_ENDPOINT", "http://localhost:45678"
+    environment "SNS_ENDPOINT", "http://localhost:45678"
     environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
+    environment "INTERNATIONAL_SMS_NUMBER_SEND_LIMIT", "10"
 
     testLogging {
         showStandardStreams = false
@@ -63,6 +76,6 @@ test {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
 }

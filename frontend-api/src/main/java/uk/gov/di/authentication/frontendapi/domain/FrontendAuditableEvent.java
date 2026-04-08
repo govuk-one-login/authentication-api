@@ -58,7 +58,9 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
     AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
     AUTH_REAUTH_FAILED,
-    AUTH_REAUTH_SUCCESS;
+    AUTH_REAUTH_SUCCESS,
+    AUTH_EMAIL_FRAUD_CHECK_DECISION_USED,
+    AUTH_MFA_RESET_REQUESTED;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);

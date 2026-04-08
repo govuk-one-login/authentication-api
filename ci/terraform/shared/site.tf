@@ -65,7 +65,7 @@ provider "aws" {
 }
 
 locals {
-  deploy_bulk_email_users_count = 0
+  deploy_bulk_email_users_count = 1
 }
 
 data "aws_caller_identity" "current" {}

@@ -29,12 +29,9 @@ import uk.gov.di.authentication.shared.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
@@ -97,8 +94,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     protected AccountInterventionsHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AccountInterventionsService accountInterventionsService,
             AuditService auditService,
@@ -109,8 +104,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         super(
                 AccountInterventionsRequest.class,
                 configurationService,
-                sessionService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.accountInterventionsService = accountInterventionsService;
@@ -123,10 +116,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     }
 
     public AccountInterventionsHandler(
-            ConfigurationService configurationService,
-            RedisConnectionService redis,
-            LambdaInvokerService lambdaInvokerService) {
-        super(AccountInterventionsRequest.class, configurationService, redis);
+            ConfigurationService configurationService, LambdaInvokerService lambdaInvokerService) {
+        super(AccountInterventionsRequest.class, configurationService);
 
         this.lambdaInvoker = lambdaInvokerService;
 
@@ -161,14 +152,16 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             try {
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
             } catch (JsonException e) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.REQUEST_MISSING_PARAMS);
             }
         }
 
         var userProfile = authenticationService.getUserProfileByEmailMaybe(request.email());
 
         if (userProfile.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
 
         String internalPairwiseId =
@@ -208,7 +201,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         } catch (UnsuccessfulAccountInterventionsResponseException e) {
             return handleErrorForAIS(e);
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -304,7 +297,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         LOG.error(
                 "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
                 e.getHttpCode(),
-                e.getMessage());
+                e.getMessage(),
+                e);
         if (!configurationService.abortOnAccountInterventionsErrorResponse()
                 || !configurationService.accountInterventionsServiceActionEnabled()) {
             try {
@@ -314,16 +308,21 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         Map.of("Environment", configurationService.getEnvironment()));
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
             } catch (JsonException ex) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.REQUEST_MISSING_PARAMS);
             }
         }
         return switch (e.getHttpCode()) {
-            case 429 -> generateApiGatewayProxyErrorResponse(429, ErrorResponse.ERROR_1051);
-            case 500 -> generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1052);
-            case 502 -> generateApiGatewayProxyErrorResponse(502, ErrorResponse.ERROR_1053);
-            case 504 -> generateApiGatewayProxyErrorResponse(504, ErrorResponse.ERROR_1054);
+            case 429 -> generateApiGatewayProxyErrorResponse(
+                    429, ErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED);
+            case 500 -> generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR);
+            case 502 -> generateApiGatewayProxyErrorResponse(
+                    502, ErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY);
+            case 504 -> generateApiGatewayProxyErrorResponse(
+                    504, ErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT);
             default -> generateApiGatewayProxyErrorResponse(
-                    e.getHttpCode(), ErrorResponse.ERROR_1055);
+                    e.getHttpCode(), ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR);
         };
     }
 

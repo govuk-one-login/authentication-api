@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,7 +41,8 @@ class AuthAppStubTest {
                         99999,
                         mock(CodeRequest.class),
                         mock(AuditService.class),
-                        mock(DynamoAccountModifiersService.class));
+                        mock(DynamoAccountModifiersService.class),
+                        mock(MFAMethodsService.class));
     }
 
     @Test

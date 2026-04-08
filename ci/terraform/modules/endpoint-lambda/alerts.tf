@@ -22,6 +22,7 @@ resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
+  count               = var.lambda_error_alarm_disabled ? 0 : 1
   alarm_name          = "${var.environment}-${local.endpoint_name_sanitized}-alarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"

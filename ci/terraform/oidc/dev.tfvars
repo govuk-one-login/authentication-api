@@ -3,6 +3,9 @@ shared_state_bucket = "di-auth-development-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontenddev"
 
+# Auth new strategic account
+auth_new_account_id = "975050272416"
+
 # App-specific
 test_clients_enabled = true
 internal_sector_uri  = "https://identity.dev.account.gov.uk"
@@ -49,7 +52,6 @@ doc_app_authorisation_uri                   = "https://dcmaw-cri.dev.stubs.accou
 doc_app_jwks_endpoint                       = "https://dcmaw-cri.dev.stubs.account.gov.uk/.well-known/jwks.json"
 doc_app_aud                                 = "https://dcmaw-cri.dev.stubs.account.gov.uk"
 doc_app_new_aud_claim_enabled               = true
-doc_app_encryption_key_id                   = ""
 spot_enabled                                = false
 custom_doc_app_claim_enabled                = true
 ipv_audience                                = "https://ipvstub.signin.dev.account.gov.uk"
@@ -59,6 +61,7 @@ account_intervention_service_action_enabled = true
 # account_intervention_service_uri is stored in AWS Secrets Manager and populated using read_secrets.sh
 account_intervention_service_abort_on_error = true
 send_storage_token_to_ipv_enabled           = true
+authentication_attempts_service_enabled     = true
 auth_frontend_public_encryption_key         = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0PcOHuVXOuexYZmpOlCo
@@ -103,5 +106,6 @@ performance_tuning = {
     scaling_trigger = 0
   }
 }
-lambda_min_concurrency        = 1
-use_strongly_consistent_reads = true
+
+use_strongly_consistent_reads  = true
+support_reauth_signout_enabled = true

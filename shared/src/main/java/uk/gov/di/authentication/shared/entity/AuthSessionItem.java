@@ -22,7 +22,6 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
     public static final String ATTRIBUTE_RESET_PASSWORD_STATE = "resetPasswordState";
     public static final String ATTRIBUTE_RESET_MFA_STATE = "resetMfaState";
-    public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "currentCredentialStrength";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
     public static final String ATTRIBUTE_UPLIFT_REQUIRED = "UpliftRequired";
@@ -39,6 +38,14 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_REQUESTED_LEVEL_OF_CONFIDENCE =
             "RequestedLevelOfConfidence";
     public static final String ATTRIBUTE_CLIENT_ID = "ClientId";
+    public static final String ATTRIBUTE_CLIENT_NAME = "ClientName";
+    public static final String ATTRIBUTE_IS_SMOKE_TEST = "IsSmokeTest";
+    public static final String ATTRIBUTE_IS_ONE_LOGIN_SERVICE = "IsOneLoginService";
+    public static final String ATTRIBUTE_SUBJECT_TYPE = "SubjectType";
+    public static final String ATTRIBUTE_RP_SECTOR_IDENTIFIER_HOST = "RpSectorIdentifierHost";
+    public static final String ATTRIBUTE_PASSKEY_ASSERTION_REQUEST = "PasskeyAssertionRequest";
+    public static final String ATTRIBUTE_HAS_VERIFIED_PASSWORD = "HasVerifiedPassword";
+    public static final String ATTRIBUTE_HAS_VERIFIED_MFA = "HasVerifiedMfa";
 
     public enum AccountState {
         NEW,
@@ -76,6 +83,14 @@ public class AuthSessionItem {
     private CredentialTrustLevel requestedCredentialStrength;
     private LevelOfConfidence requestedLevelOfConfidence;
     private String clientId;
+    private String clientName;
+    private boolean isSmokeTest;
+    private boolean isOneLoginService;
+    private String subjectType;
+    private String rpSectorIdentifierHost;
+    private String passkeyAssertionRequest;
+    private boolean hasVerifiedPassword;
+    private boolean hasVerifiedMfa;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -181,21 +196,6 @@ public class AuthSessionItem {
         return this;
     }
 
-    @DynamoDbAttribute(ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH)
-    public CredentialTrustLevel getCurrentCredentialStrength() {
-        return this.currentCredentialStrength;
-    }
-
-    public void setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
-    }
-
-    public AuthSessionItem withCurrentCredentialStrength(
-            CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
-        return this;
-    }
-
     @DynamoDbAttribute(ATTRIBUTE_UPLIFT_REQUIRED)
     public boolean getUpliftRequired() {
         return this.upliftRequired;
@@ -279,6 +279,10 @@ public class AuthSessionItem {
             NotificationType notificationType, JourneyType journeyType) {
         CodeRequestType requestType =
                 CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        return incrementCodeRequestCount(requestType);
+    }
+
+    public AuthSessionItem incrementCodeRequestCount(CodeRequestType requestType) {
         int currentCount = getCodeRequestCount(requestType);
         LOG.info("CodeRequest count: {} is: {}", requestType, currentCount);
         codeRequestCountMap.put(requestType, currentCount + 1);
@@ -290,6 +294,10 @@ public class AuthSessionItem {
             NotificationType notificationType, JourneyType journeyType) {
         CodeRequestType requestType =
                 CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        return resetCodeRequestCount(requestType);
+    }
+
+    public AuthSessionItem resetCodeRequestCount(CodeRequestType requestType) {
         codeRequestCountMap.put(requestType, 0);
         LOG.info("CodeRequest count reset: {}", codeRequestCountMap);
         return this;
@@ -318,15 +326,43 @@ public class AuthSessionItem {
         return this;
     }
 
+    /**
+     * Returns the {@link uk.gov.di.authentication.shared.entity.CredentialTrustLevel} the user has
+     * achieved in this session. This will be null initially and is set at the end of a user's
+     * journey. This value is reported back to Orchestration in the /userinfo response.
+     *
+     * @return {{@link uk.gov.di.authentication.shared.entity.CredentialTrustLevel}: the level of
+     *     credential trust a user has achieved.
+     */
     @DynamoDbAttribute(ATTRIBUTE_ACHIEVED_CREDENTIAL_STRENGTH)
     public CredentialTrustLevel getAchievedCredentialStrength() {
         return this.achievedCredentialStrength;
     }
 
+    /**
+     * Sets the {@link uk.gov.di.authentication.shared.entity.CredentialTrustLevel} the user has
+     * achieved in this session. Modifies the session object in place. This should only be called
+     * towards the end of a user's journey once we're sure they've presented valid credentials to
+     * achieve the level we're about to set. Usages of this should be careful not to downshift a
+     * user's Credential Trust level.
+     *
+     * @param credentialStrength - the level of Credential Trust a user has achieved
+     */
     public void setAchievedCredentialStrength(CredentialTrustLevel credentialStrength) {
         this.achievedCredentialStrength = credentialStrength;
     }
 
+    /**
+     * Builder like method which both sets the level of Credential Trust the user has achieved in
+     * this session and returns the modified session object, enabling method chaining. This should
+     * only be called towards the end of a user's journey once we're sure they've presented valid
+     * credentials to achieve the level we're about to set. Usages of this should be careful not to
+     * downshift a user's Credential Trust level.
+     *
+     * @param credentialStrength - the level of Credential Trust a user has achieved
+     * @return {@link uk.gov.di.authentication.shared.entity.AuthSessionItem} - the now modified
+     *     session object.
+     */
     public AuthSessionItem withAchievedCredentialStrength(CredentialTrustLevel credentialStrength) {
         this.achievedCredentialStrength = credentialStrength;
         return this;
@@ -376,6 +412,118 @@ public class AuthSessionItem {
         return this;
     }
 
+    @DynamoDbAttribute(ATTRIBUTE_CLIENT_NAME)
+    public String getClientName() {
+        return clientName;
+    }
+
+    public void setClientName(String clientName) {
+        this.clientName = clientName;
+    }
+
+    public AuthSessionItem withClientName(String clientName) {
+        this.clientName = clientName;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_SMOKE_TEST)
+    public boolean getIsSmokeTest() {
+        return isSmokeTest;
+    }
+
+    public void setIsSmokeTest(boolean isSmokeTest) {
+        this.isSmokeTest = isSmokeTest;
+    }
+
+    public AuthSessionItem withIsSmokeTest(boolean isSmokeTest) {
+        this.isSmokeTest = isSmokeTest;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_ONE_LOGIN_SERVICE)
+    public boolean getIsOneLoginService() {
+        return this.isOneLoginService;
+    }
+
+    public void setIsOneLoginService(boolean isOneLoginService) {
+        this.isOneLoginService = isOneLoginService;
+    }
+
+    public AuthSessionItem withIsOneLoginService(boolean isOneLoginService) {
+        this.isOneLoginService = isOneLoginService;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_SUBJECT_TYPE)
+    public String getSubjectType() {
+        return subjectType;
+    }
+
+    public void setSubjectType(String subjectType) {
+        this.subjectType = subjectType;
+    }
+
+    public AuthSessionItem withSubjectType(String subjectType) {
+        this.subjectType = subjectType;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RP_SECTOR_IDENTIFIER_HOST)
+    public String getRpSectorIdentifierHost() {
+        return rpSectorIdentifierHost;
+    }
+
+    public void setRpSectorIdentifierHost(String rpSectorIdentifierHost) {
+        this.rpSectorIdentifierHost = rpSectorIdentifierHost;
+    }
+
+    public AuthSessionItem withRpSectorIdentifierHost(String rpSectorIdentifierHost) {
+        this.rpSectorIdentifierHost = rpSectorIdentifierHost;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PASSKEY_ASSERTION_REQUEST)
+    public String getPasskeyAssertionRequest() {
+        return passkeyAssertionRequest;
+    }
+
+    public void setPasskeyAssertionRequest(String passkeyAssertionRequest) {
+        this.passkeyAssertionRequest = passkeyAssertionRequest;
+    }
+
+    public AuthSessionItem withPasskeyAssertionRequest(String passkeyAssertionRequest) {
+        this.passkeyAssertionRequest = passkeyAssertionRequest;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_PASSWORD)
+    public boolean getHasVerifiedPassword() {
+        return hasVerifiedPassword;
+    }
+
+    public void setHasVerifiedPassword(boolean hasVerifiedPassword) {
+        this.hasVerifiedPassword = hasVerifiedPassword;
+    }
+
+    public AuthSessionItem withHasVerifiedPassword(boolean hasVerifiedPassword) {
+        this.hasVerifiedPassword = hasVerifiedPassword;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_MFA)
+    public boolean getHasVerifiedMfa() {
+        return hasVerifiedMfa;
+    }
+
+    public void setHasVerifiedMfa(boolean hasVerifiedMfa) {
+        this.hasVerifiedMfa = hasVerifiedMfa;
+    }
+
+    public AuthSessionItem withHasVerifiedMfa(boolean hasVerifiedMfa) {
+        this.hasVerifiedMfa = hasVerifiedMfa;
+        return this;
+    }
+
     /**
      * Return a string representation of the instance that is safe to record in logs (e.g. does not
      * contain PII)
@@ -397,6 +545,10 @@ public class AuthSessionItem {
                 + internalCommonSubjectId
                 + "', upliftRequired = '"
                 + upliftRequired
+                + "', hasVerifiedPassword = '"
+                + hasVerifiedPassword
+                + "', hasVerifiedMfa = '"
+                + hasVerifiedMfa
                 + "'}}";
     }
 }

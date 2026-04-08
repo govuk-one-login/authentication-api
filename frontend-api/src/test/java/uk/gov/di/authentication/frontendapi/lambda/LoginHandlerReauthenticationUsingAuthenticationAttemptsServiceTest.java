@@ -18,15 +18,13 @@ import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -35,20 +33,24 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
-import java.time.temporal.ChronoUnit;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -62,28 +64,26 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -93,6 +93,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     public static final int MAX_ALLOWED_RETRIES = 6;
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
@@ -112,7 +113,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
-    private static final Session session = new Session();
     private final Context context = mock(Context.class);
     private final Subject subject = mock(Subject.class);
     private final String expectedCommonSubject =
@@ -134,25 +134,27 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     private LoginHandler handler;
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
-    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -174,25 +176,23 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
 
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
-
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
 
         handler =
                 new LoginHandler(
                         configurationService,
-                        sessionService,
                         authenticationService,
-                        clientService,
-                        codeStorageService,
                         userMigrationService,
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        authenticationAttemptsService,
                         authSessionService,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        permissionDecisionManager,
+                        userActionsManager,
+                        testUserHelper);
     }
 
     @ParameterizedTest
@@ -206,20 +206,25 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
             clientSubjectHelperMockedStatic
-                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
 
-            when(authenticationAttemptsService.getCount(
-                            any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
-                    .thenReturn(MAX_ALLOWED_RETRIES - 1);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            any(String.class), any(String.class), eq(JourneyType.REAUTHENTICATION)))
-                    .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1));
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                            MAX_ALLOWED_RETRIES,
+                                            Instant.now().plusSeconds(900),
+                                            false,
+                                            Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1),
+                                            java.util.List.of(ENTER_PASSWORD))));
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-            usingValidSession();
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -228,7 +233,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
             verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
@@ -258,17 +263,15 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                     Optional.of(ENCODED_DEVICE_DETAILS)),
                             pair("internalSubjectId", userProfile.getSubjectID()),
-                            pair(
-                                    "incorrectPasswordCount",
-                                    configurationService.getMaxPasswordRetries()),
+                            pair("incorrectPasswordCount", MAX_ALLOWED_RETRIES),
                             pair(
                                     "attemptNoFailedAt",
                                     configurationService.getMaxPasswordRetries()));
 
             verify(cloudwatchMetricsService, never())
-                    .incrementAuthenticationSuccess(
-                            any(), any(), any(), any(), anyBoolean(), anyBoolean());
-            verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+                    .incrementAuthenticationSuccessWithoutMfa(
+                            any(), any(), any(), any(), anyBoolean());
+            verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
         }
     }
 
@@ -287,13 +290,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         0,
                         ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
                 Arguments.arguments(
-                        ENTER_SMS_CODE,
-                        0,
-                        0,
-                        MAX_ALLOWED_RETRIES,
-                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
-                Arguments.arguments(
-                        ENTER_AUTH_APP_CODE,
+                        ENTER_MFA_CODE,
                         0,
                         0,
                         MAX_ALLOWED_RETRIES,
@@ -314,18 +311,43 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
             clientSubjectHelperMockedStatic
-                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
             when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(), any(), eq(JourneyType.REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
+            ForbiddenReason forbiddenReason =
+                    switch (countType) {
+                        case ENTER_EMAIL -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
+                        case ENTER_EMAIL_CODE -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
+                        case ENTER_PASSWORD -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
+                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+                    };
+
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            forbiddenReason,
+                                            MAX_ALLOWED_RETRIES,
+                                            Instant.now().plusSeconds(900),
+                                            false,
+                                            Map.of(
+                                                    ENTER_EMAIL, expectedEmailAttemptCount,
+                                                    ENTER_PASSWORD, expectedPasswordAttemptCount,
+                                                    ENTER_MFA_CODE, expectedOtpAttemptCount),
+                                            java.util.List.of(countType))));
+
             setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-            usingValidSession();
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -334,7 +356,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
             verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
@@ -360,6 +382,146 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     }
 
     @ParameterizedTest
+    @MethodSource("reauthCountTypesAndMetadata")
+    void shouldHandleReauthLockedOutDecisionWhenCheckingPasswordPermission(
+            CountType countType,
+            int expectedEmailAttemptCount,
+            int expectedPasswordAttemptCount,
+            int expectedOtpAttemptCount,
+            String expectedFailureReason) {
+        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            UserProfile userProfile = generateUserProfile(null);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            clientSubjectHelperMockedStatic
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
+                    .thenReturn(subject);
+            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
+
+            ForbiddenReason forbiddenReason =
+                    switch (countType) {
+                        case ENTER_EMAIL -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
+                        case ENTER_EMAIL_CODE -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
+                        case ENTER_PASSWORD -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
+                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+                    };
+
+            var detailedCounts =
+                    Map.of(
+                            ENTER_EMAIL, expectedEmailAttemptCount,
+                            ENTER_PASSWORD, expectedPasswordAttemptCount,
+                            ENTER_MFA_CODE, expectedOtpAttemptCount);
+
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            forbiddenReason,
+                                            0,
+                                            Instant.now().plusSeconds(900),
+                                            false,
+                                            detailedCounts,
+                                            java.util.List.of(countType))));
+
+            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+            usingValidAuthSession();
+            usingApplicableUserCredentialsWithLogin(SMS, true);
+
+            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
+                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
+                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
+                            pair("failure-reason", expectedFailureReason));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    FAILURE_REASON.getValue(),
+                                    expectedFailureReason));
+        }
+    }
+
+    @Test
+    void shouldHandleReauthLockedOutDecisionWhenPasswordIsIncorrect() {
+        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            UserProfile userProfile = generateUserProfile(null);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            clientSubjectHelperMockedStatic
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
+                    .thenReturn(subject);
+            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
+
+            var detailedCounts = Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
+
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                            MAX_ALLOWED_RETRIES,
+                                            Instant.now().plusSeconds(900),
+                                            false,
+                                            detailedCounts,
+                                            java.util.List.of(ENTER_PASSWORD))));
+
+            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+            usingValidAuthSession();
+            usingApplicableUserCredentialsWithLogin(SMS, false);
+
+            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                            pair("incorrect_email_attempt_count", 0),
+                            pair("incorrect_password_attempt_count", MAX_ALLOWED_RETRIES),
+                            pair("incorrect_otp_code_attempt_count", 0),
+                            pair("failure-reason", "incorrect_password"));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    FAILURE_REASON.getValue(),
+                                    "incorrect_password"));
+        }
+    }
+
+    @ParameterizedTest
     @EnumSource(JourneyType.class)
     void
             shouldNotEmitReauthFailedAuditEventWhenJourneyTypeIsNotReauthenticationWhenUserAlreadyBlocked(
@@ -379,7 +541,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
@@ -426,7 +587,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
@@ -470,32 +630,14 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(authenticationAttemptsService.getCount(any(), any(), any())).thenReturn(1);
 
-        usingValidSession();
         usingValidAuthSession();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
         handler.handleRequest(event, context);
 
-        verify(authenticationAttemptsService)
-                .createOrIncrementCount(
-                        eq(userProfile.getSubjectID()),
-                        longThat(
-                                ttl -> {
-                                    long expectedMin =
-                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
-                                                            .toInstant()
-                                                            .getEpochSecond()
-                                                    - 1;
-                                    long expectedMax =
-                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
-                                                            .toInstant()
-                                                            .getEpochSecond()
-                                                    + 1;
-                                    return ttl >= expectedMin && ttl <= expectedMax;
-                                }),
-                        eq(REAUTHENTICATION),
-                        eq(ENTER_PASSWORD));
+        verify(userActionsManager)
+                .incorrectPasswordReceived(eq(JourneyType.REAUTHENTICATION), any());
     }
 
     @Test
@@ -511,37 +653,14 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(authenticationAttemptsService.getCount(any(), any(), any()))
                 .thenReturn(MAX_ALLOWED_RETRIES - 1);
 
-        usingValidSession();
         usingValidAuthSession();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
         handler.handleRequest(event, context);
 
-        verify(authenticationAttemptsService)
-                .createOrIncrementCount(
-                        eq(userProfile.getSubjectID()),
-                        longThat(
-                                ttl -> {
-                                    long expectedMin =
-                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
-                                                            .toInstant()
-                                                            .getEpochSecond()
-                                                    - 1;
-                                    long expectedMax =
-                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
-                                                            .toInstant()
-                                                            .getEpochSecond()
-                                                    + 1;
-                                    return ttl >= expectedMin && ttl <= expectedMax;
-                                }),
-                        eq(REAUTHENTICATION),
-                        eq(ENTER_PASSWORD));
-    }
-
-    private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
+        verify(userActionsManager)
+                .incorrectPasswordReceived(eq(JourneyType.REAUTHENTICATION), any());
     }
 
     private void usingValidAuthSession() {
@@ -552,7 +671,11 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
                                         .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                        .withClientId(CLIENT_ID.getValue())));
+                                        .withClientId(CLIENT_ID.getValue())
+                                        .withClientName(CLIENT_NAME)
+                                        .withIsSmokeTest(false)
+                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)
+                                        .withInternalCommonSubjectId(expectedCommonSubject)));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
@@ -584,14 +707,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
     }
 
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withClientName(CLIENT_NAME)
-                .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("public");
-    }
-
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
             Map<String, String> headers, String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -608,8 +723,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .thenReturn(retriesAllowed);
             case ENTER_PASSWORD -> when(configurationService.getMaxPasswordRetries())
                     .thenReturn(retriesAllowed);
-            case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE, ENTER_EMAIL_CODE -> when(configurationService
-                            .getCodeMaxRetries())
+            case ENTER_MFA_CODE -> when(configurationService.getCodeMaxRetries())
                     .thenReturn(retriesAllowed);
         }
     }

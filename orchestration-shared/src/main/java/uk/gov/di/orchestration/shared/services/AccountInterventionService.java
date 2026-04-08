@@ -7,6 +7,7 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
+import uk.gov.di.orchestration.shared.helpers.HttpClientHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService.MetadataPair;
 
@@ -33,28 +34,26 @@ public class AccountInterventionService {
     private final boolean accountInterventionsCallEnabled;
     private final boolean accountInterventionsActionEnabled;
     private final boolean acountInterventionsAbortOnError;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final ConfigurationService configurationService;
 
     public AccountInterventionService(ConfigurationService configService) {
         this(
                 configService,
-                HttpClient.newHttpClient(),
-                new CloudwatchMetricsService(),
+                HttpClientHelper.newInstrumentedHttpClient(),
+                new Metrics(),
                 new AuditService(configService));
     }
 
     public AccountInterventionService(
-            ConfigurationService configService,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            AuditService auditService) {
-        this(configService, HttpClient.newHttpClient(), cloudwatchMetricsService, auditService);
+            ConfigurationService configService, Metrics metrics, AuditService auditService) {
+        this(configService, HttpClientHelper.newInstrumentedHttpClient(), metrics, auditService);
     }
 
     public AccountInterventionService(
             ConfigurationService configService,
             HttpClient httpClient,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             AuditService auditService) {
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.accountInterventionsCallEnabled =
@@ -64,7 +63,7 @@ public class AccountInterventionService {
         this.acountInterventionsAbortOnError =
                 configService.abortOnAccountInterventionsErrorResponse();
         this.httpClient = httpClient;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.auditService = auditService;
         this.configurationService = configService;
     }
@@ -90,6 +89,8 @@ public class AccountInterventionService {
                         retrieveAccountIntervention(internalPairwiseSubjectId, passwordResetTime);
                 if (accountInterventionsActionEnabled) {
                     if (auditContext == null) {
+                        LOG.error(
+                                "Account intervention Audit enabled, but no AuditContext provided");
                         throw new AccountInterventionException(
                                 "Account intervention Audit enabled, but no AuditContext provided");
                     }
@@ -137,7 +138,7 @@ public class AccountInterventionService {
     }
 
     private AccountIntervention handleException(Exception e) {
-        cloudwatchMetricsService.incrementCounter(
+        metrics.increment(
                 configurationService.getAccountInterventionsErrorMetricName(),
                 Map.of(
                         "Environment",
@@ -191,8 +192,18 @@ public class AccountInterventionService {
             httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making AIS request, exiting with fault", e);
+                System.exit(1);
+            }
             logAndThrowAccountInterventionException(
-                    "Failed to send request to Account Intervention Service.");
+                    "Failed to send request to Account Intervention Service.", e);
         }
         var durationMs = (System.nanoTime() - start) / 1_000_000L;
         if (httpResponse != null) {
@@ -221,7 +232,7 @@ public class AccountInterventionService {
                     SerializationService.getInstance()
                             .readValue(httpResponse.body(), AccountInterventionResponse.class);
         } catch (Exception e) {
-            logAndThrowAccountInterventionException("Failed to serialize AIS response body.");
+            logAndThrowAccountInterventionException("Failed to serialize AIS response body.", e);
         }
         if (Objects.isNull(accountInterventionResponse)) {
             logAndThrowAccountInterventionException("Account Intervention Status is null.");
@@ -230,12 +241,11 @@ public class AccountInterventionService {
     }
 
     private void instrumentResponse(double duration, String status) {
-        cloudwatchMetricsService.putEmbeddedValue(
-                "AISResponseTimeMs", duration, Map.of("statusCode", status));
+        metrics.emit("AISResponseTimeMs", duration, Map.of("statusCode", status));
     }
 
     private void incrementCloudwatchMetrics(AccountIntervention intervention) {
-        cloudwatchMetricsService.incrementCounter(
+        metrics.increment(
                 "AISResult",
                 Map.of(
                         "blocked",
@@ -250,6 +260,11 @@ public class AccountInterventionService {
 
     private static AccountIntervention noInterventionResponse() {
         return new AccountIntervention(new AccountInterventionState(false, false, false, false));
+    }
+
+    private void logAndThrowAccountInterventionException(String message, Exception cause) {
+        LOG.error(message, cause);
+        throw new AccountInterventionException(message, cause);
     }
 
     private void logAndThrowAccountInterventionException(String message) {

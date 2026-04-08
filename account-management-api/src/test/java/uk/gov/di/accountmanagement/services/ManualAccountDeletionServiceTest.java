@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -65,7 +66,8 @@ class ManualAccountDeletionServiceTest {
                         Optional.empty(),
                         USER_PROFILE,
                         Optional.empty(),
-                        AccountDeletionReason.SUPPORT_INITIATED);
+                        AccountDeletionReason.SUPPORT_INITIATED,
+                        true);
     }
 
     @Test
@@ -121,7 +123,7 @@ class ManualAccountDeletionServiceTest {
         // given
         doThrow(new Json.JsonException("error"))
                 .when(accountDeletionService)
-                .removeAccount(any(), any(), any(), any());
+                .removeAccount(any(), any(), any(), any(), anyBoolean());
 
         // then
         assertThrows(RuntimeException.class, () -> underTest.manuallyDeleteAccount(USER_PROFILE));

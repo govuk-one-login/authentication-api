@@ -1,8 +1,10 @@
 default_language_version:
-  golang: 1.23.6
+  golang: 1.24.5
 exclude: |
   (?x)^(
-      .*/test/.*/.*\.approved.json
+      .*/test/.*/.*\.approved.json|
+      .*/docs(/.*)?$|
+      .*/standards(/.*)?$
   )$
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -21,24 +23,15 @@ repos:
     hooks:
       - id: cfn-lint
         exclude: "\
-          ^(ci|.github|http)/.*|\
+          ^(ci|.github|http|openAPI)/.*|\
           docker-compose.*|\
           .pre-commit-config.yaml|\
           orchestration-canary-alarms.template.yaml|\
-          .*.approved.json|\
           checkov-policies.*|\
           .terraform-docs.yml|\
-          package.json|\
-          http-client.env.json|\
-          package-lock.json|\
-          .*provider.json|\
-          account-management-api/api-contract(/.*)?$"
-        files: ^.*\.(json|yml|yaml)$
-
-  - repo: https://github.com/govuk-one-login/pre-commit-hooks.git
-    rev: 0.0.1
-    hooks:
-      - id: gradle-spotless-apply
+          account-management-api/api-contract(/.*)?$|\
+          orchestration-api-spec.yaml"
+        files: ^.*\.(yml|yaml)$
 
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.97.3
@@ -56,7 +49,7 @@ repos:
           - terraform
         language: golang
         additional_dependencies:
-          - github.com/terraform-linters/tflint@v0.55.0
+          - github.com/terraform-linters/tflint@v0.58.0
         entry: scripts/tflint.py
         args:
           - --minimum-failure-severity=warning
@@ -73,7 +66,7 @@ repos:
     rev: v0.10.0.1
     hooks:
       - id: shellcheck
-        exclude: ./gradlew|./pre-commit.sh
+        exclude: gradlew|pre-commit.sh
 
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.7
@@ -110,6 +103,7 @@ repos:
           - -w # write
           - -s # simplify
           - -l # list files that differ
+        exclude: gradlew|pre-commit.sh
       - id: prettier
         name: Run prettier
         language: node
@@ -140,3 +134,41 @@ repos:
           - windows_amd64
           - -r
           - ci/terraform
+      - id: deprecation-checker
+        name: Check deprecation policy
+        entry: ./gradlew :deprecation-checker:checkDeprecations
+        language: system
+        pass_filenames: false
+        files: '\.java$'
+
+      - id: sam-validate
+        name: SAM validate with lint
+        entry: bash
+        args:
+          - -c
+          - |
+            export GITHUB_WORKSPACE=$(pwd)
+
+            echo ""
+            echo "=== Validating auth template ==="
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/auth TEMPLATE_FILE=auth-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint --ignore-lint-errors W1001 -t auth-template.yaml
+            echo ""
+
+            echo "=== Validating stubs template ==="
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/stubs TEMPLATE_FILE=stubs-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint --ignore-lint-errors W1001 -t stubs-template.yaml
+            echo ""
+
+            echo "=== Validating am template ==="
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/account-management TEMPLATE_FILE=am-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint --ignore-lint-errors W1001 -t am-template.yaml
+            echo ""
+
+            echo "=== Validating ad template ==="
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/account-data TEMPLATE_FILE=ad-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint --ignore-lint-errors W1001 -t ad-template.yaml
+            echo ""
+        language: system
+        pass_filenames: false
+        files: '^ci/cloudformation/.*\.(yml|yaml)$'

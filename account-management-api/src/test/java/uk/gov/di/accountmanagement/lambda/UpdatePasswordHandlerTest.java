@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -44,6 +45,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -122,7 +124,9 @@ class UpdatePasswordHandlerTest {
                                 "123.123.123.123",
                                 userProfile.getPhoneNumber(),
                                 PERSISTENT_ID,
-                                Optional.of(TXMA_ENCODED_HEADER_VALUE)));
+                                Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                                new ArrayList<>()),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
@@ -159,7 +163,7 @@ class UpdatePasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(auditService);
         verifyNoInteractions(sqsClient);
     }
@@ -178,7 +182,7 @@ class UpdatePasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        assertThat(result, hasJsonBody(ErrorResponse.NEW_PW_MATCHES_OLD));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
@@ -193,7 +197,7 @@ class UpdatePasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
@@ -201,7 +205,7 @@ class UpdatePasswordHandlerTest {
 
     @Test
     void shouldReturn400WhenPasswordValidationFails() {
-        doReturn(Optional.of(ErrorResponse.ERROR_1006))
+        doReturn(Optional.of(ErrorResponse.INVALID_PW_LENGTH))
                 .when(passwordValidator)
                 .validate(INVALID_PASSWORD);
 
@@ -209,7 +213,7 @@ class UpdatePasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PW_LENGTH));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(auditService);
     }

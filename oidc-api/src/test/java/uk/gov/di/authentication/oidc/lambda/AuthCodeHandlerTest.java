@@ -39,7 +39,6 @@ import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -50,16 +49,15 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.util.Base64;
@@ -95,9 +93,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -114,14 +109,12 @@ class AuthCodeHandlerTest {
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final AuthenticationUserInfoStorageService authUserInfoService =
             mock(AuthenticationUserInfoStorageService.class);
@@ -147,7 +140,6 @@ class AuthCodeHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private AuthCodeHandler handler;
 
-    private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.NEW)
@@ -177,7 +169,6 @@ class AuthCodeHandlerTest {
     void setUp() {
         handler =
                 new AuthCodeHandler(
-                        sessionService,
                         orchSessionService,
                         authUserInfoService,
                         authCodeResponseService,
@@ -185,7 +176,7 @@ class AuthCodeHandlerTest {
                         orchestrationAuthorizationService,
                         orchClientSessionService,
                         auditService,
-                        cloudwatchMetricsService,
+                        metrics,
                         configurationService,
                         dynamoClientService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
@@ -193,34 +184,21 @@ class AuthCodeHandlerTest {
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         doAnswer(
                         (i) -> {
-                            session.setNewAccount(EXISTING_DOC_APP_JOURNEY);
-                            return null;
-                        })
-                .when(authCodeResponseService)
-                .saveSession(
-                        true, sessionService, session, SESSION_ID, orchSessionService, orchSession);
-        doAnswer(
-                        (i) -> {
-                            session.setNewAccount(EXISTING);
                             orchSession
                                     .withAuthenticated(true)
                                     .setIsNewAccount(OrchSessionItem.AccountState.EXISTING);
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(
-                        false,
-                        sessionService,
-                        session,
-                        SESSION_ID,
-                        orchSessionService,
-                        orchSession);
+                .saveSession(false, orchSessionService, orchSession);
         when(dynamoClientService.getClient(anyString()))
                 .thenReturn(
                         Optional.of(
                                 new ClientRegistry()
                                         .withClientID(CLIENT_ID.getValue())
-                                        .withSubjectType("pairwise")));
+                                        .withSubjectType("pairwise")
+                                        .withClientName(CLIENT_NAME)));
+        when(orchClientSession.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -246,7 +224,6 @@ class AuthCodeHandlerTest {
                             eq(orchSession),
                             eq(CLIENT_NAME),
                             eq(CLIENT_ID.getValue()),
-                            anyBoolean(),
                             anyBoolean()))
                     .thenReturn(
                             new HashMap<>(
@@ -257,8 +234,6 @@ class AuthCodeHandlerTest {
                                             "unit-test",
                                             "Client",
                                             CLIENT_ID.getValue(),
-                                            "IsTest",
-                                            "false",
                                             "IsDocApp",
                                             Boolean.toString(false),
                                             "MfaMethod",
@@ -271,8 +246,7 @@ class AuthCodeHandlerTest {
                 .processVectorOfTrust(any(OrchClientSessionItem.class), any());
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
-        session.setCurrentCredentialStrength(initialLevel).setNewAccount(AccountState.NEW);
-        orchSession.setCurrentCredentialStrength(initialLevel);
+        orchSession.setIsNewAccount(OrchSessionItem.AccountState.NEW);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -289,7 +263,8 @@ class AuthCodeHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
-                        any(Long.class)))
+                        any(Long.class),
+                        eq(INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(authorizationCode);
         when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class),
@@ -309,18 +284,10 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
         assertTrue(orchSession.getAuthenticated());
 
         verify(authCodeResponseService, times(1))
-                .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        eq(orchSessionService),
-                        eq(orchSession));
+                .saveSession(anyBoolean(), eq(orchSessionService), eq(orchSession));
 
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -343,8 +310,6 @@ class AuthCodeHandlerTest {
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
 
-        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
-
         var dimensions =
                 Map.of(
                         "Account",
@@ -353,8 +318,6 @@ class AuthCodeHandlerTest {
                         "unit-test",
                         "Client",
                         CLIENT_ID.getValue(),
-                        "IsTest",
-                        "false",
                         "IsDocApp",
                         Boolean.toString(false),
                         "MfaMethod",
@@ -366,9 +329,9 @@ class AuthCodeHandlerTest {
                         "RequestedLevelOfConfidence",
                         "P0");
 
-        verify(cloudwatchMetricsService).incrementCounter("SignIn", dimensions);
+        verify(metrics).increment("SignIn", dimensions);
 
-        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
+        assertAuthCodeSavedForAuthJourney();
     }
 
     private static Stream<CredentialTrustLevel> docAppTestParameters() {
@@ -381,7 +344,6 @@ class AuthCodeHandlerTest {
             throws Json.JsonException, JOSEException {
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, true);
-        session.setNewAccount(AccountState.UNKNOWN);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -398,14 +360,14 @@ class AuthCodeHandlerTest {
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        any(Long.class),
+                        eq(null)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
-                        eq(orchSession),
-                        eq(CLIENT_NAME),
-                        eq(CLIENT_ID.getValue()),
-                        anyBoolean(),
-                        eq(true)))
+                        orchSession, CLIENT_NAME, CLIENT_ID.getValue(), true))
                 .thenReturn(
                         Map.of(
                                 "Account",
@@ -414,8 +376,6 @@ class AuthCodeHandlerTest {
                                 "unit-test",
                                 "Client",
                                 CLIENT_ID.getValue(),
-                                "IsTest",
-                                "false",
                                 "IsDocApp",
                                 Boolean.toString(true),
                                 "ClientName",
@@ -432,17 +392,10 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
-        assertThat(orchSession.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertFalse(orchSession.getAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        any(OrchSessionService.class),
-                        any(OrchSessionItem.class));
+                        anyBoolean(), any(OrchSessionService.class), any(OrchSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -460,8 +413,6 @@ class AuthCodeHandlerTest {
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
 
-        assertAuthorisationCodeGeneratedAndSaved(null);
-
         var expectedDimensions =
                 Map.of(
                         "Account",
@@ -470,16 +421,14 @@ class AuthCodeHandlerTest {
                         "unit-test",
                         "Client",
                         CLIENT_ID.getValue(),
-                        "IsTest",
-                        "false",
                         "IsDocApp",
                         Boolean.toString(true),
                         "ClientName",
                         CLIENT_NAME);
 
-        verify(cloudwatchMetricsService).incrementCounter("SignIn", expectedDimensions);
+        verify(metrics).increment("SignIn", expectedDimensions);
 
-        assertAuthorisationCodeGeneratedAndSaved(null);
+        assertAuthCodeSavedForDocAppJourney();
     }
 
     @Test
@@ -693,7 +642,6 @@ class AuthCodeHandlerTest {
                         SESSION_ID,
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_SESSION_ID));
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -710,7 +658,6 @@ class AuthCodeHandlerTest {
             throws ParseException, JOSEException {
         generateAuthUserInfo();
 
-        session.setNewAccount(AccountState.UNKNOWN);
         orchSession.withAccountState(OrchSessionItem.AccountState.UNKNOWN);
 
         when(orchestrationAuthorizationService.isClientRedirectUriValid(
@@ -719,7 +666,11 @@ class AuthCodeHandlerTest {
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        anyLong(),
+                        eq(INTERNAL_COMMON_SUBJECT_ID)))
                 .thenThrow(new OrchAuthCodeException("Some error during auth code generation."));
 
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
@@ -729,7 +680,7 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(500));
         assertThat(response, hasBody("Internal server error"));
 
-        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
+        assertAuthCodeSavedForAuthJourney();
     }
 
     @Test
@@ -739,7 +690,6 @@ class AuthCodeHandlerTest {
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
 
-        session.setNewAccount(AccountState.UNKNOWN);
         orchSession.withAccountState(OrchSessionItem.AccountState.UNKNOWN);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
@@ -760,14 +710,14 @@ class AuthCodeHandlerTest {
         // TODO: Stop here in new test.
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        anyLong(),
+                        eq(INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
-                        eq(orchSession),
-                        eq(CLIENT_NAME),
-                        eq(CLIENT_ID.getValue()),
-                        anyBoolean(),
-                        eq(true)))
+                        orchSession, CLIENT_NAME, CLIENT_ID.getValue(), true))
                 .thenReturn(
                         Map.of(
                                 "Account",
@@ -776,8 +726,6 @@ class AuthCodeHandlerTest {
                                 "unit-test",
                                 "Client",
                                 CLIENT_ID.getValue(),
-                                "IsTest",
-                                "false",
                                 "IsDocApp",
                                 Boolean.toString(true),
                                 "ClientName",
@@ -794,12 +742,7 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         verify(authCodeResponseService, times(1))
                 .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        any(OrchSessionService.class),
-                        any(OrchSessionItem.class));
+                        anyBoolean(), any(OrchSessionService.class), any(OrchSessionItem.class));
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(
@@ -824,7 +767,6 @@ class AuthCodeHandlerTest {
 
     private void generateValidSession(
             Map<String, List<String>> authRequestParams, CredentialTrustLevel requestedLevel) {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(orchClientSession));
@@ -849,7 +791,7 @@ class AuthCodeHandlerTest {
     }
 
     private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
@@ -892,17 +834,29 @@ class AuthCodeHandlerTest {
                 .thenReturn(Optional.of(authUserInfo));
     }
 
-    private void assertAuthorisationCodeGeneratedAndSaved(String expectedEmail) {
+    private void assertAuthCodeSavedForDocAppJourney() {
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
-                        eq(expectedEmail),
-                        anyLong());
+                        eq(null),
+                        anyLong(),
+                        eq(null));
+    }
+
+    private void assertAuthCodeSavedForAuthJourney() {
+        verify(orchAuthCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        anyLong(),
+                        eq(INTERNAL_COMMON_SUBJECT_ID));
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
+                .generateAndSaveAuthorisationCode(
+                        anyString(), anyString(), anyString(), anyLong(), anyString());
     }
 }

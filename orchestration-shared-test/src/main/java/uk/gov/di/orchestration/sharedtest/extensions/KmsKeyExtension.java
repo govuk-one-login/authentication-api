@@ -22,9 +22,14 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     protected KmsClient kms;
     protected final String keyAliasSuffix;
+    protected final String newKeyAliasSuffixV2;
 
     private String keyAlias;
+    private String newKeyAliasV2;
     private final KeyUsageType keyUsageType;
+
+    private String keyId;
+    private String newKeyIdV2;
 
     public KmsKeyExtension(String keyAliasSuffix) {
         this(keyAliasSuffix, SIGN_VERIFY);
@@ -32,6 +37,7 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     public KmsKeyExtension(String keyAliasSuffix, KeyUsageType keyUsageType) {
         this.keyAliasSuffix = keyAliasSuffix;
+        this.newKeyAliasSuffixV2 = "new-" + keyAliasSuffix + "-v2";
         this.keyUsageType = keyUsageType;
     }
 
@@ -41,7 +47,7 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                 KmsClient.builder()
                         .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
                         .region(Region.of(REGION))
-                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .build();
 
         keyAlias =
@@ -50,18 +56,29 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         keyAliasSuffix);
 
+        newKeyAliasV2 =
+                format(
+                        "alias/{0}-{1}",
+                        context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
+                        newKeyAliasSuffixV2);
+
         if (!keyExists(keyAlias)) {
             if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
-                createEncryptionKey(keyAlias);
+                createEncryptionKey();
             } else {
-                createTokenSigningKey(keyAlias);
+                createTokenSigningKeys();
             }
         }
     }
 
+    protected void createTokenSigningKeys() {
+        keyId = createTokenSigningKey(keyAlias);
+        newKeyIdV2 = createTokenSigningKey(newKeyAliasV2);
+    }
+
     // https://github.com/aws/aws-sdk/issues/125
     @SuppressWarnings("deprecation")
-    protected void createTokenSigningKey(String keyAlias) {
+    protected String createTokenSigningKey(String keyAlias) {
         var keyRequest =
                 CreateKeyRequest.builder()
                         .keyUsage(SIGN_VERIFY)
@@ -76,9 +93,11 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         .build();
 
         kms.createAlias(aliasRequest);
+
+        return keyResponse.keyMetadata().keyId();
     }
 
-    protected void createEncryptionKey(String keyAlias) {
+    protected void createEncryptionKey() {
         CreateKeyRequest keyRequest =
                 CreateKeyRequest.builder()
                         .keySpec(KeySpec.RSA_2048)
@@ -86,6 +105,8 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         .build();
 
         var keyResponse = kms.createKey(keyRequest);
+
+        keyId = keyResponse.keyMetadata().keyId();
 
         CreateAliasRequest aliasRequest =
                 CreateAliasRequest.builder()
@@ -108,5 +129,17 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     public String getKeyAlias() {
         return keyAlias;
+    }
+
+    public String getNewKeyAliasV2() {
+        return newKeyAliasV2;
+    }
+
+    public String getKeyId() {
+        return keyId;
+    }
+
+    public String getNewKeyIdV2() {
+        return newKeyIdV2;
     }
 }

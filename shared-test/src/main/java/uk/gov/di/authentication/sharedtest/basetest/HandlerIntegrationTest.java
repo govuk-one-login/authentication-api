@@ -6,14 +6,10 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -22,18 +18,16 @@ import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
-import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
+import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
-import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
-import java.net.URI;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
@@ -41,7 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.valueOf;
-import static java.util.Collections.singletonList;
 import static java.util.Map.entry;
 import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
@@ -89,7 +82,15 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new SqsQueueExtension("notification-queue");
 
     @RegisterExtension
+    protected static final SqsQueueExtension pendingEmailCheckQueue =
+            new SqsQueueExtension("pending-email-check-queue");
+
+    @RegisterExtension
     protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
+
+    @RegisterExtension
+    protected static final SqsQueueExtension spotRequestQueue =
+            new SqsQueueExtension("spot-request-queue");
 
     @RegisterExtension
     protected static final SqsQueueExtension txmaAuditQueue =
@@ -142,11 +143,15 @@ public abstract class HandlerIntegrationTest<Q, S> {
                             entry(
                                     "local-account-management-redis-tls",
                                     valueOf(DOES_REDIS_USE_TLS)),
+                            entry("local-account-data-redis-master-host", REDIS_HOST),
+                            entry("local-account-data-redis-password", valueOf(REDIS_PASSWORD)),
+                            entry("local-account-data-redis-port", valueOf(REDIS_PORT)),
+                            entry("local-account-data-redis-tls", valueOf(DOES_REDIS_USE_TLS)),
                             entry("local-password-pepper", "pepper"),
                             entry("local-auth-public-signing-key", EC_PUBLIC_KEY),
                             entry("local-notify-callback-bearer-token", BEARER_TOKEN)));
 
-    protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
+    protected static final IntegrationTestConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
                     notificationsQueue,
                     tokenSigner,
@@ -166,6 +171,31 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 }
             };
 
+    protected static ConfigurationService supportPasskeysAndTxmaEnabledConfigurationService(
+            String accountDataBaseUri) {
+        return new IntegrationTestConfigurationService(
+                notificationsQueue,
+                tokenSigner,
+                docAppPrivateKeyJwtSigner,
+                configurationParameters) {
+
+            @Override
+            public String getTxmaAuditQueueUrl() {
+                return txmaAuditQueue.getQueueUrl();
+            }
+
+            @Override
+            public boolean supportPasskeys() {
+                return true;
+            }
+
+            @Override
+            public String getAccountDataURI() {
+                return accountDataBaseUri;
+            }
+        };
+    }
+
     protected static final ConfigurationService
             REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE =
                     new IntegrationTestConfigurationService(
@@ -182,7 +212,101 @@ public abstract class HandlerIntegrationTest<Q, S> {
                         public boolean supportReauthSignoutEnabled() {
                             return true;
                         }
+
+                        @Override
+                        public boolean isAuthenticationAttemptsServiceEnabled() {
+                            return true;
+                        }
                     };
+
+    protected static final ConfigurationService EMAIL_CHECK_AND_TXMA_ENABLED_CONFIGURATION_SERVICE =
+            new IntegrationTestConfigurationService(
+                    notificationsQueue,
+                    tokenSigner,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+            };
+
+    protected static final ConfigurationService
+            ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE =
+                    new IntegrationTestConfigurationService(
+                            notificationsQueue,
+                            tokenSigner,
+                            docAppPrivateKeyJwtSigner,
+                            configurationParameters) {
+                        @Override
+                        public String getTxmaAuditQueueUrl() {
+                            return txmaAuditQueue.getQueueUrl();
+                        }
+
+                        @Override
+                        public boolean isMfaMethodManagementApiEnabled() {
+                            return true;
+                        }
+                    };
+
+    protected static final ConfigurationService
+            ACCOUNT_MANAGEMENT_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE =
+                    new IntegrationTestConfigurationService(
+                            notificationsQueue,
+                            tokenSigner,
+                            docAppPrivateKeyJwtSigner,
+                            configurationParameters) {
+                        @Override
+                        public String getTxmaAuditQueueUrl() {
+                            return txmaAuditQueue.getQueueUrl();
+                        }
+
+                        @Override
+                        public boolean isAccountManagementInternationalSmsEnabled() {
+                            return false;
+                        }
+
+                        @Override
+                        public boolean isMfaMethodManagementApiEnabled() {
+                            return true;
+                        }
+                    };
+
+    protected static final ConfigurationService
+            INTERNAL_API_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE =
+                    new IntegrationTestConfigurationService(
+                            notificationsQueue,
+                            tokenSigner,
+                            docAppPrivateKeyJwtSigner,
+                            configurationParameters) {
+                        @Override
+                        public String getTxmaAuditQueueUrl() {
+                            return txmaAuditQueue.getQueueUrl();
+                        }
+
+                        @Override
+                        public boolean isInternalApiNewInternationalSmsEnabled() {
+                            return false;
+                        }
+                    };
+
+    protected static final ConfigurationService BULK_DELETION_TXMA_ENABLED_CONFIGUARION_SERVICE =
+            new IntegrationTestConfigurationService(
+                    notificationsQueue,
+                    tokenSigner,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+
+                @Override
+                public String getLegacyAccountDeletionTopicArn() {
+                    return snsTopicExtension.getTopicArn();
+                }
+            };
 
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
@@ -196,9 +320,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final UserStoreExtension userStore = new UserStoreExtension();
 
     @RegisterExtension
-    protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
-
-    @RegisterExtension
     protected static final AuthSessionExtension authSessionStore = new AuthSessionExtension();
 
     @RegisterExtension
@@ -208,6 +329,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final CommonPasswordsExtension commonPasswords =
             new CommonPasswordsExtension();
+
+    @RegisterExtension
+    protected static final SnsTopicExtension snsTopicExtension =
+            new SnsTopicExtension("test-topic");
 
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();
@@ -241,26 +366,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
         clientSessionId.ifPresent(id -> headers.put("Client-Session-Id", id));
         persistentSessionId.ifPresent(id -> headers.put("di-persistent-session-id", id));
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, "base64 encoded");
         return headers;
-    }
-
-    public static void registerClient(
-            String emailAddress, ClientID clientId, String clientName, URI redirectUri) {
-        clientStore.registerClient(
-                clientId.getValue(),
-                clientName,
-                singletonList(redirectUri.toString()),
-                singletonList(emailAddress),
-                new Scope(OIDCScopeValue.OPENID).toStringList(),
-                Base64.getMimeEncoder()
-                        .encodeToString(
-                                KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
     }
 
     protected HttpCookie buildSessionCookie(String sessionID, String clientSessionID) {
@@ -295,6 +401,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
             this.tokenSigningKey = tokenSigningKey;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
             super.systemService = systemService;
+        }
+
+        public String getTokenSigningKeyId() {
+            return tokenSigningKey.getKeyId();
         }
 
         @Override

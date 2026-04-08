@@ -9,7 +9,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
@@ -21,14 +21,13 @@ import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.Metrics;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.util.HashMap;
@@ -46,6 +45,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
@@ -58,19 +58,19 @@ public class UserInfoHandler
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            Metrics metrics) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
     }
 
     public UserInfoHandler() {
@@ -81,55 +81,30 @@ public class UserInfoHandler
         this.configurationService = configurationService;
         this.userInfoService =
                 new UserInfoService(
-                        new DynamoService(configurationService),
                         new DynamoIdentityService(configurationService),
                         new DynamoClientService(configurationService),
-                        new DynamoDocAppService(configurationService),
-                        new CloudwatchMetricsService(),
+                        new DynamoDocAppCriService(configurationService),
+                        new Metrics(),
                         configurationService,
                         new AuthenticationUserInfoStorageService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(
-                        new RedisConnectionService(configurationService),
                         new DynamoClientService(configurationService),
                         new TokenValidationService(
                                 new JwksService(
                                         configurationService,
                                         new KmsConnectionService(configurationService)),
-                                configurationService));
+                                configurationService),
+                        new OrchAccessTokenService(configurationService));
         this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-    }
-
-    public UserInfoHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        this.configurationService = configurationService;
-        this.userInfoService =
-                new UserInfoService(
-                        new DynamoService(configurationService),
-                        new DynamoIdentityService(configurationService),
-                        new DynamoClientService(configurationService),
-                        new DynamoDocAppService(configurationService),
-                        new CloudwatchMetricsService(),
-                        configurationService,
-                        new AuthenticationUserInfoStorageService(configurationService));
-        this.accessTokenService =
-                new AccessTokenService(
-                        redis,
-                        new DynamoClientService(configurationService),
-                        new TokenValidationService(
-                                new JwksService(
-                                        configurationService,
-                                        new KmsConnectionService(configurationService)),
-                                configurationService));
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
@@ -161,7 +136,8 @@ public class UserInfoHandler
                             configurationService.isIdentityEnabled());
             userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         } catch (AccessTokenException e) {
-            LOG.warn("AccessTokenException. Sending back UserInfoErrorResponse");
+            LOG.warn(
+                    "AccessTokenException: {}. Sending back UserInfoErrorResponse", e.getMessage());
             return generateApiGatewayProxyResponse(
                     401,
                     "",
@@ -170,7 +146,7 @@ public class UserInfoHandler
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
-        String journeyId = accessTokenInfo.getAccessTokenStore().getJourneyId();
+        String journeyId = accessTokenInfo.journeyId();
         attachLogFieldToLogs(CLIENT_SESSION_ID, journeyId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, journeyId);
         var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
@@ -186,7 +162,7 @@ public class UserInfoHandler
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,
-                accessTokenInfo.getClientID(),
+                accessTokenInfo.clientID(),
                 TxmaAuditUser.user()
                         .withUserId(subjectForAudit)
                         .withGovukSigninJourneyId(journeyId),
@@ -196,8 +172,8 @@ public class UserInfoHandler
                 new HashMap<>(
                         Map.of(
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
-                                CLIENT.getValue(), accessTokenInfo.getClientID()));
-        cloudwatchMetricsService.incrementCounter(USER_INFO_RETURNED.getValue(), dimensions);
+                                CLIENT.getValue(), accessTokenInfo.clientID()));
+        metrics.increment(USER_INFO_RETURNED.getValue(), dimensions);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }

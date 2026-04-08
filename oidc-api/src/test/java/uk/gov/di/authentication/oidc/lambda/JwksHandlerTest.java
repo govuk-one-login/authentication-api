@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
@@ -37,10 +38,8 @@ class JwksHandlerTest {
 
     @Test
     void shouldReturnTwoJwksWhenRsaSigningIsDisabled() throws JOSEException {
-        var tokenSigningKey =
-                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-        var docAppSigningKey =
-                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var tokenSigningKey = generateECKey();
+        var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
         when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
@@ -56,10 +55,8 @@ class JwksHandlerTest {
     @Test
     void shouldReturnThreeJwksWhenRsaSigningIsEnabled() throws JOSEException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        var tokenSigningKey =
-                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-        var docAppSigningKey =
-                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var tokenSigningKey = generateECKey();
+        var docAppSigningKey = generateECKey();
         var rsaTokenSigningKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
@@ -78,10 +75,8 @@ class JwksHandlerTest {
 
     @Test
     void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
-        var opaqueSigningKey =
-                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-        var docAppSigningKey =
-                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var opaqueSigningKey = generateECKey();
+        var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
         when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
@@ -107,14 +102,40 @@ class JwksHandlerTest {
 
     @Test
     void shouldSetACacheHeaderOfOneDayOnSuccess() throws JOSEException {
-        var opaqueSigningKey =
-                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-        var docAppSigningKey =
-                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var opaqueSigningKey = generateECKey();
+        var docAppSigningKey = generateECKey();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
         when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
 
         var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
         assertThat(response, hasHeader("Cache-Control", "max-age=86400"));
+    }
+
+    @Test
+    void shouldPublishNewEcKeyWhenNewPublishIsEnabledButRsaNotEnabled() throws JOSEException {
+        when(configurationService.isRsaSigningAvailable()).thenReturn(false);
+        when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
+                .thenReturn(true);
+
+        var tokenSigningKey = generateECKey();
+        var docAppSigningKey = generateECKey();
+        var newTokenSigningKeyV2 = generateECKey();
+
+        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
+        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
+        when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newTokenSigningKeyV2);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet =
+                new JWKSet(List.of(tokenSigningKey, docAppSigningKey, newTokenSigningKeyV2));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+    }
+
+    private static ECKey generateECKey() throws JOSEException {
+        return new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
     }
 }

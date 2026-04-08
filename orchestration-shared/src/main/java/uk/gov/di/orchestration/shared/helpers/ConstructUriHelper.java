@@ -1,6 +1,6 @@
 package uk.gov.di.orchestration.shared.helpers;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.hc.core5.net.URIBuilder;
 
 import java.net.URI;
@@ -34,13 +34,17 @@ public class ConstructUriHelper {
         return buildURI(baseUri, Optional.ofNullable(path), Optional.empty());
     }
 
+    public static URI buildURI(URI baseUrl) {
+        return buildURI(baseUrl.toString(), Optional.empty(), Optional.empty());
+    }
+
     private static URI buildURI(
             String baseUri, Optional<String> path, Optional<Map<String, String>> queryParams) {
         try {
             var uriBuilder =
                     path.isEmpty()
                             ? new URIBuilder(baseUri)
-                            : new URIBuilder(StringUtils.removeEnd(baseUri, "/"));
+                            : new URIBuilder(Strings.CS.removeEnd(baseUri, "/"));
             path.ifPresent(uriBuilder::appendPath);
             queryParams.ifPresent(
                     qp -> {

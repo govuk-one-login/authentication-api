@@ -1,31 +1,32 @@
 plugins {
     id "java"
     id "jacoco"
-    id "au.com.dius.pact" version "4.6.17"
+    alias libs.plugins.pact
 }
 
-group "uk.gov.di"
-version "unspecified"
+group = "uk.gov.di"
+version = "unspecified"
 
 dependencies {
-    testImplementation configurations.tests,
-            configurations.apache,
-            configurations.gson,
-            configurations.nimbus,
-            configurations.bouncycastle,
-            configurations.sqs,
-            configurations.kms,
-            configurations.s3,
-            configurations.cloudwatch,
-            configurations.dynamodb,
-            configurations.lettuce,
-            configurations.lambda,
-            configurations.pact_provider
+    testImplementation libs.bundles.test,
+            libs.bundles.apache,
+            libs.gson,
+            libs.bundles.nimbus,
+            libs.bouncyCastle,
+            libs.awsSqs,
+            libs.awsKms,
+            libs.awsS3,
+            libs.awsCloudwatchEmf,
+            libs.bundles.awsDynamoDb,
+            libs.bundles.lettuce,
+            libs.bundles.awsLambda,
+            libs.pactProvider
 
     implementation project(":shared"), noXray
     implementation project(":orchestration-shared"), noXray
     implementation project(":shared-test"), noXray
     implementation project(":orchestration-shared-test"), noXray
+    implementation project(":audit-events"), noXray
     implementation project(":oidc-api"), noXray
     implementation project(":frontend-api"), noXray
     implementation project(":auth-external-api"), noXray
@@ -34,11 +35,10 @@ dependencies {
     implementation project(":interventions-api-stub"), noXray
     implementation project(":doc-checking-app-api"), noXray
     implementation project(":utils"), noXray
+    implementation project(":user-permissions"), noXray
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
-    testImplementation("uk.org.webcompere:system-stubs-jupiter:2.1.8")
-    testImplementation("org.awaitility:awaitility:4.3.0")
-    testImplementation('org.wiremock:wiremock-jetty12:3.13.0')
+    testRuntimeOnly libs.bundles.testRuntime
+    testImplementation(libs.wiremock)
 }
 
 test {
@@ -46,9 +46,9 @@ test {
     exclude 'uk/gov/di/authentication/contract/**'
 
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
-    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
     environment "AWS_REGION", "eu-west-2"
-    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "DEFAULT_LOGOUT_URI", "http://localhost:3000/signed-out"
     environment "DOMAIN_NAME", "localhost"
@@ -69,6 +69,7 @@ test {
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
     environment "BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", "1.0,1.1,1.2,1.3,1.4"
     environment "SEND_STORAGE_TOKEN_TO_IPV_ENABLED", "true"
+    environment "INTERNATIONAL_SMS_NUMBER_SEND_LIMIT", "10"
 
     testLogging {
         showStandardStreams = false
@@ -103,12 +104,12 @@ task pactProviderTests (type: Test, group: "verification") {
     systemProperties['pact.provider.version'] = "${System.env.GIT_SHA}"
 
     environment "PROVIDER_UNDER_TEST", "ClientRegistryProvider"
-    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
     environment "AWS_REGION", "eu-west-2"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "REDIS_KEY", "session"
     environment "TRACING_ENABLED", "false"
-    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "ENVIRONMENT", "local"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
@@ -119,6 +120,6 @@ task pactProviderTests (type: Test, group: "verification") {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
 }

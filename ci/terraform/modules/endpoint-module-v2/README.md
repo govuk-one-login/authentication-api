@@ -72,6 +72,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |
 | <a name="input_handler_runtime"></a> [handler\_runtime](#input\_handler\_runtime) | n/a | `string` | `"java17"` | no |
 | <a name="input_integration_request_parameters"></a> [integration\_request\_parameters](#input\_integration\_request\_parameters) | n/a | `map(string)` | `{}` | no |
+| <a name="input_lambda_error_alarm_disabled"></a> [lambda\_error\_alarm\_disabled](#input\_lambda\_error\_alarm\_disabled) | n/a | `bool` | `false` | no |
 | <a name="input_lambda_error_rate_alarm_disabled"></a> [lambda\_error\_rate\_alarm\_disabled](#input\_lambda\_error\_rate\_alarm\_disabled) | n/a | `bool` | `false` | no |
 | <a name="input_lambda_log_alarm_error_rate_threshold"></a> [lambda\_log\_alarm\_error\_rate\_threshold](#input\_lambda\_log\_alarm\_error\_rate\_threshold) | The rate of errors in a lambda before generating a Cloudwatch alarm. Calculated by dividing the number of errors in a lambda divided by the number of invocations in a 60 second period | `number` | `10` | no |
 | <a name="input_lambda_log_alarm_threshold"></a> [lambda\_log\_alarm\_threshold](#input\_lambda\_log\_alarm\_threshold) | The number of errors in a lambda logs before generating a Cloudwatch alarm | `number` | `5` | no |

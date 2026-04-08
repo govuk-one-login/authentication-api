@@ -22,13 +22,11 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.URI;
 import java.util.Map;
@@ -47,26 +45,25 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
     private final DynamoAuthCodeService dynamoAuthCodeService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public AuthenticationAuthCodeHandler(
             DynamoAuthCodeService dynamoAuthCodeService,
             ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 AuthCodeRequest.class,
                 configurationService,
-                sessionService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.dynamoAuthCodeService = dynamoAuthCodeService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public AuthenticationAuthCodeHandler(ConfigurationService configurationService) {
@@ -74,14 +71,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
-    }
-
-    public AuthenticationAuthCodeHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(AuthCodeRequest.class, configurationService, redis);
-        this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     public AuthenticationAuthCodeHandler() {
@@ -106,7 +96,23 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             if (userProfile.isEmpty()) {
                 LOG.info(
                         "Error message: Email from session does not have a user profile required to extract Subject ID");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+            }
+
+            var authSession = userContext.getAuthSession();
+            var canIssueAuthCodeResult = permissionDecisionManager.canIssueAuthCode(authSession);
+
+            if (!canIssueAuthCodeResult) {
+                LOG.warn("Not permitted to issue auth code");
+
+                if (configurationService.isEnhancedAuthCodeProtectionEnabled()) {
+                    return generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+                } else {
+                    LOG.info(
+                            "Enhanced auth code protection disabled: Did not block issuing auth code");
+                }
             }
 
             var authorisationCode = new AuthorizationCode();
@@ -131,20 +137,18 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 var auditContext =
                         AuditContext.auditContextFromUserContext(
                                 userContext,
-                                userProfile.get().getSubjectID(),
+                                userContext.getAuthSession().getInternalCommonSubjectId(),
                                 userProfile.get().getEmail(),
                                 IpAddressHelper.extractIpAddress(input),
                                 userProfile.get().getPhoneNumber(),
                                 PersistentIdHelper.extractPersistentIdFromHeaders(
                                         input.getHeaders()));
 
-                var client = userContext.getClient().orElseThrow();
                 var rpPairwiseId =
                         ClientSubjectHelper.getSubject(
                                         userProfile.get(),
-                                        client,
-                                        authenticationService,
-                                        configurationService.getInternalSectorUri())
+                                        userContext.getAuthSession(),
+                                        authenticationService)
                                 .getValue();
                 var metadataBuilder = ReauthMetadataBuilder.builder(rpPairwiseId);
 
@@ -168,7 +172,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                     200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
         } catch (JsonException ex) {
             LOG.warn("Exception generating authcode. Returning 1001: ", ex);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

@@ -1,0 +1,198 @@
+package uk.gov.di.authentication.frontendapi.lambda;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.State;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
+import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
+import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
+import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
+
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import static java.lang.String.format;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+
+class AMCAuthorizeHandlerTest {
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final AMCService amcService = mock(AMCService.class);
+    private final DynamoAmcStateService dynamoAmcStateService = mock(DynamoAmcStateService.class);
+    private AMCAuthorizeHandler handler;
+    private final Context context = mock(Context.class);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withClientId(CLIENT_ID)
+                    .withEmailAddress(EMAIL);
+    private final UserProfile userProfile =
+            new UserProfile().withEmail(EMAIL).withPublicSubjectID(PUBLIC_SUBJECT_ID);
+    private final UserContext userContext = mock(UserContext.class);
+
+    private static final String AMC_COOKIE = "some-cookie";
+
+    @BeforeEach
+    void setUp() {
+        handler =
+                new AMCAuthorizeHandler(
+                        configurationService,
+                        authenticationService,
+                        authSessionService,
+                        amcService,
+                        dynamoAmcStateService);
+        when(configurationService.getAMCSfadRedirectURI())
+                .thenReturn("https://example.com/callback");
+        when(configurationService.getAuthToAMApiAudience())
+                .thenReturn("https://example.com/AmAudience");
+        when(configurationService.getAMCCreatePasskeyRedirectURI())
+                .thenReturn("https://example.com/account-data-callback");
+        when(configurationService.getAuthToAccountDataApiAudience())
+                .thenReturn("https://example.com/ADAPIAudience");
+        when(configurationService.getAMCSfadRedirectURI())
+                .thenReturn("https://example.com/redirectUri");
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
+        when(userContext.getAuthSession()).thenReturn(authSession);
+        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+    }
+
+    private static Stream<Arguments> amcJourneyTypeAndExpectedScope() {
+        return Stream.of(
+                Arguments.of(AMCJourneyType.SFAD, AMCScope.ACCOUNT_DELETE),
+                Arguments.of(AMCJourneyType.PASSKEY_CREATE, AMCScope.PASSKEY_CREATE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("amcJourneyTypeAndExpectedScope")
+    void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
+            AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
+        String expectedUrl = "https://example.com/authorize";
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(amcService.buildAuthorizationResult(
+                        eq(INTERNAL_COMMON_SUBJECT_ID),
+                        eq(expectedAmcScope),
+                        eq(authSession),
+                        eq(PUBLIC_SUBJECT_ID),
+                        anyString(),
+                        anyList(),
+                        any(State.class)))
+                .thenReturn(
+                        Result.success(new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
+
+        var event =
+                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                        CommonTestVariables.VALID_HEADERS,
+                        format("{\"journeyType\":\"%s\"}", amcJourneyType));
+
+        var request = new AMCAuthorizeRequest(amcJourneyType);
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(event, context, request, userContext);
+
+        var expectedResponse = new AMCAuthorizeResponse(expectedUrl, AMC_COOKIE);
+        assertEquals(200, result.getStatusCode());
+        assertThat(result, hasJsonBody(expectedResponse));
+
+        var expectedRedirectUri =
+                request.amcJourneyType().getTransportJwtConfig(configurationService).redirectUri();
+        var expectedAccessTokenConfigs =
+                request.amcJourneyType().getAccessTokenConfigs(configurationService);
+        var stateCaptor = ArgumentCaptor.forClass(State.class);
+        verify(amcService)
+                .buildAuthorizationResult(
+                        eq(INTERNAL_COMMON_SUBJECT_ID),
+                        eq(expectedAmcScope),
+                        eq(authSession),
+                        eq(PUBLIC_SUBJECT_ID),
+                        eq(expectedRedirectUri),
+                        eq(expectedAccessTokenConfigs),
+                        stateCaptor.capture());
+
+        verify(dynamoAmcStateService).store(stateCaptor.getValue().getValue(), CLIENT_SESSION_ID);
+    }
+
+    @Test
+    void shouldReturn400WhenUserProfileNotFound() {
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
+
+        var event =
+                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                        CommonTestVariables.VALID_HEADERS,
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
+
+        assertEquals(400, result.getStatusCode());
+        assertTrue(result.getBody().contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
+    }
+
+    @ParameterizedTest
+    @EnumSource(JwtFailureReason.class)
+    void shouldHandleAllFailureReasons(JwtFailureReason failureReason) {
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(amcService.buildAuthorizationResult(
+                        anyString(), any(), any(), anyString(), anyString(), anyList(), any()))
+                .thenReturn(Result.failure(failureReason));
+
+        var event =
+                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                        CommonTestVariables.VALID_HEADERS,
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
+
+        var httpResponse = AMCFailureHttpMapper.toHttpResponse(failureReason);
+        int expectedStatusCode = httpResponse.statusCode();
+        ErrorResponse expectedError = httpResponse.errorResponse();
+
+        assertEquals(expectedStatusCode, result.getStatusCode());
+        assertTrue(result.getBody().contains(expectedError.getMessage()));
+    }
+}

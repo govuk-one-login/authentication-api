@@ -74,12 +74,27 @@ data "aws_iam_policy_document" "mfa_reset_signing_key_access_policy" {
       identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
     }
   }
+
+  statement {
+    sid    = "AllowCrossAccountAccess"
+    effect = "Allow"
+
+    actions = [
+      "kms:GetPublicKey",
+      "kms:Sign"
+    ]
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
+    }
+    resources = ["*"]
+  }
 }
 
+## ipv_reverification_request_signing_key - V2 ##
 
-
-resource "aws_kms_key" "ipv_reverification_request_signing_key" {
-  description              = "KMS signing key (ECC) for JARs sent from Authentication to IPV for MFA reset"
+resource "aws_kms_key" "ipv_reverification_request_signing_key_v2" {
+  description              = "KMS signing key (ECC) for JARs sent from Authentication to IPV for MFA reset (v2)"
   deletion_window_in_days  = 30
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
@@ -87,12 +102,22 @@ resource "aws_kms_key" "ipv_reverification_request_signing_key" {
   policy = data.aws_iam_policy_document.ipv_reverification_request_signing_key_access_policy.json
 }
 
+resource "aws_kms_alias" "ipv_reverification_request_signing_key_v2_alias" {
+  name          = "alias/${var.environment}-ipv_reverification_request_signing_key_v2"
+  target_key_id = aws_kms_key.ipv_reverification_request_signing_key_v2.key_id
+}
 
+## / ipv_reverification_request_signing_key - V2 ##
+
+## ipv_reverification_request_signing_key - Signing alias ##
+## Note that this alias lives alongside the "versioned" aliases and points to the current key used for signing.
 
 resource "aws_kms_alias" "ipv_reverification_request_signing_key_alias" {
   name          = "alias/${var.environment}-ipv_reverification_request_signing_key"
-  target_key_id = aws_kms_key.ipv_reverification_request_signing_key.key_id
+  target_key_id = aws_kms_key.ipv_reverification_request_signing_key_v2.key_id
 }
+
+## / ipv_reverification_request_signing_key - Signing alias ##
 
 data "aws_iam_policy_document" "ipv_reverification_request_signing_key_access_policy" {
   statement {
@@ -108,5 +133,20 @@ data "aws_iam_policy_document" "ipv_reverification_request_signing_key_access_po
       type        = "AWS"
       identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
     }
+  }
+
+  statement {
+    sid    = "AllowCrossAccountAccess"
+    effect = "Allow"
+
+    actions = [
+      "kms:GetPublicKey",
+      "kms:Sign"
+    ]
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
+    }
+    resources = ["*"]
   }
 }

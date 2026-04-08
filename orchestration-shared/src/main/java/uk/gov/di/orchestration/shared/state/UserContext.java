@@ -3,51 +3,38 @@ package uk.gov.di.orchestration.shared.state;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserCredentials;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.util.Optional;
 
 public class UserContext {
-    private final Session session;
     private final String sessionId;
-    private final Optional<UserCredentials> userCredentials;
     private final Optional<ClientRegistry> client;
     private final OrchClientSessionItem orchClientSession;
     private final SupportedLanguage userLanguage;
     private final String clientSessionId;
     private final OrchSessionItem orchSession;
+    private final String clientId;
 
     protected UserContext(
-            Session session,
             String sessionId,
-            Optional<UserCredentials> userCredentials,
             Optional<ClientRegistry> client,
             OrchClientSessionItem orchClientSession,
             SupportedLanguage userLanguage,
             String clientSessionId,
-            OrchSessionItem orchSession) {
-        this.session = session;
+            OrchSessionItem orchSession,
+            String clientId) {
         this.sessionId = sessionId;
-        this.userCredentials = userCredentials;
         this.client = client;
         this.orchClientSession = orchClientSession;
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
         this.orchSession = orchSession;
-    }
-
-    public Session getSession() {
-        return session;
+        this.clientId = clientId;
     }
 
     public String getSessionId() {
         return sessionId;
-    }
-
-    public Optional<UserCredentials> getUserCredentials() {
-        return userCredentials;
     }
 
     public Optional<ClientRegistry> getClient() {
@@ -55,7 +42,7 @@ public class UserContext {
     }
 
     public String getClientId() {
-        return getClient().map(ClientRegistry::getClientID).orElse("");
+        return clientId;
     }
 
     public String getClientName() {
@@ -78,31 +65,23 @@ public class UserContext {
         return orchSession;
     }
 
-    public static Builder builder(Session session) {
-        return new Builder(session);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static class Builder {
-        private final Session session;
         private String sessionId;
-        private Optional<UserCredentials> userCredentials = Optional.empty();
         private Optional<ClientRegistry> client = Optional.empty();
         private OrchClientSessionItem orchClientSession;
         private SupportedLanguage userLanguage;
         private String clientSessionId;
         private OrchSessionItem orchSession;
+        private String clientId;
 
-        protected Builder(Session session) {
-            this.session = session;
-        }
+        protected Builder() {}
 
         public Builder withSessionId(String sessionId) {
             this.sessionId = sessionId;
-            return this;
-        }
-
-        public Builder withUserCredentials(Optional<UserCredentials> userCredentials) {
-            this.userCredentials = userCredentials;
             return this;
         }
 
@@ -112,6 +91,11 @@ public class UserContext {
 
         public Builder withClient(Optional<ClientRegistry> client) {
             this.client = client;
+            return this;
+        }
+
+        public Builder withClientId(String clientId) {
+            this.clientId = clientId;
             return this;
         }
 
@@ -137,14 +121,13 @@ public class UserContext {
 
         public UserContext build() {
             return new UserContext(
-                    session,
                     sessionId,
-                    userCredentials,
                     client,
                     orchClientSession,
                     userLanguage,
                     clientSessionId,
-                    orchSession);
+                    orchSession,
+                    clientId);
         }
     }
 }

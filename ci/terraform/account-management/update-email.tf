@@ -27,12 +27,11 @@ module "update_email" {
   path_part       = "update-email"
   endpoint_method = ["POST"]
   handler_environment_variables = {
-    ENVIRONMENT                 = var.environment
-    EMAIL_QUEUE_URL             = aws_sqs_queue.email_queue.id
-    REDIS_KEY                   = local.redis_key
-    TXMA_AUDIT_QUEUE_URL        = module.account_management_txma_audit.queue_url
-    INTERNAl_SECTOR_URI         = var.internal_sector_uri
-    SUPPORT_EMAIL_CHECK_ENABLED = var.support_email_check_enabled
+    ENVIRONMENT          = var.environment
+    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
+    REDIS_KEY            = local.redis_key
+    TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest"
 
@@ -58,6 +57,7 @@ module "update_email" {
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_management_api_update_email_role.arn
+  runbook_link                           = "https://govukverify.atlassian.net/wiki/x/DgAlWgE"
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention

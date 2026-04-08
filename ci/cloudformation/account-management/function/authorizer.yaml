@@ -1,0 +1,204 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-api_gateway_authorizer
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./account-management-api/build/distributions/account-management-api.zip
+      Handler: uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest
+      Runtime: java17
+      Timeout: 30
+      Environment:
+        Variables:
+          TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                TokenSigningkeyArn,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                TokenSigningkeyArn,
+              ]
+          TEST_TOKEN_SIGNING_KEY_ALIAS: !If
+            - IsAcceptanceTestEnv
+            - !GetAtt TestIdTokenSigningKey.Arn
+            - !Ref AWS::NoValue
+          ENVIRONMENT: !Sub
+            - "${env}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+          TEST_SIGNING_KEY_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              testSigningKeyEnabled,
+            ]
+          ACCESS_TOKEN_JWKS_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              accessTokenJwksUrl,
+            ]
+      LoggingConfig:
+        LogGroup: !Ref AuthorizerFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoClientRegistryReadAccessPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref AuditEventsSnsPolicy
+        - !Ref IdTokenSigningKeyPolicy
+        - !If [
+            IsAcceptanceTestEnv,
+            !Ref TestIdTokenSigningKeyPolicy,
+            !Ref "AWS::NoValue",
+          ]
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+
+  AuthorizerFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AuthorizerFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  AuthorizerFunctionAliasPermissionOldAwsAcct:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt AuthorizerFunction.Arn
+      Principal: !Sub
+        - "arn:aws:iam::${DataStoreAccountId}:root"
+        - DataStoreAccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              dataStoreAccountId,
+            ]
+
+  AuthorizerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-api_gateway_authorizer
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AuthorizerFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/authorizer.yaml
+
+  AuthorizerFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-api-gateway-authorizer-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref AuthorizerFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-api-gateway-authorizer-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthorizerFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-api_gateway_authorizer function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 10,
+            ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "authorizer",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-api-gateway-authorizer-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-api-gateway-authorizer-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  AuthorizerFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthorizerFunctionLogGroup
+
+  AuthorizerFunctionArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub
+        - "/acceptance-tests/${Env}/AUTH_AM_AUTHORIZER_LAMBDA_NAME"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Type: String
+      Value: !GetAtt AuthorizerFunction.Arn
+      Description: "ARN for the API Gateway Authorizer Lambda function"
+      Tags:
+        Environment: !Ref Environment
+        Source: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/authorizer.yaml
+
+Outputs:
+  AuthorizerFunctionArn:
+    Value: !GetAtt AuthorizerFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-AuthorizerFunctionArn"
+
+  AuthorizerFunctionAliasArn:
+    Value: !Ref AuthorizerFunction.Alias
+    Export:
+      Name: !Sub "${AWS::StackName}-AuthorizerFunctionAliasArn"

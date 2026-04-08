@@ -13,17 +13,18 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
+import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -35,22 +36,26 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -60,8 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -69,13 +73,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -86,22 +90,24 @@ class CheckUserExistsHandlerTest {
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final PasskeysService passkeysService = mock(PasskeysService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
-    private final Session session = new Session();
     private static final String CLIENT_ID = "test-client-id";
+    private static final String SECTOR_HOST = "sector-identifier";
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
-                    .withClientId(CLIENT_ID);
+                    .withClientId(CLIENT_ID)
+                    .withRpSectorIdentifierHost(SECTOR_HOST);
     private static final Subject SUBJECT = new Subject();
-    private static final String SECTOR_URI = "http://sector-identifier";
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
@@ -116,7 +122,8 @@ class CheckUserExistsHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -133,25 +140,33 @@ class CheckUserExistsHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(configurationService.supportPasskeys()).thenReturn(false);
 
         handler =
                 new CheckUserExistsHandler(
                         configurationService,
-                        sessionService,
                         authSessionService,
-                        clientService,
                         authenticationService,
                         auditService,
-                        codeStorageService);
+                        permissionDecisionManager,
+                        mfaMethodsService,
+                        passkeysService);
         reset(authenticationService);
+        reset(permissionDecisionManager);
+
+        // Setup default PermissionDecisionManager behavior after reset
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
     }
 
     @Nested
     class WhenUserExists {
         @BeforeEach
         void setup() {
-            usingValidSession();
             authSessionExists();
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
             var userProfile =
                     generateUserProfile().withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
             setupUserProfileAndClient(Optional.of(userProfile));
@@ -176,12 +191,15 @@ class CheckUserExistsHandlerTest {
                     "doesUserExist":true,
                     "mfaMethodType":"SMS",
                     "phoneNumberLastThree":"%s",
-                    "lockoutInformation":[]}
+                    "lockoutInformation":[],
+                    "hasActivePasskey":false,
+                    "needsForcedMFAResetAfterMFACheck":false}
                     """,
                             EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
@@ -230,7 +248,9 @@ class CheckUserExistsHandlerTest {
                     "doesUserExist":true,
                     "mfaMethodType":"%s",
                     "phoneNumberLastThree": %s,
-                    "lockoutInformation":[]}
+                    "lockoutInformation":[],
+                    "hasActivePasskey":false,
+                    "needsForcedMFAResetAfterMFACheck":false}
                     """,
                             EMAIL_ADDRESS,
                             expectedMfaMethodType,
@@ -238,6 +258,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(expectedResponse),
                     JsonParser.parseString(result.getBody()));
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
@@ -278,34 +299,299 @@ class CheckUserExistsHandlerTest {
 
         @Test
         void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
-            when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
-                    .thenReturn(15L);
-            when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
-                    .thenReturn(15L);
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
-                    .thenReturn(6);
+            var lockoutExpiry = java.time.Instant.now().plusSeconds(15);
+            var signInLockout =
+                    new Decision.TemporarilyLockedOut(
+                            uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
+                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                            5,
+                            lockoutExpiry,
+                            false);
+            var passwordResetLockout =
+                    new Decision.TemporarilyLockedOut(
+                            uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
+                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                            5,
+                            lockoutExpiry,
+                            false);
+
+            when(permissionDecisionManager.canVerifyMfaOtp(eq(JourneyType.SIGN_IN), any()))
+                    .thenReturn(Result.success(signInLockout));
+            when(permissionDecisionManager.canVerifyMfaOtp(
+                            eq(JourneyType.PASSWORD_RESET_MFA), any()))
+                    .thenReturn(Result.success(passwordResetLockout));
+
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
             var event = userExistsRequest(EMAIL_ADDRESS);
 
             var result = handler.handleRequest(event, context);
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertThat(result, hasStatus(200));
-            assertTrue(
-                    result.getBody()
-                            .contains(
-                                    "\"lockoutInformation\":["
-                                            + "{\"lockType\":\"codeBlock\","
-                                            + "\"mfaMethodType\":\"AUTH_APP\","
-                                            + "\"lockTTL\":15,"
-                                            + "\"journeyType\":\"SIGN_IN\"},"
-                                            + "{\"lockType\":\"codeBlock\","
-                                            + "\"mfaMethodType\":\"AUTH_APP\","
-                                            + "\"lockTTL\":15,"
-                                            + "\"journeyType\":\"PASSWORD_RESET_MFA\"}]"));
+
+            var expectedResponse =
+                    new CheckUserExistsResponse(
+                            EMAIL_ADDRESS,
+                            true,
+                            MFAMethodType.AUTH_APP,
+                            null,
+                            List.of(
+                                    new LockoutInformation(
+                                            "codeBlock",
+                                            MFAMethodType.AUTH_APP,
+                                            lockoutExpiry.getEpochSecond(),
+                                            JourneyType.SIGN_IN),
+                                    new LockoutInformation(
+                                            "codeBlock",
+                                            MFAMethodType.AUTH_APP,
+                                            lockoutExpiry.getEpochSecond(),
+                                            JourneyType.PASSWORD_RESET_MFA)),
+                            false,
+                            false);
+            assertThat(result, hasJsonBody(expectedResponse));
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForNonMigratedUserWhenFlagDisabled()
+                throws Json.JsonException {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void
+                shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForNonMigratedUserWithDomesticNumber()
+                        throws Json.JsonException {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(
+                                            MFAMethod.smsMfaMethod(
+                                                    true,
+                                                    true,
+                                                    CommonTestVariables.UK_MOBILE_NUMBER,
+                                                    PriorityIdentifier.DEFAULT,
+                                                    "sms-id"))));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForMigratedUserWithDomesticNumber()
+                throws Json.JsonException {
+            var migratedUserProfile = generateUserProfile().withMfaMethodsMigrated(true);
+            setupUserProfileAndClient(Optional.of(migratedUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            var domesticSms =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            CommonTestVariables.UK_MOBILE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            "sms-id");
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(domesticSms)));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(Result.success(List.of(domesticSms)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {false, true})
+        void
+                shouldReturnNeedsForcedMFAResetAfterMFACheckMatchingFlagForNonMigratedUserWithInternationalNumber(
+                        boolean featureFlagEnabled) throws Json.JsonException {
+            var phoneNumber = CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
+            var internationalUserProfile = generateUserProfile().withPhoneNumber(phoneNumber);
+            setupUserProfileAndClient(Optional.of(internationalUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled())
+                    .thenReturn(featureFlagEnabled);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(
+                                            MFAMethod.smsMfaMethod(
+                                                    true,
+                                                    true,
+                                                    phoneNumber,
+                                                    PriorityIdentifier.DEFAULT,
+                                                    "sms-id"))));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(
+                    featureFlagEnabled, checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {false, true})
+        void
+                shouldReturnNeedsForcedMFAResetAfterMFACheckMatchingFlagForMigratedUserWithInternationalNumber(
+                        boolean featureFlagEnabled) throws Json.JsonException {
+            var migratedUserProfile = generateUserProfile().withMfaMethodsMigrated(true);
+            setupUserProfileAndClient(Optional.of(migratedUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled())
+                    .thenReturn(featureFlagEnabled);
+
+            var internationalSms =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            "sms-id");
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(internationalSms)));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(Result.success(List.of(internationalSms)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(
+                    featureFlagEnabled, checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForNonMigratedUserWithAuthApp()
+                throws Json.JsonException {
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+            MFAMethod authAppMethod = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(authAppMethod)));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(
+                                            MFAMethod.authAppMfaMethod(
+                                                    "some-credential",
+                                                    true,
+                                                    true,
+                                                    PriorityIdentifier.DEFAULT,
+                                                    "auth-app-id"))));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseForMigratedUserWithAuthApp()
+                throws Json.JsonException {
+            var migratedUserProfile = generateUserProfile().withMfaMethodsMigrated(true);
+            setupUserProfileAndClient(Optional.of(migratedUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            var authAppMethod =
+                    MFAMethod.authAppMfaMethod(
+                            "some-credential",
+                            true,
+                            true,
+                            PriorityIdentifier.DEFAULT,
+                            "auth-app-id");
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(authAppMethod)));
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(Result.success(List.of(authAppMethod)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void
+                shouldReturnNeedsForcedMFAResetAfterMFACheckAsTrueForInternationalNumberRegardlessOfCredentialStrength()
+                        throws Json.JsonException {
+            var lowTrustAuthSession =
+                    new AuthSessionItem()
+                            .withSessionId(SESSION_ID)
+                            .withRequestedCredentialStrength(CredentialTrustLevel.LOW_LEVEL)
+                            .withClientId(CLIENT_ID)
+                            .withRpSectorIdentifierHost(SECTOR_HOST);
+            when(authSessionService.getSessionFromRequestHeaders(any()))
+                    .thenReturn(Optional.of(lowTrustAuthSession));
+            var internationalUserProfile =
+                    generateUserProfile()
+                            .withPhoneNumber(CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER);
+            setupUserProfileAndClient(Optional.of(internationalUserProfile));
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            var internationalSms =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            "sms-id");
+            when(mfaMethodsService.getMfaMethods(
+                            any(UserProfile.class), any(UserCredentials.class), eq(true)))
+                    .thenReturn(Result.success(List.of(internationalSms)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertTrue(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
+        }
+
+        @Test
+        void shouldReturnNeedsForcedMFAResetAfterMFACheckAsFalseWhenUserDoesNotExist()
+                throws Json.JsonException {
+            setupUserProfileAndClient(Optional.empty());
+            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.needsForcedMFAResetAfterMFACheck());
         }
 
         @Test
@@ -325,19 +611,72 @@ class CheckUserExistsHandlerTest {
             assertNull(checkUserExistsResponse.phoneNumberLastThree());
         }
 
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldReturnResultOfHasActivePasskeysWhenFeatureFlagIsOn(boolean hasActivePasskey)
+                throws Json.JsonException {
+            when(configurationService.supportPasskeys()).thenReturn(true);
+            var userProfile = generateUserProfile();
+            setupUserProfileAndClient(Optional.of(userProfile));
+
+            MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+            when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID()))
+                    .thenReturn(Result.success(hasActivePasskey));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(hasActivePasskey, checkUserExistsResponse.hasActivePasskey());
+        }
+
+        @Test
+        void shouldReturnFalseForHasActivePasskeyIfPasskeysServiceReturnsFailure()
+                throws Json.JsonException {
+            when(configurationService.supportPasskeys()).thenReturn(true);
+            var userProfile = generateUserProfile();
+            setupUserProfileAndClient(Optional.of(userProfile));
+
+            MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+            when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID()))
+                    .thenReturn(
+                            Result.failure(
+                                    PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertFalse(checkUserExistsResponse.hasActivePasskey());
+        }
+
         @Test
         void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
-            when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
+            var lockedOutDecision =
+                    new Decision.TemporarilyLockedOut(
+                            uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
+                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                            5,
+                            java.time.Instant.now().plusSeconds(3600),
+                            false);
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(lockedOutDecision));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
-            verify(sessionService, times(1)).storeOrUpdateSession(any(Session.class), anyString());
+            assertThat(result, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
+            verify(authSessionService, times(1)).updateSession(any(AuthSessionItem.class));
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                            AUDIT_CONTEXT,
+                            AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
                             AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login", 5));
         }
@@ -345,7 +684,6 @@ class CheckUserExistsHandlerTest {
 
     @Test
     void shouldReturn200IfUserDoesNotExist() throws Json.JsonException {
-        usingValidSession();
         authSessionExists();
 
         setupUserProfileAndClient(Optional.empty());
@@ -357,7 +695,9 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
+        assertFalse(checkUserExistsResponse.hasActivePasskey());
         assertNull(authSession.getInternalCommonSubjectId());
+        verify(authSessionService).updateSession(any(AuthSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
@@ -367,14 +707,13 @@ class CheckUserExistsHandlerTest {
 
     @Test
     void shouldReturn400IfRequestIsMissingEmail() {
-        usingValidSession();
         authSessionExists();
 
         var event = new APIGatewayProxyRequestEvent().withHeaders(VALID_HEADERS).withBody("{ }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(auditService);
     }
 
@@ -385,20 +724,18 @@ class CheckUserExistsHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(auditService);
     }
 
     @Test
     void shouldReturn400IfEmailAddressIsInvalid() {
-        usingValidSession();
-        setupClient();
         authSessionExists();
 
         var result = handler.handleRequest(userExistsRequest("joe.bloggs"), context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_EMAIL_FORMAT));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL,
@@ -407,19 +744,12 @@ class CheckUserExistsHandlerTest {
 
     @Test
     void shouldReturn400IfAuthSessionExpired() {
-        usingValidSession();
         authSessionMissing();
-        setupClient();
 
         var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
-    }
-
-    private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
     }
 
     private void authSessionExists() {
@@ -441,18 +771,6 @@ class CheckUserExistsHandlerTest {
                         new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
     }
 
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withRedirectUrls(singletonList("http://localhost/oidc/redirect"))
-                .withClientID(CLIENT_ID)
-                .withContacts(singletonList(EMAIL_ADDRESS))
-                .withPublicKey(null)
-                .withSectorIdentifierUri(SECTOR_URI)
-                .withScopes(singletonList("openid"))
-                .withCookieConsentShared(true)
-                .withSubjectType("pairwise");
-    }
-
     private static String getExpectedRpPairwiseId() {
         return ClientSubjectHelper.calculatePairwiseIdentifier(
                 SUBJECT.getValue(), "sector-identifier", SALT.array());
@@ -470,11 +788,6 @@ class CheckUserExistsHandlerTest {
                                 .thenReturn(SALT.array()));
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(maybeUserProfile);
-        setupClient();
-    }
-
-    private void setupClient() {
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
     }
 
     private APIGatewayProxyRequestEvent userExistsRequest(String email) {
@@ -491,5 +804,63 @@ class CheckUserExistsHandlerTest {
                 true,
                 enabled,
                 NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+    }
+
+    @Nested
+    class PermissionDecisionManagerErrorHandling {
+        @BeforeEach
+        void setup() {
+            authSessionExists();
+        }
+
+        private static Stream<Arguments> decisionErrorToExpectedStatusAndErrorResponse() {
+            return Stream.of(
+                    Arguments.of(
+                            DecisionError.STORAGE_SERVICE_ERROR,
+                            500,
+                            ErrorResponse.STORAGE_LAYER_ERROR),
+                    Arguments.of(
+                            DecisionError.INVALID_USER_CONTEXT,
+                            400,
+                            ErrorResponse.REQUEST_MISSING_PARAMS));
+        }
+
+        @ParameterizedTest
+        @MethodSource("decisionErrorToExpectedStatusAndErrorResponse")
+        void shouldReturnCorrectErrorResponseForCanReceivePasswordFailure(
+                DecisionError decisionError,
+                int expectedStatusCode,
+                ErrorResponse expectedErrorResponse) {
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.failure(decisionError));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(expectedStatusCode));
+            assertThat(result, hasJsonBody(expectedErrorResponse));
+        }
+
+        private static Stream<Arguments> decisionErrorToExpectedErrorResponse() {
+            return Stream.of(
+                    Arguments.of(
+                            DecisionError.STORAGE_SERVICE_ERROR,
+                            ErrorResponse.STORAGE_LAYER_ERROR));
+        }
+
+        @ParameterizedTest
+        @MethodSource("decisionErrorToExpectedErrorResponse")
+        void shouldReturnCorrectErrorResponseForCanVerifyMfaOtpFailure(
+                DecisionError decisionError, ErrorResponse expectedErrorResponse) {
+            setupUserProfileAndClient(Optional.of(generateUserProfile()));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            when(permissionDecisionManager.canVerifyMfaOtp(eq(JourneyType.SIGN_IN), any()))
+                    .thenReturn(Result.failure(decisionError));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
+        }
     }
 }

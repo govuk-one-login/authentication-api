@@ -5,7 +5,6 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -23,26 +22,28 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import software.amazon.awssdk.services.lambda.model.InvokeResponse;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 
 import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class ClientSignatureValidationServiceTest {
 
@@ -53,25 +54,31 @@ class ClientSignatureValidationServiceTest {
     private static final URI AUTHORIZE_URI = URI.create("https://localhost/authorize");
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final OidcAPI oidcAPI = mock(OidcAPI.class);
     private final RpPublicKeyCacheService rpPublicKeyCacheService =
             mock(RpPublicKeyCacheService.class);
     private final LambdaClient lambdaClient = mock(LambdaClient.class);
     private ClientSignatureValidationService clientSignatureValidationService;
 
+    private ClientRegistry client;
+    private KeyPair keyPair;
+
+    @BeforeEach
+    void setup() {
+        when(oidcAPI.tokenURI()).thenReturn(TOKEN_URI);
+        when(oidcAPI.getIssuerURI()).thenReturn(OIDC_BASE_URI);
+        keyPair = generateRsaKeyPair();
+    }
+
     @Nested
     class StaticPublicKeySource {
-        ClientRegistry client;
-        KeyPair keyPair;
 
         @BeforeEach
         void setup() {
-            when(configurationService.getOidcApiBaseURL()).thenReturn(OIDC_BASE_URI);
-            when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
-            keyPair = generateKeyPair();
             client = generateClientWithStaticPublicKeySource(keyPair.getPublic());
             clientSignatureValidationService =
                     new ClientSignatureValidationService(
-                            configurationService, rpPublicKeyCacheService, lambdaClient);
+                            configurationService, rpPublicKeyCacheService, lambdaClient, oidcAPI);
         }
 
         @Test
@@ -92,8 +99,33 @@ class ClientSignatureValidationServiceTest {
         }
 
         @Test
+        void shouldSuccessfullyReturnWhenValidatingPrivateKeyJWTWithIssuerAud() {
+            var privateKeyJWT =
+                    generatePrivateKeyJWT(keyPair.getPrivate(), Optional.of(OIDC_BASE_URI));
+
+            assertDoesNotThrow(
+                    () ->
+                            clientSignatureValidationService.validateTokenClientAssertion(
+                                    privateKeyJWT, client));
+        }
+
+        @Test
+        void shouldThrowWhenInvalidAudProvided() throws URISyntaxException {
+            var privateKeyJWT =
+                    generatePrivateKeyJWT(
+                            keyPair.getPrivate(),
+                            Optional.of(new URI("https://example.com/token")));
+
+            assertThrows(
+                    ClientSignatureValidationException.class,
+                    () ->
+                            clientSignatureValidationService.validateTokenClientAssertion(
+                                    privateKeyJWT, client));
+        }
+
+        @Test
         void shouldThrowExceptionWhenValidatingInvalidSignedJWT() {
-            var keyPair2 = generateKeyPair();
+            var keyPair2 = generateRsaKeyPair();
             var signedJWT = generateSignedJWT(keyPair2.getPrivate());
 
             assertThrows(
@@ -103,7 +135,7 @@ class ClientSignatureValidationServiceTest {
 
         @Test
         void shouldThrowExceptionWhenValidatingInvalidPrivateKeyJWT() {
-            var keyPair2 = generateKeyPair();
+            var keyPair2 = generateRsaKeyPair();
             var privateKeyJWT = generatePrivateKeyJWT(keyPair2.getPrivate());
 
             assertThrows(
@@ -126,18 +158,13 @@ class ClientSignatureValidationServiceTest {
 
     @Nested
     class JwksPublicKeySource {
-        ClientRegistry client;
-        KeyPair keyPair;
 
         @BeforeEach
         void setup() {
-            when(configurationService.getOidcApiBaseURL()).thenReturn(OIDC_BASE_URI);
-            when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
-            keyPair = generateKeyPair();
             client = generateClientWithJwksPublicKeySource();
             clientSignatureValidationService =
                     new ClientSignatureValidationService(
-                            configurationService, rpPublicKeyCacheService, lambdaClient);
+                            configurationService, rpPublicKeyCacheService, lambdaClient, oidcAPI);
         }
 
         @Test
@@ -174,7 +201,7 @@ class ClientSignatureValidationServiceTest {
 
         @Test
         void shouldThrowExceptionWhenValidatingInvalidSignedJWT() {
-            var keyPair2 = generateKeyPair();
+            var keyPair2 = generateRsaKeyPair();
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair2.getPublic());
             when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
             var signedJWT = generateSignedJWT(keyPair.getPrivate());
@@ -186,7 +213,7 @@ class ClientSignatureValidationServiceTest {
 
         @Test
         void shouldThrowExceptionWhenValidatingInvalidPrivateKeyJWT() {
-            var keyPair2 = generateKeyPair();
+            var keyPair2 = generateRsaKeyPair();
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair2.getPublic());
             when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
             var privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
@@ -224,10 +251,15 @@ class ClientSignatureValidationServiceTest {
     }
 
     private static PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) {
+        return generatePrivateKeyJWT(privateKey, Optional.empty());
+    }
+
+    private static PrivateKeyJWT generatePrivateKeyJWT(
+            PrivateKey privateKey, Optional<URI> audience) {
         try {
             return new PrivateKeyJWT(
                     new ClientID(CLIENT_ID),
-                    TOKEN_URI,
+                    audience.orElse(TOKEN_URI),
                     JWSAlgorithm.RS256,
                     privateKey,
                     "12345",
@@ -235,16 +267,6 @@ class ClientSignatureValidationServiceTest {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static KeyPair generateKeyPair() {
-        KeyPairGenerator keyPairGenerator;
-        try {
-            keyPairGenerator = KeyPairGenerator.getInstance(KeyType.RSA.getValue());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        return keyPairGenerator.generateKeyPair();
     }
 
     private InvokeResponse generateFetchJwksLambdaValidResponse(PublicKey publicKey) {

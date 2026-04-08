@@ -126,6 +126,12 @@ public class HttpStubExtension implements AfterAllCallback {
 
     @Override
     public void afterAll(ExtensionContext context) throws Exception {
-        httpStub.stop();
+        if (!isNestedClass(context)) {
+            httpStub.stop();
+        }
+    }
+
+    private boolean isNestedClass(ExtensionContext context) {
+        return context.getParent().flatMap(ExtensionContext::getTestClass).isPresent();
     }
 }

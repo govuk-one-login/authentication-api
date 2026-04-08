@@ -35,6 +35,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -75,14 +76,14 @@ class DocAppCriServiceTest {
     private DocAppCriService docAppCriService;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws MalformedURLException {
         docAppCriService = new DocAppCriService(configService, kmsService, docAppCriApi);
         when(docAppCriApi.tokenURI()).thenReturn(TOKEN_URI);
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getDocAppAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
         when(configService.getEnvironment()).thenReturn("test");
-        when(configService.getDocAppJwksURI()).thenReturn(DOC_APP_JWKS_URI);
+        when(configService.getDocAppJwksUrl()).thenReturn(DOC_APP_JWKS_URI.toURL());
     }
 
     @Nested
@@ -170,6 +171,10 @@ class DocAppCriServiceTest {
         }
 
         private void signJWTWithKMS() throws JOSEException {
+            signJWTWithKMS(SIGNING_KID);
+        }
+
+        private void signJWTWithKMS(String keyId) throws JOSEException {
             var ecSigningKey =
                     new ECKeyGenerator(Curve.P_256)
                             .keyID(SIGNING_KID)
@@ -195,7 +200,7 @@ class DocAppCriServiceTest {
             var signResult =
                     SignResponse.builder()
                             .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
-                            .keyId(SIGNING_KID)
+                            .keyId(keyId)
                             .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();
 

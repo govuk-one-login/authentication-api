@@ -4,9 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.AsymmetricJWK;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,12 +28,16 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 import uk.gov.di.authentication.shared.services.SystemService;
 
 import java.net.URI;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +47,7 @@ import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableE
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -49,7 +59,8 @@ public class TokenHandler
     private final TokenService tokenUtilityService;
     private final TokenRequestValidator tokenRequestValidator;
     private final AuditService auditService;
-    private final DynamoService dynamoService;
+    private final AuthenticationService authenticationService;
+    private final RemoteJwksService authJwksService;
 
     public TokenHandler(
             ConfigurationService configurationService,
@@ -58,14 +69,16 @@ public class TokenHandler
             TokenService tokenUtilityService,
             TokenRequestValidator tokenRequestValidator,
             AuditService auditService,
-            DynamoService dynamoService) {
+            AuthenticationService authenticationService,
+            RemoteJwksService authJwksService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.accessTokenStoreService = accessTokenService;
         this.tokenUtilityService = tokenUtilityService;
         this.tokenRequestValidator = tokenRequestValidator;
         this.auditService = auditService;
-        this.dynamoService = dynamoService;
+        this.authenticationService = authenticationService;
+        this.authJwksService = authJwksService;
     }
 
     public TokenHandler() {
@@ -85,7 +98,8 @@ public class TokenHandler
         this.tokenRequestValidator =
                 new TokenRequestValidator(orchestratorCallbackRedirectUri, orchestratorClientId);
         this.auditService = new AuditService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoService(configurationService);
+        this.authJwksService = new RemoteJwksService(configurationService.getAuthJwksUrl());
     }
 
     @Override
@@ -96,12 +110,13 @@ public class TokenHandler
                     "auth-external-api::" + getClass().getSimpleName(),
                     () -> tokenRequestHandler(input));
         } catch (Exception e) {
-            LOG.error("Unexpected exception: {}", e.getMessage());
+            LOG.error("Unexpected exception", e);
             return generateApiGatewayProxyResponse(500, "server_error");
         }
     }
 
     public APIGatewayProxyResponseEvent tokenRequestHandler(APIGatewayProxyRequestEvent input) {
+        attachTraceId();
         LOG.info("Request received to the TokenHandler");
 
         Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(input.getBody());
@@ -132,8 +147,11 @@ public class TokenHandler
                             new Audience(orchAuthExternalApiTokenEndpoint));
             var validPublicKeys =
                     configurationService.getOrchestrationToAuthenticationSigningPublicKeys();
+            var privateKeyJwt = extractPrivateKeyJwt(input.getBody());
+            getKeyFromJwks(privateKeyJwt).ifPresent(validPublicKeys::add);
+
             tokenRequestValidator.validatePrivateKeyJwtClientAuth(
-                    input.getBody(), expectedAudience, validPublicKeys);
+                    privateKeyJwt, expectedAudience, validPublicKeys);
 
             String suppliedAuthCode = requestBody.get("code");
 
@@ -174,7 +192,7 @@ public class TokenHandler
             authorisationCodeService.updateHasBeenUsed(authCodeStore.getAuthCode(), true);
 
             String subjectID = authCodeStore.getSubjectID();
-            UserProfile userProfile = dynamoService.getUserProfileFromSubject(subjectID);
+            UserProfile userProfile = authenticationService.getUserProfileFromSubject(subjectID);
             String internalPairwiseId =
                     userProfile.getSalt() == null
                             ? AuditService.UNKNOWN
@@ -211,6 +229,49 @@ public class TokenHandler
                     tokenUtilityService.generateTokenErrorResponse(e.getOAuth2Error());
             return generateApiGatewayProxyResponse(
                     tokenErrorResponse.getStatusCode(), tokenErrorResponse.getContent());
+        }
+    }
+
+    private PrivateKeyJWT extractPrivateKeyJwt(String requestBody)
+            throws TokenAuthInvalidException {
+        try {
+            return PrivateKeyJWT.parse(requestBody);
+        } catch (ParseException e) {
+            LOG.warn("Unable to parse private_key_jwt", e);
+            throw new TokenAuthInvalidException(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid private_key_jwt"),
+                    ClientAuthenticationMethod.PRIVATE_KEY_JWT,
+                    "tbc");
+        }
+    }
+
+    private Optional<String> getKeyFromJwks(PrivateKeyJWT privateKeyJWT)
+            throws TokenAuthInvalidException {
+        try {
+            var jwk =
+                    authJwksService.retrieveJwkFromURLWithKeyId(
+                            privateKeyJWT.getClientAssertion().getHeader().getKeyID());
+            X509EncodedKeySpec x509EncodedKeySpec =
+                    new X509EncodedKeySpec(((AsymmetricJWK) jwk).toPublicKey().getEncoded());
+
+            byte[] x509EncodedPublicKey = x509EncodedKeySpec.getEncoded();
+            return Optional.of(Base64.getEncoder().encodeToString(x509EncodedPublicKey));
+        } catch (JOSEException e) {
+            if (configurationService
+                    .getOrchestrationStubToAuthenticationSigningPublicKey()
+                    .isPresent()) {
+                LOG.warn(
+                        "No JWKS key found but orch stub key is present. Using orch stub key for signature validation");
+                return Optional.empty();
+            } else {
+                LOG.warn("Could not verify signature of private_key_jwt", e);
+                throw new TokenAuthInvalidException(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_CLIENT_CODE,
+                                "Invalid signature in private_key_jwt"),
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT,
+                        "tbc");
+            }
         }
     }
 

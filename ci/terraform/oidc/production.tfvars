@@ -3,6 +3,9 @@ shared_state_bucket = "digital-identity-prod-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendprod"
 
+# Auth new strategic account
+auth_new_account_id = "211125303002"
+
 # App-specific
 internal_sector_uri  = "https://identity.account.gov.uk"
 test_clients_enabled = false
@@ -53,6 +56,7 @@ orch_environment                                   = "production"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:533266965190:key/7ad27a55-9d21-47f2-be03-b61f2c9a8ce6"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:533266965190:key/9b57120e-3bcd-4fce-ada8-89ea9d1412d6"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:533266965190:key/b2979629-c62f-458d-992b-ac4239c2cf81"
+orch_client_registry_table_encryption_key_arn      = "arn:aws:kms:eu-west-2:533266965190:key/e9f1350d-75e2-4532-be84-8bec6de99755"
 
 orch_openid_configuration_enabled    = true
 orch_jwks_enabled                    = true
@@ -91,7 +95,6 @@ doc_app_authorisation_client_id    = "authOrchestratorDocApp"
 doc_app_authorisation_callback_uri = "https://oidc.account.gov.uk/doc-app-callback"
 doc_app_authorisation_uri          = "https://www.review-b.account.gov.uk/dca/oauth2/authorize"
 doc_app_jwks_endpoint              = "https://api-backend-api.review-b.account.gov.uk/.well-known/jwks.json"
-doc_app_encryption_key_id          = "7958938d-eea0-4e6d-9ea1-ec0b9d421f77"
 
 cloudwatch_log_retention                    = 30
 client_registry_api_enabled                 = false
@@ -137,6 +140,21 @@ logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_c
 
 # Sizing
 performance_tuning = {
+
+  mfa-reset-jwk = {
+    memory          = 1536
+    concurrency     = 3
+    max_concurrency = 10
+    scaling_trigger = 0.6
+  }
+
+  mfa-reset-jar-jwk = {
+    memory          = 1536
+    concurrency     = 3
+    max_concurrency = 10
+    scaling_trigger = 0.6
+  }
+
   register = {
     memory          = 1536
     concurrency     = 0
@@ -153,24 +171,27 @@ performance_tuning = {
 
   reset-password = {
     memory          = 1536
-    concurrency     = 2
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reset-password-request = {
     memory          = 1536
-    concurrency     = 2
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reverification-result = {
     memory          = 1536
-    concurrency     = 1
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.6
   }
 }
 lambda_max_concurrency = 10
-lambda_min_concurrency = 3
+
+
+ipv_jwks_call_enabled = true
+ipv_jwks_url          = "https://api.identity.account.gov.uk/.well-known/jwks.json"

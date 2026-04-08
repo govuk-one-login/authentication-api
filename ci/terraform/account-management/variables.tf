@@ -17,12 +17,17 @@ variable "notify_url" {
 variable "notify_template_map" {
   type = map(string)
   default = {
-    AM_VERIFY_EMAIL_TEMPLATE_ID        = "2564a2fe-df04-43df-b086-08831b1034d7"
-    AM_VERIFY_PHONE_NUMBER_TEMPLATE_ID = "86fbfd12-e428-4579-b0ee-42ba2b840eac"
-    EMAIL_UPDATED_TEMPLATE_ID          = "0a200a63-97b2-4920-bc40-48e9a9e1121e"
-    DELETE_ACCOUNT_TEMPLATE_ID         = "0706adcc-b593-4d2d-afa6-c3da7149e426"
-    PHONE_NUMBER_UPDATED_TEMPLATE_ID   = "8274a2a3-5121-4630-a27e-e8578f8cba59"
-    PASSWORD_UPDATED_TEMPLATE_ID       = "323ebef4-cfa7-414f-bfba-1db324acdd66"
+    AM_VERIFY_EMAIL_TEMPLATE_ID           = "2564a2fe-df04-43df-b086-08831b1034d7"
+    AM_VERIFY_PHONE_NUMBER_TEMPLATE_ID    = "86fbfd12-e428-4579-b0ee-42ba2b840eac"
+    EMAIL_UPDATED_TEMPLATE_ID             = "0a200a63-97b2-4920-bc40-48e9a9e1121e"
+    DELETE_ACCOUNT_TEMPLATE_ID            = "0706adcc-b593-4d2d-afa6-c3da7149e426"
+    PHONE_NUMBER_UPDATED_TEMPLATE_ID      = "8274a2a3-5121-4630-a27e-e8578f8cba59"
+    PASSWORD_UPDATED_TEMPLATE_ID          = "323ebef4-cfa7-414f-bfba-1db324acdd66"
+    BACKUP_METHOD_ADDED_TEMPLATE_ID       = "2abd5f54-15b6-4957-b4d3-f310f2437b9f"
+    BACKUP_METHOD_REMOVED_TEMPLATE_ID     = "5a101e35-8b8d-456d-bcfe-8c7470bf63e4"
+    CHANGED_AUTHENTICATOR_APP_TEMPLATE_ID = "b0bb3667-985b-428c-9eb3-6b778b50fb6b"
+    CHANGED_DEFAULT_MFA_TEMPLATE_ID       = "ab62d5fa-79a8-4dba-beb0-283118d2450f"
+    SWITCHED_MFA_METHODS_TEMPLATE_ID      = "be78564b-b9a6-4b3d-b438-7b30e45caf54"
   }
 }
 
@@ -165,12 +170,6 @@ variable "test_clients_enabled" {
   default = "false"
 }
 
-variable "support_email_check_enabled" {
-  default     = true
-  type        = bool
-  description = "Feature flag which toggles the Experian email check on and off"
-}
-
 variable "legacy_account_deletion_topic_arn" {
   type        = string
   description = "SNS ARN for the account deletion topic owned by Home for use with the manual account deletion lambda. A dev topic is created if this value is not provided."
@@ -209,6 +208,12 @@ variable "mfa_method_management_api_enabled" {
   default     = false
 }
 
+variable "account_management_international_sms_enabled" {
+  description = "Feature flag to control whether international phone numbers can be added as MFA methods"
+  type        = bool
+  default     = true
+}
+
 variable "account_intervention_service_uri" {
   default = ""
   type    = string
@@ -221,9 +226,9 @@ variable "ais_call_in_authenticate_enabled" {
 }
 
 variable "home_vpc_endpoint_id" {
-  description = "The execute API vpc endpoint ID of Home AWS account to give execute access on method mgmt API"
-  type        = string
-  default     = ""
+  description = "The execute API vpc endpoint IDs of Home AWS account to give execute access on method mgmt API"
+  type        = list(string)
+  default     = []
 }
 
 variable "am_api_fms_tag_value" {
@@ -236,4 +241,28 @@ variable "notify_test_destinations" {
   description = "The list of notify destinations that are allowed to write their otp codes to S3."
   type        = string
   default     = ""
+}
+
+variable "new_auth_protectedsub_cidr_blocks" {
+  type        = list(string)
+  default     = []
+  description = "New Auth equivalent environment protected subnets"
+}
+
+variable "new_auth_privatesub_cidr_blocks" {
+  type        = list(string)
+  default     = []
+  description = "New Auth equivalent environment private subnets"
+}
+
+variable "test_signing_key_enabled" {
+  description = "Feature flag to control whether we check the access token signature against the auth owned acceptance test key"
+  type        = bool
+  default     = false
+}
+
+variable "access_token_jwks_url" {
+  type        = string
+  default     = ""
+  description = "Endpoint to get the Access Token JWKS to encrypt and verify JWTs"
 }

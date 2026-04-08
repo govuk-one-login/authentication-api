@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import uk.gov.di.authentication.entity.ExternalTICFCRIRequest;
 import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
+import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -20,6 +21,7 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Void> {
 
@@ -41,7 +43,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
 
     public TicfCriHandler() {
         this.configurationService = ConfigurationService.getInstance();
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = HttpClientHelper.newInstrumentedHttpClient();
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
@@ -50,6 +52,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
 
     @Override
     public Void handleRequest(InternalTICFCRIRequest input, Context context) {
+        attachTraceId();
         LOG.debug("received request to TICF CRI Handler");
         var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
@@ -67,14 +70,22 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
             LOG.warn(
                     format(
                             "Request to TICF CRI timed out with timeout set to %d",
-                            configurationService.getTicfCriServiceCallTimeout()));
+                            configurationService.getTicfCriServiceCallTimeout()),
+                    e);
             sendMetricsForInterventionsError("TicfCriServiceTimeout");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e));
+            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e.getMessage()), e);
             sendMetricsForInterventionsError("TicfCriServiceError");
         } catch (IOException e) {
-            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e));
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making TICF request, exiting with fault");
+                System.exit(1);
+            }
+            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e.getMessage()), e);
             sendMetricsForInterventionsError("TicfCriServiceError");
         }
         return null;
@@ -95,6 +106,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
                 HttpRequest.newBuilder(
                                 buildURI(configurationService.getTicfCriServiceURI(), "/auth"))
                         .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .header("Content-Type", "application/json")
                         .timeout(timeoutInMilliseconds)
                         .build();
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());

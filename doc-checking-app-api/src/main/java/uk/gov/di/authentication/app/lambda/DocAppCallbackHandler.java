@@ -17,7 +17,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.services.DocAppCriService;
-import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
@@ -30,18 +30,18 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
-import uk.gov.di.orchestration.shared.services.JwksService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -59,6 +59,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class DocAppCallbackHandler
@@ -70,9 +71,9 @@ public class DocAppCallbackHandler
     private final DocAppCriService tokenService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
-    private final DynamoDocAppService dynamoDocAppService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final DynamoDocAppCriService dynamoDocAppCriService;
+    private final Metrics metrics;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final AuthFrontend authFrontend;
     private final DocAppCriAPI docAppCriApi;
@@ -89,10 +90,10 @@ public class DocAppCallbackHandler
             DocAppCriService tokenService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
-            DynamoDocAppService dynamoDocAppService,
+            DynamoDocAppCriService dynamoDocAppCriService,
             OrchAuthCodeService orchAuthCodeService,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
+            Metrics metrics,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             AuthFrontend authFrontend,
             DocAppCriAPI docAppCriApi,
             OrchSessionService orchSessionService) {
@@ -101,10 +102,10 @@ public class DocAppCallbackHandler
         this.tokenService = tokenService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
-        this.dynamoDocAppService = dynamoDocAppService;
+        this.dynamoDocAppCriService = dynamoDocAppCriService;
         this.orchAuthCodeService = orchAuthCodeService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.metrics = metrics;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.authFrontend = authFrontend;
         this.docAppCriApi = docAppCriApi;
         this.orchSessionService = orchSessionService;
@@ -117,42 +118,18 @@ public class DocAppCallbackHandler
         this.authorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
                         kmsConnectionService,
-                        new JwksService(configurationService, kmsConnectionService));
+                        new JwksCacheService(configurationService),
+                        new StateStorageService(configurationService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.dynamoDocAppService = new DynamoDocAppService(configurationService);
+        this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
-        this.authFrontend = new AuthFrontend(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-    }
-
-    public DocAppCallbackHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        this.docAppCriApi = new DocAppCriAPI(configurationService);
-        this.configurationService = configurationService;
-        this.authorisationService =
-                new DocAppAuthorisationService(
-                        configurationService,
-                        redis,
-                        kmsConnectionService,
-                        new JwksService(configurationService, kmsConnectionService));
-        this.tokenService =
-                new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.dynamoDocAppService = new DynamoDocAppService(configurationService);
-        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redis);
+        this.metrics = new Metrics(configurationService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -168,6 +145,7 @@ public class DocAppCallbackHandler
 
     public APIGatewayProxyResponseEvent docAppCallbackRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        attachTraceId();
         LOG.info("Request received to DocAppCallbackHandler");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
@@ -177,7 +155,7 @@ public class DocAppCallbackHandler
             if (Objects.isNull(sessionCookiesIds)) {
                 LOG.warn("No session cookie present. Attempt to find session using state");
                 var noSessionEntity =
-                        noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                        crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(
                                 input.getQueryStringParameters());
                 var authRequest =
                         AuthenticationRequest.parse(
@@ -256,7 +234,7 @@ public class DocAppCallbackHandler
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         authFrontend.errorURI(),
                         new Error(
                                 String.format(
@@ -282,7 +260,7 @@ public class DocAppCallbackHandler
                         clientId,
                         user);
                 LOG.info("Adding DocAppCredential to dynamo");
-                dynamoDocAppService.addDocAppCredential(
+                dynamoDocAppCriService.addDocAppCredential(
                         orchClientSession.getDocAppSubjectId(), credential);
 
                 LOG.info("Redirecting to frontend");
@@ -291,11 +269,12 @@ public class DocAppCallbackHandler
                                 Map.of(
                                         "Environment", configurationService.getEnvironment(),
                                         "Successful", Boolean.toString(true)));
-                cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
+                metrics.increment("DocAppCallback", dimensions);
+                metrics.increment("orchJourneyCompleted", Map.of("journeyType", "docapp"));
 
                 var authCode =
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
-                                clientId, clientSessionId, null, null);
+                                clientId, clientSessionId, null, null, null);
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
@@ -341,7 +320,7 @@ public class DocAppCallbackHandler
                             DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                             clientId,
                             user);
-                    return RedirectService.redirectToFrontendErrorPage(
+                    return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                             authFrontend.errorURI(),
                             new Error(
                                     String.format(
@@ -349,13 +328,17 @@ public class DocAppCallbackHandler
                                             e.getMessage())));
                 }
             }
-        } catch (DocAppCallbackException | OrchAuthCodeException e) {
-            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
+        } catch (OrchAuthCodeException e) {
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(
+                    authFrontend.errorURI(), e);
+        } catch (DocAppCallbackException e) {
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                    authFrontend.errorURI(), e);
         } catch (NoSessionException e) {
-            return RedirectService.redirectToFrontendErrorPageForNoSessionCookies(
+            return RedirectService.redirectToFrontendErrorPageForNoSession(
                     authFrontend.errorURI(), e);
         } catch (ParseException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
         }
@@ -395,6 +378,6 @@ public class DocAppCallbackHandler
                                 "Successful", Boolean.toString(false),
                                 "Error", error));
 
-        cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
+        metrics.increment("DocAppCallback", dimensions);
     }
 }

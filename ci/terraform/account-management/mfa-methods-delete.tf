@@ -7,6 +7,8 @@ module "account_management_api_mfa_methods_delete_role" {
   policies_to_attach = [
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
     aws_iam_policy.dynamo_am_user_write_access_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    module.account_management_txma_audit.access_policy_arn,
   ]
   extra_tags = {
     Service = "mfa-methods-delete"
@@ -19,7 +21,8 @@ module "mfa-methods-delete" {
   endpoint_name = "mfa-methods-delete"
   handler_environment_variables = {
     ENVIRONMENT                       = var.environment
-    REDIS_KEY                         = local.redis_key
+    REDIS_KEY                         = var.environment == "production" ? local.redis_key : null
+    EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
     TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI               = var.internal_sector_uri
     MFA_METHOD_MANAGEMENT_API_ENABLED = var.mfa_method_management_api_enabled
@@ -36,10 +39,10 @@ module "mfa-methods-delete" {
   lambda_zip_file_version = aws_s3_object.account_management_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+  security_group_ids = concat([
     local.allow_aws_service_access_security_group_id,
-    aws_security_group.allow_access_to_am_redis.id,
-  ]
+  ], var.environment == "production" ? [aws_security_group.allow_access_to_am_redis.id] : [])
+
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_management_api_mfa_methods_delete_role.arn
@@ -51,6 +54,9 @@ module "mfa-methods-delete" {
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
+
+  runbook_link                          = "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+  lambda_log_alarm_error_rate_threshold = 25
 
   depends_on = [module.account_management_api_mfa_methods_delete_role]
 }

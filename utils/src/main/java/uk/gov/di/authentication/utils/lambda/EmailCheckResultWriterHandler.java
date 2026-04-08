@@ -61,7 +61,9 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
                         emailCheckResult.emailAddress(),
                         emailCheckResult.status(),
                         emailCheckResult.timeToExist(),
-                        emailCheckResult.requestReference());
+                        emailCheckResult.requestReference(),
+                        emailCheckResult.govukSigninJourneyId(),
+                        emailCheckResult.emailCheckResponse());
 
                 long currentTime = now().getTime();
                 long timeOfInitialRequest = emailCheckResult.timeOfInitialRequest();

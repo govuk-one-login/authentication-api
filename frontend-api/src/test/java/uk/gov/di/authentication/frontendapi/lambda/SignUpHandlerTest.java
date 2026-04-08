@@ -10,11 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -23,13 +20,14 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -49,15 +47,15 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PASSWORD;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PASSWORD;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -66,9 +64,7 @@ class SignUpHandlerTest {
 
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final User user = mock(User.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -76,12 +72,14 @@ class SignUpHandlerTest {
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String EMAIL = CommonTestVariables.EMAIL;
 
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -89,11 +87,10 @@ class SignUpHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                    .withClientId(CLIENT_ID.getValue());
+                    .withClientId(CLIENT_ID.getValue())
+                    .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST);
 
     private SignUpHandler handler;
-
-    private final Session session = new Session();
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -105,7 +102,8 @@ class SignUpHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -121,20 +119,19 @@ class SignUpHandlerTest {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(user.getUserProfile()).thenReturn(userProfile);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
+        doReturn(Optional.of(ErrorResponse.INVALID_PW_LENGTH))
+                .when(passwordValidator)
+                .validate("pwd");
         handler =
                 new SignUpHandler(
                         configurationService,
-                        sessionService,
-                        clientService,
                         authenticationService,
                         auditService,
                         commonPasswordsService,
                         passwordValidator,
-                        authSessionService);
+                        authSessionService,
+                        userActionsManager);
     }
 
     @Test
@@ -144,7 +141,6 @@ class SignUpHandlerTest {
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
-        usingValidSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -187,7 +183,6 @@ class SignUpHandlerTest {
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
-        usingValidSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -209,7 +204,6 @@ class SignUpHandlerTest {
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
-        usingValidSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
@@ -241,28 +235,26 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
 
         verifyNoInteractions(auditService);
     }
 
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
-        usingValidSession();
         withValidAuthSession();
         var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
 
         verifyNoInteractions(auditService);
     }
 
     @Test
     void shouldReturn400IfPasswordInvalid() {
-        usingValidSession();
         withValidAuthSession();
         var body =
                 format("{ \"password\": \"%s\", \"email\": \"%s\" }", "pwd", EMAIL.toUpperCase());
@@ -270,7 +262,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PW_LENGTH));
 
         verifyNoInteractions(auditService);
     }
@@ -279,7 +271,6 @@ class SignUpHandlerTest {
     void shouldReturn400IfUserAlreadyExists() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
 
-        usingValidSession();
         withValidAuthSession();
 
         var body =
@@ -290,7 +281,7 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_WITH_EMAIL_EXISTS));
 
         verify(auditService)
                 .submitAuditEvent(AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, AUDIT_CONTEXT);
@@ -299,7 +290,6 @@ class SignUpHandlerTest {
     @Test
     void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        usingValidSession();
         withValidAuthSession();
         var body =
                 format(
@@ -320,7 +310,6 @@ class SignUpHandlerTest {
     @Test
     void shouldReturn400IfNoAuthSessionPresent() {
         withNoAuthSession();
-        usingValidSession();
 
         var body =
                 format(
@@ -331,21 +320,29 @@ class SignUpHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(auditService);
     }
 
-    private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
-    }
+    @Test
+    void shouldCallCreatedPasswordWhenSignUpIsSuccessful() {
+        // Arrange
+        when(authenticationService.userExists(EMAIL)).thenReturn(false);
+        when(authenticationService.signUp(
+                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
+                .thenReturn(user);
+        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
+        withValidAuthSession();
+        var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withClientName("test-client")
-                .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("pairwise");
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+        verify(userActionsManager)
+                .createdPassword(any(), argThat(pc -> pc.authSessionItem() != null));
     }
 
     private void withValidAuthSession() {

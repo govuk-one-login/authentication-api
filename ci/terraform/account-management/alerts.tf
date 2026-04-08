@@ -7,6 +7,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   period              = "300"
   statistic           = "Sum"
   threshold           = var.dlq_alarm_threshold
+  count               = 0
 
   dimensions = {
     QueueName = aws_sqs_queue.email_dead_letter_queue.name

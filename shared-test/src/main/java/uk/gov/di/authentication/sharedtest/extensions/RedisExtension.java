@@ -9,11 +9,7 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -42,16 +38,6 @@ public class RedisExtension
         this.codeStorageService = new CodeStorageService(configurationService);
     }
 
-    public String createSession(String sessionId) throws Json.JsonException {
-        Session session = new Session();
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-        return sessionId;
-    }
-
-    public String createSession() throws Json.JsonException {
-        return createSession(IdGenerator.generate());
-    }
-
     public void addStateToRedis(State state, String sessionId) throws Json.JsonException {
         addStateToRedis("state:", state, sessionId);
     }
@@ -71,17 +57,6 @@ public class RedisExtension
 
     public void incrementEmailCount(String email) {
         codeStorageService.increaseIncorrectEmailCount(email);
-    }
-
-    public void setSessionCredentialTrustLevel(
-            String sessionId, CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setCurrentCredentialStrength(credentialTrustLevel);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-    }
-
-    public Session getSession(String sessionId) throws Json.JsonException {
-        return objectMapper.readValue(redis.getValue(sessionId), Session.class);
     }
 
     public String generateAndSaveEmailCode(String email, long codeExpiryTime) {
@@ -128,14 +103,6 @@ public class RedisExtension
 
     public int getMfaCodeAttemptsCount(String email) {
         return codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
-    }
-
-    public int getMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        return codeStorageService.getIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
-    }
-
-    public void increaseMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
     }
 
     public void increaseMfaCodeAttemptsCount(String email) {

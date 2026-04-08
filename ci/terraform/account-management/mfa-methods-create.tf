@@ -7,7 +7,10 @@ module "account_management_api_mfa_methods_create_role" {
   policies_to_attach = [
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
     aws_iam_policy.dynamo_am_user_write_access_policy.arn,
-    aws_iam_policy.parameter_policy.arn
+    aws_iam_policy.parameter_policy.arn,
+    local.user_profile_encryption_policy_arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    module.account_management_txma_audit.access_policy_arn,
   ]
   extra_tags = {
     Service = "mfa-methods-create"
@@ -19,11 +22,13 @@ module "mfa-methods-create" {
 
   endpoint_name = "mfa-methods-create"
   handler_environment_variables = {
-    ENVIRONMENT                       = var.environment
-    REDIS_KEY                         = local.redis_key
-    TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
-    INTERNAl_SECTOR_URI               = var.internal_sector_uri
-    MFA_METHOD_MANAGEMENT_API_ENABLED = var.mfa_method_management_api_enabled
+    ENVIRONMENT                                  = var.environment
+    REDIS_KEY                                    = local.redis_key
+    EMAIL_QUEUE_URL                              = aws_sqs_queue.email_queue.id
+    TXMA_AUDIT_QUEUE_URL                         = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI                          = var.internal_sector_uri
+    MFA_METHOD_MANAGEMENT_API_ENABLED            = var.mfa_method_management_api_enabled
+    ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED = var.account_management_international_sms_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler::handleRequest"
 
@@ -52,6 +57,9 @@ module "mfa-methods-create" {
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
+
+  runbook_link                          = "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+  lambda_log_alarm_error_rate_threshold = 25
 
   depends_on = [module.account_management_api_mfa_methods_create_role]
 }

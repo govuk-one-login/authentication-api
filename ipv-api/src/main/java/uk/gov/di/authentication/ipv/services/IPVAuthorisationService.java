@@ -10,13 +10,10 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -29,15 +26,17 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
+import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
+import uk.gov.di.orchestration.shared.helpers.RsaKeyHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
@@ -52,67 +51,77 @@ public class IPVAuthorisationService {
 
     private static final Logger LOG = LogManager.getLogger(IPVAuthorisationService.class);
     private final ConfigurationService configurationService;
-    private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
+    private final JwksCacheService jwksCacheService;
+    private final StateStorageService stateStorageService;
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
-    private static final Json objectMapper = SerializationService.getInstance();
+    public static final String SESSION_INVALIDATED_ERROR_CODE = "session_invalidated";
 
     public IPVAuthorisationService(
-            ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
         this(
                 configurationService,
-                redisConnectionService,
                 kmsConnectionService,
                 new JwksService(configurationService, kmsConnectionService),
+                new JwksCacheService(configurationService),
+                new StateStorageService(configurationService),
                 new NowClock(Clock.systemUTC()));
     }
 
     public IPVAuthorisationService(
             ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
             JwksService jwksService,
+            JwksCacheService jwksCacheService,
+            StateStorageService stateStorageService,
             NowClock nowClock) {
         this.configurationService = configurationService;
-        this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
+        this.jwksCacheService = jwksCacheService;
+        this.stateStorageService = stateStorageService;
         this.nowClock = nowClock;
     }
 
-    public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
-        if (headers == null || headers.isEmpty()) {
+    public Optional<IpvCallbackValidationError> validateResponse(
+            Map<String, String> queryParams, String sessionId) {
+        if (queryParams == null || queryParams.isEmpty()) {
             LOG.warn("No Query parameters in IPV Authorisation response");
             return Optional.of(
-                    new ErrorObject(
+                    new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
         }
-        if (headers.containsKey("error")) {
+        if (queryParams.containsKey("error")) {
+
+            if (SESSION_INVALIDATED_ERROR_CODE.equals(queryParams.get("error"))) {
+                LOG.warn("Session invalidated response from IPV");
+                return Optional.of(
+                        new IpvCallbackValidationError(queryParams.get("error"), null, true));
+            }
+
             LOG.warn("Error response found in IPV Authorisation response");
-            return Optional.of(new ErrorObject(headers.get("error")));
+            return Optional.of(new IpvCallbackValidationError(queryParams.get("error"), null));
         }
-        if (!headers.containsKey("state") || headers.get("state").isEmpty()) {
+        if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
             LOG.warn("No state param in IPV Authorisation response");
             return Optional.of(
-                    new ErrorObject(
+                    new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No state param present in Authorisation response"));
         }
-        if (!isStateValid(sessionId, headers.get("state"))) {
+        if (!isStateValid(sessionId, queryParams.get("state"))) {
             return Optional.of(
-                    new ErrorObject(
+                    new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid state param present in Authorisation response"));
         }
-        if (!headers.containsKey("code") || headers.get("code").isEmpty()) {
+        if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
             LOG.warn("No code param in IPV Authorisation response");
             return Optional.of(
-                    new ErrorObject(
+                    new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No code param present in Authorisation response"));
         }
@@ -121,32 +130,20 @@ public class IPVAuthorisationService {
     }
 
     public void storeState(String sessionId, State state) {
-        try {
-            redisConnectionService.saveWithExpiry(
-                    STATE_STORAGE_PREFIX + sessionId,
-                    objectMapper.writeValueAsString(state),
-                    configurationService.getSessionExpiry());
-        } catch (JsonException e) {
-            LOG.error("Unable to save state to Redis");
-            throw new RuntimeException(e);
-        }
+        stateStorageService.storeState(STATE_STORAGE_PREFIX + sessionId, state.getValue());
     }
 
     private boolean isStateValid(String sessionId, String responseState) {
-        var value =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(STATE_STORAGE_PREFIX + sessionId));
-        if (value.isEmpty()) {
-            LOG.info("No state found in Redis");
+        var valueFromDynamo =
+                stateStorageService
+                        .getState(STATE_STORAGE_PREFIX + sessionId)
+                        .map(StateItem::getState);
+        if (valueFromDynamo.isEmpty()) {
+            LOG.info("No state found in Dynamo");
             return false;
         }
-        State storedState;
-        try {
-            storedState = objectMapper.readValue(value.get(), State.class);
-        } catch (JsonException e) {
-            LOG.info("Error when deserializing state from redis");
-            return false;
-        }
+
+        State storedState = new State(valueFromDynamo.get());
         LOG.info(
                 "Response state: {} and Stored state: {}. Are equal: {}",
                 responseState,
@@ -228,15 +225,11 @@ public class IPVAuthorisationService {
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
             LOG.info("Encrypting SignedJWT");
-            String keyId = null;
-            RSAPublicKey publicEncryptionKey;
-            if (configurationService.isUseIPVJwksEndpointEnabled()) {
-                JWK publicEncryptionJwk = getJwkFromJwksEndpoint();
-                keyId = publicEncryptionJwk.getKeyID();
-                publicEncryptionKey = getRsaPublicKeyFromJwk(publicEncryptionJwk);
-            } else {
-                publicEncryptionKey = getPublicKeyFromSSM();
-            }
+            JwksCacheItem jwksCacheItem = getJwksCacheItemFromJwksEndpoint();
+            String keyId = jwksCacheItem.getKeyId();
+            RSAPublicKey publicEncryptionKey =
+                    RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem(jwksCacheItem);
+
             var jweObject =
                     new JWEObject(
                             new JWEHeader.Builder(
@@ -257,32 +250,8 @@ public class IPVAuthorisationService {
         }
     }
 
-    private RSAPublicKey getPublicKeyFromSSM() {
-        try {
-            LOG.info("Getting IPV Encryption Public Key via SSM");
-            var ipvAuthEncryptionPublicKey = configurationService.getIPVAuthEncryptionPublicKey();
-            return new RSAKey.Builder(
-                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
-                    .build()
-                    .toRSAPublicKey();
-        } catch (JOSEException e) {
-            LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private JWK getJwkFromJwksEndpoint() {
+    private JwksCacheItem getJwksCacheItemFromJwksEndpoint() {
         LOG.info("Getting IPV Encryption JWK via JWKS endpoint");
-        return jwksService.getIpvJwk();
-    }
-
-    private RSAPublicKey getRsaPublicKeyFromJwk(JWK ipvAuthEncryptionPublicKey) {
-        try {
-            LOG.info("Converting JWK to RSAPublicKey");
-            return new RSAKey.Builder((RSAKey) ipvAuthEncryptionPublicKey).build().toRSAPublicKey();
-        } catch (JOSEException e) {
-            LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new RuntimeException(e);
-        }
+        return jwksCacheService.getOrGenerateIpvJwksCacheItem();
     }
 }

@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -12,17 +11,13 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
-import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -30,36 +25,36 @@ import org.jetbrains.annotations.Nullable;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
+import uk.gov.di.authentication.oidc.entity.SlidingWindowAlgorithm;
+import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
+import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.authentication.oidc.services.RateLimitService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
-import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -67,39 +62,36 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
+import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.SERVER_ERROR;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.UNAUTHORIZED_CLIENT_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
-import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -114,126 +106,116 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
-import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
-    public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
 
     private final ConfigurationService configurationService;
-    private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
     private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator;
     private final AuditService auditService;
     private final ClientService clientService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
+    private final AuthenticationAuthorizationService authenticationAuthorisationService;
     private final DocAppAuthorisationService docAppAuthorisationService;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final TokenValidationService tokenValidationService;
     private final AuthFrontend authFrontend;
     private final AuthorisationService authorisationService;
+    private final NowHelper.NowClock nowClock;
+    private final RateLimitService rateLimitService;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             OrchSessionService orchSessionService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
             QueryParamsAuthorizeValidator queryParamsAuthorizeValidator,
             RequestObjectAuthorizeValidator requestObjectAuthorizeValidator,
             ClientService clientService,
+            AuthenticationAuthorizationService authenticationAuthorisationService,
             DocAppAuthorisationService docAppAuthorisationService,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
+            Metrics metrics,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             TokenValidationService tokenValidationService,
             AuthFrontend authFrontend,
-            AuthorisationService authorisationService) {
+            AuthorisationService authorisationService,
+            RateLimitService rateLimitService,
+            Clock clock) {
         this.configurationService = configurationService;
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
         this.queryParamsAuthorizeValidator = queryParamsAuthorizeValidator;
         this.requestObjectAuthorizeValidator = requestObjectAuthorizeValidator;
         this.clientService = clientService;
+        this.authenticationAuthorisationService = authenticationAuthorisationService;
         this.docAppAuthorisationService = docAppAuthorisationService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.metrics = metrics;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.tokenValidationService = tokenValidationService;
         this.authFrontend = authFrontend;
         this.authorisationService = authorisationService;
+        this.rateLimitService = rateLimitService;
+        this.nowClock = new NowHelper.NowClock(clock);
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService);
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var jwksService = new JwksService(configurationService, kmsConnectionService);
+        var jwksCacheService = new JwksCacheService(configurationService);
+        var stateStorageService = new StateStorageService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
-                new OrchestrationAuthorizationService(configurationService);
+                new OrchestrationAuthorizationService(
+                        configurationService,
+                        kmsConnectionService,
+                        crossBrowserOrchestrationService,
+                        stateStorageService);
         this.auditService = new AuditService(configurationService);
         this.queryParamsAuthorizeValidator =
                 new QueryParamsAuthorizeValidator(configurationService);
         this.requestObjectAuthorizeValidator =
                 new RequestObjectAuthorizeValidator(configurationService);
         this.clientService = new DynamoClientService(configurationService);
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        var jwksService = new JwksService(configurationService, kmsConnectionService);
+        this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
+        this.authFrontend = new AuthFrontend(configurationService);
+        this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
+        this.authenticationAuthorisationService =
+                new AuthenticationAuthorizationService(
+                        configurationService,
+                        stateStorageService,
+                        orchestrationAuthorizationService,
+                        tokenValidationService,
+                        authFrontend,
+                        nowClock);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
                         kmsConnectionService,
-                        jwksService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
-        this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
-        this.authFrontend = new AuthFrontend(configurationService);
+                        jwksCacheService,
+                        stateStorageService);
+        var cloudwatchMetricService = new Metrics(configurationService);
+        this.metrics = cloudwatchMetricService;
         this.authorisationService = new AuthorisationService(configurationService);
-    }
-
-    public AuthorisationHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService, redis);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService, redis);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.orchestrationAuthorizationService =
-                new OrchestrationAuthorizationService(configurationService, redis);
-        this.auditService = new AuditService(configurationService);
-        this.queryParamsAuthorizeValidator =
-                new QueryParamsAuthorizeValidator(configurationService);
-        this.requestObjectAuthorizeValidator =
-                new RequestObjectAuthorizeValidator(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        var jwksService = new JwksService(configurationService, kmsConnectionService);
-        this.docAppAuthorisationService =
-                new DocAppAuthorisationService(
-                        configurationService, redis, kmsConnectionService, jwksService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redis);
-        this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
-        this.authFrontend = new AuthFrontend(configurationService);
-        this.authorisationService = new AuthorisationService(configurationService);
+        var slidingWindowAlgorithm = new SlidingWindowAlgorithm(configurationService);
+        this.rateLimitService =
+                new RateLimitService(slidingWindowAlgorithm, cloudwatchMetricService);
     }
 
     public AuthorisationHandler() {
@@ -244,6 +226,7 @@ public class AuthorisationHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
@@ -256,7 +239,7 @@ public class AuthorisationHandler
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         input.getHeaders());
         var ipAddress = IpAddressHelper.extractIpAddress(input);
-        var clientSessionId = clientSessionService.generateClientSessionId();
+        var clientSessionId = IdGenerator.generate();
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
@@ -274,21 +257,17 @@ public class AuthorisationHandler
 
         AuthenticationRequest authRequest;
         try {
-            Map<String, String> parameterMap =
-                    switch (input.getHttpMethod()) {
-                        case "GET" -> input.getQueryStringParameters();
-                        case "POST" -> parseRequestBody(input.getBody());
-                        default -> {
-                            LOG.warn(
-                                    String.format(
-                                            "Authentication request sent with invalid HTTP method %s",
-                                            input.getHttpMethod()));
-                            throw new InvalidHttpMethodException(
-                                    String.format(
-                                            "Authentication request does not support %s requests",
-                                            input.getHttpMethod()));
-                        }
-                    };
+            if (!"GET".equals(input.getHttpMethod())) {
+                LOG.warn(
+                        String.format(
+                                "Authentication request sent with invalid HTTP method %s",
+                                input.getHttpMethod()));
+                throw new InvalidHttpMethodException(
+                        String.format(
+                                "Authentication request does not support %s requests",
+                                input.getHttpMethod()));
+            }
+            Map<String, String> parameterMap = input.getQueryStringParameters();
             Map<String, List<String>> requestParameters =
                     parameterMap.entrySet().stream()
                             .collect(
@@ -296,6 +275,7 @@ public class AuthorisationHandler
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
             authRequest = stripOutReauthenticateQueryParams(authRequest);
+            authRequest = stripOutLoginHintQueryParams(authRequest);
         } catch (ParseException e) {
             LOG.warn("Authentication request could not be parsed", e);
             return generateParseExceptionResponse(e, user);
@@ -342,17 +322,6 @@ public class AuthorisationHandler
             }
         }
 
-        if (!client.isActive()) {
-            LOG.error("Client configured as not active in Client Registry");
-            return generateErrorResponse(
-                    authRequest.getRedirectionURI(),
-                    authRequest.getState(),
-                    authRequest.getResponseMode(),
-                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
-                    authRequest.getClientID().getValue(),
-                    user);
-        }
-
         try {
             if (authRequest.getRequestObject() == null) {
                 LOG.info("Validating request query params");
@@ -371,6 +340,37 @@ public class AuthorisationHandler
                     SERVER_ERROR.getHTTPStatusCode(), SERVER_ERROR.getDescription());
         }
 
+        if (!client.isActive()) {
+            LOG.error("Client configured as not active in Client Registry");
+            return generateErrorResponse(
+                    authRequest.getRedirectionURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
+                    authRequest.getClientID().getValue(),
+                    user);
+        }
+
+        var rateLimitDecision =
+                rateLimitService.getClientRateLimitDecision(
+                        ClientRateLimitConfig.fromClientRegistry(client));
+
+        if (rateLimitDecision.hasExceededRateLimit()) {
+            switch (rateLimitDecision.getAction()) {
+                case RETURN_TO_RP -> {
+                    authRequestError =
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.TEMPORARILY_UNAVAILABLE,
+                                            authRequest.getRedirectionURI(),
+                                            authRequest.getState()));
+                }
+                case NONE -> {
+                    // continue
+                }
+            }
+        }
+
         if (authRequestError.isPresent()) {
             return generateErrorResponse(
                     authRequestError.get().redirectURI(),
@@ -382,50 +382,62 @@ public class AuthorisationHandler
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
+        if (authRequest.getRequestObject() != null) {
+            var requestObjectScopes =
+                    authRequest.getRequestObject().getJWTClaimsSet().getStringClaim("scope");
+            if (requestObjectScopes.contains(",")) {
+                LOG.info(
+                        "Scope parameter in request object contains commas. Client ID: {}",
+                        clientId);
+            }
+        }
+        var queryParamScopes = input.getQueryStringParameters().get("scope");
+        if (queryParamScopes.contains(",")) {
+            LOG.info(
+                    "Scope parameter in query parameters contains commas. Client ID: {}", clientId);
+        }
         try {
-            cloudwatchMetricsService.putEmbeddedValue(
+            metrics.emit(
                     "rpStateLength",
                     authRequest.getState().getValue().length(),
-                    Map.of("clientId", authRequest.getClientID().getValue()));
+                    Map.of("clientId", clientId, "clientName", client.getClientName()));
         } catch (Exception e) {
             LOG.warn("Error recording state length, continuing: ", e);
         }
 
-        boolean reauthRequested =
-                authRequest.getCustomParameter("id_token_hint") != null
-                        && !authRequest.getCustomParameter("id_token_hint").isEmpty()
-                        && authRequest.getPrompt() != null
-                        && authRequest.getPrompt().contains(Prompt.Type.LOGIN);
-        var identityRequested =
+        var isDocAppJourney =
+                DocAppUserHelper.isDocCheckingAppUser(
+                        authRequest.toParameters(), Optional.of(client));
+        var isIdentityJourney =
                 identityRequired(
                         authRequest.toParameters(),
                         client.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
+        metrics.increment(
+                "orchAuthorizeRequestCount",
+                Map.of(
+                        "clientName",
+                        client.getClientName(),
+                        "isDocAppJourney",
+                        Boolean.toString(isDocAppJourney),
+                        "isIdentityJourney",
+                        Boolean.toString(isIdentityJourney)));
+        metrics.increment(
+                "orchAuthorizeRequestCountForAlarm",
+                Map.of(
+                        "isDocAppJourney",
+                        Boolean.toString(isDocAppJourney),
+                        "isIdentityJourney",
+                        Boolean.toString(isIdentityJourney)));
+
+        boolean reauthRequested =
+                getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
+                        && authRequest.getPrompt() != null
+                        && authRequest.getPrompt().contains(Prompt.Type.LOGIN);
         var vtrList = getVtrList(reauthRequested, authRequest);
         var requestedVtr = VectorOfTrust.getLowestVtr(vtrList);
 
-        var auditEventExtensions =
-                new ArrayList<>(
-                        List.of(
-                                pair("rpSid", getRpSid(authRequest)),
-                                pair("identityRequested", identityRequested),
-                                pair("reauthRequested", reauthRequested),
-                                pair(
-                                        "credential_trust_level",
-                                        requestedVtr.getCredentialTrustLevel().toString())));
-
-        var maxAgeParam = getMaxAge(authRequest);
-        if (configurationService.supportMaxAgeEnabled()
-                && client.getMaxAgeEnabled()
-                && maxAgeParam.isPresent()) {
-            auditEventExtensions.add(pair("maximumSessionAge", maxAgeParam.get()));
-        }
-
-        auditService.submitAuditEvent(
-                OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
-                authRequest.getClientID().getValue(),
-                user,
-                auditEventExtensions.toArray(AuditService.MetadataPair[]::new));
+        sendAuthRequestParsedAuditEvent(authRequest, client, reauthRequested, requestedVtr, user);
 
         Optional<String> sessionId =
                 CookieHelper.getSessionIdFromRequestHeaders(input.getHeaders());
@@ -433,9 +445,6 @@ public class AuthorisationHandler
                 sessionId.flatMap(orchSessionService::getSession);
 
         var creationDate = LocalDateTime.now();
-        ClientSession clientSession =
-                clientSessionService.generateClientSession(
-                        authRequest.toParameters(), creationDate, vtrList, client.getClientName());
         OrchClientSessionItem orchClientSession =
                 orchClientSessionService.generateClientSession(
                         clientSessionId,
@@ -444,15 +453,9 @@ public class AuthorisationHandler
                         vtrList,
                         client.getClientName());
 
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
-
-        if (DocAppUserHelper.isDocCheckingAppUser(
-                authRequest.toParameters(), Optional.of(client))) {
-
+        if (isDocAppJourney) {
             return handleDocAppJourney(
-                    sessionId,
                     orchSessionOptional,
-                    clientSession,
                     orchClientSession,
                     authRequest,
                     client,
@@ -468,7 +471,6 @@ public class AuthorisationHandler
                 sessionId,
                 browserSessionIdFromCookie,
                 orchSessionOptional,
-                clientSession,
                 orchClientSession,
                 authRequest,
                 persistentSessionId,
@@ -479,12 +481,46 @@ public class AuthorisationHandler
                 user);
     }
 
+    private void sendAuthRequestParsedAuditEvent(
+            AuthenticationRequest authRequest,
+            ClientRegistry client,
+            boolean reauthRequested,
+            VectorOfTrust requestedVtr,
+            TxmaAuditUser user) {
+        var identityRequested =
+                identityRequired(
+                        authRequest.toParameters(),
+                        client.isIdentityVerificationSupported(),
+                        configurationService.isIdentityEnabled());
+
+        var auditEventExtensions =
+                new ArrayList<>(
+                        List.of(
+                                pair("rpSid", getRpSid(authRequest)),
+                                pair("identityRequested", identityRequested),
+                                pair("reauthRequested", reauthRequested),
+                                pair(
+                                        "credential_trust_level",
+                                        requestedVtr.getCredentialTrustLevel().toString())));
+
+        var maxAgeParam = getMaxAge(authRequest);
+        if (client.getMaxAgeEnabled() && maxAgeParam.isPresent()) {
+            auditEventExtensions.add(pair("maximumSessionAge", maxAgeParam.get()));
+        }
+
+        getCustomParameterOpt(authRequest, "channel")
+                .ifPresent(channel -> auditEventExtensions.add(pair("channel", channel)));
+
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                authRequest.getClientID().getValue(),
+                user,
+                auditEventExtensions.toArray(AuditService.MetadataPair[]::new));
+    }
+
     private static String getRpSid(AuthenticationRequest authRequest) {
         try {
-            if (authRequest.getCustomParameter("rp_sid") != null) {
-                return authRequest.getCustomParameter("rp_sid").get(0);
-            }
-            return AuditService.UNKNOWN;
+            return getCustomParameterOpt(authRequest, "rp_sid").orElse(AuditService.UNKNOWN);
         } catch (Exception e) {
             LOG.error("Failed to retrieve rp_sid. Passing unknown");
             return AuditService.UNKNOWN;
@@ -522,32 +558,15 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent handleDocAppJourney(
-            Optional<String> existingSessionId,
             Optional<OrchSessionItem> orchSessionOptional,
-            ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
             AuthenticationRequest authenticationRequest,
             ClientRegistry client,
             String clientSessionId,
             String persistentSessionId,
             TxmaAuditUser user) {
-        Session session;
         var newSessionId = IdGenerator.generate();
         var newBrowserSessionId = IdGenerator.generate();
-        var existingSession = existingSessionId.flatMap(sessionService::getSession);
-        if (existingSessionId.isEmpty() || existingSession.isEmpty()) {
-            session = sessionService.generateSession();
-            updateAttachedSessionIdToLogs(newSessionId);
-            LOG.info("Created new session with ID {}", newSessionId);
-        } else {
-            var previousSessionId = existingSessionId.get();
-            session =
-                    sessionService.updateWithNewSessionId(
-                            existingSession.get(), previousSessionId, newSessionId);
-            updateAttachedSessionIdToLogs(newSessionId);
-            LOG.info("Updated session ID from {} to {}", previousSessionId, newSessionId);
-        }
-
         OrchSessionItem orchSession;
         if (orchSessionOptional.isEmpty()) {
             orchSession =
@@ -560,6 +579,7 @@ public class AuthorisationHandler
                             Optional.of(previousOrchSessionId), newSessionId);
             LOG.info("Updated Orch session ID from {} to {}", previousOrchSessionId, newSessionId);
         }
+        updateAttachedSessionIdToLogs(newSessionId);
         attachOrchSessionIdToLogs(orchSession.getSessionId());
 
         Subject subjectId =
@@ -569,8 +589,6 @@ public class AuthorisationHandler
                         configurationService.getDocAppDomain());
         LOG.info("Doc app request received");
 
-        clientSessionService.storeClientSession(
-                clientSessionId, clientSession.setDocAppSubjectId(subjectId));
         orchClientSessionService.storeClientSession(
                 orchClientSession.withDocAppSubjectId(subjectId.getValue()));
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
@@ -578,7 +596,6 @@ public class AuthorisationHandler
         orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.storeOrUpdateSession(session, newSessionId);
         orchSessionOptional.ifPresentOrElse(
                 s -> orchSessionService.updateSession(orchSession),
                 () -> orchSessionService.addSession(orchSession));
@@ -598,7 +615,7 @@ public class AuthorisationHandler
         var authorisationRequest = authRequestBuilder.build();
 
         docAppAuthorisationService.storeState(newSessionId, state);
-        noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
+        crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
 
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
@@ -611,7 +628,7 @@ public class AuthorisationHandler
                 "AuthorisationHandler successfully processed doc app request, redirect URI {}",
                 authorisationRequestUri);
 
-        cloudwatchMetricsService.incrementCounter(
+        metrics.increment(
                 "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
 
         List<String> cookies =
@@ -633,7 +650,6 @@ public class AuthorisationHandler
             Optional<String> previousSessionIdFromCookie,
             Optional<String> browserSessionIdFromCookie,
             Optional<OrchSessionItem> existingOrchSessionOptional,
-            ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
@@ -659,16 +675,12 @@ public class AuthorisationHandler
                 browserSessionIdFromSession.isPresent()
                         && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie);
 
-        Session session;
         OrchSessionItem orchSession;
         var newSessionId = IdGenerator.generate();
         var newBrowserSessionId = IdGenerator.generate();
-        var existingSession = previousSessionIdFromCookie.flatMap(sessionService::getSession);
         if (previousSessionIdFromCookie.isEmpty()
-                || existingSession.isEmpty()
                 || existingOrchSessionOptional.isEmpty()
                 || doesBrowserSessionIdFromSessionNotMatchCookie) {
-            session = sessionService.generateSession();
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
             // We re-assign here to ensure that we only pass auth previous session id
@@ -676,23 +688,15 @@ public class AuthorisationHandler
             previousSessionIdFromCookie = Optional.empty();
         } else {
             var maxAgeParam = getMaxAge(authenticationRequest);
-            boolean isMaxAgeSupported =
-                    configurationService.supportMaxAgeEnabled() && client.getMaxAgeEnabled();
-            final long timeNow = NowHelper.now().toInstant().getEpochSecond();
+            final long timeNow = nowClock.now().toInstant().getEpochSecond();
 
             if (maxAgeParam.isPresent()
-                    && isMaxAgeSupported
+                    && client.getMaxAgeEnabled()
                     && maxAgeExpired(
                             existingOrchSessionOptional.get().getAuthTime(),
                             maxAgeParam,
                             timeNow)) {
                 var newSessionIdForPreviousSession = IdGenerator.generate();
-                session =
-                        updateSharedSessionDueToMaxAgeExpiry(
-                                existingSession.get(),
-                                previousSessionIdFromCookie.get(),
-                                newSessionIdForPreviousSession,
-                                newSessionId);
 
                 orchSession =
                         updateOrchSessionDueToMaxAgeExpiry(
@@ -712,11 +716,7 @@ public class AuthorisationHandler
                         newSessionId);
 
             } else {
-                var previousSession = existingSession.get();
                 var previousSessionId = previousSessionIdFromCookie.get();
-                session =
-                        sessionService.updateWithNewSessionId(
-                                previousSession, previousSessionId, newSessionId);
 
                 orchSession =
                         updateOrchSession(newSessionId, existingOrchSessionOptional.get(), timeNow);
@@ -739,13 +739,11 @@ public class AuthorisationHandler
                 pair("client-name", client.getClientName()),
                 pair("new_authentication_required", doesBrowserSessionIdFromSessionNotMatchCookie));
 
-        clientSessionService.storeClientSession(clientSessionId, clientSession);
         orchClientSessionService.storeClientSession(orchClientSession);
 
         orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.storeOrUpdateSession(session, newSessionId);
         orchSessionService.addSession(orchSession);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
@@ -801,23 +799,10 @@ public class AuthorisationHandler
                         .withSessionId(newSessionId)
                         .withBrowserSessionId(newBrowserSessionId)
                         .withTimeToLive(timeNow + configurationService.getSessionExpiry())
-                        .withCurrentCredentialStrength(null)
                         .withAuthenticated(false)
                         .withPreviousSessionId(newSessionIdForPreviousSession);
         newSession.resetProcessingIdentityAttempts();
         newSession.resetClientSessions();
-        return newSession;
-    }
-
-    private Session updateSharedSessionDueToMaxAgeExpiry(
-            Session previousSession,
-            String previousSessionId,
-            String newSessionIdForPreviousSession,
-            String newSessionId) {
-        sessionService.updateWithNewSessionId(
-                previousSession, previousSessionId, newSessionIdForPreviousSession);
-        var newSession = sessionService.copySessionForMaxAge(previousSession);
-        sessionService.storeOrUpdateSession(newSession, newSessionId);
         return newSession;
     }
 
@@ -859,28 +844,6 @@ public class AuthorisationHandler
             TxmaAuditUser user,
             Optional<String> previousSessionId,
             OrchSessionItem orchSession) {
-        LOG.info("Redirecting");
-
-        Optional<Prompt.Type> prompt =
-                Objects.nonNull(authenticationRequest.getPrompt())
-                                && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
-                        ? Optional.of(Prompt.Type.LOGIN)
-                        : Optional.empty();
-
-        List<String> optionalGaTrackingParameter =
-                authenticationRequest.getCustomParameter(GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY);
-        Optional<String> googleAnalytics =
-                Objects.nonNull(optionalGaTrackingParameter)
-                                && !optionalGaTrackingParameter.isEmpty()
-                        ? Optional.of(optionalGaTrackingParameter.get(0))
-                        : Optional.empty();
-        if (Objects.nonNull(optionalGaTrackingParameter)
-                && !optionalGaTrackingParameter.isEmpty()) {
-            googleAnalytics = Optional.of(optionalGaTrackingParameter.get(0));
-        }
-
-        var redirectURI = authFrontend.authorizeURI(prompt, googleAnalytics).toString();
-
         List<String> cookies =
                 handleCookies(
                         sessionId,
@@ -888,101 +851,29 @@ public class AuthorisationHandler
                         authenticationRequest,
                         persistentSessionId,
                         clientSessionId);
-
-        var jwtID = IdGenerator.generate();
-        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
-        var rpSectorIdentifierHost =
-                ClientSubjectHelper.getSectorIdentifierForClient(
-                        client, configurationService.getInternalSectorURI());
-        var state = new State();
-        orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
-
-        String reauthSub = null;
-        String reauthSid = null;
-        if (reauthRequested) {
-            try {
-                SignedJWT reauthIdToken = getReauthIdToken(authenticationRequest);
-                reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
-                reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
-            } catch (RuntimeException e) {
-                return generateErrorResponse(
-                        authenticationRequest.getRedirectionURI(),
-                        authenticationRequest.getState(),
-                        authenticationRequest.getResponseMode(),
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
-                        authenticationRequest.getClientID().getValue(),
-                        user);
-            } catch (java.text.ParseException e) {
-                LOG.warn("Unable to parse id_token_hint SignedJWT into claims");
-                throw new RuntimeException("Invalid id_token_hint");
-            }
-        }
-
-        var cookieConsentOpt =
-                Optional.ofNullable(authenticationRequest.getCustomParameter("cookie_consent"))
-                        .map(List::stream)
-                        .flatMap(Stream::findFirst);
-        var gaOpt =
-                Optional.ofNullable(authenticationRequest.getCustomParameter("_ga"))
-                        .map(List::stream)
-                        .flatMap(Stream::findFirst);
-        var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
-        var claimsBuilder =
-                new JWTClaimsSet.Builder()
-                        .issuer(configurationService.getOrchestrationClientId())
-                        .audience(authFrontend.baseURI().toString())
-                        .expirationTime(expiryDate)
-                        .issueTime(NowHelper.now())
-                        .notBeforeTime(NowHelper.now())
-                        .jwtID(jwtID)
-                        .claim("rp_client_id", client.getClientID())
-                        .claim("rp_sector_host", rpSectorIdentifierHost)
-                        .claim("rp_redirect_uri", authenticationRequest.getRedirectionURI())
-                        .claim("rp_state", authenticationRequest.getState().getValue())
-                        .claim("client_name", client.getClientName())
-                        .claim("cookie_consent_shared", client.isCookieConsentShared())
-                        .claim("is_one_login_service", client.isOneLoginService())
-                        .claim("service_type", client.getServiceType())
-                        .claim("govuk_signin_journey_id", clientSessionId)
-                        .claim(
-                                "requested_credential_strength",
-                                requestedVtr.getCredentialTrustLevel().getValue())
-                        .claim("state", state.getValue())
-                        .claim("client_id", configurationService.getOrchestrationClientId())
-                        .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
-                        .claim("reauthenticate", reauthSub)
-                        .claim("previous_govuk_signin_journey_id", reauthSid)
-                        .claim("channel", client.getChannel().toLowerCase())
-                        .claim("authenticated", orchSession.getAuthenticated())
-                        .claim(
-                                "current_credential_strength",
-                                orchSession.getCurrentCredentialStrength())
-                        .claim("scope", authenticationRequest.getScope().toString());
-
-        previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
-        gaOpt.ifPresent(ga -> claimsBuilder.claim("_ga", ga));
-        cookieConsentOpt.ifPresent(
-                cookieConsent -> claimsBuilder.claim("cookie_consent", cookieConsent));
-        levelOfConfidenceOpt.ifPresent(
-                levelOfConfidence ->
-                        claimsBuilder.claim(
-                                "requested_level_of_confidence", levelOfConfidence.getValue()));
-
-        var claimsSetRequest =
-                constructAdditionalAuthenticationClaims(client, authenticationRequest);
-        claimsSetRequest.ifPresent(t -> claimsBuilder.claim("claim", t.toJSONString()));
-        var encryptedJWT =
-                orchestrationAuthorizationService.getSignedAndEncryptedJWT(claimsBuilder.build());
-
-        var authorizationRequest =
-                new AuthorizationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new ClientID(configurationService.getOrchestrationClientId()))
-                        .endpointURI(URI.create(redirectURI))
-                        .requestObject(encryptedJWT)
-                        .build();
+        AuthorizationRequest authorizationRequest;
         try {
-            cloudwatchMetricsService.putEmbeddedValue(
+            authorizationRequest =
+                    authenticationAuthorisationService.generateAuthRedirectRequest(
+                            sessionId,
+                            clientSessionId,
+                            authenticationRequest,
+                            client,
+                            reauthRequested,
+                            requestedVtr,
+                            previousSessionId,
+                            orchSession);
+        } catch (AuthenticationAuthorisationRequestException e) {
+            return generateErrorResponse(
+                    authenticationRequest.getRedirectionURI(),
+                    authenticationRequest.getState(),
+                    authenticationRequest.getResponseMode(),
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
+                    authenticationRequest.getClientID().getValue(),
+                    user);
+        }
+        try {
+            metrics.emit(
                     "AuthRedirectQueryParamSize",
                     authorizationRequest.toQueryString().length(),
                     Map.of("clientId", client.getClientID()));
@@ -990,7 +881,7 @@ public class AuthorisationHandler
             LOG.warn("Error recording query params length, continuing: ", e);
         }
 
-        redirectURI = authorizationRequest.toURI().toString();
+        var redirectURI = authorizationRequest.toURI().toString();
         return generateApiGatewayProxyResponse(
                 302,
                 "",
@@ -1071,78 +962,6 @@ public class AuthorisationHandler
                 302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
     }
 
-    private Optional<OIDCClaimsRequest> constructAdditionalAuthenticationClaims(
-            ClientRegistry clientRegistry, AuthenticationRequest authenticationRequest) {
-        LOG.info("Constructing additional authentication claims");
-        var identityRequired =
-                identityRequired(
-                        authenticationRequest.toParameters(),
-                        clientRegistry.isIdentityVerificationSupported(),
-                        configurationService.isIdentityEnabled());
-
-        var amScopePresent =
-                requestedScopesContain(CustomScopeValue.ACCOUNT_MANAGEMENT, authenticationRequest);
-        var govukAccountScopePresent =
-                requestedScopesContain(CustomScopeValue.GOVUK_ACCOUNT, authenticationRequest);
-        var phoneScopePresent = requestedScopesContain(OIDCScopeValue.PHONE, authenticationRequest);
-        var emailScopePresent = requestedScopesContain(OIDCScopeValue.EMAIL, authenticationRequest);
-
-        var claimsSet = new HashSet<AuthUserInfoClaims>();
-        claimsSet.add(AuthUserInfoClaims.EMAIL);
-        claimsSet.add(AuthUserInfoClaims.LOCAL_ACCOUNT_ID);
-        claimsSet.add(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE);
-        claimsSet.add(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH);
-        claimsSet.add(AuthUserInfoClaims.UPLIFT_REQUIRED);
-        claimsSet.add(AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH);
-        if (identityRequired) {
-            LOG.info(
-                    "Identity is required. Adding the salt, email_verified and phone_number claims");
-            claimsSet.add(AuthUserInfoClaims.SALT);
-            // Email required for ID journeys for use in Face-to-Face flows
-            claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
-            claimsSet.add(AuthUserInfoClaims.PHONE_NUMBER);
-        }
-        if (amScopePresent) {
-            LOG.info("am scope is present. Adding the public_subject_id claim");
-            claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
-        } else if (PUBLIC.toString().equalsIgnoreCase(clientRegistry.getSubjectType())) {
-            LOG.info("client has PUBLIC subjectType. Adding the public_subject_id claim");
-            claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
-        }
-
-        if (govukAccountScopePresent) {
-            LOG.info("govuk-account scope is present. Adding the legacy_subject_id claim");
-            claimsSet.add(AuthUserInfoClaims.LEGACY_SUBJECT_ID);
-        }
-        if (phoneScopePresent) {
-            LOG.info(
-                    "phone scope is present. Adding the phone_number and phone_number_verified claim");
-            claimsSet.add(AuthUserInfoClaims.PHONE_NUMBER);
-            claimsSet.add(AuthUserInfoClaims.PHONE_VERIFIED);
-        }
-        if (emailScopePresent) {
-            LOG.info("email scope is present. Adding the email_verified claim");
-            claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
-        }
-
-        var claimSetEntries =
-                claimsSet.stream()
-                        .map(claim -> new ClaimsSetRequest.Entry(claim.getValue()))
-                        .toList();
-
-        if (claimSetEntries.isEmpty()) {
-            LOG.info("No additional claims to add to request");
-            return Optional.empty();
-        }
-        var claimsSetRequest = new ClaimsSetRequest(claimSetEntries);
-        return Optional.of(new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest));
-    }
-
-    private boolean requestedScopesContain(
-            Scope.Value scope, AuthenticationRequest authenticationRequest) {
-        return authenticationRequest.getScope().toStringList().contains(scope.getValue());
-    }
-
     private List<String> handleCookies(
             String sessionId,
             OrchSessionItem orchSessionItem,
@@ -1199,36 +1018,7 @@ public class AuthorisationHandler
                 .build();
     }
 
-    private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest) {
-        boolean isTokenSignatureValid =
-                segmentedFunctionCall(
-                        "isTokenSignatureValid",
-                        () ->
-                                tokenValidationService.isTokenSignatureValid(
-                                        authenticationRequest
-                                                .getCustomParameter("id_token_hint")
-                                                .get(0)));
-        if (!isTokenSignatureValid) {
-            LOG.warn("Unable to validate ID token signature");
-            throw new RuntimeException("Unable to validate id_token_hint");
-        }
-
-        SignedJWT idToken;
-        String aud;
-        try {
-            idToken =
-                    SignedJWT.parse(
-                            authenticationRequest.getCustomParameter("id_token_hint").get(0));
-            aud = idToken.getJWTClaimsSet().getAudience().stream().findFirst().orElse(null);
-        } catch (java.text.ParseException e) {
-            LOG.warn("Unable to parse id_token_hint into SignedJWT");
-            throw new RuntimeException("Invalid id_token_hint");
-        }
-
-        if (aud == null || !aud.equals(authenticationRequest.getClientID().getValue())) {
-            LOG.warn("Audience on id_token_hint does not match client ID");
-            throw new RuntimeException("Invalid id_token_hint for client");
-        }
-        return idToken;
+    private AuthenticationRequest stripOutLoginHintQueryParams(AuthenticationRequest authRequest) {
+        return new AuthenticationRequest.Builder(authRequest).loginHint(null).build();
     }
 }

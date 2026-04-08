@@ -4,7 +4,7 @@ module "account_management_api_send_notification_role" {
   role_name   = "account-management-api-send-notification-role"
   vpc_arn     = local.vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
     aws_iam_policy.dynamo_am_client_registry_read_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
@@ -15,7 +15,8 @@ module "account_management_api_send_notification_role" {
     local.pending_email_check_queue_access_policy_arn,
     local.email_check_results_encryption_policy_arn,
     aws_iam_policy.check_email_fraud_block_read_dynamo_read_access_policy.arn,
-  ]
+
+  ], var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
   extra_tags = {
     Service = "send-otp-notification"
   }
@@ -30,19 +31,19 @@ module "send_otp_notification" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                            = var.environment
-    EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
-    PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
-    REDIS_KEY                              = local.redis_key
-    TXMA_AUDIT_QUEUE_URL                   = module.account_management_txma_audit.queue_url
-    LOCKOUT_DURATION                       = var.lockout_duration
-    DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
-    EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
-    INTERNAl_SECTOR_URI                    = var.internal_sector_uri
-    TEST_CLIENT_VERIFY_EMAIL_OTP           = var.test_client_verify_email_otp
-    TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP    = var.test_client_verify_phone_number_otp
-    TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
-    SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
+    ENVIRONMENT                                  = var.environment
+    EMAIL_QUEUE_URL                              = aws_sqs_queue.email_queue.id
+    PENDING_EMAIL_CHECK_QUEUE_URL                = local.pending_email_check_queue_id
+    REDIS_KEY                                    = local.redis_key
+    TXMA_AUDIT_QUEUE_URL                         = module.account_management_txma_audit.queue_url
+    LOCKOUT_DURATION                             = var.lockout_duration
+    DEFAULT_OTP_CODE_EXPIRY                      = var.otp_code_ttl_duration
+    EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY       = var.email_acct_creation_otp_code_ttl_duration
+    INTERNAl_SECTOR_URI                          = var.internal_sector_uri
+    TEST_CLIENT_VERIFY_EMAIL_OTP                 = var.test_client_verify_email_otp
+    ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED = var.account_management_international_sms_enabled
+    TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP          = var.test_client_verify_phone_number_otp
+    TEST_CLIENTS_ENABLED                         = var.test_clients_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
 

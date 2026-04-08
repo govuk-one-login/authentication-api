@@ -13,7 +13,7 @@ class AuthenticationAttemptsTest {
     private static final JourneyType JOURNEY_TYPE = JourneyType.REAUTHENTICATION;
     private static final String CREATED_DATE = "2024-07-29T10:00:00Z";
     private static final String UPDATED_DATE = "2024-07-29T10:30:00Z";
-    private static final CountType COUNT_TYPE = CountType.ENTER_AUTH_APP_CODE;
+    private static final CountType COUNT_TYPE = CountType.ENTER_MFA_CODE;
     private static final long TTL = 1234567890L;
 
     @Test

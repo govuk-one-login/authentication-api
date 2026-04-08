@@ -23,8 +23,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -46,7 +46,6 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -77,8 +76,8 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     private String sessionId;
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
-    private static final String CLIENT_NAME = "some-client-name";
     private static final String testRsaKeyId = "test-key-rsa";
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     private static RSAKey rsaKey;
 
     private static WireMockServer wireMockServer;
@@ -168,6 +167,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     @BeforeEach
     void setup() throws Json.JsonException, MalformedURLException, NoSuchAlgorithmException {
+        sessionId = IdGenerator.generate();
         rsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .privateKey(
@@ -191,14 +191,8 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                         "test.account.gov.uk",
                         SaltHelper.generateNewSalt());
 
-        setUpSession();
         addSessionToSessionStore(internalCommonSubjectId);
-        registerClient();
         addUserToUserStore();
-    }
-
-    private void setUpSession() throws Json.JsonException {
-        sessionId = redis.createSession();
     }
 
     private void addSessionToSessionStore(String internalCommonSubjectId) {
@@ -206,21 +200,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         authSessionStore.addEmailToSession(sessionId, USER_EMAIL);
         authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
-    }
-
-    private static void registerClient() {
-        clientStore.registerClient(
-                CLIENT_ID.getValue(),
-                CLIENT_NAME,
-                singletonList("redirect-url"),
-                singletonList(USER_EMAIL),
-                List.of("openid", "email", "phone"),
-                "public-key",
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
+        authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
     }
 
     private static void addUserToUserStore() {

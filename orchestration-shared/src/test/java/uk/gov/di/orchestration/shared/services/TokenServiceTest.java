@@ -9,6 +9,7 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -34,9 +35,9 @@ import org.approvaltests.scrubbers.RegExScrubber;
 import org.approvaltests.scrubbers.Scrubbers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
@@ -44,16 +45,14 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.helper.SubjectHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -67,6 +66,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.samePropertyValuesAs;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,23 +75,31 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class TokenServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
+    private final OrchAccessTokenService orchAccessTokenService =
+            mock(OrchAccessTokenService.class);
+    private final OrchRefreshTokenService orchRefreshTokenService =
+            mock(OrchRefreshTokenService.class);
     private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final TokenService tokenService =
             new TokenService(
-                    configurationService, redisConnectionService, kmsConnectionService, oidcApi);
+                    configurationService,
+                    kmsConnectionService,
+                    orchAccessTokenService,
+                    orchRefreshTokenService,
+                    oidcApi);
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
@@ -114,15 +122,11 @@ class TokenServiceTest {
     private static final String OIDC_BASE_URI = "https://oidc.test.account.gov.uk";
     private static final String OIDC_TRUSTMARK_URI = "https://oidc.test.account.gov.uk/trustmark";
     private static final String KEY_ID = "14342354354353";
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
-    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String STORAGE_TOKEN_PREFIX =
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
     private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
     private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
-
-    private static final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(TokenService.class);
@@ -147,8 +151,7 @@ class TokenServiceTest {
     }
 
     @Test
-    void shouldGenerateTokenResponseWithRefreshToken()
-            throws ParseException, JOSEException, Json.JsonException {
+    void shouldGenerateTokenResponseWithRefreshToken() throws ParseException, JOSEException {
         when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
         createSignedAccessToken();
@@ -158,7 +161,6 @@ class TokenServiceTest {
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
@@ -168,28 +170,23 @@ class TokenServiceTest {
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
                         VOT,
-                        AUTH_TIME);
+                        AUTH_TIME,
+                        AUTH_CODE);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
-        RefreshTokenStore refreshTokenStore =
-                new RefreshTokenStore(
-                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
-        ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        redisKey.capture(),
-                        eq(objectMapper.writeValueAsString(refreshTokenStore)),
-                        eq(300L));
-
-        var refreshToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue());
+        String refreshTokenValue = tokenResponse.getOIDCTokens().getRefreshToken().getValue();
+        var refreshToken = SignedJWT.parse(refreshTokenValue);
         var jti = refreshToken.getJWTClaimsSet().getJWTID();
-        assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
-        assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
+
+        verify(orchRefreshTokenService)
+                .saveRefreshToken(
+                        jti,
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        refreshTokenValue,
+                        AUTH_CODE,
+                        JOURNEY_ID);
     }
 
     @Test
@@ -214,10 +211,7 @@ class TokenServiceTest {
 
     @Test
     void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
-            throws ParseException,
-                    JOSEException,
-                    Json.JsonException,
-                    com.nimbusds.oauth2.sdk.ParseException {
+            throws ParseException, JOSEException, com.nimbusds.oauth2.sdk.ParseException {
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
 
@@ -230,7 +224,6 @@ class TokenServiceTest {
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
@@ -240,7 +233,8 @@ class TokenServiceTest {
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
                         VOT,
-                        AUTH_TIME);
+                        AUTH_TIME,
+                        AUTH_CODE);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -264,29 +258,22 @@ class TokenServiceTest {
         assertTrue(jsonarray.contains("nickname"));
         assertTrue(jsonarray.contains("birthdate"));
 
-        RefreshTokenStore refreshTokenStore =
-                new RefreshTokenStore(
-                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
-
-        ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        redisKey.capture(),
-                        eq(objectMapper.writeValueAsString(refreshTokenStore)),
-                        eq(300L));
-
-        var refreshToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue());
+        String refreshTokenValue = tokenResponse.getOIDCTokens().getRefreshToken().getValue();
+        var refreshToken = SignedJWT.parse(refreshTokenValue);
         var jti = refreshToken.getJWTClaimsSet().getJWTID();
-        assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
-        assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
+
+        verify(orchRefreshTokenService)
+                .saveRefreshToken(
+                        jti,
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        refreshTokenValue,
+                        AUTH_CODE,
+                        JOURNEY_ID);
     }
 
     @Test
     void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
-            throws ParseException, JOSEException, Json.JsonException {
+            throws ParseException, JOSEException {
         when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
@@ -296,7 +283,6 @@ class TokenServiceTest {
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
@@ -306,7 +292,8 @@ class TokenServiceTest {
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
                         VOT,
-                        AUTH_TIME);
+                        AUTH_TIME,
+                        AUTH_CODE);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -324,7 +311,6 @@ class TokenServiceTest {
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
@@ -334,7 +320,8 @@ class TokenServiceTest {
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
                         VOT,
-                        AUTH_TIME);
+                        AUTH_TIME,
+                        AUTH_CODE);
 
         var parsedAccessToken =
                 SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue())
@@ -374,13 +361,13 @@ class TokenServiceTest {
         Optional<ErrorObject> errorObject =
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
-                equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing redirect_uri parameter"))));
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing redirect_uri parameter")));
     }
 
     @Test
@@ -392,13 +379,13 @@ class TokenServiceTest {
         Optional<ErrorObject> errorObject =
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
-                equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing grant_type parameter"))));
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing grant_type parameter")));
     }
 
     @Test
@@ -411,13 +398,54 @@ class TokenServiceTest {
         Optional<ErrorObject> errorObject =
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
-                equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing code parameter"))));
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing code parameter")));
+    }
+
+    @Test
+    void shouldReturnErrorIfCodeIEmptyStringWhenValidatingTokenRequest() {
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
+        customParams.put("code", Collections.singletonList(""));
+        Optional<ErrorObject> errorObject =
+                tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing code parameter")));
+    }
+
+    @Test
+    void shouldReturnErrorIfCodeIsNullWhenValidatingTokenRequest() {
+        var requestBody =
+                "grant_type="
+                        + GrantType.AUTHORIZATION_CODE.getValue()
+                        + "&client_id="
+                        + CLIENT_ID
+                        + "&redirect_uri="
+                        + REDIRECT_URI
+                        + "&code";
+        Optional<ErrorObject> errorObject = tokenService.validateTokenRequestParams(requestBody);
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing code parameter")));
     }
 
     @Test
@@ -466,10 +494,223 @@ class TokenServiceTest {
         assertTrue(errorObject.isPresent());
     }
 
+    @Test
+    void shouldGenerateNewTokensFromRefreshToken() throws Exception {
+        var scopes = List.of("openid", "offline_access");
+        var clientSessionId = "test-client-session-id";
+        createSignedAccessToken();
+
+        tokenService.generateRefreshTokenResponse(
+                CLIENT_ID,
+                scopes,
+                PUBLIC_SUBJECT,
+                INTERNAL_PAIRWISE_SUBJECT,
+                JWSAlgorithm.ES256,
+                AUTH_CODE,
+                clientSessionId);
+
+        verify(orchAccessTokenService)
+                .saveAccessToken(
+                        eq(CLIENT_ID + "." + PUBLIC_SUBJECT.getValue()),
+                        eq(AUTH_CODE),
+                        anyString(),
+                        eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
+                        eq(clientSessionId));
+        verify(orchRefreshTokenService)
+                .saveRefreshToken(
+                        anyString(),
+                        eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
+                        anyString(),
+                        eq(AUTH_CODE),
+                        eq(clientSessionId));
+    }
+
+    @Nested
+    class KeyRotation {
+
+        private final String NEW_V2_KEY_ALIAS = "alias/new-signing-key-v2";
+        private final String NEW_V2_KEY_ALIAS_RSA = "alias/new-signing-key-rsa-v2";
+
+        private final String PREVIOUS_KEY_ALIAS = "alias/old-signing-key";
+        private final String PREVIOUS_KEY_ALIAS_RSA = "alias/old-signing-key-rsa";
+
+        private final String MOCK_PREVIOUS_EC_KEY_ID =
+                "nF2rpzCc-UZavTfpb9V7TTBG4uphYul9u-Op-cLqf_4";
+        private final String MOCK_PREVIOUS_RSA_KEY_ID =
+                "A67fuGRkM96UF0YRCObJMeRLfL38jAP07zAAv79uYRk";
+
+        private final String EXPECTED_OPAQUE_PREVIOUS_EC_KEY_ID =
+                hashSha256String(MOCK_PREVIOUS_EC_KEY_ID);
+        private final String EXPECTED_OPAQUE_PREVIOUS_RSA_KEY_ID =
+                hashSha256String(MOCK_PREVIOUS_RSA_KEY_ID);
+
+        private final String MOCK_NEW_V2_EC_KEY_ID = "i4rwnl-SLuhPjdtP1GJyKXZRDG00znaRld8s-h6Fn2i";
+        private final String MOCK_NEW_V2_RSA_KEY_ID = "LA9hmMyeZ2h4oOZcoWpReQKHGp0PwfyzuKCc08cdjYh";
+
+        private final String EXPECTED_OPAQUE_NEW_V2_EC_KEY_ID =
+                hashSha256String(MOCK_NEW_V2_EC_KEY_ID);
+        private final String EXPECTED_OPAQUE_NEW_V2_RSA_KEY_ID =
+                hashSha256String(MOCK_NEW_V2_RSA_KEY_ID);
+
+        private final String MOCK_SIGNATURE =
+                "f1pIGJZixTCGckjMnnAJM7efIPCJF177FqsenqflVXRQPa-FE-5viRrgPXdTjlDShFOwOQEfF6c8IlBixzorPA";
+
+        private SignResponse mockSignResponseRsa;
+        private SignResponse mockSignResponseEc;
+
+        @BeforeEach
+        void setup() throws JOSEException {
+
+            when(configurationService.getExternalTokenSigningKeyAlias())
+                    .thenReturn(PREVIOUS_KEY_ALIAS);
+            when(configurationService.getExternalTokenSigningKeyRsaAlias())
+                    .thenReturn(PREVIOUS_KEY_ALIAS_RSA);
+
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(PREVIOUS_KEY_ALIAS).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_PREVIOUS_EC_KEY_ID).build());
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(PREVIOUS_KEY_ALIAS_RSA).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_PREVIOUS_RSA_KEY_ID).build());
+
+            when(configurationService.getNextExternalTokenSigningKeyAliasV2())
+                    .thenReturn(NEW_V2_KEY_ALIAS);
+            when(configurationService.getNextExternalTokenSigningKeyRsaAliasV2())
+                    .thenReturn(NEW_V2_KEY_ALIAS_RSA);
+
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_EC_KEY_ID).build());
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS_RSA).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_RSA_KEY_ID).build());
+
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_EC_KEY_ID).build());
+            when(kmsConnectionService.getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS_RSA).build()))
+                    .thenReturn(
+                            GetPublicKeyResponse.builder().keyId(MOCK_NEW_V2_RSA_KEY_ID).build());
+
+            mockSignResponseEc =
+                    SignResponse.builder()
+                            .signature(
+                                    SdkBytes.fromByteArray(
+                                            ECDSA.transcodeSignatureToDER(
+                                                    MOCK_SIGNATURE.getBytes(
+                                                            StandardCharsets.UTF_8))))
+                            .build();
+            mockSignResponseRsa =
+                    SignResponse.builder()
+                            .signature(
+                                    SdkBytes.fromByteArray(
+                                            MOCK_SIGNATURE.getBytes(StandardCharsets.UTF_8)))
+                            .build();
+        }
+
+        @Test
+        void itShouldUseTheNewV2KeyToCreateATokenWhenFeatureFlagEnabled() {
+            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(true);
+            when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseEc);
+
+            var testClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .claim("sub", FIXED_INTERNAL_PAIRWISE_SUBJECT)
+                            .build();
+
+            var signedToken =
+                    tokenService.generateSignedJwtUsingExternalKey(
+                            testClaimsSet, Optional.empty(), JWSAlgorithm.ES256);
+
+            verify(kmsConnectionService)
+                    .getPublicKey(GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS).build());
+            assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+            assertThat(
+                    signedToken.getHeader().getKeyID(), equalTo(EXPECTED_OPAQUE_NEW_V2_EC_KEY_ID));
+        }
+
+        @Test
+        void itShouldUseTheNewV2RsaKeyToCreateATokenWhenFeatureFlagEnabled() {
+            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(true);
+            when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseRsa);
+
+            var testClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .claim("sub", FIXED_INTERNAL_PAIRWISE_SUBJECT)
+                            .build();
+
+            var signedToken =
+                    tokenService.generateSignedJwtUsingExternalKey(
+                            testClaimsSet, Optional.empty(), JWSAlgorithm.RS256);
+
+            verify(kmsConnectionService)
+                    .getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(NEW_V2_KEY_ALIAS_RSA).build());
+            assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.RS256));
+            assertThat(
+                    signedToken.getHeader().getKeyID(), equalTo(EXPECTED_OPAQUE_NEW_V2_RSA_KEY_ID));
+        }
+
+        @Test
+        void itShouldContinueToUseOldKeyWhenFeatureFlagIsDisabled() {
+            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(false);
+            when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseEc);
+
+            var testClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .claim("sub", FIXED_INTERNAL_PAIRWISE_SUBJECT)
+                            .build();
+
+            var signedToken =
+                    tokenService.generateSignedJwtUsingExternalKey(
+                            testClaimsSet, Optional.empty(), JWSAlgorithm.ES256);
+
+            verify(kmsConnectionService)
+                    .getPublicKey(GetPublicKeyRequest.builder().keyId(PREVIOUS_KEY_ALIAS).build());
+            assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+            assertThat(
+                    signedToken.getHeader().getKeyID(),
+                    equalTo(EXPECTED_OPAQUE_PREVIOUS_EC_KEY_ID));
+        }
+
+        @Test
+        void itShouldContinueToUseOldRsaKeyWhenFeatureFlagIsDisabled() {
+            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(false);
+            when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseRsa);
+
+            var testClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .claim("sub", FIXED_INTERNAL_PAIRWISE_SUBJECT)
+                            .build();
+
+            var signedToken =
+                    tokenService.generateSignedJwtUsingExternalKey(
+                            testClaimsSet, Optional.empty(), JWSAlgorithm.RS256);
+
+            verify(kmsConnectionService)
+                    .getPublicKey(
+                            GetPublicKeyRequest.builder().keyId(PREVIOUS_KEY_ALIAS_RSA).build());
+            assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.RS256));
+            assertThat(
+                    signedToken.getHeader().getKeyID(),
+                    equalTo(EXPECTED_OPAQUE_PREVIOUS_RSA_KEY_ID));
+        }
+    }
+
     private void createSignedIdToken() throws JOSEException {
+        createSignedIdTokenWithKeyId(KEY_ID);
+    }
+
+    private void createSignedIdTokenWithKeyId(String keyId) throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
+                        .keyID(keyId)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         SignedJWT signedIdToken = createSignedIdToken(ecSigningKey);
@@ -478,7 +719,7 @@ class TokenServiceTest {
         SignResponse idTokenSignedResult =
                 SignResponse.builder()
                         .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
-                        .keyId(KEY_ID)
+                        .keyId(keyId)
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .build();
 
@@ -538,18 +779,15 @@ class TokenServiceTest {
     }
 
     private void assertSuccessfulTokenResponse(OIDCTokenResponse tokenResponse)
-            throws ParseException, Json.JsonException {
-        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        assertNotNull(tokenResponse.getOIDCTokens().getAccessToken());
-        AccessTokenStore accessTokenStore =
-                new AccessTokenStore(
+            throws ParseException {
+
+        verify(orchAccessTokenService)
+                .saveAccessToken(
+                        CLIENT_ID + "." + PUBLIC_SUBJECT.getValue(),
+                        AUTH_CODE,
                         tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
                         INTERNAL_PAIRWISE_SUBJECT.getValue(),
                         JOURNEY_ID);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
 
         var header = (JWSHeader) tokenResponse.getOIDCTokens().getIDToken().getHeader();
 
@@ -582,7 +820,8 @@ class TokenServiceTest {
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
                 is(JOURNEY_ID));
-        assertNull(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("auth_time"));
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("auth_time"),
+                is(AUTH_TIME));
     }
 }

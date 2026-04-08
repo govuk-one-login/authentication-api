@@ -1,0 +1,88 @@
+name: "SP - Pre-merge checks for SAM API modules"
+
+on:
+  pull_request:
+    paths:
+      - "ci/cloudformation/auth/**"
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
+
+env:
+  AWS_REGION: eu-west-2
+  RAIN_VERSION: v1.23.0
+  RAIN_ARCH: linux-amd64
+
+jobs:
+  sam-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up SAM cli
+        uses: aws-actions/setup-sam@d78e1a4a9656d3b223e59b80676a797f20093133 # v2
+        with:
+          use-installer: true
+
+      - name: Set up AWS creds
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        with:
+          role-to-assume: ${{ secrets.GH_ACTIONS_VALIDATE_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Rain
+        env:
+          VERSION: ${{ env.RAIN_VERSION }}
+          ARCH: ${{ env.RAIN_ARCH }}
+        run: |
+          wget -q "https://github.com/aws-cloudformation/rain/releases/download/${VERSION}/rain-${VERSION}_${ARCH}.zip"
+          unzip "rain-${VERSION}_${ARCH}.zip"
+          chmod +x "rain-${VERSION}_${ARCH}/rain"
+          mv "rain-${VERSION}_${ARCH}/rain" /usr/local/bin/rain
+
+      - name: Generate auth template
+        run: "./scripts/merge-templates.sh"
+        env:
+          TEMPLATE_SOURCE_DIR: ci/cloudformation/auth
+          TEMPLATE_FILE: auth-template.yaml
+
+      - name: SAM Validate
+        run: |
+          sam validate --lint -t auth-template.yaml
+
+      - name: Generate stubs template
+        run: "./scripts/merge-templates.sh"
+        env:
+          TEMPLATE_SOURCE_DIR: ci/cloudformation/stubs
+          TEMPLATE_FILE: stubs-template.yaml
+
+      - name: SAM Validate
+        run: |
+          sam validate --lint -t stubs-template.yaml
+
+      - name: Generate am template
+        run: "./scripts/merge-templates.sh"
+        env:
+          TEMPLATE_SOURCE_DIR: ci/cloudformation/account-management
+          TEMPLATE_FILE: am-template.yaml
+
+      - name: SAM Validate
+        run: |
+          sam validate --lint -t am-template.yaml
+
+      - name: Generate ad template
+        run: "./scripts/merge-templates.sh"
+        env:
+          TEMPLATE_SOURCE_DIR: ci/cloudformation/account-data
+          TEMPLATE_FILE: ad-template.yaml
+
+      - name: SAM Validate
+        run: |
+          sam validate --lint -t ad-template.yaml

@@ -2,12 +2,23 @@ package uk.gov.di.authentication.external.lambda;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.KeySourceException;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
+import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.id.Audience;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
+import com.nimbusds.oauth2.sdk.util.URLUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,12 +31,23 @@ import uk.gov.di.authentication.shared.entity.AuthCodeStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.services.*;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -49,6 +71,7 @@ class TokenHandlerTest {
     private static final AccessTokenResponse SUCCESS_TOKEN_RESPONSE =
             new AccessTokenResponse(new Tokens(SUCCESS_TOKEN_RESPONSE_ACCESS_TOKEN, null));
     private static final DynamoAuthCodeService authCodeService = mock(DynamoAuthCodeService.class);
+    private static final RemoteJwksService authJwksService = mock(RemoteJwksService.class);
     private static final long UNIX_TIME_16_08_2099 = 4090554490L;
     private static final String VALID_AUTH_CODE = "valid-auth-code";
     private static final String SUBJECT_ID = "any";
@@ -88,6 +111,7 @@ class TokenHandlerTest {
                     .withSubjectID("any")
                     .withHasBeenUsed(false)
                     .withTimeToExist(0L);
+    private ECKey ecKeyPair;
 
     @BeforeAll
     public static void init() {
@@ -106,7 +130,7 @@ class TokenHandlerTest {
     }
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws JOSEException {
         configurationService = mock(ConfigurationService.class);
         when(configurationService.getAuthenticationAuthCallbackURI())
                 .thenReturn(URI.create("https://test-callback.com"));
@@ -127,7 +151,11 @@ class TokenHandlerTest {
                         tokenUtilityService,
                         tokenRequestValidator,
                         auditService,
-                        dynamoService);
+                        dynamoService,
+                        authJwksService);
+        ecKeyPair = new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        when(authJwksService.retrieveJwkFromURLWithKeyId(ecKeyPair.getKeyID()))
+                .thenReturn(ecKeyPair.toPublicJWK());
     }
 
     @Test
@@ -148,8 +176,20 @@ class TokenHandlerTest {
     }
 
     @Test
+    void shouldReturn400WithErrorMessageWhenPrivateJwtIncomplete() {
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody("client_assertion=incomplete_jwt");
+
+        APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
+
+        assertEquals(400, response.getStatusCode());
+        assertTrue(response.getBody().contains(OAuth2Error.INVALID_REQUEST_CODE));
+        assertTrue(response.getBody().contains("Invalid private_key_jwt"));
+    }
+
+    @Test
     void shouldReturn400WithErrorMessageWhenClientAssertionJwtCannotBeValidated()
-            throws TokenAuthInvalidException {
+            throws TokenAuthInvalidException, JOSEException {
         String testErrorDescription = "test-error-description";
 
         doThrow(
@@ -160,7 +200,8 @@ class TokenHandlerTest {
                                 "tbc"))
                 .when(tokenRequestValidator)
                 .validatePrivateKeyJwtClientAuth(any(), any(), any());
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody(privateKeyJWTBody());
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
 
@@ -170,10 +211,28 @@ class TokenHandlerTest {
     }
 
     @Test
-    void shouldReturn400WithErrorMessageWhenAuthCodeNotFoundInDataStore() {
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        String formData = "code=" + "auth-code-not-registered-for-mock-auth-code-store-service";
-        request.setBody(formData);
+    void shouldReturn400WithErrorMessageWhenNoKeysFoundOnJwksEndpoint() throws JOSEException {
+        doThrow(new KeySourceException("No keys found"))
+                .when(authJwksService)
+                .retrieveJwkFromURLWithKeyId(ecKeyPair.getKeyID());
+
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody(privateKeyJWTBody());
+
+        APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
+
+        assertEquals(400, response.getStatusCode());
+        assertTrue(response.getBody().contains(OAuth2Error.INVALID_CLIENT_CODE));
+        assertTrue(response.getBody().contains("Invalid signature in private_key_jwt"));
+    }
+
+    @Test
+    void shouldReturn400WithErrorMessageWhenAuthCodeNotFoundInDataStore() throws JOSEException {
+        var bodyMap = new HashMap<String, List<String>>();
+        bodyMap.put("code", List.of("auth-code-not-registered-for-mock-auth-code-store-service"));
+        bodyMap.putAll(privateKeyJWTParams());
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody(URLUtils.serializeParameters(bodyMap));
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
 
@@ -183,10 +242,12 @@ class TokenHandlerTest {
     }
 
     @Test
-    void shouldReturn400WithErrorMessageWhenAuthCodeHasAlreadyBeenUsed() {
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        String formData = "code=" + USED_AUTH_CODE;
-        request.setBody(formData);
+    void shouldReturn400WithErrorMessageWhenAuthCodeHasAlreadyBeenUsed() throws JOSEException {
+        var bodyMap = new HashMap<String, List<String>>();
+        bodyMap.put("code", List.of(USED_AUTH_CODE));
+        bodyMap.putAll(privateKeyJWTParams());
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody(URLUtils.serializeParameters(bodyMap));
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
 
@@ -196,10 +257,12 @@ class TokenHandlerTest {
     }
 
     @Test
-    void shouldReturn400WithErrorMessageWhenAuthCodeHasExpired() {
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        String formData = "code=" + EXPIRED_AUTH_CODE;
-        request.setBody(formData);
+    void shouldReturn400WithErrorMessageWhenAuthCodeHasExpired() throws JOSEException {
+        var bodyMap = new HashMap<String, List<String>>();
+        bodyMap.put("code", List.of(EXPIRED_AUTH_CODE));
+        bodyMap.putAll(privateKeyJWTParams());
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody(URLUtils.serializeParameters(bodyMap));
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
 
@@ -209,15 +272,19 @@ class TokenHandlerTest {
     }
 
     @Test
-    void shouldReturn200WithAccessTokenWhenAuthCodeStoreIsValidAndMarkAuthCodeStoreAsUsed() {
+    void shouldReturn200WithAccessTokenWhenAuthCodeStoreIsValidAndMarkAuthCodeStoreAsUsed()
+            throws JOSEException {
         String internalPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT_ID,
                         "test-backend.com",
                         SdkBytes.fromByteBuffer(ByteBuffer.allocateDirect(12345)).asByteArray());
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        String formData = "code=" + VALID_AUTH_CODE + "&client_id=" + CLIENT_ID;
-        request.setBody(formData);
+        var bodyMap = new HashMap<String, List<String>>();
+        bodyMap.put("code", List.of(VALID_AUTH_CODE));
+        bodyMap.put("client_id", List.of(CLIENT_ID));
+        bodyMap.putAll(privateKeyJWTParams());
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody(URLUtils.serializeParameters(bodyMap));
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
 
@@ -246,6 +313,27 @@ class TokenHandlerTest {
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
-                                Optional.empty()));
+                                Optional.empty(),
+                                new ArrayList<>()));
+    }
+
+    private Map<String, List<String>> privateKeyJWTParams() throws JOSEException {
+        var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
+        var claimsSet =
+                new JWTAuthenticationClaimsSet(
+                        new ClientID("test-client-id"), new Audience("http://localhost/token"));
+        claimsSet.getExpirationTime().setTime(expiryDate.getTime());
+        var privateKeyJWT =
+                new PrivateKeyJWT(
+                        claimsSet,
+                        JWSAlgorithm.ES256,
+                        ecKeyPair.toPrivateKey(),
+                        ecKeyPair.getKeyID(),
+                        null);
+        return privateKeyJWT.toParameters();
+    }
+
+    private String privateKeyJWTBody() throws JOSEException {
+        return URLUtils.serializeParameters(privateKeyJWTParams());
     }
 }

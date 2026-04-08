@@ -4,16 +4,22 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsPutHandler;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,18 +34,60 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
+import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
+import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
+import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
+import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
-    public static final String UPDATE_SMS_METHOD_REQUEST_TEMPLATE =
+    public static final String UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE =
             """
             {
               "mfaMethod": {
                 "priorityIdentifier": "DEFAULT",
+                "method": {
+                    "mfaMethodType": "SMS",
+                    "phoneNumber": "%s",
+                    "otp": "%s"
+                }
+              }
+            }
+            """;
+    public static final String UPDATE_BACKUP_SMS_METHOD_REQUEST_TEMPLATE =
+            """
+            {
+              "mfaMethod": {
+                "priorityIdentifier": "BACKUP",
                 "method": {
                     "mfaMethodType": "SMS",
                     "phoneNumber": "%s",
@@ -61,12 +109,22 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             }
             """;
     private static String testInternalSubject;
+    private static final Map<String, String> TEST_HEADERS =
+            Map.of(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
 
     private static final String TEST_EMAIL = "test@email.com";
     private static final String TEST_PASSWORD = "test-password";
     private static final String TEST_PHONE_NUMBER = "+447700900000";
     private static final String TEST_PHONE_NUMBER_TWO = "+447700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
+    public static final String EXTENSIONS_ACCOUNT_RECOVERY =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+    public static final String EXTENSIONS_MIGRATION_SUCCEEDED =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
+    public static final String EXTENSIONS_HAD_PARTIAL =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
+    public static final String EXTENSIONS_MFA_CODE_ENTERED =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
     private static String testPublicSubject;
     private static final MFAMethod defaultSms =
             MFAMethod.smsMfaMethod(
@@ -80,13 +138,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final MFAMethod backupAuthApp =
             MFAMethod.authAppMfaMethod(
                     TEST_CREDENTIAL, true, true, BACKUP, UUID.randomUUID().toString());
-    private final ConfigurationService mfaMethodEnabledConfigurationService =
-            new ConfigurationService() {
-                @Override
-                public boolean isMfaMethodManagementApiEnabled() {
-                    return true;
-                }
-            };
 
     @BeforeEach
     void setUp() {
@@ -100,7 +151,10 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         userProfile.getSubjectID(), INTERNAL_SECTOR_HOST, salt);
 
-        handler = new MFAMethodsPutHandler(mfaMethodEnabledConfigurationService);
+        handler = new MFAMethodsPutHandler(ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE);
+
+        notificationsQueue.clear();
+        txmaAuditQueue.clear();
     }
 
     private MFAMethod getMethodWithPriority(
@@ -128,7 +182,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Nested
     class ChangingDefaultMethod {
-
         public static final String DEFAULT_AUTH_APP_RESPONSE_TEMPLATE =
                 """
                 [
@@ -143,7 +196,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     }
                 ]
                 """;
-
         public static final String SMS_RESPONSE_TEMPLATE =
                 """
                 {
@@ -168,7 +220,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -191,6 +243,34 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertRetrievedMethodHasSameBasicFields(defaultAuthApp, retrievedMethod);
             assertMfaCredentialUpdated(retrievedMethod, updatedCredential);
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    CHANGED_AUTHENTICATOR_APP,
+                                    LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            Map<String, String> updateProfileAuthAppAttributes = new HashMap<>();
+            updateProfileAuthAppAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            updateProfileAuthAppAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            eventExpectations.put(
+                    AUTH_UPDATE_PROFILE_AUTH_APP.name(), updateProfileAuthAppAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -203,12 +283,13 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var mfaIdentifier = defaultSms.getMfaIdentifier();
             var updatedPhoneNumber = "07900000123";
             var updatedPhoneNumberWithCountryCode = "+447900000123";
-            var updateRequest = format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, updatedPhoneNumber, otp);
+            var updateRequest =
+                    format(UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE, updatedPhoneNumber, otp);
 
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -257,6 +338,30 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     updatedPhoneNumberWithCountryCode,
                                     retrievedDefault.getDestination()),
                     () -> assertNull(retrievedDefault.getCredentialValue()));
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    PHONE_NUMBER_UPDATED,
+                                    LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
+            codeVerifiedAttributes.put(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -266,13 +371,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
 
             var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
-            var updateRequest = format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, "+447900000123", otp);
+            var updateRequest =
+                    format(UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE, "+447900000123", otp);
             var mfaIdentifier = defaultAuthApp.getMfaIdentifier();
 
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -321,6 +427,30 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     () -> assertEquals(SMS.name(), backupMfa.getMfaMethodType()),
                     () -> assertNull(backupMfa.getCredentialValue()),
                     () -> assertEquals(backupSms.getDestination(), backupMfa.getDestination()));
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    CHANGED_DEFAULT_MFA,
+                                    LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
+            codeVerifiedAttributes.put(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -336,7 +466,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -378,6 +508,34 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     () ->
                             assertEquals(
                                     backupSms.getDestination(), backupMfa.get().getDestination()));
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    CHANGED_DEFAULT_MFA,
+                                    LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            Map<String, String> updateProfileAuthAppAttributes = new HashMap<>();
+            updateProfileAuthAppAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            updateProfileAuthAppAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            eventExpectations.put(
+                    AUTH_UPDATE_PROFILE_AUTH_APP.name(), updateProfileAuthAppAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -393,7 +551,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -402,12 +560,68 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertEquals(400, response.getStatusCode());
             assertThatJson(response.getBody()).node("code").isIntegralNumber().isEqualTo("1082");
+
+            assertNoNotificationsReceived(notificationsQueue);
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
+        }
+
+        @Test
+        void shouldReturn400WhenInvalidOTPEnteredWhenChangingDefaultMFAToSMS() {
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultSms);
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupSms);
+            userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var invalidOtp = otp + 1;
+
+            var mfaIdentifier = defaultSms.getMfaIdentifier();
+            var updatedPhoneNumber = "07900000123";
+            var updateRequest =
+                    format(
+                            UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE,
+                            updatedPhoneNumber,
+                            invalidOtp);
+
+            var response =
+                    makeRequest(
+                            Optional.of(updateRequest),
+                            Map.of(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS"),
+                            Collections.emptyMap(),
+                            Map.ofEntries(
+                                    Map.entry("publicSubjectId", testPublicSubject),
+                                    Map.entry("mfaIdentifier", mfaIdentifier)),
+                            Map.of("principalId", testInternalSubject));
+
+            assertEquals(400, response.getStatusCode());
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_OTP));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_INVALID_CODE_SENT);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> addInvalidCodeSentAttributes = new HashMap<>();
+            addInvalidCodeSentAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            addInvalidCodeSentAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            eventExpectations.put(AUTH_INVALID_CODE_SENT.name(), addInvalidCodeSentAttributes);
+            verifyAuditEvents(expectedEvents, eventExpectations);
+
+            assertNoNotificationsReceived(notificationsQueue);
         }
     }
 
     @Nested
     class SwitchingMethods {
-
         private void assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
                 MFAMethod expected, MFAMethod retrieved, PriorityIdentifier expectedPriority) {
             assertAll(
@@ -446,7 +660,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                      }
                  }
                 """;
-
         public static final String SWITCH_REQUEST =
                 """
                 {
@@ -467,7 +680,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(SWITCH_REQUEST),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -503,6 +716,26 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     backupSms, retrievedDefault, DEFAULT);
             assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
                     defaultSms, retrievedBackup, BACKUP);
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    SWITCHED_MFA_METHODS,
+                                    LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> switchCompletedAttributes = new HashMap<>();
+            switchCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            switchCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(
+                    AUTH_MFA_METHOD_SWITCH_COMPLETED.name(), switchCompletedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -516,7 +749,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(SWITCH_REQUEST),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -552,12 +785,31 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     backupAuthApp, retrievedDefault, DEFAULT);
             assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
                     defaultSms, retrievedBackup, BACKUP);
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    SWITCHED_MFA_METHODS,
+                                    LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> switchCompletedAttributes = new HashMap<>();
+            switchCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            switchCompletedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(
+                    AUTH_MFA_METHOD_SWITCH_COMPLETED.name(), switchCompletedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
     @Nested
     class UserMigration {
-
         private void createUnMigratedUserWithIntermediateMfaIdentifier(String mfaIdentifier) {
             userStore.setPhoneNumberAndVerificationStatus(
                     TEST_EMAIL, TEST_PHONE_NUMBER, true, true);
@@ -573,12 +825,13 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var secondPhoneNumber = "+447900000100";
             var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
-            var updateRequest = format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, secondPhoneNumber, otp);
+            var updateRequest =
+                    format(UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE, secondPhoneNumber, otp);
 
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -611,7 +864,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertTrue(userProfileAfterUpdate.isPresent());
 
             assertAll(
-                    () -> assertTrue(userProfileAfterUpdate.get().getMfaMethodsMigrated()),
+                    () -> assertTrue(userProfileAfterUpdate.get().isMfaMethodsMigrated()),
                     () -> assertFalse(userProfileAfterUpdate.get().isPhoneNumberVerified()),
                     () -> assertNull(userProfileAfterUpdate.get().getPhoneNumber()));
 
@@ -628,12 +881,39 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     () -> assertTrue(retrievedMethod.isEnabled()),
                     () -> assertTrue(retrievedMethod.isMethodVerified()),
                     () -> assertEquals(secondPhoneNumber, retrievedMethod.getDestination()));
+
+            List<AuditableEvent> expectedEvents =
+                    List.of(
+                            AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
+                            AUTH_CODE_VERIFIED,
+                            AUTH_UPDATE_PHONE_NUMBER);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> migrationAttemptedAttributes = new HashMap<>();
+            migrationAttemptedAttributes.put(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
+            migrationAttemptedAttributes.put(EXTENSIONS_MIGRATION_SUCCEEDED, "true");
+            migrationAttemptedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            migrationAttemptedAttributes.put(EXTENSIONS_HAD_PARTIAL, "true");
+            migrationAttemptedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(
+                    AUTH_MFA_METHOD_MIGRATION_ATTEMPTED.name(), migrationAttemptedAttributes);
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
+            codeVerifiedAttributes.put(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
     @Nested
     class Idempotence {
-
         @Test
         void duplicateUpdatesShouldBeIdempotentForUpdatesToDefaultMethod() {
             userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultAuthApp);
@@ -645,7 +925,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var firstResponse =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -665,10 +945,12 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertMfaCredentialUpdated(retrievedMethodAfterFirstRequest, updatedCredential);
 
             for (int i = 0; i < 5; i++) {
+                txmaAuditQueue.clear();
+
                 var response =
                         makeRequest(
                                 Optional.of(updateRequest),
-                                Collections.emptyMap(),
+                                TEST_HEADERS,
                                 Collections.emptyMap(),
                                 Map.ofEntries(
                                         Map.entry("publicSubjectId", testPublicSubject),
@@ -687,17 +969,25 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 assertEquals(
                         retrievedMethodAfterFirstRequest.getCredentialValue(),
                         retrievedMethod.getCredentialValue());
+
+                List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+                Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+                Map<String, String> codeVerifiedAttributes = new HashMap<>();
+                codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+                codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+                codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+                codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+                eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+                verifyAuditEvents(expectedEvents, eventExpectations);
             }
         }
     }
 
     @Nested
     class ChangingBackupMethod {
-
-        private static String buildUpdateRequestWithOtp() {
-            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
-            return format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, backupSms.getDestination(), otp);
-        }
 
         @Test
         void cannotEditBackupMethod() {
@@ -706,7 +996,12 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
 
             var mfaIdentifierOfBackup = backupSms.getMfaIdentifier();
-            var updateRequest = buildUpdateRequestWithOtp();
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var updateRequest =
+                    format(
+                            UPDATE_BACKUP_SMS_METHOD_REQUEST_TEMPLATE,
+                            backupSms.getDestination(),
+                            otp);
 
             var requestPathParams =
                     Map.ofEntries(
@@ -716,7 +1011,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             requestPathParams,
                             Map.of("principalId", testInternalSubject));
@@ -732,18 +1027,40 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertRetrievedMethodHasSameBasicFields(
                     backupSms, getMethodWithPriority(retrievedMfaMethods, BACKUP));
+
+            assertNoNotificationsReceived(notificationsQueue);
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
+            codeVerifiedAttributes.put(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
     @Nested
     class Validations {
-
         @Test
         void shouldReturn401WhenPrincipalIsInvalid() {
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var updateRequest =
+                    format(
+                            UPDATE_BACKUP_SMS_METHOD_REQUEST_TEMPLATE,
+                            backupSms.getDestination(),
+                            otp);
             var response =
                     makeRequest(
-                            Optional.empty(),
-                            Collections.emptyMap(),
+                            Optional.of(updateRequest),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -751,15 +1068,24 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             Map.of("principalId", "invalid-internal-subject-id"));
 
             assertEquals(401, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
+            assertNoNotificationsReceived(notificationsQueue);
+
+            assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
 
         @Test
         void shouldReturn404WhenUserProfileIsNotFoundForPublicSubject() {
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var updateRequest =
+                    format(
+                            UPDATE_BACKUP_SMS_METHOD_REQUEST_TEMPLATE,
+                            backupSms.getDestination(),
+                            otp);
             var response =
                     makeRequest(
-                            Optional.empty(),
-                            Collections.emptyMap(),
+                            Optional.of(updateRequest),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", "invalid-public-subject-id"),
@@ -767,7 +1093,63 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             Map.of("principalId", testInternalSubject));
 
             assertEquals(404, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+            assertThat(response, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+
+            assertNoNotificationsReceived(notificationsQueue);
+        }
+
+        @Test
+        void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultSms);
+            userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+
+            handler =
+                    new MFAMethodsPutHandler(
+                            ACCOUNT_MANAGEMENT_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    format(
+                                            UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE,
+                                            INTERNATIONAL_MOBILE_NUMBER,
+                                            CommonTestVariables.TEST_OTP_CODE)),
+                            Collections.emptyMap(),
+                            Collections.emptyMap(),
+                            Map.ofEntries(
+                                    Map.entry("publicSubjectId", testPublicSubject),
+                                    Map.entry("mfaIdentifier", defaultSms.getMfaIdentifier())),
+                            Map.of("principalId", testInternalSubject));
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    response, hasJsonBody(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED));
+        }
+    }
+
+    private void verifyAuditEvents(
+            List<AuditableEvent> expectedEvents,
+            Map<String, Map<String, String>> eventExpectations) {
+        // Assert that the expected events were received
+        List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents);
+
+        // Create and verify expectations for each event
+        for (Map.Entry<String, Map<String, String>> eventEntry : eventExpectations.entrySet()) {
+            String eventName = eventEntry.getKey();
+            Map<String, String> attributes = eventEntry.getValue();
+
+            // Create the expectation for this event
+            AuditEventExpectation expectation =
+                    new AuditEventExpectation(AccountManagementAuditableEvent.valueOf(eventName));
+
+            // Add all expected attributes
+            for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
+                expectation.withAttribute(attributeEntry.getKey(), attributeEntry.getValue());
+            }
+
+            // Verify the expectation against the received events
+            expectation.assertPublished(receivedEvents);
+            assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
     }
 }

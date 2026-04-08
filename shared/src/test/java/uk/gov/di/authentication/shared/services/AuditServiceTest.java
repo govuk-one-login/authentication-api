@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -47,7 +48,8 @@ class AuditServiceTest {
                     "ip-address",
                     "phone-number",
                     "persistent-session-id",
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     enum TestEvents implements AuditableEvent {
         AUTH_TEST_EVENT_ONE;
@@ -76,7 +78,8 @@ class AuditServiceTest {
                         "ip-address",
                         "phone-number",
                         "persistent-session-id",
-                        Optional.empty());
+                        Optional.empty(),
+                        new ArrayList<>());
 
         auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, myContext);
 
@@ -192,6 +195,38 @@ class AuditServiceTest {
         assertThatTheRestrictedSectionDoesNotContainADeviceInformationObject();
     }
 
+    @Test
+    void populatesExtensionsFromAuditContext() {
+        var context = AUDIT_CONTEXT.withMetadataItem(pair("mfa-method", "DEFAULT", false));
+
+        auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, context);
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        System.out.println("audit event: " + txmaMessage);
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions");
+        assertThat(extensions.getAsJsonObject(), hasField("mfa-method"));
+    }
+
+    @Test
+    void populatesExtensionsFromAuditContextAndVarargs() {
+        var context = AUDIT_CONTEXT.withMetadataItem(pair("mfa-method", "DEFAULT", false));
+
+        auditService.submitAuditEvent(
+                AUTH_TEST_EVENT_ONE, context, pair("additional-extension", "value", false));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        System.out.println("audit event: " + txmaMessage);
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions");
+        assertThat(extensions.getAsJsonObject(), hasField("mfa-method"));
+        assertThat(extensions.getAsJsonObject(), hasField("additional-extension"));
+    }
+
     private void assertThatTheRestrictedSectionDoesNotExist() {
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
         var restricted = txmaMessage.getAsJsonObject().get("restricted");
@@ -218,5 +253,38 @@ class AuditServiceTest {
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
         var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
         assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
+    }
+
+    @Test
+    void shouldCombineMetadataFromContextAndVarargs() {
+        // Given
+        var context =
+                AUDIT_CONTEXT
+                        .withMetadataItem(pair("context-key", "context-value", false))
+                        .withMetadataItem(
+                                pair("context-restricted-key", "context-restricted-value", true));
+
+        // When
+        auditService.submitAuditEvent(
+                AUTH_TEST_EVENT_ONE,
+                context,
+                pair("vararg-key", "vararg-value", false),
+                pair("vararg-restricted-key", "vararg-restricted-value", true));
+
+        // Then
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions").getAsJsonObject();
+        assertThat(extensions, hasFieldWithValue("context-key", equalTo("context-value")));
+        assertThat(extensions, hasFieldWithValue("vararg-key", equalTo("vararg-value")));
+
+        var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
+        assertThat(
+                restricted,
+                hasFieldWithValue("context-restricted-key", equalTo("context-restricted-value")));
+        assertThat(
+                restricted,
+                hasFieldWithValue("vararg-restricted-key", equalTo("vararg-restricted-value")));
     }
 }

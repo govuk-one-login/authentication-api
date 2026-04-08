@@ -1,19 +1,24 @@
 package uk.gov.di.authentication.sharedtest.helper;
 
 import com.google.gson.JsonElement;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 
 public class AuditAssertionsHelper {
@@ -75,8 +80,15 @@ public class AuditAssertionsHelper {
         }
     }
 
-    public static void assertTxmaAuditEventsReceived(
+    public static List<String> assertTxmaAuditEventsReceived(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
+        return assertTxmaAuditEventsReceived(queue, events, true);
+    }
+
+    public static List<String> assertTxmaAuditEventsReceived(
+            SqsQueueExtension queue,
+            Collection<AuditableEvent> events,
+            boolean validateDeviceInformation) {
 
         var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
 
@@ -105,17 +117,37 @@ public class AuditAssertionsHelper {
                         .toList();
 
         // Check all expected events have been sent
-        // Check no unexpected events were sent
+        var missingEvents =
+                expectedTxmaEvents.stream()
+                        .filter(event -> !namesOfSentEvents.contains(event))
+                        .toList();
         assertTrue(
-                expectedTxmaEvents.containsAll(namesOfSentEvents)
-                        && namesOfSentEvents.containsAll(expectedTxmaEvents));
+                missingEvents.isEmpty(),
+                String.format(
+                        "Missing expected audit events: %s. Expected: %s, Actual: %s",
+                        missingEvents, expectedTxmaEvents, namesOfSentEvents));
+
+        // Check no unexpected events were sent
+        var unexpectedEvents =
+                namesOfSentEvents.stream()
+                        .filter(event -> !expectedTxmaEvents.contains(event))
+                        .toList();
+        assertTrue(
+                unexpectedEvents.isEmpty(),
+                String.format(
+                        "Received unexpected audit events: %s. Expected: %s, Actual: %s",
+                        unexpectedEvents, expectedTxmaEvents, namesOfSentEvents));
 
         // Check all sent events applied business rules, i.e. include a device_information section.
-        sentEvents.forEach(
-                sentEvent -> {
-                    var event = asJson(sentEvent);
-                    assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
-                });
+        if (validateDeviceInformation) {
+            sentEvents.forEach(
+                    sentEvent -> {
+                        var event = asJson(sentEvent);
+                        assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
+                    });
+        }
+
+        return sentEvents;
     }
 
     private static void assertValidAuditEventsHaveDeviceInformationInRestrictedSection(
@@ -126,5 +158,31 @@ public class AuditAssertionsHelper {
                         .get("restricted")
                         .getAsJsonObject()
                         .get("device_information"));
+    }
+
+    public static void containsMetadataPair(
+            AuditContext capturedObject, String field, String value) {
+        capturedObject
+                .getMetadataItemByKey(field)
+                .ifPresentOrElse(
+                        actualMetadataPairForMfaMethod ->
+                                assertEquals(
+                                        AuditService.MetadataPair.pair(field, value),
+                                        actualMetadataPairForMfaMethod),
+                        () -> fail("Missing metadata key: " + field));
+    }
+
+    public static void assertAuditEventExpectations(
+            SqsQueueExtension queue, List<AuditEventExpectation> expectedEvents) {
+        List<AuditableEvent> events =
+                expectedEvents.stream().map(AuditEventExpectation::getEvent).toList();
+
+        List<String> receivedEvents = assertTxmaAuditEventsReceived(queue, events);
+
+        for (AuditEventExpectation expectation : expectedEvents) {
+            expectation.assertPublished(receivedEvents);
+        }
+
+        assertNoTxmaAuditEventsReceived(queue);
     }
 }

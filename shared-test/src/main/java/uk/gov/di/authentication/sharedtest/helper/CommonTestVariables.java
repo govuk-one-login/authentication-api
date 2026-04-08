@@ -1,0 +1,110 @@
+package uk.gov.di.authentication.sharedtest.helper;
+
+import com.google.gson.JsonParser;
+import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+
+import java.util.List;
+import java.util.Map;
+
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+
+public class CommonTestVariables {
+
+    public static final String EMAIL = "joe.bloggs@test.com";
+    public static final String PASSWORD = "computer-1";
+    public static final String UK_MOBILE_NUMBER = "+447234567890";
+    public static final String UK_NOTIFY_MOBILE_TEST_NUMBER = "07700900000";
+    public static final String INTERNATIONAL_MOBILE_NUMBER = "+77777777777";
+    public static final String IP_ADDRESS = "192.0.2.0/24";
+    public static final String DI_PERSISTENT_SESSION_ID = "some-persistent-id-value";
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
+    public static final String SESSION_ID = "session-id";
+    public static final String CLIENT_SESSION_ID = "known-client-session-id";
+    public static final String CLIENT_NAME = "client-name";
+    public static final String CLIENT_ID = "client-id";
+    public static final String INTERNAL_COMMON_SUBJECT_ID = "urn:some:subject:identifier";
+    public static final String PUBLIC_SUBJECT_ID = "public-subject-id";
+    public static final String JOURNEY_ID = "journey-id";
+    public static final String TEST_OTP_CODE = "123456";
+    public static final Map<String, String> VALID_HEADERS =
+            Map.ofEntries(
+                    Map.entry(
+                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
+                    Map.entry(SESSION_ID_HEADER, SESSION_ID),
+                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
+
+    public static final Map<String, String> VALID_HEADERS_WITHOUT_AUDIT_ENCODED =
+            Map.ofEntries(
+                    Map.entry(
+                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
+                    Map.entry(SESSION_ID_HEADER, SESSION_ID),
+                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
+
+    public static final MFAMethod DEFAULT_AUTH_APP_METHOD =
+            MFAMethod.authAppMfaMethod(
+                    "default-auth-app-secret",
+                    true,
+                    true,
+                    PriorityIdentifier.DEFAULT,
+                    "default-auth-app-identifier");
+    public static final MFAMethod BACKUP_AUTH_APP_METHOD =
+            MFAMethod.authAppMfaMethod(
+                    "backup-auth-app-secret",
+                    true,
+                    true,
+                    PriorityIdentifier.BACKUP,
+                    "backup-auth-app-identifier");
+    public static final MFAMethod DEFAULT_SMS_METHOD =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    UK_MOBILE_NUMBER,
+                    PriorityIdentifier.DEFAULT,
+                    "default-sms-identifier");
+    public static final MFAMethod BACKUP_SMS_METHOD =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    UK_MOBILE_NUMBER,
+                    PriorityIdentifier.BACKUP,
+                    "backup-sms-identifier");
+
+    public static final Object EMAIL_CHECK_RESPONSE_TEST_DATA =
+            Map.of(
+                    "testString",
+                    "testValue1",
+                    "testNumber",
+                    456,
+                    "testBoolean",
+                    true,
+                    "testArray",
+                    List.of("testItem1", "testItem2"),
+                    "testObject",
+                    Map.of("testNestedString", "testNestedValue", "testNestedNumber", 789));
+    public static final String extensionsJsonString =
+            """
+            {
+                "emailFraudCheckResponse": {
+                    "type": "EMAIL_FRAUD_CHECK"
+                }
+            }
+            """;
+
+    public static final String restrictedJsonString =
+            """
+            {
+                "domain_name": "digital.cabinet-office.gov.uk"
+            }
+            """;
+    public static final EmailCheckResponse TEST_EMAIL_CHECK_RESPONSE =
+            new EmailCheckResponse(
+                    JsonParser.parseString(extensionsJsonString),
+                    JsonParser.parseString(restrictedJsonString));
+}

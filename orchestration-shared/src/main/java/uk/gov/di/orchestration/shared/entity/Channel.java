@@ -3,7 +3,7 @@ package uk.gov.di.orchestration.shared.entity;
 public enum Channel {
     WEB("web"),
     STRATEGIC_APP("strategic_app"),
-    MOBILE("mobile");
+    GENERIC_APP("generic_app");
 
     private final String value;
 

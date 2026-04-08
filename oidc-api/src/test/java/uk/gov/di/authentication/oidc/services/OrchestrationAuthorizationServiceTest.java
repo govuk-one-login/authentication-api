@@ -40,16 +40,15 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -74,6 +73,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class OrchestrationAuthorizationServiceTest {
 
@@ -90,10 +90,10 @@ class OrchestrationAuthorizationServiceTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
-    private final NoSessionOrchestrationService noSessionOrchestrationService =
-            mock(NoSessionOrchestrationService.class);
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
+            mock(CrossBrowserOrchestrationService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
+    private final JwksService jwksService = mock(JwksService.class);
     private PrivateKey privateKey;
 
     @RegisterExtension
@@ -106,10 +106,10 @@ class OrchestrationAuthorizationServiceTest {
                 new OrchestrationAuthorizationService(
                         configurationService,
                         dynamoClientService,
-                        ipvCapacityService,
                         kmsConnectionService,
-                        redisConnectionService,
-                        noSessionOrchestrationService);
+                        crossBrowserOrchestrationService,
+                        stateStorageService,
+                        jwksService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         String publicCertificateAsPem =
@@ -211,20 +211,6 @@ class OrchestrationAuthorizationServiceTest {
         assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentSessionId));
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldIdentifyATestUserJourney(boolean dynamoClientServiceReturns) {
-        when(dynamoClientService.isTestJourney(CLIENT_ID.toString(), "test@test.com"))
-                .thenReturn(dynamoClientServiceReturns);
-
-        assertThat(
-                orchestrationAuthorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
-                equalTo(dynamoClientServiceReturns));
-        assertThat(
-                orchestrationAuthorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
-                equalTo(dynamoClientServiceReturns));
-    }
-
     @Test
     void shouldConstructASignedAndEncryptedRequestJWT() throws JOSEException, ParseException {
         var claim1Value = "JWT claim 1";
@@ -233,9 +219,11 @@ class OrchestrationAuthorizationServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
+        when(jwksService.getPublicAuthSigningJwkWithOpaqueId())
+                .thenReturn(ecSigningKey.toPublicJWK());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwtClaimsSet = new JWTClaimsSet.Builder().claim("claim1", claim1Value).build();
-        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KEY_ID).build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         signedJWT.sign(ecdsaSigner);
         byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
@@ -269,13 +257,15 @@ class OrchestrationAuthorizationServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
+        when(jwksService.getPublicAuthSigningJwkWithOpaqueId())
+                .thenReturn(ecSigningKey.toPublicJWK());
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("claim1", claim1Value)
                         .claim("state", LONG_CLAIM)
                         .build();
-        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KEY_ID).build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         var expectedMessage =
                 jwsHeader.toBase64URL() + "." + Base64URL.encode(jwtClaimsSet.toString());
@@ -303,7 +293,7 @@ class OrchestrationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldSaveStateInRedis() {
+    void shouldSaveStateInDynamo() {
         when(configurationService.getSessionExpiry()).thenReturn(3600L);
         var sessionId = "new-session-id";
         var clientSessionId = "new-client-session-id";
@@ -311,9 +301,9 @@ class OrchestrationAuthorizationServiceTest {
 
         orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
-        verify(redisConnectionService)
-                .saveWithExpiry("auth-state:" + sessionId, state.getValue(), 3600);
-        verify(noSessionOrchestrationService)
+        var prefixedSessionId = "auth-state:" + sessionId;
+        verify(stateStorageService).storeState(prefixedSessionId, state.getValue());
+        verify(crossBrowserOrchestrationService)
                 .storeClientSessionIdAgainstState(clientSessionId, state);
     }
 
@@ -371,17 +361,6 @@ class OrchestrationAuthorizationServiceTest {
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
         encryptedJWT.decrypt(new RSADecrypter(privateKey));
         return encryptedJWT.getPayload().toSignedJWT();
-    }
-
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 
     private SdkBytes getHashSdkBytes(String jwtMessage) {

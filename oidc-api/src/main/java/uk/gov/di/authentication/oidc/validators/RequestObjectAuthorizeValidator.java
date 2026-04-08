@@ -194,16 +194,14 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                         state);
             }
 
-            if (configurationService.isPkceEnabled()) {
-                var codeChallenge = jwtClaimsSet.getStringClaim("code_challenge");
-                var codeChallengeMethod = jwtClaimsSet.getStringClaim("code_challenge_method");
+            var codeChallenge = jwtClaimsSet.getStringClaim("code_challenge");
+            var codeChallengeMethod = jwtClaimsSet.getStringClaim("code_challenge_method");
 
-                var codeChallengeError =
-                        validateCodeChallengeAndMethod(
-                                codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
-                if (codeChallengeError.isPresent()) {
-                    return errorResponse(redirectURI, codeChallengeError.get(), state);
-                }
+            var codeChallengeError =
+                    validateCodeChallengeAndMethod(
+                            codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
+            if (codeChallengeError.isPresent()) {
+                return errorResponse(redirectURI, codeChallengeError.get(), state);
             }
 
             var vtrError = validateVtr(jwtClaimsSet, client);
@@ -239,6 +237,23 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                     "login_hint present in request object, length: {}",
                                     hint.length()));
 
+            if (loginHint.isPresent() && loginHint.get().length() > 256) {
+                return errorResponse(
+                        redirectURI,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "login_hint parameter is invalid"),
+                        state);
+            }
+            var channel = jwtClaimsSet.getStringClaim("channel");
+            if (channel != null) {
+                var channelError = validateChannel(channel);
+                if (channelError.isPresent()) {
+                    return Optional.of(
+                            new AuthRequestError(channelError.get(), redirectURI, state));
+                }
+            }
+
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
         } catch (ParseException e) {
@@ -246,19 +261,9 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         }
     }
 
-    private boolean requestContainsInvalidScopes(Scope scopes, ClientRegistry clientRegistry) {
-
-        for (String scope : scopes.toStringList()) {
-            if (!ValidScopes.getAllValidScopes().contains(scope)) {
-                return true;
-            }
-
-            if (!clientRegistry.getScopes().contains(scope)) {
-                return true;
-            }
-        }
-
-        return false;
+    private boolean requestContainsInvalidScopes(Scope scopes, ClientRegistry client) {
+        return !ValidScopes.areScopesValid(scopes.toStringList())
+                || !client.getScopes().containsAll(scopes.toStringList());
     }
 
     private Optional<ErrorObject> validateVtr(JWTClaimsSet jwtClaimsSet, ClientRegistry client) {
@@ -276,6 +281,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
             }
+            logIfIdentityLoCAndIdentityUnsupported(vtrList, client);
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
                 return Optional.of(OAuth2Error.TEMPORARILY_UNAVAILABLE);

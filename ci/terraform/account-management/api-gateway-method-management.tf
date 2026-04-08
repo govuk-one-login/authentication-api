@@ -50,7 +50,7 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
 }
 
 locals {
-  api_vpc_endpoint_ids = var.home_vpc_endpoint_id == "" ? [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id] : [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id, var.home_vpc_endpoint_id]
+  api_vpc_endpoint_ids = length(var.home_vpc_endpoint_id) == 0 ? [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id] : concat([data.aws_vpc_endpoint.auth_api_vpc_endpoint.id], var.home_vpc_endpoint_id)
 }
 
 module "account-management-method_management_gateway" {

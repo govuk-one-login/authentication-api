@@ -28,19 +28,16 @@ import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class LogoutService {
 
     private static final Logger LOG = LogManager.getLogger(LogoutService.class);
 
-    private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final DynamoClientService dynamoClientService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final BackChannelLogoutService backChannelLogoutService;
     private final AuthFrontend authFrontend;
     private final NowClock nowClock;
@@ -49,50 +46,30 @@ public class LogoutService {
 
     public LogoutService(ConfigurationService configurationService) {
         this(
-                new SessionService(configurationService),
                 new OrchSessionService(configurationService),
                 new DynamoClientService(configurationService),
-                new ClientSessionService(configurationService),
                 new OrchClientSessionService(configurationService),
                 new AuditService(configurationService),
-                new CloudwatchMetricsService(),
-                new BackChannelLogoutService(configurationService),
-                new AuthFrontend(configurationService),
-                new NowClock(Clock.systemUTC()));
-    }
-
-    public LogoutService(ConfigurationService configurationService, RedisConnectionService redis) {
-        this(
-                new SessionService(configurationService, redis),
-                new OrchSessionService(configurationService),
-                new DynamoClientService(configurationService),
-                new ClientSessionService(configurationService, redis),
-                new OrchClientSessionService(configurationService),
-                new AuditService(configurationService),
-                new CloudwatchMetricsService(),
+                new Metrics(),
                 new BackChannelLogoutService(configurationService),
                 new AuthFrontend(configurationService),
                 new NowClock(Clock.systemUTC()));
     }
 
     public LogoutService(
-            SessionService sessionService,
             OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             BackChannelLogoutService backChannelLogoutService,
             AuthFrontend authFrontend,
             NowClock nowClock) {
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.backChannelLogoutService = backChannelLogoutService;
         this.authFrontend = authFrontend;
         this.nowClock = nowClock;
@@ -114,20 +91,12 @@ public class LogoutService {
 
     private void destroySessions(DestroySessionsRequest request) {
         for (String clientSessionId : request.getClientSessions()) {
-            var clientSessionOpt = clientSessionService.getClientSession(clientSessionId);
             var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
-            logIfClientSessionsAreNotEqual(
-                    clientSessionOpt.orElse(null), orchClientSessionOpt.orElse(null));
 
             sendBackchannelLogoutIfPresent(orchClientSessionOpt);
-
-            LOG.info("Deleting Client Session");
-            clientSessionService.deleteStoredClientSession(clientSessionId);
             LOG.info("Deleting Orch Client session");
             orchClientSessionService.deleteStoredClientSession(clientSessionId);
         }
-        LOG.info("Deleting Session");
-        sessionService.deleteStoredSession(request.getSessionId());
 
         LOG.info("Deleting Orch Session");
         orchSessionService.deleteSession(request.getSessionId());
@@ -145,7 +114,7 @@ public class LogoutService {
         destroySessionsRequest.ifPresent(
                 request -> {
                     destroySessions(request);
-                    cloudwatchMetricsService.incrementLogout(clientId);
+                    metrics.incrementLogout(clientId);
                 });
 
         URI logoutUri;
@@ -182,7 +151,7 @@ public class LogoutService {
             URI errorRedirectUri) {
         var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
         destroySessions(request);
-        cloudwatchMetricsService.incrementLogout(Optional.of(clientId));
+        metrics.incrementLogout(Optional.of(clientId));
         return generateLogoutResponse(
                 errorRedirectUri,
                 LogoutReason.REAUTHENTICATION_FAILURE,
@@ -201,7 +170,7 @@ public class LogoutService {
         var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
 
         destroySessions(request);
-        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
+        metrics.incrementLogout(Optional.of(clientId), Optional.of(intervention));
 
         URI redirectURI;
         if (intervention.getBlocked()) {
@@ -211,6 +180,7 @@ public class LogoutService {
             redirectURI = authFrontend.accountSuspendedURI();
             LOG.info("Generating Account Intervention suspended logout response");
         } else {
+            LOG.error("Account status must be blocked or suspended");
             throw new RuntimeException("Account status must be blocked or suspended");
         }
 
@@ -235,6 +205,23 @@ public class LogoutService {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.of(sessionAge));
+    }
+
+    public APIGatewayProxyResponseEvent handleSessionInvalidationLogout(
+            DestroySessionsRequest request,
+            String internalCommonSubjectId,
+            APIGatewayProxyRequestEvent input,
+            String clientId) {
+        LOG.info("Handling session invalidation logout");
+        destroySessions(request);
+        var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
+        return generateLogoutResponse(
+                // ATO-1796: Create new error page on auth frontend for this scenario
+                authFrontend.defaultLogoutURI(),
+                LogoutReason.INTERVENTION,
+                auditUser,
+                Optional.of(clientId),
+                Optional.empty());
     }
 
     private void sendAuditEvent(

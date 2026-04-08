@@ -1,0 +1,88 @@
+package uk.gov.di.authentication.ipv.services;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
+
+import java.util.Map;
+
+import static uk.gov.di.authentication.ipv.utils.IdentityProgressUtils.getIdentityProgressStatus;
+
+public class IdentityProgressService {
+
+    private static final Logger LOG = LogManager.getLogger(IdentityProgressService.class);
+    private static final int DELAY_IN_MS = 500;
+    private final ConfigurationService configurationService;
+    private final DynamoIdentityService dynamoIdentityService;
+    private final AuditService auditService;
+    private final Metrics metrics;
+    private final Sleeper sleeper;
+    private final int maxRetries;
+
+    public IdentityProgressService(ConfigurationService configurationService) {
+        this(
+                configurationService,
+                new DynamoIdentityService(configurationService),
+                new AuditService(configurationService),
+                new Metrics(configurationService),
+                Thread::sleep);
+    }
+
+    public IdentityProgressService(
+            ConfigurationService configurationService,
+            DynamoIdentityService dynamoIdentityService,
+            AuditService auditService,
+            Metrics metrics,
+            Sleeper sleeper) {
+        this.configurationService = configurationService;
+        this.dynamoIdentityService = dynamoIdentityService;
+        this.auditService = auditService;
+        this.metrics = metrics;
+        this.sleeper = sleeper;
+        this.maxRetries = (int) (configurationService.getSyncWaitForSpotTimeout() / DELAY_IN_MS);
+    }
+
+    public IdentityProgressStatus pollForStatus(String clientSessionId, AuditContext auditContext)
+            throws InterruptedException {
+        var status = IdentityProgressStatus.PROCESSING;
+        var attempts = 1;
+        while (status == IdentityProgressStatus.PROCESSING) {
+            LOG.info(
+                    "Attempting to find identity credentials in dynamo. Attempt {} out of {}",
+                    attempts,
+                    maxRetries);
+            var identityCredentials = dynamoIdentityService.getIdentityCredentials(clientSessionId);
+            status = getIdentityProgressStatus(identityCredentials, attempts);
+            if (status == IdentityProgressStatus.PROCESSING) {
+                if (attempts >= maxRetries) {
+                    LOG.info("Max retries of {} reached. Returning ERROR", maxRetries);
+                    status = IdentityProgressStatus.ERROR;
+                } else {
+                    sleeper.sleep(DELAY_IN_MS);
+                    attempts++;
+                }
+            }
+        }
+        LOG.info("Client session ID {} identity progress status: {}", clientSessionId, status);
+        metrics.increment(
+                "ProcessingIdentity",
+                Map.of(
+                        "Environment",
+                        configurationService.getEnvironment(),
+                        "Status",
+                        status.toString()));
+        auditService.submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
+
+        return status;
+    }
+
+    interface Sleeper {
+        void sleep(long millis) throws InterruptedException;
+    }
+}

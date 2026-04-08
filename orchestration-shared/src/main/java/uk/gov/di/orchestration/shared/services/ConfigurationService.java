@@ -8,8 +8,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
-import software.amazon.awssdk.services.ssm.model.GetParametersRequest;
-import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
@@ -21,9 +19,7 @@ import java.net.URL;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
@@ -40,8 +36,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     private SsmClient ssmClient;
-    private Map<String, String> ssmRedisParameters;
-
     private String notifyCallbackBearerToken;
     protected SystemService systemService;
 
@@ -57,6 +51,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     private boolean getFlagOrFalse(String envVar) {
         return System.getenv().containsKey(envVar) && Boolean.parseBoolean(System.getenv(envVar));
+    }
+
+    private boolean getFlagOrTrue(String envVar) {
+        return Optional.ofNullable(System.getenv(envVar))
+                .map(s -> Boolean.parseBoolean(s))
+                .orElse(true);
     }
 
     private URI getURIOrDefault(String envVar, String defaultUri) {
@@ -166,16 +166,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CLIENT_ID", "");
     }
 
-    public String getDocAppEncryptionKeyID() {
-        return System.getenv().getOrDefault("DOC_APP_ENCRYPTION_KEY_ID", "");
-    }
-
-    public URI getDocAppJwksURI() {
-        return getURIOrEmpty("DOC_APP_JWKS_URL");
+    public URL getDocAppJwksUrl() {
+        return getURLOrThrow("DOC_APP_JWKS_URL");
     }
 
     public String getDocAppTokenSigningKeyAlias() {
-        return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
+        return System.getenv("DOC_APP_SIGNING_KEY_ALIAS");
     }
 
     public String getDocAppCriV2DataEndpoint() {
@@ -214,32 +210,24 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
 
-    public boolean fetchRpPublicKeyFromJwksEnabled() {
-        return getFlagOrFalse("FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED");
-    }
-
     public String getSpotQueueURI() {
         return System.getenv("SPOT_QUEUE_URL");
+    }
+
+    public String getSpotRequestQueueURI() {
+        return System.getenv("SPOT_REQUEST_QUEUE_URL");
     }
 
     public URI getAuthFrontendBaseURL() {
         return getURIOrThrow("AUTH_FRONTEND_BASE_URL");
     }
 
-    public URI getOrchFrontendBaseURL() {
-        return getURIOrThrow("ORCH_FRONTEND_BASE_URL");
-    }
-
-    public boolean getOrchFrontendEnabled() {
-        return getFlagOrFalse("ORCH_FRONTEND_ENABLED");
-    }
-
-    public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
-        return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS");
+    public String getAuthSigningKeyAlias() {
+        return System.getenv("AUTH_SIGNING_KEY_ALIAS");
     }
 
     public String getOrchestrationToAuthenticationEncryptionPublicKey() {
-        var paramName = format("{0}-auth-public-encryption-key", getEnvironment());
+        var paramName = System.getenv("ORCH_TO_AUTH_ENCRYPTION_KEY_PARAM");
         try {
             var request =
                     GetParameterRequest.builder().withDecryption(true).name(paramName).build();
@@ -295,25 +283,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("IPV_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public String getIPVAuthEncryptionPublicKey() {
-        var paramName = format("{0}-ipv-public-encryption-key", getEnvironment());
-        try {
-            var request =
-                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
-            return getSsmClient().getParameter(request).parameter().value();
-        } catch (ParameterNotFoundException e) {
-            LOG.error("No parameter exists with name: {}", paramName);
-            throw new RuntimeException(e);
-        }
-    }
-
     public URL getIPVJwksUrl() {
         return getURLOrThrow("IPV_JWKS_URL");
     }
 
-    public int getIPVJwkCacheExpirationInSeconds() {
+    public int getJwkCacheExpirationInSeconds() {
         return Integer.parseInt(
-                System.getenv().getOrDefault("IPV_JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
+                System.getenv().getOrDefault("JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
     }
 
     public String getInternalSectorURI() {
@@ -339,29 +315,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrThrow("OIDC_API_BASE_URL");
     }
 
-    public String getRedisHost() {
-        return getSsmRedisParameters()
-                .get(format("{0}-{1}-redis-master-host", getEnvironment(), getRedisKey()));
-    }
-
-    public Optional<String> getRedisPassword() {
-        return Optional.ofNullable(
-                getSsmRedisParameters()
-                        .get(format("{0}-{1}-redis-password", getEnvironment(), getRedisKey())));
-    }
-
-    public int getRedisPort() {
-        return Integer.parseInt(
-                getSsmRedisParameters()
-                        .get(format("{0}-{1}-redis-port", getEnvironment(), getRedisKey())));
-    }
-
-    public boolean getUseRedisTLS() {
-        return Boolean.parseBoolean(
-                getSsmRedisParameters()
-                        .get(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey())));
-    }
-
     public String getSessionCookieAttributes() {
         return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
                 .orElse("Secure; HttpOnly;");
@@ -381,12 +334,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("LANGUAGE_COOKIE_MAX_AGE", "31536000"));
     }
 
-    public long getSessionExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
+    public long getRefreshTokenExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("REFRESH_TOKEN_EXPIRY", "3600"));
     }
 
-    public boolean supportMaxAgeEnabled() {
-        return getFlagOrFalse("SUPPORT_MAX_AGE_ENABLED");
+    public long getSessionExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }
 
     public String getStorageTokenClaimName() {
@@ -416,24 +369,41 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
 
+    public String getNextExternalTokenSigningKeyAliasV2() {
+        return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2");
+    }
+
+    public String getNextExternalTokenSigningKeyRsaAliasV2() {
+        return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2");
+    }
+
+    public boolean isPublishNextExternalTokenSigningKeysEnabledV2() {
+        return getFlagOrFalse("PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2");
+    }
+
     public boolean isRsaSigningAvailable() {
-        return List.of("build", "staging", "integration", "production").contains(getEnvironment());
+        return List.of("dev", "build", "staging", "integration", "production")
+                .contains(getEnvironment());
+    }
+
+    public boolean isUseNewV2TokenSigningKeysEnabled() {
+        return getFlagOrFalse("USE_NEW_V2_TOKEN_SIGNING_KEYS");
+    }
+
+    public boolean isSingleFactorAccountDeletionEnabled() {
+        return getFlagOrFalse("SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED");
+    }
+
+    public boolean isNewSpotRequestQueueWritingEnabled() {
+        return getFlagOrFalse("NEW_SPOT_REQUEST_QUEUE_WRITING");
+    }
+
+    public boolean isOldSpotRequestQueueWritingEnabled() {
+        return getFlagOrTrue("OLD_SPOT_REQUEST_QUEUE_WRITING");
     }
 
     public String getStorageTokenSigningKeyAlias() {
         return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public boolean isReturnAuthTimeInIdTokenEnabled() {
-        return getFlagOrFalse("RETURN_AUTH_TIME_IN_ID_TOKEN_ENABLED");
-    }
-
-    public boolean isUseIPVJwksEndpointEnabled() {
-        return getFlagOrFalse("USE_IPV_JWKS_ENDPOINT");
-    }
-
-    public boolean isUseStronglyConsistentReads() {
-        return getFlagOrFalse("USE_STRONGLY_CONSISTENT_READS");
     }
 
     public Optional<String> getIPVCapacity() {
@@ -447,29 +417,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         } catch (ParameterNotFoundException e) {
             return Optional.empty();
         }
-    }
-
-    private Map<String, String> getSsmRedisParameters() {
-        if (ssmRedisParameters == null) {
-            var getParametersRequest =
-                    GetParametersRequest.builder()
-                            .names(
-                                    format(
-                                            "{0}-{1}-redis-master-host",
-                                            getEnvironment(), getRedisKey()),
-                                    format(
-                                            "{0}-{1}-redis-password",
-                                            getEnvironment(), getRedisKey()),
-                                    format("{0}-{1}-redis-port", getEnvironment(), getRedisKey()),
-                                    format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey()))
-                            .withDecryption(true)
-                            .build();
-            var result = getSsmClient().getParameters(getParametersRequest);
-            ssmRedisParameters =
-                    result.parameters().stream()
-                            .collect(Collectors.toMap(Parameter::name, Parameter::value));
-        }
-        return ssmRedisParameters;
     }
 
     private SsmClient getSsmClient() {
@@ -498,19 +445,24 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return ssmClient;
     }
 
-    private String getRedisKey() {
-        return System.getenv("REDIS_KEY");
-    }
-
     public String getBackChannelLogoutQueueURI() {
         return System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI");
     }
 
-    public String getNotifyTemplateId(String templateName) {
-        return System.getenv(templateName);
+    public long getBackChannelLogoutCallTimeout() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("BACK_CHANNEL_LOGOUT_CALL_TIMEOUT", "15000"));
     }
 
-    public boolean isPkceEnabled() {
-        return getFlagOrFalse("PKCE_ENABLED");
+    public boolean isSyncWaitForSpotEnabled() {
+        return getFlagOrFalse("USE_SYNC_WAIT_FOR_SPOT");
+    }
+
+    public long getSyncWaitForSpotTimeout() {
+        return Long.parseLong(System.getenv().getOrDefault("SYNC_WAIT_FOR_SPOT_TIMEOUT", "5000"));
+    }
+
+    public String getNotifyTemplateId(String templateName) {
+        return System.getenv(templateName);
     }
 }

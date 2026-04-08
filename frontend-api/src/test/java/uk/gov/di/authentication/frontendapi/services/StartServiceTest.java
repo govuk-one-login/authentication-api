@@ -18,15 +18,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -34,10 +30,9 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.net.URI;
 import java.security.KeyPairGenerator;
@@ -49,15 +44,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
-import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.retrieveLevelOfConfidence;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class StartServiceTest {
@@ -67,7 +59,6 @@ class StartServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final String SESSION_ID = "a-session-id";
-    private static final Session SESSION = new Session();
     private static final AuthSessionItem AUTH_SESSION =
             new AuthSessionItem()
                     .withEmailAddress(EMAIL)
@@ -80,33 +71,25 @@ class StartServiceTest {
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final State STATE = new State();
     private final UserContext basicUserContext =
-            buildUserContext(true, ClientType.WEB, true, Optional.empty(), Optional.empty(), false);
+            buildUserContext(Optional.empty(), Optional.empty());
 
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private StartService startService;
 
     @BeforeEach
     void setup() {
-        startService = new StartService(dynamoClientService, dynamoService, sessionService);
+        startService = new StartService(dynamoService);
     }
 
     @Test
     void shouldCreateUserContextFromSessionAndAuthSession() {
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.getValue(), false)));
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(mock(UserProfile.class)));
         when(dynamoService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn((mock(UserCredentials.class)));
-        var userContext = startService.buildUserContext(SESSION, AUTH_SESSION);
+        var userContext = startService.buildUserContext(AUTH_SESSION);
 
-        assertThat(userContext.getSession(), equalTo(SESSION));
         assertThat(userContext.getAuthSession(), equalTo(AUTH_SESSION));
     }
 
@@ -124,36 +107,27 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartInfo() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl"), "some-cookie-consent", null, false, false),
-                Arguments.of(jsonArrayOf("Cl.Cm"), null, "ga-tracking-id", false, true));
+                Arguments.of("some-cookie-consent", null, false),
+                Arguments.of(null, "ga-tracking-id", true));
     }
 
     @ParameterizedTest
     @MethodSource("userStartInfo")
     void shouldCreateUserStartInfo(
-            String vtr,
-            String cookieConsent,
-            String gaTrackingId,
-            boolean rpSupportsIdentity,
-            boolean isAuthenticated) {
+            String cookieConsent, String gaTrackingId, boolean isAuthenticated) {
         var userContext =
                 buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        rpSupportsIdentity,
                         Optional.of(
                                 new UserProfile()
                                         .withSubjectID(new Subject().getValue())
                                         .withEmail(EMAIL)),
-                        Optional.empty(),
-                        false);
+                        Optional.empty());
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
-                        LevelOfConfidence.NONE,
                         cookieConsent,
                         gaTrackingId,
-                        true,
+                        false,
                         false,
                         false,
                         isAuthenticated,
@@ -167,47 +141,6 @@ class StartServiceTest {
         assertThat(userStartInfo.isBlockedForReauth(), equalTo(false));
     }
 
-    private static Stream<Arguments> userStartIdentityInfo() {
-        return Stream.of(
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", true, true, true),
-                Arguments.of(jsonArrayOf("Cl.Cm"), "P0", false, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, false, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", true, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, true, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, false, false));
-    }
-
-    @ParameterizedTest
-    @MethodSource("userStartIdentityInfo")
-    void shouldCreateUserStartInfoWithCorrectIdentityRequiredValue(
-            String vtr,
-            String levelOfConfidence,
-            boolean expectedIdentityRequiredValue,
-            boolean rpSupportsIdentity,
-            boolean identityEnabled) {
-        var userContext =
-                buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        rpSupportsIdentity,
-                        Optional.empty(),
-                        Optional.empty(),
-                        false);
-        var userStartInfo =
-                startService.buildUserStartInfo(
-                        userContext,
-                        retrieveLevelOfConfidence(levelOfConfidence),
-                        "some-cookie-consent",
-                        "some-ga-tracking-id",
-                        identityEnabled,
-                        false,
-                        false,
-                        false,
-                        false);
-
-        assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
-    }
-
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void shouldCreateUserStartInfoWithCorrectReauthBlockedValue(boolean isBlockedForReauth) {
@@ -218,7 +151,6 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
-                        NONE,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -282,68 +214,52 @@ class StartServiceTest {
         return Stream.of(
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         CredentialTrustLevel.LOW_LEVEL,
                         true,
                         authAppUserProfileVerified,
-                        authAppUserCredentialsVerified,
-                        MFAMethodType.AUTH_APP),
+                        authAppUserCredentialsVerified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         null,
                         false,
                         authAppUserProfileUnverified,
-                        authAppUserCredentialsUnverified,
-                        null),
+                        authAppUserCredentialsUnverified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         CredentialTrustLevel.LOW_LEVEL,
                         true,
                         smsUserProfileVerified,
-                        smsUserCredentialsVerified,
-                        MFAMethodType.SMS),
+                        smsUserCredentialsVerified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         null,
                         false,
                         smsUserProfileUnverified,
-                        smsUserCredentialsUnverified,
-                        null),
+                        smsUserCredentialsUnverified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         null,
                         false,
                         unverifiedUserProfile,
-                        unverifiedUserCredentials,
-                        null),
+                        unverifiedUserCredentials),
                 Arguments.of(
                         jsonArrayOf("Cl"),
-                        false,
                         CredentialTrustLevel.LOW_LEVEL,
                         false,
                         authAppUserProfileVerified,
-                        authAppUserCredentialsVerified,
-                        MFAMethodType.AUTH_APP),
+                        authAppUserCredentialsVerified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         false,
                         authAppUserProfileVerified,
-                        authAppUserCredentialsVerified,
-                        MFAMethodType.AUTH_APP),
+                        authAppUserCredentialsVerified),
                 Arguments.of(
                         jsonArrayOf("P2.Cl.Cm"),
-                        true,
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         false,
                         authAppUserProfileVerified,
-                        authAppUserCredentialsVerified,
-                        MFAMethodType.AUTH_APP));
+                        authAppUserCredentialsVerified));
     }
 
     @Test
@@ -353,7 +269,6 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
-                        NONE,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -369,30 +284,19 @@ class StartServiceTest {
     @MethodSource("userStartUpliftInfo")
     void shouldCreateUserStartInfoWithCorrectUpliftRequiredValue(
             String vtrString,
-            boolean expectedIdentityRequiredValue,
             CredentialTrustLevel credentialTrustLevel,
             boolean expectedUpliftRequiredValue,
             UserProfile userProfile,
-            UserCredentials userCredentials,
-            MFAMethodType expectedMfaMethodType) {
-        var userContext =
-                buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        true,
-                        Optional.of(userProfile),
-                        Optional.of(userCredentials),
-                        false);
+            UserCredentials userCredentials) {
+        var userContext = buildUserContext(Optional.of(userProfile), Optional.of(userCredentials));
         var requestedVtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(vtrString));
         var requestedCredentialTrustLevel = requestedVtr.getCredentialTrustLevel();
-        var levelOfConfidence = requestedVtr.getLevelOfConfidence();
         var upliftRequired =
                 startService.isUpliftRequired(requestedCredentialTrustLevel, credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
-                        levelOfConfidence,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -460,18 +364,11 @@ class StartServiceTest {
                         .withEmail(EMAIL)
                         .withPhoneNumberVerified(false);
         var userCredentials = new UserCredentials().withEmail(EMAIL).withMfaMethods(mfaMethods);
-        var userContext =
-                buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        true,
-                        Optional.of(userProfile),
-                        Optional.of(userCredentials),
-                        false);
+        var userContext = buildUserContext(Optional.of(userProfile), Optional.of(userCredentials));
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, NONE, "true", "tracking-id", true, false, false, false, false);
+                        userContext, "true", "tracking-id", true, false, false, false, false);
 
         assertThat(userStartInfo.mfaMethodType(), equalTo(expectedMfaMethodType));
     }
@@ -484,18 +381,11 @@ class StartServiceTest {
                         .withEmail(EMAIL)
                         .withPhoneNumberVerified(false);
         var userCredentials = Optional.<UserCredentials>empty();
-        var userContext =
-                buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        true,
-                        Optional.of(userProfile),
-                        userCredentials,
-                        false);
+        var userContext = buildUserContext(Optional.of(userProfile), userCredentials);
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, NONE, "true", "tracking-id", true, false, false, false, false);
+                        userContext, "true", "tracking-id", true, false, false, false, false);
 
         assertThat(userStartInfo.mfaMethodType(), equalTo(MFAMethodType.NONE));
     }
@@ -503,32 +393,25 @@ class StartServiceTest {
     @ParameterizedTest
     @MethodSource("clientStartInfo")
     void shouldCreateClientStartInfo(
-            boolean cookieConsentShared,
-            ClientType clientType,
-            SignedJWT signedJWT,
-            boolean oneLoginService) {
-        var userContext =
-                buildUserContext(
-                        cookieConsentShared,
-                        clientType,
-                        false,
-                        Optional.empty(),
-                        Optional.empty(),
-                        oneLoginService);
+            boolean cookieConsentShared, SignedJWT signedJWT, boolean oneLoginService) {
         var scopes = Objects.nonNull(signedJWT) ? DOC_APP_SCOPES : SCOPES;
 
         var clientStartInfo =
                 startService.buildClientStartInfo(
-                        userContext.getClient().orElseThrow(),
+                        ServiceType.MANDATORY.toString(),
+                        CLIENT_NAME,
                         scopes.toStringList(),
                         REDIRECT_URI,
-                        STATE);
+                        STATE,
+                        cookieConsentShared,
+                        oneLoginService);
 
         assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
         assertThat(clientStartInfo.redirectUri(), equalTo(REDIRECT_URI));
         assertThat(clientStartInfo.state().getValue(), equalTo(STATE.getValue()));
         assertThat(clientStartInfo.isOneLoginService(), equalTo(oneLoginService));
+        assertThat(clientStartInfo.serviceType(), equalTo(ServiceType.MANDATORY.toString()));
 
         var expectedScopes = SCOPES;
         if (Objects.nonNull(signedJWT)) {
@@ -541,16 +424,8 @@ class StartServiceTest {
     @MethodSource("cookieConsentValues")
     void shouldReturnCookieConsentValueWhenPresentAndValid(
             String cookieConsentValue, boolean cookieConsentShared, String expectedValue) {
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(),
-                                        CLIENT_ID.getValue(),
-                                        cookieConsentShared)));
-
         assertThat(
-                startService.getCookieConsentValue(cookieConsentValue, CLIENT_ID.getValue()),
+                startService.getCookieConsentValue(cookieConsentValue, cookieConsentShared),
                 equalTo(expectedValue));
     }
 
@@ -572,40 +447,15 @@ class StartServiceTest {
     private static Stream<Arguments> clientStartInfo()
             throws NoSuchAlgorithmException, JOSEException {
         return Stream.of(
-                Arguments.of(false, ClientType.WEB, null, false),
-                Arguments.of(true, ClientType.WEB, null, false),
-                Arguments.of(true, ClientType.WEB, null, true),
-                Arguments.of(true, ClientType.APP, generateSignedJWT(), false));
-    }
-
-    private ClientRegistry generateClientRegistry(
-            String redirectURI, String clientID, boolean cookieConsentShared) {
-        return new ClientRegistry()
-                .withRedirectUrls(singletonList(redirectURI))
-                .withClientID(clientID)
-                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .withPublicKey(null)
-                .withScopes(singletonList("openid"))
-                .withCookieConsentShared(cookieConsentShared);
+                Arguments.of(false, null, false),
+                Arguments.of(true, null, false),
+                Arguments.of(true, null, true),
+                Arguments.of(true, generateSignedJWT(), false));
     }
 
     private UserContext buildUserContext(
-            boolean cookieConsentShared,
-            ClientType clientType,
-            boolean identityVerificationSupport,
-            Optional<UserProfile> userProfile,
-            Optional<UserCredentials> userCredentials,
-            boolean oneLoginService) {
-        var clientRegistry =
-                new ClientRegistry()
-                        .withClientID(CLIENT_ID.getValue())
-                        .withClientName(CLIENT_NAME)
-                        .withCookieConsentShared(cookieConsentShared)
-                        .withClientType(clientType.getValue())
-                        .withIdentityVerificationSupported(identityVerificationSupport)
-                        .withOneLoginService(oneLoginService);
-        return UserContext.builder(SESSION)
-                .withClient(clientRegistry)
+            Optional<UserProfile> userProfile, Optional<UserCredentials> userCredentials) {
+        return UserContext.builder(AUTH_SESSION)
                 .withUserCredentials(userCredentials)
                 .withUserProfile(userProfile)
                 .build();

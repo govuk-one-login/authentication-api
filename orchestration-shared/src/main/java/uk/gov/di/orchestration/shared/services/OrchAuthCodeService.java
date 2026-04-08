@@ -40,24 +40,29 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
             DynamoDbTable<OrchAuthCodeItem> dynamoDbTable,
             ConfigurationService configurationService,
             Clock clock) {
-        super(dynamoDbTable, dynamoDbClient, configurationService);
+        super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getAuthCodeExpiry();
         this.nowClock = new NowHelper.NowClock(clock);
         this.objectMapper = SerializationService.getInstance();
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientId, String clientSessionId, String email, Long authTime) {
+            String clientId,
+            String clientSessionId,
+            String email,
+            Long authTime,
+            String internalPairwiseSubjectId) {
         LOG.info("Generating and saving authorisation code to orch auth code store");
 
         AuthorizationCode authorizationCode = new AuthorizationCode();
 
         var exchangeData =
                 new AuthCodeExchangeData()
-                        .setClientId(clientId)
-                        .setClientSessionId(clientSessionId)
-                        .setEmail(email)
-                        .setAuthTime(authTime);
+                        .withClientId(clientId)
+                        .withClientSessionId(clientSessionId)
+                        .withEmail(email)
+                        .withAuthTime(authTime)
+                        .withInternalPairwiseSubjectId(internalPairwiseSubjectId);
 
         var itemTtl = nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS).toInstant().getEpochSecond();
 
@@ -101,28 +106,10 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
 
         if (authCodeItem.isEmpty()) {
             LOG.info(
-                    "No orch auth code item found. Retrying with strongly consistent reads. Code: {}",
+                    "No orch auth code item found with strongly consistent reads enabled. Code: {}",
                     code);
 
-            try {
-                authCodeItem = getWithConsistentRead(code);
-            } catch (Exception e) {
-                logAndThrowOrchAuthCodeException(
-                        String.format(
-                                "Failed to get orch auth code item with strongly consistent reads. Code: %s",
-                                code),
-                        e);
-            }
-
-            if (authCodeItem.isEmpty()) {
-                LOG.info(
-                        "No orch auth code item found on retry with strongly consistent reads enabled. No further retries, returning. Code: {}",
-                        code);
-
-                return Optional.empty();
-            }
-
-            LOG.info("Orch auth code item found on retry with strongly consistent reads enabled.");
+            return Optional.empty();
         }
 
         Optional<OrchAuthCodeItem> unusedAuthCodeItem = authCodeItem.filter(c -> !c.getIsUsed());

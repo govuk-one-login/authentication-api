@@ -1,0 +1,459 @@
+---
+openapi: 3.0.1
+info:
+  title: "Authentication Internal API"
+  version: "1.0.0"
+paths:
+  /.well-known/mfa-reset-jwk.json:
+    get:
+      responses:
+        "200":
+          description: "Successfully retrieved MFA reset storage token JWK set"
+        "500":
+          description: "Failed to serve storage token signature verification key"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaResetStorageTokenJwkFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /.well-known/reverification-jwk.json:
+    get:
+      responses:
+        "200":
+          description: "Successfully retrieved reverification JAR JWK set"
+        "500":
+          description: "Failed to serve reverification JAR signature verification key"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaResetJarJwkFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /.well-known/amc-jwks.json:
+    get:
+      responses:
+        "200":
+          description: "Successfully retrieved JWKS"
+          content:
+            application/json:
+              schema:
+                type: string
+        "400":
+          description: "Bad Request / Forbidden"
+        "404":
+          description: "JWKS file not found"
+        "500":
+          description: "Internal Server Error"
+      x-amazon-apigateway-integration:
+        type: "aws"
+        httpMethod: "GET"
+        credentials:
+          Fn::GetAtt: [AuthInternalApiS3ExecutionRole, Arn]
+        uri:
+          Fn::Sub:
+            - "arn:aws:apigateway:${AWS::Region}:s3:path/${Env}-amc-jwks/.well-known/amc-jwks.json"
+            - Env:
+                Fn::If:
+                  - UseSubEnvironment
+                  - Ref: SubEnvironment
+                  - Ref: Environment
+        passthroughBehavior: "when_no_match"
+        responses:
+          "404":
+            statusCode: "404"
+            selectionPattern: "404"
+          "400":
+            statusCode: "400"
+            selectionPattern: "4\\d{2}" # Regex for any 4XX status
+          "500":
+            statusCode: "500"
+            selectionPattern: "5\\d{2}" # Regex for any 5XX status
+          default:
+            statusCode: "200"
+  /account-interventions:
+    post:
+      responses:
+        "200":
+          description: "Successfully retrieved account interventions status"
+        "400":
+          description: "Bad Request - session missing, missing params, or no user profile"
+        "429":
+          description: "Account interventions API throttled"
+        "500":
+          description: "Account interventions server error"
+        "502":
+          description: "Account interventions bad gateway"
+        "504":
+          description: "Account interventions gateway timeout"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountInterventionsFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /account-recovery:
+    post:
+      responses:
+        "200":
+          description: "Successfully determined account recovery permission"
+        "400":
+          description: "Bad Request - session missing or missing params"
+        "500":
+          description: "Internal Server Error - serialization failure"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountRecoveryFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /amc-authorize:
+    post:
+      responses:
+        "200":
+          description: "Successfully generated AMC authorization URL and cookie"
+        "400":
+          description: "Bad Request - session missing, missing params, no user profile, JWT encoding or transcoding error"
+        "500":
+          description: "Internal Server Error - serialization, signing, or encryption error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AMCAuthorizeFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /amc-callback:
+    post:
+      responses:
+        "200":
+          description: "Successfully retrieved AMC journey outcome"
+        "400":
+          description: "Bad Request - session missing, missing params, JWT encoding/transcoding error, or journey outcome error response"
+        "500":
+          description: "Internal Server Error - signing, encryption, token, or journey outcome error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AMCCallbackFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /check-email-fraud-block:
+    post:
+      responses:
+        "200":
+          description: "Successfully checked email fraud block status"
+        "400":
+          description: "Bad Request - session missing or missing params"
+        "500":
+          description: "Internal Server Error - serialization failure"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CheckEmailFraudBlockFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /check-reauth-user:
+    post:
+      responses:
+        "200":
+          description: "Re-authentication user check passed"
+        "400":
+          description: "Bad Request - session missing, missing params, too many reauth attempts, or invalid user context"
+        "404":
+          description: "User not found or pairwise ID mismatch"
+        "500":
+          description: "Internal Server Error - storage or configuration error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CheckReAuthUserFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /id-reverification-state:
+    post:
+      responses:
+        "200":
+          description: "Successfully retrieved orchestration redirect URL"
+        "404":
+          description: "State not found"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${IDReverificationStateFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /login:
+    post:
+      responses:
+        "200":
+          description: "Successfully authenticated user"
+        "400":
+          description: "Bad Request - session missing, missing params, account not found, too many attempts, or MFA code blocked"
+        "401":
+          description: "Invalid login credentials"
+        "500":
+          description: "Internal Server Error - MFA method error, storage, or configuration error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LoginFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /mfa:
+    post:
+      responses:
+        "204":
+          description: "MFA code sent successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, invalid notification type, no user profile, phone not registered, or code blocked"
+        "500":
+          description: "Internal Server Error - MFA method error, storage, or configuration error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /mfa-reset-authorize:
+    post:
+      responses:
+        "200":
+          description: "Successfully generated MFA reset IPV reverification redirect URI"
+        "400":
+          description: "Bad Request - session missing or missing params"
+        "500":
+          description: "MFA reset JAR generation error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaResetAuthorizeFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /orch-auth-code:
+    post:
+      responses:
+        "200":
+          description: "Successfully generated authentication auth code"
+        "400":
+          description: "Bad Request - session missing, missing params, or no user profile"
+        "500":
+          description: "Internal Server Error - unexpected error during auth code generation"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OrchAuthCodeFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /reset-password:
+    post:
+      responses:
+        "204":
+          description: "Password reset successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, password validation failure, or new password matches old"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ResetPasswordFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /reset-password-request:
+    post:
+      responses:
+        "200":
+          description: "Password reset request processed with MFA method info"
+        "400":
+          description: "Bad Request - session missing, missing params, too many reset requests, or too many invalid codes"
+        "404":
+          description: "User not found"
+        "500":
+          description: "Internal Server Error - MFA method error or queue error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ResetPasswordRequestFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /reverification-result:
+    post:
+      responses:
+        "200":
+          description: "Successfully retrieved reverification result from IPV"
+        "400":
+          description: "Bad Request - session missing, missing params, IPV state mismatch, unsuccessful token response, or reverification result error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReverificationResultFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /send-notification:
+    post:
+      responses:
+        "204":
+          description: "Notification sent successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, invalid notification type, phone validation failure, or code limit reached"
+        "500":
+          description: "Internal Server Error - queue error, storage, or configuration error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendNotificationFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /signup:
+    post:
+      responses:
+        "200":
+          description: "User signed up successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, account already exists, or password validation failure"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SignUpFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /start:
+    post:
+      responses:
+        "200":
+          description: "Session started successfully"
+        "400":
+          description: "Bad Request - session missing, invalid client session ID, or missing params"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StartFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-profile:
+    post:
+      responses:
+        "204":
+          description: "Profile updated successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, or invalid update profile type"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateProfileFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /user-exists:
+    post:
+      responses:
+        "200":
+          description: "User existence check completed"
+        "400":
+          description: "Bad Request - session missing, missing params, invalid email, account locked, or invalid user context"
+        "500":
+          description: "Internal Server Error - storage or configuration error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserExistsFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /verify-code:
+    post:
+      responses:
+        "204":
+          description: "Code verified successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, invalid code, too many attempts, no user profile, or phone not registered"
+        "500":
+          description: "Internal Server Error - MFA method error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VerifyCodeFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /verify-mfa-code:
+    post:
+      responses:
+        "204":
+          description: "MFA code verified successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, invalid code, invalid auth app secret, too many attempts, or no user profile"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VerifyMfaCodeFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /processing-identity:
+    post:
+      responses:
+        "200":
+          description: "Processing identity status returned (PROCESSING, COMPLETED, NO_ENTRY, ERROR, or INTERVENTION)"
+        "400":
+          description: "Bad Request - session missing or missing params"
+        "500":
+          description: "Internal Server Error - serialization or data retrieval failure"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProcessingIdentityFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /start-passkey-assertion:
+    post:
+      responses:
+        "200":
+          description: "Passkey assertion request started successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, empty email, or user not found"
+        "500":
+          description: "Internal Server Error - serialization failure"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StartPasskeyAssertionFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /finish-passkey-assertion:
+    post:
+      responses:
+        "200":
+          description: "Passkey assertion completed successfully"
+        "400":
+          description: "Bad Request - session missing, missing params, or invalid public key credential"
+        "401":
+          description: "Passkey assertion failed"
+        "500":
+          description: "Internal Server Error - assertion request parsing error"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FinishPasskeyAssertionFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000

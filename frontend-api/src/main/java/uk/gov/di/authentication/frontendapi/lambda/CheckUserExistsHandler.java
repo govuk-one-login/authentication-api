@@ -10,11 +10,16 @@ import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
-import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
+import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -25,19 +30,24 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.hasInternationalPhoneNumber;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -48,25 +58,27 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
     private final AuditService auditService;
-    private final CodeStorageService codeStorageService;
+    private final PermissionDecisionManager permissionDecisionManager;
+    private final MFAMethodsService mfaMethodsService;
+    private final PasskeysService passkeysService;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             AuthSessionService authSessionService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CodeStorageService codeStorageService) {
+            PermissionDecisionManager permissionDecisionManager,
+            MFAMethodsService mfaMethodsService,
+            PasskeysService passkeysService) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
-                sessionService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;
-        this.codeStorageService = codeStorageService;
+        this.permissionDecisionManager = permissionDecisionManager;
+        this.mfaMethodsService = mfaMethodsService;
+        this.passkeysService = passkeysService;
     }
 
     public CheckUserExistsHandler() {
@@ -76,14 +88,9 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     public CheckUserExistsHandler(ConfigurationService configurationService) {
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService);
-    }
-
-    public CheckUserExistsHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(CheckUserExistsRequest.class, configurationService, redis);
-        this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.passkeysService = new PasskeysService(configurationService);
     }
 
     @Override
@@ -120,7 +127,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             persistentSessionId);
 
             if (errorResponse.isPresent()) {
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -128,16 +134,33 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
             var userExists = userProfile.isPresent();
+            var internalCommonSubjectId =
+                    userExists
+                            ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                            userProfile.get(),
+                                            configurationService.getInternalSectorUri(),
+                                            authenticationService)
+                                    .getValue()
+                            : AuditService.UNKNOWN;
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
-            var session = userContext.getSession();
-            var sessionId = userContext.getAuthSession().getSessionId();
+            PermissionContext permissionContext =
+                    PermissionContext.builder().withEmailAddress(emailAddress).build();
 
-            if (codeStorageService.isBlockedForEmail(
-                    emailAddress,
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
+            var decisionResult =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, permissionContext);
+
+            if (decisionResult.isFailure()) {
+                LOG.info("No decision made: {}", decisionResult.getFailure());
+                return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                        decisionResult.getFailure());
+            }
+
+            if (decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
                 LOG.info("User account is locked");
-                sessionService.storeOrUpdateSession(session, sessionId);
+                auditContext = auditContext.withSubjectId(internalCommonSubjectId);
+                authSessionService.updateSession(userContext.getAuthSession());
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
@@ -146,12 +169,15 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
 
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1045);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
             }
 
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = UserMfaDetail.noMfa();
+            var hasActivePasskey = false;
+            var needsForcedMFAResetAfterMFACheck = false;
 
             AuthSessionItem authSession = userContext.getAuthSession();
 
@@ -160,14 +186,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 rpPairwiseId =
                         ClientSubjectHelper.getSubject(
                                         userProfile.get(),
-                                        userContext.getClient().get(),
-                                        authenticationService,
-                                        configurationService.getInternalSectorUri())
-                                .getValue();
-                var internalCommonSubjectId =
-                        ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                        userProfile.get(),
-                                        configurationService.getInternalSectorUri(),
+                                        userContext.getAuthSession(),
                                         authenticationService)
                                 .getValue();
 
@@ -182,6 +201,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 userCredentials,
                                 userProfile.get());
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
+
+                needsForcedMFAResetAfterMFACheck =
+                        configurationService.isForcedMFAResetAfterMFACheckEnabled()
+                                && requiresMfaResetForInternationalNumber(
+                                        authSession, userCredentials, userProfile.get());
+                hasActivePasskey = hasActivePasskey(userProfile.get().getPublicSubjectID());
             } else {
                 authSession.setInternalCommonSubjectId(null);
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
@@ -190,23 +215,14 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             auditService.submitAuditEvent(
                     auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
 
-            var lockoutInformation =
-                    Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                            .map(
-                                    journeyType -> {
-                                        var ttl =
-                                                codeStorageService.getMfaCodeBlockTimeToLive(
-                                                        emailAddress,
-                                                        MFAMethodType.AUTH_APP,
-                                                        journeyType);
-                                        return new LockoutInformation(
-                                                "codeBlock",
-                                                MFAMethodType.AUTH_APP,
-                                                ttl,
-                                                journeyType);
-                                    })
-                            .filter(info -> info.lockTTL() > 0)
-                            .toList();
+            var lockoutInformationResult = determineLockoutInformation(permissionContext);
+
+            if (lockoutInformationResult.isFailure()) {
+                return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                        lockoutInformationResult.getFailure());
+            }
+
+            var lockoutInformation = lockoutInformationResult.getSuccess();
 
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
@@ -214,8 +230,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userExists,
                             userMfaDetail.mfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
-                            lockoutInformation);
-            sessionService.storeOrUpdateSession(session, sessionId);
+                            lockoutInformation,
+                            hasActivePasskey,
+                            needsForcedMFAResetAfterMFACheck);
+
             authSessionService.updateSession(authSession);
 
             LOG.info("Successfully processed request");
@@ -223,7 +241,74 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
 
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
+    }
+
+    private boolean hasActivePasskey(String publicSubjectId) {
+        if (configurationService.supportPasskeys()) {
+            LOG.info("Checking if user has active passkey");
+            var result = passkeysService.hasActivePasskey(publicSubjectId);
+            if (result.isFailure()) {
+                LOG.warn(
+                        "Error retrieving passkey information for user. Error: {}",
+                        result.getFailure());
+                return false;
+            }
+            return result.getSuccess();
+        } else return false;
+    }
+
+    private boolean requiresMfaResetForInternationalNumber(
+            AuthSessionItem authSession, UserCredentials userCredentials, UserProfile userProfile) {
+        var mfaMethodsResult = mfaMethodsService.getMfaMethods(userProfile, userCredentials, true);
+        List<MFAMethod> mfaMethods =
+                mfaMethodsResult.isSuccess()
+                        ? mfaMethodsResult.getSuccess()
+                        : Collections.emptyList();
+
+        boolean hasInternationalNumber = hasInternationalPhoneNumber(mfaMethods);
+
+        LOG.info(
+                "User {} international phone number, {} required",
+                hasInternationalNumber ? "has" : "has no",
+                hasInternationalNumber ? "MFA reset" : "no MFA reset");
+
+        return hasInternationalNumber;
+    }
+
+    private Result<DecisionError, List<LockoutInformation>> determineLockoutInformation(
+            PermissionContext permissionContext) {
+        var lockoutInformation = new ArrayList<LockoutInformation>();
+
+        var signInResult =
+                permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, permissionContext);
+        if (signInResult.isFailure()) {
+            return Result.failure(signInResult.getFailure());
+        }
+        if (signInResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
+            long ttl = tempLockOut.lockedUntil().getEpochSecond();
+            lockoutInformation.add(
+                    new LockoutInformation(
+                            "codeBlock", MFAMethodType.AUTH_APP, ttl, JourneyType.SIGN_IN));
+        }
+
+        var passwordResetResult =
+                permissionDecisionManager.canVerifyMfaOtp(
+                        JourneyType.PASSWORD_RESET_MFA, permissionContext);
+        if (passwordResetResult.isFailure()) {
+            return Result.failure(passwordResetResult.getFailure());
+        }
+        if (passwordResetResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
+            long ttl = tempLockOut.lockedUntil().getEpochSecond();
+            lockoutInformation.add(
+                    new LockoutInformation(
+                            "codeBlock",
+                            MFAMethodType.AUTH_APP,
+                            ttl,
+                            JourneyType.PASSWORD_RESET_MFA));
+        }
+
+        return Result.success(lockoutInformation);
     }
 }

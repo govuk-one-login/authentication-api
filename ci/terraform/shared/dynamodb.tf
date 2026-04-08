@@ -239,113 +239,6 @@ resource "aws_dynamodb_table" "client_registry_table" {
   )
 }
 
-resource "aws_dynamodb_table" "identity_credentials_table" {
-  name         = "${var.environment}-identity-credentials"
-  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
-  hash_key     = "SubjectID"
-
-  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
-  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
-
-  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
-
-  attribute {
-    name = "SubjectID"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.identity_credentials_table_encryption_key.arn
-  }
-
-  lifecycle {
-    prevent_destroy = false
-  }
-
-  ttl {
-    attribute_name = "TimeToExist"
-    enabled        = true
-  }
-
-  tags = (
-    var.environment == "integration" || var.environment == "production" ?
-    {
-      "BackupFrequency" = "Bihourly"
-    } : {}
-  )
-}
-
-resource "aws_dynamodb_table" "doc_app_credential_table" {
-  name         = "${var.environment}-doc-app-credential"
-  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
-  hash_key     = "SubjectID"
-
-  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
-  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
-
-  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
-
-  attribute {
-    name = "SubjectID"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.doc_app_credential_table_encryption_key.arn
-  }
-
-  lifecycle {
-    prevent_destroy = false
-  }
-
-  ttl {
-    attribute_name = "TimeToExist"
-    enabled        = true
-  }
-
-  tags = (
-    var.environment == "integration" || var.environment == "production" ?
-    {
-      "BackupFrequency" = "Bihourly"
-    } : {}
-  )
-}
-
-resource "aws_dynamodb_resource_policy" "doc_app_credential_table_policy" {
-  resource_arn = aws_dynamodb_table.doc_app_credential_table.arn
-  policy       = data.aws_iam_policy_document.cross_account_doc_app_credential_table_policy.json
-}
-
-data "aws_iam_policy_document" "cross_account_doc_app_credential_table_policy" {
-  statement {
-    effect = "Allow"
-    actions = [
-      "dynamodb:UpdateItem",
-      "dynamodb:PutItem",
-      "dynamodb:BatchGetItem",
-      "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
-      "dynamodb:Scan",
-    ]
-    principals {
-      identifiers = [var.orchestration_account_id]
-      type        = "AWS"
-    }
-    resources = ["*"]
-  }
-}
-
 resource "aws_dynamodb_table" "common_passwords_table" {
   name         = "${var.environment}-common-passwords"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
@@ -650,7 +543,7 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
 }
 
 locals {
-  authorized_account_ids = local.allow_cross_account_access ? [var.auth_new_account_id, var.orchestration_account_id] : [var.orchestration_account_id]
+  authorized_account_ids = [var.auth_new_account_id, var.orchestration_account_id]
 }
 
 resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
@@ -658,14 +551,9 @@ resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
 }
 
-resource "aws_dynamodb_resource_policy" "identity_credentials_table_policy" {
-  resource_arn = aws_dynamodb_table.identity_credentials_table.arn
-  policy       = data.aws_iam_policy_document.cross_account_identity_credentials_table_resource_policy_document.json
-}
-
 resource "aws_dynamodb_resource_policy" "user_profile_table_policy" {
   resource_arn = aws_dynamodb_table.user_profile_table.arn
-  policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
+  policy       = data.aws_iam_policy_document.new_auth_cross_account_table_resource_policy_document.json
 }
 
 data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
@@ -689,7 +577,7 @@ data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
   }
 }
 
-data "aws_iam_policy_document" "cross_account_identity_credentials_table_resource_policy_document" {
+data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_document" {
   statement {
     actions = [
       "dynamodb:BatchGetItem",
@@ -697,16 +585,56 @@ data "aws_iam_policy_document" "cross_account_identity_credentials_table_resourc
       "dynamodb:Get*",
       "dynamodb:Query",
       "dynamodb:Scan",
+      "dynamodb:BatchWriteItem",
       "dynamodb:UpdateItem",
       "dynamodb:PutItem",
-      "dynamodb:DeleteItem",
     ]
     effect = "Allow"
     principals {
-      identifiers = local.authorized_account_ids
+      identifiers = [var.auth_new_account_id]
       type        = "AWS"
     }
     resources = ["*"]
+  }
+
+  statement {
+    actions = [
+      "dynamodb:DeleteItem"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.auth_new_account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+
+  dynamic "statement" {
+    for_each = contains(["integration", "production"], var.environment) ? [1] : []
+    content {
+      sid    = "DenyNonAdminTeamRolesAccess"
+      effect = "Deny"
+      principals {
+        identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+        type        = "AWS"
+      }
+      not_actions = [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource"
+      ]
+      resources = ["*"]
+      condition {
+        test     = "StringLike"
+        variable = "aws:PrincipalARN"
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*"]
+      }
+      condition {
+        test     = "StringNotLike"
+        variable = "aws:PrincipalARN"
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdmin*"]
+      }
+    }
   }
 }
 
@@ -784,74 +712,200 @@ resource "aws_dynamodb_table" "id_reverification_state" {
   )
 }
 
+resource "aws_dynamodb_table" "international_sms_send_count" {
+  name         = "${var.environment}-international-sms-send-count"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  hash_key = "PhoneNumber"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
+  attribute {
+    name = "PhoneNumber"
+    type = "S"
+  }
+
+  // NOTE: Explicit absence of TTL.
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.international_sms_send_count_encryption_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = (
+    var.environment == "integration" || var.environment == "production" ?
+    {
+      "BackupFrequency" = "Bihourly"
+    } : {}
+  )
+}
+
+resource "aws_dynamodb_table" "authenticator_table" {
+  name         = "${var.environment}-authenticator"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  hash_key  = "PublicSubjectID"
+  range_key = "SK"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
+  attribute {
+    name = "PublicSubjectID"
+    type = "S"
+  }
+
+  attribute {
+    name = "SK"
+    type = "S"
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.authenticator_table_encryption_key.arn
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = (
+    var.environment == "integration" || var.environment == "production" ?
+    {
+      "BackupFrequency" = "Bihourly"
+    } : {}
+  )
+}
+
+resource "aws_dynamodb_table" "amc_state" {
+  name         = "${var.environment}-amc-state"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  hash_key = "AuthenticationState"
+
+  attribute {
+    name = "AuthenticationState"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.amc_state_table_encryption_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = (
+    var.environment == "integration" || var.environment == "production" ?
+    {
+      "BackupFrequency" = "Bihourly"
+    } : {}
+  )
+}
+
 ## DynamoDB Resource Policies
 ## These policies are used to allow cross-account access to the DynamoDB tables
 
 resource "aws_dynamodb_resource_policy" "user_credentials_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.user_credentials_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "common_passwords_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.common_passwords_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "account_modifiers_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.account_modifiers_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "access_token_store" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.access_token_store.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "auth_code_store" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.auth_code_store.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "email-check-result" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.email-check-result.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "authentication_attempt_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.authentication_attempt_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_combined_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "auth_session_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.auth_session_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_combined_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "id_reverification_state" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.id_reverification_state.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
-
-locals {
-  allowed_env                = ["staging", "build", "dev", "authdev1", "authdev2", "sandpit"]
-  allow_cross_account_access = contains(local.allowed_env, var.environment)
+resource "aws_dynamodb_resource_policy" "international_sms_request_count" {
+  resource_arn = aws_dynamodb_table.international_sms_send_count.arn
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
+resource "aws_dynamodb_resource_policy" "authenticator_table" {
+  resource_arn = aws_dynamodb_table.authenticator_table.arn
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
+}
+
+resource "aws_dynamodb_resource_policy" "bulk_email_users" {
+  count        = local.deploy_bulk_email_users_count
+  resource_arn = aws_dynamodb_table.bulk_email_users[0].arn
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
+}
+
+resource "aws_dynamodb_resource_policy" "amc_state" {
+  resource_arn = aws_dynamodb_table.amc_state.arn
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
+}
 
 data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_document" {
   #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
-  #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrictable actions
-  count = local.allow_cross_account_access ? 1 : 0
+  #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrict table actions
   statement {
     actions = [
       "dynamodb:BatchGetItem",
@@ -870,4 +924,68 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
     }
     resources = ["*"]
   }
+
+  statement {
+    actions = [
+      "dynamodb:DeleteItem"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.auth_new_account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+
+  dynamic "statement" {
+    for_each = contains(["integration", "production"], var.environment) ? [1] : []
+    content {
+      sid    = "DenyNonAdminTeamRolesAccess"
+      effect = "Deny"
+      principals {
+        identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+        type        = "AWS"
+      }
+      not_actions = [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource"
+      ]
+      resources = ["*"]
+      condition {
+        test     = "StringLike"
+        variable = "aws:PrincipalARN"
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*"]
+      }
+      condition {
+        test     = "StringNotLike"
+        variable = "aws:PrincipalARN"
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdmin*"]
+      }
+    }
+  }
+}
+
+
+data "aws_iam_policy_document" "auth_cross_account_table_delete_item_policy_document" {
+  #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
+  #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrict table actions
+  statement {
+    actions = [
+      "dynamodb:DeleteItem"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.auth_new_account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "auth_cross_account_table_resource_combined_policy_document" {
+  source_policy_documents = [
+    data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json,
+    data.aws_iam_policy_document.auth_cross_account_table_delete_item_policy_document.json
+  ]
 }

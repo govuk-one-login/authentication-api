@@ -2,18 +2,23 @@ import com.github.spotbugs.snom.Confidence
 import com.github.spotbugs.snom.Effort
 buildscript {
     repositories {
-        maven {
-            url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
+        mavenCentral()
+    }
+    dependencies {
+        constraints {
+            classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
+                because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+            }
         }
     }
 }
 
 plugins {
-    id "com.diffplug.spotless" version "7.0.3"
-    id "com.avast.gradle.docker-compose" version "0.17.12"
-    id "org.sonarqube" version "6.2.0.5505"
+    alias libs.plugins.spotless
+    alias libs.plugins.dockerCompose
+    alias libs.plugins.sonar
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.1.11'
+    alias libs.plugins.spotbugs
 }
 
 apply plugin: "java"
@@ -21,24 +26,11 @@ apply plugin: "application"
 apply plugin: "idea"
 
 ext {
-    dependencyVersions = [
-        aws_sdk_v2_version: "2.31.41",
-        aws_lambda_core_version: "1.2.3",
-        aws_lambda_events_version: "3.15.0",
-        gson: "2.13.1",
-        jetbrains_annotations: "26.0.2",
-        nimbusds_oauth_version: "10.13.2",
-        nimbusds_jwt_version: "10.3",
-        junit: "5.12.2",
-        xray: "2.18.2",
-        pact: "4.6.17",
-    ]
-
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
 
     awsCredentialsEnvironment = terraformEnvironment == "localstack" ? [
-        AWS_ACCESS_KEY_ID: "mock-access-key",
-        AWS_SECRET_ACCESS_KEY: "mock-secret-key",
+        AWS_ACCESS_KEY_ID: "mockaccesskey",
+        AWS_SECRET_ACCESS_KEY: "mocksecretkey",
     ] : [:]
 
     noXray = {
@@ -56,16 +48,39 @@ subprojects {
     buildscript {
         dependencies {
             constraints {
-                classpath('io.netty:netty-codec-http:[4.1.108.Final,)') {
-                    because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
+                // Netty constraints
+                classpath('io.netty:netty-codec-http:[4.1.129.Final,)') {
+                    because 'CVE-2025-67735 is fixed in io.netty:netty-codec-http:4.1.129.Final and higher'
                 }
 
-                classpath('com.google.protobuf:protobuf-java:[3.25.5,)') {
-                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
+                classpath('io.netty:netty-common:[4.1.118.Final,4.2)') {
+                    because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
                 }
 
                 classpath('io.netty:netty-handler:[4.1.118.Final,)') {
                     because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
+                }
+
+                classpath('io.netty:netty-codec-http2:[4.1.129.Final,4.2.0)') {
+                    because 'CVE-2025-67735 is fixed in io.netty:netty-codec-http2:4.1.129.Final and higher'
+                }
+
+                classpath('io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
+                    because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
+                }
+
+                // Apache Commons constraints
+                classpath('commons-beanutils:commons-beanutils:[1.11.0,)') {
+                    because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
+                }
+
+                classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
+                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+                }
+
+                // Other constraints
+                classpath('com.google.protobuf:protobuf-java:[3.25.5,)') {
+                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
             }
         }
@@ -86,32 +101,9 @@ subprojects {
         excludeFilter = file("$rootProject.projectDir/spotbugsExclude.xml")
     }
 
-    configurations {
-        apache
-        bouncycastle
-        cloudwatch
-        dynamodb
-        govuk_notify
-        gson
-        hamcrest
-        jetbrains_annotations
-        kms
-        lambda
-        lambda_tests
-        lettuce
-        libphonenumber
-        logging_runtime
-        nimbus
-        secretsmanager
-        s3
-        sns
-        sqs
-        ssm
-        tests
-        test_runtime
-        xray
-        pact_consumer
-        pact_provider
+    configurations.all {
+        exclude group: 'org.apache.tika', module: 'tika-parser-pdf-module'
+        exclude group: 'org.apache.commons', module: 'commons-io'
     }
 
     // Check dependencies using:
@@ -120,112 +112,83 @@ subprojects {
     // ./gradlew :frontend-api:dependencyInsight --dependency guava  --configuration runtimeClasspath
     //
     dependencies {
+        // Unneeded constraints should be removed once no longer required
+        // https://discuss.gradle.org/t/dependency-version-constraints-for-all-configurations/34161/3
         constraints {
             configurations.configureEach { conf ->
-                add(conf.name, 'io.netty:netty-codec-http:[4.1.108.Final,)') {
-                    because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
-                }
+                if (!conf.canBeConsumed && !conf.canBeResolved) {
+                    // Netty constraints
+                    add(conf.name, 'io.netty:netty-codec-http:[4.1.129.Final,)') {
+                        because 'CVE-2025-67735 is fixed in io.netty:netty-codec-http:4.1.129.Final and higher'
+                    }
 
-                add(conf.name, 'io.netty:netty-common:[4.1.115.Final,4.2)') {
-                    because 'CVE-2024-47535 is fixed in io.netty:netty-common:4.1.115.Final and higher'
-                }
+                    add(conf.name, 'io.netty:netty-common:[4.1.118.Final,4.2)') {
+                        because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
+                    }
 
-                add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
-                    because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
-                }
+                    add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
+                        because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
+                    }
 
-                add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
-                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
-                }
+                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.129.Final,4.2.0)') {
+                        because 'CVE-2025-67735 is fixed in io.netty:netty-codec-http2:4.1.129.Final and higher'
+                    }
 
-                add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
-                    because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
-                }
+                    add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
+                        because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
+                    }
 
-                add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.17,12.1.0)') {
-                    because 'CVE-2025-1948 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.17 and higher'
+                    // Jetty constraints
+                    add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.25,12.1.0)') {
+                        because 'CVE-2025-5115 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.25 and higher'
+                    }
+
+                    add(conf.name, 'org.eclipse.jetty:jetty-server:[12.0.32,)') {
+                        because 'CVE-2026-1605 is fixed in org.eclipse.jetty:jetty-server:12.0.32 and higher'
+                    }
+
+                    // Jackson constraints
+                    add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
+                        because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
+                    }
+
+                    add(conf.name, 'com.fasterxml.jackson.core:jackson-core:[2.21.1,)') {
+                        because 'GHSA-72hv-8253-57qq is fixed in com.fasterxml.jackson.core:jackson-core:2.21.1 and higher'
+                    }
+
+                    // Apache Commons constraints
+                    add(conf.name, 'commons-beanutils:commons-beanutils:[1.11.0,)') {
+                        because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
+                    }
+
+                    add(conf.name, 'org.apache.commons:commons-lang3:[3.18.0,)') {
+                        because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+                    }
+
+                    add(conf.name, 'commons-io:commons-io:[2.21.0,)') {
+                        because 'CVE-2021-29425 is fixed in commons-io:commons-io:2.21.0 and higher'
+                    }
+
+                    // Other constraints
+                    add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
+                        because 'CVE-2024-7254 is fixed in 3.25.5 and above'
+                    }
+
+                    add(conf.name, 'org.apache.logging.log4j:log4j-core:[2.25.3,3.0.0)') {
+                        because 'CVE-2025-68161 is fixed in 2.25.3 and higher'
+                    }
                 }
             }
         }
 
-        apache "commons-codec:commons-codec:1.18.0",
-                "org.apache.httpcomponents:httpclient:4.5.14",
-                "org.apache.commons:commons-collections4:4.5.0",
-                "commons-net:commons-net:3.11.1",
-                "commons-io:commons-io:2.19.0",
-                "org.apache.commons:commons-lang3:3.17.0"
+        constraints {
+            spotbugs('org.apache.logging.log4j:log4j-core:[2.25.3,3.0.0)') {
+                because 'CVE-2025-68161 is fixed in 2.25.3 and higher'
+            }
+        }
 
-        bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.80"
-
-        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
-
-        dynamodb "software.amazon.awssdk:dynamodb:${dependencyVersions.aws_sdk_v2_version}",
-                "software.amazon.awssdk:dynamodb-enhanced:${dependencyVersions.aws_sdk_v2_version}"
-
-        lambda "software.amazon.awssdk:lambda:${dependencyVersions.aws_sdk_v2_version}"
-
-        govuk_notify "uk.gov.service.notify:notifications-java-client:5.2.1-RELEASE"
-
-        gson "com.google.code.gson:gson:${dependencyVersions.gson}"
-
-        hamcrest "org.hamcrest:hamcrest:3.0"
-
-        jetbrains_annotations "org.jetbrains:annotations:${dependencyVersions.jetbrains_annotations}"
-
-        kms "software.amazon.awssdk:kms:${dependencyVersions.aws_sdk_v2_version}"
-
-        lambda "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
-                "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
-                "com.amazonaws:aws-lambda-java-log4j2:1.6.0"
-
-        lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
-
-        lettuce "org.apache.commons:commons-pool2:2.12.1",
-                "io.lettuce:lettuce-core:6.6.0.RELEASE"
-
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:9.0.5"
-
-        logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
-                "org.slf4j:slf4j-nop:2.0.17"
-
-        nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
-                "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
-
-        secretsmanager "software.amazon.awssdk:secretsmanager:${dependencyVersions.aws_sdk_v2_version}"
-
-        sns "software.amazon.awssdk:sns:${dependencyVersions.aws_sdk_v2_version}"
-
-        sqs "software.amazon.awssdk:sqs:${dependencyVersions.aws_sdk_v2_version}"
-
-        ssm "software.amazon.awssdk:ssm:${dependencyVersions.aws_sdk_v2_version}"
-
-        s3 "software.amazon.awssdk:s3:${dependencyVersions.aws_sdk_v2_version}"
-
-        tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
-                "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.junit.platform:junit-platform-launcher",
-                "org.mockito:mockito-core:5.17.0",
-                "org.awaitility:awaitility:4.3.0",
-                "com.approvaltests:approvaltests:24.21.1",
-                configurations.hamcrest,
-                "org.reflections:reflections:0.10.2"
-
-        test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
-
-        xray platform("com.amazonaws:aws-xray-recorder-sdk-bom:${dependencyVersions.xray}"),
-                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-instrumentor:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
-
-        spotbugs "com.github.spotbugs:spotbugs:4.9.3"
-
+        spotbugs libs.spotbugs
         spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
-
-        pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
-
-        pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
     }
 }
 
@@ -436,18 +399,24 @@ subprojects {
 reporting {
     reports {
         testCodeCoverageReport(JacocoCoverageReport) {
-            testType = TestSuiteType.UNIT_TEST
+            testSuiteName = "test"
         }
     }
 }
 
 dependencies {
     jacocoAggregation subprojects
+
+    constraints {
+        spotbugs('org.apache.logging.log4j:log4j-core:[2.25.3,)') {
+            because 'CVE-2025-68161 is fixed in 2.25.3 and higher'
+        }
+    }
 }
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }
@@ -459,8 +428,10 @@ task searchForDependency {
     doLast {
         def targetGroup = project.hasProperty('targetGroup') ? project.property('targetGroup') : null
         def targetName = project.hasProperty('targetName') ? project.property('targetName') : null
+        def minVersion = project.hasProperty('minVersion') ? project.property('minVersion') : null
+        def parsedMinVersion  = VersionNumber.parse(minVersion)
 
-        println "searching for ${targetGroup}:${targetName}...\n"
+        println "searching for ${targetGroup}:${targetName} < ${minVersion}\n"
 
         def foundProjects = new LinkedHashSet<String>()
 
@@ -471,7 +442,12 @@ task searchForDependency {
 
                     resolvedDependencies.each { dep ->
                         if (dep.moduleGroup == targetGroup && dep.moduleName == targetName) {
-                            foundProjects.add(project.name + ":" + config.name)
+                            def parsedResolvedVersion = VersionNumber.parse(dep.getModuleVersion())
+                            def isLower = parsedResolvedVersion < parsedMinVersion
+                            def versionString = isLower
+                                    ? "Version: \u001B[31m${dep.getModuleVersion()}\u001B[0m ⚠️"
+                                    : "Version: \u001B[32m${dep.getModuleVersion()}\u001B[0m ✅"
+                            foundProjects.add(project.path + ":" + config.name +". "  + versionString)
                         }
                     }
                 }

@@ -3,6 +3,7 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
@@ -11,9 +12,10 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
+import uk.gov.di.authentication.sharedtest.extensions.InternationalSmsSendCountExtension;
 
 import java.util.List;
 import java.util.Map;
@@ -29,15 +31,21 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+
+    @RegisterExtension
+    protected static final InternationalSmsSendCountExtension internationalSmsSendLimit =
+            new InternationalSmsSendCountExtension(10);
 
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String PASSWORD = "Pa55word";
     private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
+    private static final String TEST_REFERENCE = "test-reference";
     private static final String RESET_PASSWORD_REQUEST =
             format(
                     """
@@ -75,8 +83,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldUpdatePasswordAndReturn204() throws Json.JsonException {
-        var sessionId = redis.createSession();
+    void shouldUpdatePasswordAndReturn204() {
+        var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -99,9 +107,9 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldUpdatePasswordSendSMSAndWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumber()
-            throws Json.JsonException {
-        var sessionId = redis.createSession();
+    void
+            shouldUpdatePasswordSendSMSAndWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumber() {
+        var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
@@ -137,9 +145,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void
-            shouldUpdatePasswordSendSMSAndNotWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumberButRequestAllowsMfaReset()
-                    throws Json.JsonException {
-        var sessionId = redis.createSession();
+            shouldUpdatePasswordSendSMSAndNotWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumberButRequestAllowsMfaReset() {
+        var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
@@ -168,8 +175,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldReturn400ForRequestWithCommonPassword() throws Json.JsonException {
-        var sessionId = redis.createSession();
+    void shouldReturn400ForRequestWithCommonPassword() {
+        var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -188,13 +195,12 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 makeRequest(Optional.of(body), constructFrontendHeaders(sessionId), Map.of());
 
         assertThat(response, hasStatus(400));
-        assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
+        assertTrue(response.getBody().contains(ErrorResponse.PW_TOO_COMMON.getMessage()));
     }
 
     @Test
-    void shouldSendForcedResetJourneyAuditEventWhenForcedPasswordResetIsTrue()
-            throws Json.JsonException {
-        var sessionId = redis.createSession();
+    void shouldSendForcedResetJourneyAuditEventWhenForcedPasswordResetIsTrue() {
+        var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -225,8 +231,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @ParameterizedTest
     @MethodSource("phoneNumberVerified")
     void shouldUpdatePasswordAndWriteToAccountModifiersTableWithIfUserHasVerifiedPhoneNumber(
-            boolean phoneNumberVerified) throws Json.JsonException {
-        var sessionId = redis.createSession();
+            boolean phoneNumberVerified) {
+        var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
@@ -276,8 +282,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @ParameterizedTest
     @MethodSource("authAppVerified")
     void shouldUpdatePasswordAndWriteToAccountRecoveryTableWithIfUserHasVerifiedAuthApp(
-            boolean authAppVerified) throws Json.JsonException {
-        var sessionId = redis.createSession();
+            boolean authAppVerified) {
+        var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
@@ -311,6 +317,72 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         ? List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL)
                         : List.of(AUTH_PASSWORD_RESET_SUCCESSFUL);
         assertTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
+    }
+
+    @Test
+    void shouldSendSmsToInternationalNumberWhenNotLockedOut() {
+        var sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(2));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+        assertThat(requests.get(1).getDestination(), equalTo(INTERNATIONAL_MOBILE_NUMBER));
+        assertThat(requests.get(1).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION_SMS));
+
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    @Test
+    void shouldNotSendSmsToInternationalNumberWhenLockedOut() {
+        var sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        for (int i = 0; i < 10; i++) {
+            internationalSmsSendLimit.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER, TEST_REFERENCE);
+        }
+
+        var response =
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL));
     }
 
     private static class ResetPasswordTestConfigurationService

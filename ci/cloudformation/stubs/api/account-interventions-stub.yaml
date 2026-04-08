@@ -1,0 +1,181 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AccountInterventionsStubApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${Env}-di-interventions-api-stub
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      OpenApiVersion: 3.0.1
+      EndpointConfiguration:
+        Type: PRIVATE
+        VPCEndpointIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+          - !If
+            - AddOrchApiVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                orchApiVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
+          - !If
+            - AddOldAuthApiVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                oldAuthApiVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
+
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: Allow
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource: "execute-api:/*"
+            - Effect: Deny
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource:
+                - "execute-api:/*"
+              Condition:
+                StringNotEquals:
+                  aws:SourceVpce:
+                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                    - !If
+                      - AddOrchApiVpcEndpointId
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          orchApiVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+                      - !Ref AWS::NoValue
+                    - !If
+                      - AddOldAuthApiVpcEndpointId
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          oldAuthApiVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+                      - !Ref AWS::NoValue
+
+      AccessLogSetting:
+        DestinationArn: !GetAtt AccountInterventionsStubApiAccessLogGroup.Arn
+        Format:
+          Fn::ToJsonString:
+            requestId: $context.requestId
+            ip: $context.identity.sourceIp
+            userAgent: $context.identity.userAgent
+            requestTime: $context.requestTime
+            httpMethod: $context.httpMethod
+            resourcePath: $context.resourcePath
+            status: $context.status
+            protocol: $context.protocol
+            responseLength: $context.responseLength
+            integrationStatus: $context.integration.integrationStatus
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
+      MethodSettings:
+        - CachingEnabled: false
+          DataTraceEnabled: false
+          HttpMethod: "*"
+          ResourcePath: "/*"
+          LoggingLevel: INFO
+          MetricsEnabled: true
+      TracingEnabled: true
+      DefinitionBody:
+        openapi: "3.0.1"
+        info:
+          title: !Sub "${Environment}-di-interventions-api-stub"
+        paths:
+          /v1/ais/{internalPairwiseId}:
+            get:
+              parameters:
+                - name: internalPairwiseId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountInterventionsApiStubLambdaFunction.Arn}:active/invocations"
+                requestParameters:
+                  integration.request.path.internalPairwiseId: method.request.path.internalPairwiseId
+                timeoutInMillis: 29000
+      Tags:
+        FMSRegionalPolicy: "false"
+        CustomPolicy: apistub
+
+  AccountInterventionsStubApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - "${Env}-di-account-interventions-api-access-logs"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountInterventionsStubApiAccessLogGroup"
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/stubs/api/account-interventions-stub.yaml
+
+  AccountInterventionsStubApiAccessLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AccountInterventionsStubApiAccessLogGroup
+
+  AccountInterventionsStubApiExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${AccountInterventionsStubApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountInterventionsStubApiExecutionLogGroup"
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/stubs/api/account-interventions-stub.yaml
+
+  AccountInterventionsStubApiExecutionLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AccountInterventionsStubApiExecutionLogGroup
+
+Outputs:
+  AccountInterventionsStubApiID:
+    Description: "API Gateway ID for Account intervention API "
+    Value: !Ref AccountInterventionsStubApi
+    Export:
+      Name: !Sub "${AWS::StackName}-AccountInterventionsStubApiID"

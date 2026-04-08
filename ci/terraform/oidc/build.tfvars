@@ -3,6 +3,8 @@ shared_state_bucket = "digital-identity-dev-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendbuild"
 
+# Auth new strategic account
+auth_new_account_id = "058264536367"
 
 # App-specific
 ipv_backend_uri = "https://ipvstub.signin.build.account.gov.uk"
@@ -49,6 +51,7 @@ orch_environment                                   = "build"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:767397776536:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:767397776536:key/7a1d86fe-1ca0-499c-95e9-ee8593a850f9"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:767397776536:key/e284a04a-bac2-42b0-b723-ef0d32722ad5"
+orch_client_registry_table_encryption_key_arn      = "arn:aws:kms:eu-west-2:767397776536:key/84243770-7ba6-42c6-a26c-28bc82e3efa2"
 
 orch_storage_token_jwk_enabled              = true
 orch_openid_configuration_enabled           = true
@@ -73,7 +76,6 @@ doc_app_authorisation_uri                   = "https://dcmaw-cri.build.stubs.acc
 doc_app_jwks_endpoint                       = "https://dcmaw-cri.build.stubs.account.gov.uk/.well-known/jwks.json"
 doc_app_aud                                 = "https://dcmaw-cri.build.stubs.account.gov.uk"
 doc_app_new_aud_claim_enabled               = true
-doc_app_encryption_key_id                   = "dcmaw-cri-stubs-build-INqHBvMYWmNodklvbpTCgf1DS10Fv5ic4_8LdoBNjAw"
 spot_enabled                                = false
 custom_doc_app_claim_enabled                = true
 doc_app_cri_data_v2_endpoint                = "credentials/issue"
@@ -130,5 +132,5 @@ performance_tuning = {
     scaling_trigger = 0
   }
 }
-lambda_min_concurrency        = 1
+
 use_strongly_consistent_reads = true

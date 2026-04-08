@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -31,6 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -235,6 +237,31 @@ class DynamoServiceIntegrationTest {
             assertSingleMfaMethodExistsWithData(userCredentials, defaultPriorityAuthAppData);
         }
 
+        private static Stream<Arguments> existingMFAs() {
+            return Stream.of(
+                    Arguments.of(defaultPrioritySmsData, null),
+                    Arguments.of(defaultPriorityAuthAppData, null),
+                    Arguments.of(defaultPrioritySmsData, defaultPriorityAuthAppData),
+                    Arguments.of(defaultPriorityAuthAppData, defaultPrioritySmsData),
+                    Arguments.of(defaultPrioritySmsData, defaultPrioritySmsData));
+        }
+
+        @MethodSource("existingMFAs")
+        @ParameterizedTest
+        void shouldDeleteAllMigratedMfaMethods(MFAMethod mfaMethod, MFAMethod mfaMethod2) {
+            userStore.signUp(TEST_EMAIL, "password-1", new Subject("1111"));
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod);
+            if (mfaMethod2 != null) {
+                userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod2);
+            }
+            dynamoService.setMfaMethodsMigrated(TEST_EMAIL, true);
+
+            dynamoService.deleteMigratedMfaMethods(TEST_EMAIL);
+
+            var result = userStore.getMfaMethod(TEST_EMAIL);
+            assertNull(result);
+        }
+
         @Test
         void anMfaMethodShouldNotReplaceAnExistingMethodOfADifferentTypeWithDifferentPriority() {
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
@@ -282,140 +309,23 @@ class DynamoServiceIntegrationTest {
         }
 
         @Test
-        void shouldUpdateAPhoneNumber() {
+        void updateMfaMethods() {
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
 
-            var updatedPhoneNumber = "111222333";
+            var newMfaMethods = new ArrayList<MFAMethod>();
+            newMfaMethods.add(backupPrioritySmsData);
 
-            var result =
-                    dynamoService.updateMigratedDefaultMfaMethod(
-                            TEST_EMAIL,
-                            MFAMethodType.SMS,
-                            updatedPhoneNumber,
-                            defaultPrioritySmsData.getMfaIdentifier());
+            var updatedDEfaultMethods = defaultPrioritySmsData;
+            updatedDEfaultMethods.setDestination("some-other-destination");
 
-            var expectedUpdatedDefaultSmsMethod =
-                    MFAMethod.smsMfaMethod(
-                            defaultPrioritySmsData.isMethodVerified(),
-                            defaultPrioritySmsData.isEnabled(),
-                            updatedPhoneNumber,
-                            PriorityIdentifier.valueOf(defaultPrioritySmsData.getPriority()),
-                            defaultPrioritySmsData.getMfaIdentifier());
+            newMfaMethods.add(updatedDEfaultMethods);
 
-            var returnedMethods = result.getSuccess();
-            var updatedDefaultMethod =
-                    returnedMethods.stream()
-                            .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
-                            .findFirst()
-                            .get();
-            var backupMethod =
-                    returnedMethods.stream()
-                            .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
-                            .findFirst()
-                            .get();
+            var result = dynamoService.updateMfaMethods(newMfaMethods, TEST_EMAIL);
 
-            assertRetrievedMethodHasData(expectedUpdatedDefaultSmsMethod, updatedDefaultMethod);
-            assertRetrievedMethodHasData(backupPrioritySmsData, backupMethod);
-
-            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-
-            assertBackupAndDefaultMfaMethodsWithData(
-                    userCredentials, expectedUpdatedDefaultSmsMethod, backupPrioritySmsData);
-        }
-
-        @Test
-        void shouldUpdateAnAuthAppCredential() {
-            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
-            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
-
-            var updatedCredential = "some-updated-credential";
-
-            var result =
-                    dynamoService.updateMigratedDefaultMfaMethod(
-                            TEST_EMAIL,
-                            MFAMethodType.AUTH_APP,
-                            updatedCredential,
-                            defaultPriorityAuthAppData.getMfaIdentifier());
-
-            var expectedUpdatedAuthAppMethod =
-                    MFAMethod.authAppMfaMethod(
-                            updatedCredential,
-                            defaultPriorityAuthAppData.isMethodVerified(),
-                            defaultPriorityAuthAppData.isEnabled(),
-                            PriorityIdentifier.valueOf(defaultPriorityAuthAppData.getPriority()),
-                            defaultPriorityAuthAppData.getMfaIdentifier());
-
-            var returnedMethods = result.getSuccess();
-            var updatedDefaultPriorityMethod =
-                    returnedMethods.stream()
-                            .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
-                            .findFirst()
-                            .get();
-            var returnedBackupMethod =
-                    returnedMethods.stream()
-                            .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
-                            .findFirst()
-                            .get();
-
-            assertRetrievedMethodHasData(
-                    updatedDefaultPriorityMethod, expectedUpdatedAuthAppMethod);
-            assertRetrievedMethodHasData(returnedBackupMethod, backupPrioritySmsData);
-
-            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-
-            assertBackupAndDefaultMfaMethodsWithData(
-                    userCredentials, expectedUpdatedAuthAppMethod, backupPrioritySmsData);
-        }
-
-        @Test
-        void
-                shouldReturnAnErrorAndDoNoUpdatesForUpdatePhoneNumberIfMfaMethodByIdentifierDoesNotExist() {
-            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
-            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
-
-            var updatedPhoneNumber = "111222333";
-
-            var result =
-                    dynamoService.updateMigratedDefaultMfaMethod(
-                            TEST_EMAIL,
-                            MFAMethodType.SMS,
-                            updatedPhoneNumber,
-                            "some-other-identifier");
-
-            assertEquals(
-                    "Mfa method with identifier some-other-identifier does not exist",
-                    result.getFailure());
-
-            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-
-            assertBackupAndDefaultMfaMethodsWithData(
-                    userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
-        }
-
-        @Test
-        void
-                shouldReturnAnErrorAndDoNoUpdatesForUpdateAuthAppCredentialIfMfaMethodByIdentifierDoesNotExist() {
-            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
-            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
-
-            var updatedCredential = "some-updated-credential";
-
-            var result =
-                    dynamoService.updateMigratedDefaultMfaMethod(
-                            TEST_EMAIL,
-                            MFAMethodType.AUTH_APP,
-                            updatedCredential,
-                            "some-other-identifier");
-
-            assertEquals(
-                    "Mfa method with identifier some-other-identifier does not exist",
-                    result.getFailure());
-
-            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-
-            assertBackupAndDefaultMfaMethodsWithData(
-                    userCredentials, defaultPriorityAuthAppData, backupPrioritySmsData);
+            assertNotNull(result);
+            assertFalse(result.isFailure());
+            assertEquals(newMfaMethods, result.getSuccess());
         }
 
         @Test
@@ -797,7 +707,7 @@ class DynamoServiceIntegrationTest {
         assertThrows(
                 RuntimeException.class,
                 () -> dynamoService.getUserProfileFromSubject("NonExistentUser"),
-                "No userCredentials found with query search");
+                "No userProfile found with query search");
     }
 
     @Test
@@ -848,6 +758,184 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void shouldGetUserWithInternationalPhoneNumber() {
+        signUpWithPhoneNumber("domestic@test.com", "1111", "+447700900000");
+        signUpWithPhoneNumber("international@test.com", "2222", "+33612345678");
+        signUpWithPhoneNumber("nophone@test.com", "3333", null);
+
+        var users =
+                dynamoService
+                        .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null)
+                        .toList();
+
+        assertThat(users.size(), equalTo(1));
+        assertThat(users.get(0).getEmail(), equalTo("international@test.com"));
+    }
+
+    @Test
+    void shouldReturnNoUsersWithInternationalNumberWhenAllPhoneNumbersAreDomestic() {
+        signUpWithPhoneNumber("domestic@test.com", "1111", "+447700900000");
+
+        var users =
+                dynamoService.getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null);
+        assertThat(users.count(), equalTo(0L));
+    }
+
+    @Test
+    void shouldOnlyIncludeUserProfileWithInternationalCountryCode() {
+        signUpWithPhoneNumber("uk-country-code@test.com", "1111", "+447700900000");
+        signUpWithPhoneNumber("no-country-code@test.com", "2222", "07700900000");
+        signUpWithPhoneNumber("international@test.com", "3333", "+33612345678");
+
+        var users =
+                dynamoService
+                        .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null)
+                        .toList();
+
+        assertThat(users.size(), equalTo(1));
+        assertThat(users.get(0).getEmail(), equalTo("international@test.com"));
+    }
+
+    @Test
+    void shouldNotMatchUserProfileScanWhenInternationalNumberIsOnlyInUserCredentialsMfaMethods() {
+        signUpWithMfaMethods(
+                "authapp@test.com",
+                "1111",
+                MFAMethod.authAppMfaMethod(
+                        "credential", true, true, PriorityIdentifier.DEFAULT, "id-1"));
+        signUpWithMfaMethods(
+                "domestic@test.com",
+                "2222",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447700900000", PriorityIdentifier.DEFAULT, "id-2"));
+        signUpWithMfaMethods(
+                "international@test.com",
+                "3333",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+33612345678", PriorityIdentifier.DEFAULT, "id-3"));
+
+        var users =
+                dynamoService.getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(null);
+        assertThat(users.count(), equalTo(0L));
+    }
+
+    @Test
+    void shouldNotMatchUserWithAuthAppAndDomesticSmsFromBulkUserEmailAudienceUserCredentialsScan() {
+        signUpWithMfaMethods(
+                "user@test.com",
+                "1111",
+                MFAMethod.authAppMfaMethod(
+                        "credential", true, true, PriorityIdentifier.DEFAULT, "id-1"),
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447700900000", PriorityIdentifier.BACKUP, "id-2"));
+
+        var users =
+                dynamoService.getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(
+                        null);
+
+        assertThat(users.count(), equalTo(0L));
+    }
+
+    @Test
+    void
+            shouldOnlyIncludeCredentialsWithInternationalCountryCodeFromBulkUserEmailAudienceUserCredentialsScan() {
+        signUpWithMfaMethods(
+                "uk-country-code@test.com",
+                "1111",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447700900000", PriorityIdentifier.DEFAULT, "id-1"));
+        signUpWithMfaMethods(
+                "no-country-code@test.com",
+                "2222",
+                MFAMethod.smsMfaMethod(
+                        true, true, "07700900000", PriorityIdentifier.DEFAULT, "id-2"));
+        signUpWithMfaMethods(
+                "international@test.com",
+                "3333",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+33612345678", PriorityIdentifier.DEFAULT, "id-3"));
+
+        var users =
+                dynamoService
+                        .getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(null)
+                        .toList();
+
+        assertThat(users.size(), equalTo(1));
+        assertThat(users.get(0).getEmail(), equalTo("international@test.com"));
+    }
+
+    @Test
+    void
+            shouldMatchInternationalSmsAsBackupMfaMethodFromBulkUserEmailAudienceUserCredentialsScan() {
+        signUpWithMfaMethods(
+                "user@test.com",
+                "1111",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447700900000", PriorityIdentifier.DEFAULT, "id-1"),
+                MFAMethod.smsMfaMethod(
+                        true, true, "+33612345678", PriorityIdentifier.BACKUP, "id-2"));
+
+        var users =
+                dynamoService
+                        .getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(null)
+                        .toList();
+
+        assertThat(users.size(), equalTo(1));
+        assertThat(users.get(0).getEmail(), equalTo("user@test.com"));
+    }
+
+    @Test
+    void
+            shouldNotMatchTwoDomesticSmsButShouldMatchInternationalFromBulkUserEmailAudienceUserCredentialsScan() {
+        signUpWithMfaMethods(
+                "domestic-only@test.com",
+                "1111",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447700900000", PriorityIdentifier.DEFAULT, "id-1"),
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447700900001", PriorityIdentifier.BACKUP, "id-2"));
+        signUpWithMfaMethods(
+                "international@test.com",
+                "2222",
+                MFAMethod.smsMfaMethod(
+                        true, true, "+33612345678", PriorityIdentifier.DEFAULT, "id-3"),
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447700900002", PriorityIdentifier.BACKUP, "id-4"));
+
+        var users =
+                dynamoService
+                        .getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(null)
+                        .toList();
+
+        assertThat(users.size(), equalTo(1));
+        assertThat(users.get(0).getEmail(), equalTo("international@test.com"));
+    }
+
+    @Test
+    void shouldNotMatchUserWithNoMfaMethodsFromBulkUserEmailAudienceUserCredentialsScan() {
+        signUpWithMfaMethods("no-mfa@test.com", "1111");
+
+        var users =
+                dynamoService.getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(
+                        null);
+        assertThat(users.count(), equalTo(0L));
+    }
+
+    @Test
+    void shouldExcludeUnverifiedMfaMethodsFromBulkUserEmailAudienceUserCredentialsScan() {
+        signUpWithMfaMethods(
+                "unverified@test.com",
+                "1111",
+                MFAMethod.smsMfaMethod(
+                        false, true, "+33612345678", PriorityIdentifier.DEFAULT, "id-1"));
+
+        var users =
+                dynamoService.getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(
+                        null);
+        assertThat(users.count(), equalTo(0L));
+    }
+
+    @Test
     void shouldThrowWhenUserNotFoundBySubjectId() {
         setupDynamoWithMultipleUsers();
 
@@ -868,7 +956,7 @@ class DynamoServiceIntegrationTest {
         dynamoService.setMfaMethodsMigrated(email, true);
 
         var userProfileAfterUpdate = userStore.getUserProfileFromEmail(email).get();
-        assertTrue(userProfileAfterUpdate.getMfaMethodsMigrated());
+        assertTrue(userProfileAfterUpdate.isMfaMethodsMigrated());
         assertFalse(userProfileAfterUpdate.isPhoneNumberVerified());
         assertNull(userProfileAfterUpdate.getPhoneNumber());
     }
@@ -884,9 +972,23 @@ class DynamoServiceIntegrationTest {
         dynamoService.setMfaMethodsMigrated(email, false);
 
         var userProfileAfterUpdate = userStore.getUserProfileFromEmail(email).get();
-        assertFalse(userProfileAfterUpdate.getMfaMethodsMigrated());
+        assertFalse(userProfileAfterUpdate.isMfaMethodsMigrated());
         assertTrue(userProfileAfterUpdate.isPhoneNumberVerified());
         assertEquals(phoneNumber, userProfileAfterUpdate.getPhoneNumber());
+    }
+
+    private void signUpWithPhoneNumber(String email, String subjectId, String phoneNumber) {
+        userStore.signUp(email, "password-1", new Subject(subjectId));
+        if (phoneNumber != null) {
+            userStore.setPhoneNumberAndVerificationStatus(email, phoneNumber, true, true);
+        }
+    }
+
+    private void signUpWithMfaMethods(String email, String subjectId, MFAMethod... methods) {
+        userStore.signUp(email, "password-1", new Subject(subjectId));
+        for (MFAMethod method : methods) {
+            userStore.addMfaMethodSupportingMultiple(email, method);
+        }
     }
 
     private void setupDynamoWithMultipleUsers() {

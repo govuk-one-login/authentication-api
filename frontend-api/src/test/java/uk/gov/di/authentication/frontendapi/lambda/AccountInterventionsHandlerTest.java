@@ -17,7 +17,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.AccountState;
@@ -26,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Intervention;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.State;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -37,13 +35,12 @@ import uk.gov.di.authentication.shared.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -74,9 +71,10 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PERMANENTLY_BLOCKED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_TEMP_SUSPENDED_INTERVENTION;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.LoginHandler.INTERNAL_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -99,25 +97,23 @@ class AccountInterventionsHandlerTest {
     private final Context context = mock(Context.class);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final UserContext userContext = mock(UserContext.class, Mockito.RETURNS_DEEP_STUBS);
     private final AccountInterventionsService accountInterventionsService =
             mock(AccountInterventionsService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final LambdaInvokerService mockLambdaInvokerService = mock(LambdaInvokerService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
-    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_SUBJECT_ID)
-                    .withRequestedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
+                    .withRequestedCredentialStrength(CredentialTrustLevel.LOW_LEVEL)
+                    .withClientId(CLIENT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -129,7 +125,8 @@ class AccountInterventionsHandlerTest {
                     CommonTestVariables.IP_ADDRESS,
                     AuditService.UNKNOWN,
                     CommonTestVariables.DI_PERSISTENT_SESSION_ID,
-                    Optional.of(CommonTestVariables.ENCODED_DEVICE_DETAILS));
+                    Optional.of(CommonTestVariables.ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
     private static final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension
@@ -139,8 +136,6 @@ class AccountInterventionsHandlerTest {
     @BeforeEach
     void setUp() throws URISyntaxException {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         UserProfile userProfile = generateUserProfile();
@@ -153,9 +148,7 @@ class AccountInterventionsHandlerTest {
         when(configurationService.getAccountInterventionServiceURI())
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
-        when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getClientId()).thenReturn(CommonTestVariables.CLIENT_ID);
         when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded())
                 .thenReturn(CommonTestVariables.ENCODED_DEVICE_DETAILS);
@@ -166,8 +159,6 @@ class AccountInterventionsHandlerTest {
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
-                        sessionService,
-                        clientService,
                         authenticationService,
                         accountInterventionsService,
                         auditService,
@@ -482,7 +473,8 @@ class AccountInterventionsHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        assertThat(
+                result, hasBody(objectMapper.writeValueAsString(ErrorResponse.SESSION_ID_MISSING)));
     }
 
     @Test
@@ -494,7 +486,9 @@ class AccountInterventionsHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -505,7 +499,9 @@ class AccountInterventionsHandlerTest {
         var result = handler.handleRequest(apiRequestEventWithEmail(), context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
     }
 
     @ParameterizedTest
@@ -644,20 +640,17 @@ class AccountInterventionsHandlerTest {
 
     private static Stream<Arguments> httpErrorCodesAndAssociatedResponses() {
         return Stream.of(
-                Arguments.of(429, ErrorResponse.ERROR_1051),
-                Arguments.of(500, ErrorResponse.ERROR_1052),
-                Arguments.of(502, ErrorResponse.ERROR_1053),
-                Arguments.of(504, ErrorResponse.ERROR_1054),
-                Arguments.of(404, ErrorResponse.ERROR_1055));
+                Arguments.of(429, ErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED),
+                Arguments.of(500, ErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR),
+                Arguments.of(502, ErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY),
+                Arguments.of(504, ErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT),
+                Arguments.of(404, ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR));
     }
 
     private APIGatewayProxyRequestEvent apiRequestEventWithEmail() {
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\" }",
-                        uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL));
+        event.setBody(format("{ \"email\": \"%s\" }", CommonTestVariables.EMAIL));
         return event;
     }
 

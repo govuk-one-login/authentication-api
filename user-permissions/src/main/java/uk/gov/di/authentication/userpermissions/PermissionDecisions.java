@@ -1,0 +1,129 @@
+package uk.gov.di.authentication.userpermissions;
+
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+
+/**
+ * Interface defining permission checks for user authentication actions.
+ *
+ * <p>This interface provides methods to determine if a user is permitted to perform specific
+ * authentication actions based on their context and journey type.
+ */
+public interface PermissionDecisions {
+    /**
+     * Checks if a user is permitted to submit an email address.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canReceiveEmailAddress(
+            JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
+     * Checks if the system can send an email OTP notification to the user.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canSendEmailOtpNotification(
+            JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
+     * Checks if a user is permitted to verify an email OTP.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canVerifyEmailOtp(
+            JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
+     * Checks if a user is permitted to submit a password.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canReceivePassword(
+            JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
+     * Checks if the system can send an SMS OTP notification to the user.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    default Result<DecisionError, Decision> canSendSmsOtpNotification(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        return canSendSmsOtpNotification(journeyType, permissionContext, null);
+    }
+
+    /**
+     * Checks if the system can send an SMS OTP notification to the user.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @param lockoutStateHolder Holder for communicating lockout state within a single Lambda
+     *     invocation. See {@link InMemoryLockoutStateHolder} for details on why this exists.
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canSendSmsOtpNotification(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            InMemoryLockoutStateHolder lockoutStateHolder);
+
+    /**
+     * Checks if a user is permitted to verify an MFA OTP.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canVerifyMfaOtp(
+            JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
+     * Checks if a user is permitted to login.
+     *
+     * <p>This is an experimental method that could replace canReceivePassword.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    @Experimental("Could be an alternative to canReceivePassword")
+    default Result<DecisionError, Decision> canLogin(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        return canReceiveEmailAddress(journeyType, permissionContext);
+    }
+
+    /**
+     * Checks if a user is permitted to start an authentication journey.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canStartJourney(
+            JourneyType journeyType, PermissionContext permissionContext);
+
+    // NOTE - AUT-4789 - See AUT-5248 to change how we handle decisions.
+    //  This is a temporary implementation.
+
+    /**
+     * Checks if the user has passed the required checks in order to issue an auth code.
+     *
+     * @param authSession The user's current session
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    boolean canIssueAuthCode(AuthSessionItem authSession);
+}

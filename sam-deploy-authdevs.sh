@@ -4,30 +4,52 @@ set -euo pipefail
 # Ensure we're in the root directory of the repo
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
-environments=("authdev1" "authdev2" "dev")
+environments=("authdev1" "authdev2" "authdev3" "dev")
+
+# -------------
+# Prerequisites
+# -------------
+if ! command -v rain &> /dev/null; then
+  echo "Merging templates requires rain to be installed. See https://github.com/aws-cloudformation/rain for installation instructions."
+  exit 1
+fi
+
+if ! command -v sam &> /dev/null; then
+  echo "Deploying template requires AWS sam cli to be installed. See https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html for installation instructions."
+  exit 1
+fi
 
 function usage() {
   cat <<- USAGE
 Usage:
-    $0 [options] <environment>
+    $0 [options]
 
 Options:
+    -a  --AccMgmt               deploy the Account Management APIs
     -b, --build                 run gradle and buildZip tasks
     --no-build                  do not run gradle and buildZip tasks
     -p, --prompt                prompt for confirmation before sam deploy
     -c, --clean                 run gradle clean before build
     -h, --help                  display this help message
+    -x, --authapi               deploy the Auth Int & ext API
+    -s  --Stubsapi              deploy the Stubs API
+    -d  --actdataapi             deploy the Account data API
+    -u, --utils                 deploy the Utils stack
 
-    -x, --auth-external         deploy the auth-external API
 
-Arguments:
-    environment                 the environment to deploy to. Valid environments are: ${environments[*]}
+Dependencies:
+    AWS CLI, AWS SAM, rain
 USAGE
 }
 
+if [ $# -lt 1 ]; then
+  usage
+  exit 1
+fi
+
 function sso_login() {
   export AWS_ACCOUNT=di-authentication-development
-  export AWS_PROFILE=di-authentication-development-AWSAdministratorAccess
+  export AWS_PROFILE=di-authentication-development-AdministratorAccessPermission
   export AWS_REGION="eu-west-2"
 
   if ! aws sts get-caller-identity &> /dev/null; then
@@ -35,22 +57,32 @@ function sso_login() {
   fi
 }
 
-O_BUILD=0  # -b, --build
-O_CLEAN="" # -c, --clean
-O_DEPLOY=0 # -x, --auth-external
-
-POSITIONAL=()
-TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/backend-template.yaml}"
+O_DEPLOYAM=0         # -a, --accmgmt
+O_BUILD=0            # -b, --build
+O_CLEAN=""           # -c, --clean
+O_DEPLOYAUTHAPI=0    # -x, --auth-internal-external-api
+O_DEPLOYSTUBSAPI=0   # -s, --stubs-api
+O_DEPLOYUTILS=0      # -u, --utils
+O_DEPLOYACTDATAAPI=0 # -d, --accdata-api
+AMAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/am-template.yaml}"
+AUTHAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/auth-template.yaml}"
+ADAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/ad-template.yaml}"
+STUBSAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/stubs-template.yaml}"
+UTILS_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/utils-template.yaml}"
 SAMCONFIG_FILE=${SAMCONFIG_FILE:-${DIR}/scripts/dev-samconfig.toml}
 CONFIRM_CHANGESET_OPTION="--no-confirm-changeset"
 
 while [[ $# -gt 0 ]]; do
   case "${1}" in
+    -a | --accmgmt) O_DEPLOYAM=1 ;;
     -b | --build) O_BUILD=1 ;;
     --no-build) O_BUILD=0 ;;
     -p | --prompt) CONFIRM_CHANGESET_OPTION="--confirm-changeset" ;;
     -c | --clean) O_CLEAN="clean" ;;
-    -x | --auth-external) O_DEPLOY=1 ;;
+    -x | --authapi) O_DEPLOYAUTHAPI=1 ;;
+    -s | --stubsapi) O_DEPLOYSTUBSAPI=1 ;;
+    -d | --actdataapi) O_DEPLOYACTDATAAPI=1 ;;
+    -u | --utils) O_DEPLOYUTILS=1 ;;
     -h | --help)
       usage
       exit 0
@@ -59,44 +91,188 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 1
       ;;
-    *) POSITIONAL+=("$1") ;;
+    *)
+      echo "Error: Unknown argument: $1"
+      usage
+      exit 1
+      ;;
   esac
   shift
 done
 
-if [[ ${#POSITIONAL[@]} -gt 1 ]]; then
-  echo "Error: only 1 environment can be specified"
-  exit 1
-elif [[ ${#POSITIONAL[@]} -eq 0 ]]; then
-  echo "Error: Environment must be specified. Valid environments are: ${environments[*]}"
-  exit 1
-fi
-
-if [[ ! " ${environments[*]} " =~ ${POSITIONAL[0]} ]]; then
-  echo "Error: invalid environment specified: ${POSITIONAL[0]}"
-  exit 1
-fi
-ENVIRONMENT=${POSITIONAL[0]}
+echo "Select environment:"
+select env in "${environments[@]}"; do
+  if [[ -n ${env} ]]; then
+    ENVIRONMENT=${env}
+    break
+  else
+    echo "Invalid selection. Please try again."
+  fi
+done
+echo "You are going to deploy in ${ENVIRONMENT}"
+read -r -p "Press enter to continue or Ctrl+C to abort"
 echo "Environment: ${ENVIRONMENT}"
 
 if [[ ${O_BUILD} -eq 1 ]]; then
   echo "Building deployment artefacts ... "
-  ./gradlew --no-daemon --parallel ${O_CLEAN} :auth-external-api:buildZip
+  ./gradlew --no-daemon --parallel ${O_CLEAN} buildZip
   echo "done!"
 fi
 
-if [[ ${O_DEPLOY} -eq 1 ]]; then
+if [[ ${O_DEPLOYAUTHAPI} -eq 1 ]]; then
   sso_login
 
+  echo "Merging all ${DIR}/ci/cloudformation/auth templates into a single ${AUTHAPI_TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/auth" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${AUTHAPI_TEMPLATE_FILE}"
+
   echo "Lint template file"
-  sam validate --lint --template-file="${TEMPLATE_FILE}"
+  sam validate --lint --template-file="${AUTHAPI_TEMPLATE_FILE}"
 
   echo "Running sam build on template file"
-  sam build --parallel --template-file="${TEMPLATE_FILE}"
+  sam build --parallel --template-file="${AUTHAPI_TEMPLATE_FILE}"
 
   sam deploy \
     --no-fail-on-empty-changeset \
     --config-env "${ENVIRONMENT}" \
+    --config-file "${SAMCONFIG_FILE}" \
+    ${CONFIRM_CHANGESET_OPTION}
+
+  echo "Deployment complete!"
+fi
+
+if [[ ${O_DEPLOYAM} -eq 1 ]]; then
+  sso_login
+
+  if [[ ${ENVIRONMENT} == "dev" ]]; then
+    SAM_CONFIG_ENV="devam"
+  elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+    SAM_CONFIG_ENV="authdev1am"
+  elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
+    SAM_CONFIG_ENV="authdev2am"
+  elif [[ ${ENVIRONMENT} == "authdev3" ]]; then
+    SAM_CONFIG_ENV="authdev3am"
+  else
+    SAM_CONFIG_ENV="${ENVIRONMENT}"
+  fi
+
+  echo "Merging all ${DIR}/ci/cloudformation/account-management templates into a single ${AMAPI_TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/account-management" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${AMAPI_TEMPLATE_FILE}"
+
+  echo "Lint template file"
+  sam validate --lint --template-file="${AMAPI_TEMPLATE_FILE}"
+
+  echo "Running sam build on template file"
+  sam build --parallel --template-file="${AMAPI_TEMPLATE_FILE}"
+
+  sam deploy \
+    --no-fail-on-empty-changeset \
+    --config-env "${SAM_CONFIG_ENV}" \
+    --config-file "${SAMCONFIG_FILE}" \
+    ${CONFIRM_CHANGESET_OPTION}
+
+  echo "Deployment complete!"
+fi
+
+if [[ ${O_DEPLOYSTUBSAPI} -eq 1 ]]; then
+  sso_login
+
+  if [[ ${ENVIRONMENT} == "dev" ]]; then
+    SAM_CONFIG_ENV="devstubs"
+  elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+    SAM_CONFIG_ENV="authdev1stubs"
+  elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
+    SAM_CONFIG_ENV="authdev2stubs"
+  elif [[ ${ENVIRONMENT} == "authdev3" ]]; then
+    SAM_CONFIG_ENV="authdev3stubs"
+  else
+    SAM_CONFIG_ENV="${ENVIRONMENT}"
+  fi
+
+  echo "Merging all ${DIR}/ci/cloudformation/stubs templates into a single ${STUBSAPI_TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/stubs" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${STUBSAPI_TEMPLATE_FILE}"
+
+  echo "Lint template file"
+  sam validate --lint --template-file="${STUBSAPI_TEMPLATE_FILE}"
+
+  echo "Running sam build on template file"
+  sam build --parallel --template-file="${STUBSAPI_TEMPLATE_FILE}"
+
+  sam deploy \
+    --no-fail-on-empty-changeset \
+    --config-env "${SAM_CONFIG_ENV}" \
+    --config-file "${SAMCONFIG_FILE}" \
+    ${CONFIRM_CHANGESET_OPTION}
+
+  echo "Deployment complete!"
+fi
+
+if [[ ${O_DEPLOYACTDATAAPI} -eq 1 ]]; then
+  sso_login
+
+  if [[ ${ENVIRONMENT} == "dev" ]]; then
+    SAM_CONFIG_ENV="devad"
+  elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+    SAM_CONFIG_ENV="authdev1ad"
+  elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
+    SAM_CONFIG_ENV="authdev2ad"
+  elif [[ ${ENVIRONMENT} == "authdev3" ]]; then
+    SAM_CONFIG_ENV="authdev3ad"
+  else
+    SAM_CONFIG_ENV="${ENVIRONMENT}"
+  fi
+
+  echo "Merging all ${DIR}/ci/cloudformation/account-datas templates into a single ${ADAPI_TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/account-data" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${ADAPI_TEMPLATE_FILE}"
+
+  echo "Lint template file"
+  sam validate --lint --template-file="${ADAPI_TEMPLATE_FILE}"
+
+  echo "Running sam build on template file"
+  sam build --parallel --template-file="${ADAPI_TEMPLATE_FILE}"
+
+  sam deploy \
+    --no-fail-on-empty-changeset \
+    --config-env "${SAM_CONFIG_ENV}" \
+    --config-file "${SAMCONFIG_FILE}" \
+    ${CONFIRM_CHANGESET_OPTION}
+
+  echo "Deployment complete!"
+fi
+
+if [[ ${O_DEPLOYUTILS} -eq 1 ]]; then
+  sso_login
+
+  if [[ ${ENVIRONMENT} == "dev" ]]; then
+    SAM_CONFIG_ENV="devutils"
+  elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+    SAM_CONFIG_ENV="authdev1utils"
+  elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
+    SAM_CONFIG_ENV="authdev2utils"
+  elif [[ ${ENVIRONMENT} == "authdev3" ]]; then
+    SAM_CONFIG_ENV="authdev3utils"
+  else
+    SAM_CONFIG_ENV="${ENVIRONMENT}"
+  fi
+
+  echo "Merging all ${DIR}/ci/cloudformation/utils templates into a single ${UTILS_TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/utils" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${UTILS_TEMPLATE_FILE}"
+
+  sed -i '' 's/Mode: OFF/Mode: "OFF"/g' "${UTILS_TEMPLATE_FILE}"
+
+  echo "Lint template file"
+  sam validate --lint --template-file="${UTILS_TEMPLATE_FILE}"
+
+  echo "Running sam build on template file"
+  sam build --parallel --template-file="${UTILS_TEMPLATE_FILE}"
+
+  sam deploy \
+    --no-fail-on-empty-changeset \
+    --config-env "${SAM_CONFIG_ENV}" \
     --config-file "${SAMCONFIG_FILE}" \
     ${CONFIRM_CHANGESET_OPTION}
 

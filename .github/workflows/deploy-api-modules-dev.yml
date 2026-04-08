@@ -1,4 +1,4 @@
-name: "DEV: Build and deploy API modules"
+name: "TF - DEV: Build and deploy API modules"
 env:
   AWS_REGION: eu-west-2
   DEPLOYER_ROLE: arn:aws:iam::706615647326:role/deployers/dev-github-actions-publish-to-s3-for-code-signing
@@ -55,7 +55,7 @@ jobs:
       shell: ${{ steps.fetch-pr-metadata.outputs.shell }}
     steps:
       - name: Fetch PR Metadata
-        uses: govuk-one-login/authentication-artifact-metadata-action@d0ea2b26de2edf3ba08e649f9f06e6300460f2f6
+        uses: govuk-one-login/authentication-artifact-metadata-action@1184fbdf9626b4485932595462b7bb6efc3d501e
         id: fetch-pr-metadata
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -69,14 +69,14 @@ jobs:
       java_distribution: ${{ env.JAVA_DISTRIBUTION }}
     steps:
       - name: Check out repository code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set up JDK 17
-        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 #v4.7.1
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
         with:
           java-version: ${{ env.JAVA_VERSION}}
           distribution: ${{ env.JAVA_DISTRIBUTION}}
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
@@ -96,16 +96,13 @@ jobs:
       matrix:
         module:
           - account-management-api
-          - auth-external-api
           - client-registry-api
           - delivery-receipts-api
           - doc-checking-app-api
           - frontend-api
-          - interventions-api-stub
           - ipv-api
           - oidc-api
           - test-services-api
-          - ticf-cri-stub
           - utils
     permissions:
       id-token: write
@@ -143,16 +140,10 @@ jobs:
         include:
           - module_name: account-management-api
             terraform_directory_name: account-management
-          - module_name: auth-external-api
-            terraform_directory_name: auth-external-api
           - module_name: delivery-receipts-api
             terraform_directory_name: delivery-receipts
-          - module_name: interventions-api-stub
-            terraform_directory_name: interventions-api-stub
           - module_name: test-services-api
             terraform_directory_name: test-services
-          - module_name: ticf-cri-stub
-            terraform_directory_name: ticf-cri-stub
           - module_name: utils
             terraform_directory_name: utils
     permissions:
@@ -195,17 +186,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up AWS credentials
-        uses: aws-actions/configure-aws-credentials@f24d7193d98baebaeacc7e2227925dd47cc267f5 # v4.2.0
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
           role-to-assume: ${{ needs.set-up.outputs.promotion_role }}
           aws-region: ${{ needs.set-up.outputs.aws_region }}
 
       - name: Download all promotion artifacts
         id: download_promotion_artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: promotion-artifacts
           pattern: promotion_artifact_*

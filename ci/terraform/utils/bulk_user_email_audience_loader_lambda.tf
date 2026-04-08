@@ -10,7 +10,8 @@ module "bulk_user_email_audience_loader_lambda_role" {
     aws_iam_policy.bulk_user_email_audience_loader_dynamo_write_access[0].arn,
     aws_iam_policy.bulk_user_email_dynamo_encryption_key_kms_policy[0].arn,
     aws_iam_policy.bulk_user_email_audience_loader_lambda_invocation_policy[0].arn,
-    local.user_profile_encryption_policy_arn
+    local.user_profile_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn
   ]
 }
 
@@ -70,6 +71,8 @@ resource "aws_lambda_function" "bulk_user_email_audience_loader_lambda" {
       BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT      = var.bulk_user_email_max_audience_load_user_count
       BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE = var.bulk_user_email_max_audience_load_user_batch_size
       BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME       = local.bulk_user_email_audience_loader_lambda_name
+      BULK_USER_EMAIL_TYPE                              = var.bulk_user_email_type
+      BULK_USER_EMAIL_AUDIENCE_LOAD_PAUSE_DURATION      = var.bulk_user_email_audience_load_pause_duration
       BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS     = var.bulk_user_email_included_terms_and_conditions
     })
   }

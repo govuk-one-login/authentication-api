@@ -9,6 +9,7 @@ locals {
     DT_TENANT                    = var.dynatrace_secret.DT_TENANT
     DT_LOG_COLLECTION_AUTH_TOKEN = var.dynatrace_secret.DT_LOG_COLLECTION_AUTH_TOKEN
 
-    DT_OPEN_TELEMETRY_ENABLE_INTEGRATION = "true"
+    DT_OPEN_TELEMETRY_ENABLE_INTEGRATION                                   = "true"
+    OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING = "true"
   }
 }

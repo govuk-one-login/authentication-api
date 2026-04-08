@@ -2,23 +2,20 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
+import java.util.List;
 import java.util.Optional;
 
 public class OrchSessionExtension extends DynamoExtension implements AfterEachCallback {
 
     public static final String TABLE_NAME = "local-Orch-Session";
     public static final String SESSION_ID_FIELD = "SessionId";
+    public static final String INTERNAL_COMMON_SUBJECT_ID_INDEX = "InternalCommonSubjectIdIndex";
+    public static final String INTERNAL_COMMON_SUBJECT_ID_FIELD = "InternalCommonSubjectId";
     private OrchSessionService orchSessionService;
     private final ConfigurationService configurationService;
 
@@ -43,28 +40,11 @@ public class OrchSessionExtension extends DynamoExtension implements AfterEachCa
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createOrchSessionTable();
-        }
-    }
-
-    private void createOrchSessionTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(TABLE_NAME)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(SESSION_ID_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(SESSION_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-        dynamoDB.createTable(request);
+        createTableWithPartitionKey(
+                TABLE_NAME,
+                SESSION_ID_FIELD,
+                createGlobalSecondaryIndex(
+                        INTERNAL_COMMON_SUBJECT_ID_INDEX, INTERNAL_COMMON_SUBJECT_ID_FIELD));
     }
 
     public void addSession(OrchSessionItem orchSession) {
@@ -86,6 +66,11 @@ public class OrchSessionExtension extends DynamoExtension implements AfterEachCa
 
     public Optional<OrchSessionItem> getSession(String sessionId) {
         return orchSessionService.getSession(sessionId);
+    }
+
+    public List<OrchSessionItem> getSessionsByInternalCommonSubjectId(
+            String internalCommonSubjectId) {
+        return orchSessionService.getSessionsFromInternalCommonSubjectId(internalCommonSubjectId);
     }
 
     public void updateSession(OrchSessionItem sessionItem) {

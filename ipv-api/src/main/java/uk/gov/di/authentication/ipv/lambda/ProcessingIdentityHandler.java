@@ -12,7 +12,6 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -21,23 +20,20 @@ import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.ipv.utils.IdentityProgressUtils.getProcessingIdentityStatus;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -47,7 +43,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     private final DynamoIdentityService dynamoIdentityService;
     private final AccountInterventionService accountInterventionService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final LogoutService logoutService;
 
     private static final Logger LOG = LogManager.getLogger(ProcessingIdentityHandler.class);
@@ -56,23 +52,10 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         super(ProcessingIdentityRequest.class, configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.metrics = new Metrics();
         this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configurationService, metrics, auditService);
         this.logoutService = new LogoutService(configurationService);
-    }
-
-    public ProcessingIdentityHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(ProcessingIdentityRequest.class, configurationService);
-        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
-        this.logoutService = new LogoutService(configurationService, redis);
     }
 
     public ProcessingIdentityHandler() {
@@ -82,27 +65,23 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     public ProcessingIdentityHandler(
             DynamoIdentityService dynamoIdentityService,
             AccountInterventionService accountInterventionService,
-            SessionService sessionService,
             DynamoClientService dynamoClientService,
-            DynamoService dynamoService,
             ConfigurationService configurationService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             LogoutService logoutService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
         super(
                 ProcessingIdentityRequest.class,
                 configurationService,
-                sessionService,
                 dynamoClientService,
-                dynamoService,
                 orchSessionService,
                 orchClientSessionService);
         this.dynamoIdentityService = dynamoIdentityService;
         this.accountInterventionService = accountInterventionService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.logoutService = logoutService;
     }
 
@@ -121,7 +100,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         LOG.info("ProcessingIdentity request received");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
-            ClientRegistry client = userContext.getClient().orElseThrow();
 
             int processingAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
@@ -131,17 +109,12 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
 
             var identityCredentials =
                     dynamoIdentityService.getIdentityCredentials(userContext.getClientSessionId());
-            var processingStatus = ProcessingIdentityStatus.PROCESSING;
-            if (identityCredentials.isEmpty()
-                    && userContext.getOrchSession().getProcessingIdentityAttempts() == 1) {
-                processingStatus = ProcessingIdentityStatus.NO_ENTRY;
+            var processingStatus =
+                    getProcessingIdentityStatus(identityCredentials, processingAttempts);
+            if (processingStatus == ProcessingIdentityStatus.NO_ENTRY) {
                 userContext.getOrchSession().resetProcessingIdentityAttempts();
-            } else if (identityCredentials.isEmpty()) {
-                processingStatus = ProcessingIdentityStatus.ERROR;
-            } else if (Objects.nonNull(identityCredentials.get().getCoreIdentityJWT())) {
-                processingStatus = ProcessingIdentityStatus.COMPLETED;
             }
-            cloudwatchMetricsService.incrementCounter(
+            metrics.increment(
                     "ProcessingIdentity",
                     Map.of(
                             "Environment",
@@ -153,7 +126,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     new AuditContext(
                             userContext.getClientSessionId(),
                             userContext.getSessionId(),
-                            client.getClientID(),
+                            userContext.getClientId(),
                             AuditService.UNKNOWN,
                             Optional.ofNullable(request.getEmail()).orElse(AuditService.UNKNOWN),
                             IpAddressHelper.extractIpAddress(input),
@@ -178,7 +151,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                                 auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getSuspended() || intervention.getBlocked())) {
-                    return performIntervention(input, userContext, client, intervention);
+                    return performIntervention(input, userContext, intervention);
                 }
             } else if (processingStatus == ProcessingIdentityStatus.ERROR) {
                 LOG.error("Error response received from SPOT");
@@ -199,7 +172,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     private APIGatewayProxyResponseEvent performIntervention(
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            ClientRegistry client,
             AccountIntervention intervention)
             throws Json.JsonException {
         var logoutResult =
@@ -208,9 +180,10 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                 userContext.getSessionId(), userContext.getOrchSession()),
                         userContext.getOrchSession().getInternalCommonSubjectId(),
                         input,
-                        client.getClientID(),
+                        userContext.getClientId(),
                         intervention);
         var redirectUrl = logoutResult.getHeaders().get(ResponseHeaders.LOCATION);
+        LOG.info("Completed intervention in processing identity handler");
         return generateApiGatewayProxyResponse(
                 200,
                 new ProcessingIdentityInterventionResponse(

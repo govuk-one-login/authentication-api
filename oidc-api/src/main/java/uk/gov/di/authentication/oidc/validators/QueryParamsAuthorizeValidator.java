@@ -17,6 +17,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -108,23 +109,20 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             state));
         }
 
-        if (configurationService.isPkceEnabled()) {
-            var codeChallenge =
-                    Optional.ofNullable(authRequest.getCodeChallenge())
-                            .map(Identifier::getValue)
-                            .orElse(null);
-            var codeChallengeMethod =
-                    Optional.ofNullable(authRequest.getCodeChallengeMethod())
-                            .map(Identifier::getValue)
-                            .orElse(null);
+        var codeChallenge =
+                Optional.ofNullable(authRequest.getCodeChallenge())
+                        .map(Identifier::getValue)
+                        .orElse(null);
+        var codeChallengeMethod =
+                Optional.ofNullable(authRequest.getCodeChallengeMethod())
+                        .map(Identifier::getValue)
+                        .orElse(null);
 
-            var codeChallengeError =
-                    validateCodeChallengeAndMethod(
-                            codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
-            if (codeChallengeError.isPresent()) {
-                return Optional.of(
-                        new AuthRequestError(codeChallengeError.get(), redirectURI, state));
-            }
+        var codeChallengeError =
+                validateCodeChallengeAndMethod(
+                        codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
+        if (codeChallengeError.isPresent()) {
+            return Optional.of(new AuthRequestError(codeChallengeError.get(), redirectURI, state));
         }
 
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
@@ -144,6 +142,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                                 redirectURI,
                                 state));
             }
+            logIfIdentityLoCAndIdentityUnsupported(vtrList, client);
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
@@ -184,18 +183,27 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
             LOG.info("login_hint attached to query params");
         }
 
+        var channelOpt =
+                Optional.ofNullable(authRequest.getCustomParameter("channel"))
+                        .map(List::stream)
+                        .flatMap(Stream::findFirst);
+        if (channelOpt.isPresent()) {
+            var channelError = validateChannel(channelOpt.get());
+            if (channelError.isPresent()) {
+                return Optional.of(new AuthRequestError(channelError.get(), redirectURI, state));
+            }
+        }
+
         return Optional.empty();
     }
 
     private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
-        for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
-                logErrorInProdElseWarn(
-                        String.format(
-                                "Scopes have been requested which are not yet supported. Scopes in request: %s",
-                                scopes));
-                return false;
-            }
+        if (!ValidScopes.areScopesValid(scopes)) {
+            logErrorInProdElseWarn(
+                    String.format(
+                            "Scopes have been requested which are not yet supported. Scopes in request: %s",
+                            scopes));
+            return false;
         }
         if (!clientRegistry.getScopes().containsAll(scopes)) {
             logErrorInProdElseWarn(

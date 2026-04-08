@@ -17,29 +17,25 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -52,7 +48,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -88,25 +83,20 @@ class ProcessingIdentityHandlerTest {
                     URI.create(INTERNAL_SECTOR_URI),
                     SdkBytes.fromByteBuffer(SALT).asByteArray());
 
-    private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
     private static final String ENVIRONMENT = "test-environment";
 
     private final Context context = mock(Context.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final LogoutService logoutService = mock(LogoutService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
-    private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(PAIRWISE_SUBJECT);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -119,8 +109,6 @@ class ProcessingIdentityHandlerTest {
 
     @BeforeEach
     void setup() {
-        when(dynamoClientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         Map<String, String> headers = new HashMap<>();
@@ -133,12 +121,10 @@ class ProcessingIdentityHandlerTest {
                 new ProcessingIdentityHandler(
                         dynamoIdentityService,
                         accountInterventionService,
-                        sessionService,
                         dynamoClientService,
-                        dynamoService,
                         configurationService,
                         auditService,
-                        cloudwatchMetricsService,
+                        metrics,
                         logoutService,
                         orchSessionService,
                         orchClientSessionService);
@@ -150,24 +136,22 @@ class ProcessingIdentityHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
     }
 
     @Test
     void shouldReturnErrorIfOrchSessionIsNotFound() throws Json.JsonException {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.empty());
 
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
     }
 
     @Test
     void shouldReturnErrorIfOrchSessionHasNoInternalCommonSubjectId() throws Json.JsonException {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString()))
                 .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
 
@@ -175,7 +159,7 @@ class ProcessingIdentityHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(metrics);
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Orch session has no internalCommonSubjectId")));
@@ -203,8 +187,8 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.COMPLETED))));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -284,8 +268,8 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityInterventionResponse(
                                         ProcessingIdentityStatus.INTERVENTION, redirectUrl))));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -315,8 +299,8 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.PROCESSING))));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -343,8 +327,8 @@ class ProcessingIdentityHandlerTest {
                 hasBody(
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(ProcessingIdentityStatus.ERROR))));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -371,8 +355,8 @@ class ProcessingIdentityHandlerTest {
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.NO_ENTRY))));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(0));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "ProcessingIdentity",
                         Map.of(
                                 "Environment",
@@ -398,19 +382,6 @@ class ProcessingIdentityHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
-    }
-
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withClientID(CLIENT_ID)
-                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .withPublicKey(null)
-                .withSectorIdentifierUri("http://sector-identifier")
-                .withScopes(singletonList("openid"))
-                .withCookieConsentShared(true)
-                .withSubjectType("pairwise");
     }
 }

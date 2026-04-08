@@ -1,0 +1,138 @@
+package uk.gov.di.orchestration.shared.entity;
+
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
+
+@DynamoDbBean
+public class OrchAccessTokenItem {
+
+    private static final String ATTRIBUTE_CLIENT_AND_RP_PAIRWISE_ID = "ClientAndRpPairwiseId";
+    private static final String ATTRIBUTE_AUTH_CODE = "AuthCode";
+    private static final String ATTRIBUTE_TOKEN = "Token";
+    private static final String ATTRIBUTE_INTERNAL_PAIRWISE_SUBJECT_ID =
+            "InternalPairwiseSubjectId";
+    private static final String ATTRIBUTE_CLIENT_SESSION_ID = "ClientSessionId";
+    private static final String ATTRIBUTE_TTL = "ttl";
+
+    private String clientAndRpPairwiseId;
+    private String authCode;
+    private String token;
+    private String internalPairwiseSubjectId;
+    private String clientSessionId;
+    private long timeToLive;
+
+    @DynamoDbPartitionKey
+    @DynamoDbAttribute(ATTRIBUTE_CLIENT_AND_RP_PAIRWISE_ID)
+    public String getClientAndRpPairwiseId() {
+        return clientAndRpPairwiseId;
+    }
+
+    public void setClientAndRpPairwiseId(String clientAndRpPairwiseId) {
+        this.clientAndRpPairwiseId = clientAndRpPairwiseId;
+    }
+
+    public OrchAccessTokenItem withClientAndRpPairwiseId(String clientAndRpPairwiseId) {
+        this.clientAndRpPairwiseId = clientAndRpPairwiseId;
+        return this;
+    }
+
+    @DynamoDbSortKey
+    @DynamoDbSecondaryPartitionKey(indexNames = "AuthCodeIndex")
+    @DynamoDbAttribute(ATTRIBUTE_AUTH_CODE)
+    public String getAuthCode() {
+        return authCode;
+    }
+
+    public void setAuthCode(String authCode) {
+        this.authCode = authCode;
+    }
+
+    public OrchAccessTokenItem withAuthCode(String authCode) {
+        this.authCode = authCode;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_INTERNAL_PAIRWISE_SUBJECT_ID)
+    public String getInternalPairwiseSubjectId() {
+        return internalPairwiseSubjectId;
+    }
+
+    public void setInternalPairwiseSubjectId(String internalPairwiseSubjectId) {
+        this.internalPairwiseSubjectId = internalPairwiseSubjectId;
+    }
+
+    public OrchAccessTokenItem withInternalPairwiseSubjectId(String internalPairwiseSubjectId) {
+        this.internalPairwiseSubjectId = internalPairwiseSubjectId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_TOKEN)
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public OrchAccessTokenItem withToken(String token) {
+        this.token = token;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CLIENT_SESSION_ID)
+    public String getClientSessionId() {
+        return clientSessionId;
+    }
+
+    public void setClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
+    }
+
+    public OrchAccessTokenItem withClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_TTL)
+    public long getTimeToLive() {
+        return timeToLive;
+    }
+
+    public void setTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
+    }
+
+    public OrchAccessTokenItem withTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OrchAccessTokenItem that = (OrchAccessTokenItem) o;
+        return timeToLive == that.timeToLive
+                && java.util.Objects.equals(clientAndRpPairwiseId, that.clientAndRpPairwiseId)
+                && java.util.Objects.equals(authCode, that.authCode)
+                && java.util.Objects.equals(token, that.token)
+                && java.util.Objects.equals(
+                        internalPairwiseSubjectId, that.internalPairwiseSubjectId)
+                && java.util.Objects.equals(clientSessionId, that.clientSessionId);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(
+                clientAndRpPairwiseId,
+                authCode,
+                token,
+                internalPairwiseSubjectId,
+                clientSessionId,
+                timeToLive);
+    }
+}

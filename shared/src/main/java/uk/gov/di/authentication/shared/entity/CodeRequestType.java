@@ -7,19 +7,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum CodeRequestType {
-    EMAIL_REGISTRATION(MFAMethodType.EMAIL, JourneyType.REGISTRATION),
-    EMAIL_ACCOUNT_RECOVERY(MFAMethodType.EMAIL, JourneyType.ACCOUNT_RECOVERY),
-    EMAIL_PASSWORD_RESET(MFAMethodType.EMAIL, JourneyType.PASSWORD_RESET),
-    SMS_ACCOUNT_RECOVERY(MFAMethodType.SMS, JourneyType.ACCOUNT_RECOVERY),
-    PW_RESET_MFA_SMS(MFAMethodType.SMS, JourneyType.PASSWORD_RESET_MFA),
-    SMS_REGISTRATION(MFAMethodType.SMS, JourneyType.REGISTRATION),
-    SMS_SIGN_IN(MFAMethodType.SMS, JourneyType.SIGN_IN),
-    AUTH_APP_ACCOUNT_RECOVERY(MFAMethodType.AUTH_APP, JourneyType.ACCOUNT_RECOVERY),
-    AUTH_APP_SIGN_IN(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN),
-    PW_RESET_MFA_AUTH_APP(MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA),
-    AUTH_APP_REGISTRATION(MFAMethodType.AUTH_APP, JourneyType.REGISTRATION),
-    SMS_REAUTHENTICATION(MFAMethodType.SMS, JourneyType.REAUTHENTICATION),
-    AUTH_APP_REAUTHENTICATION(MFAMethodType.AUTH_APP, JourneyType.REAUTHENTICATION);
+    EMAIL_REGISTRATION(SupportedCodeType.EMAIL, JourneyType.REGISTRATION),
+    EMAIL_ACCOUNT_RECOVERY(SupportedCodeType.EMAIL, JourneyType.ACCOUNT_RECOVERY),
+    EMAIL_PASSWORD_RESET(SupportedCodeType.EMAIL, JourneyType.PASSWORD_RESET),
+    MFA_ACCOUNT_RECOVERY(SupportedCodeType.MFA, JourneyType.ACCOUNT_RECOVERY),
+    MFA_PW_RESET_MFA(SupportedCodeType.MFA, JourneyType.PASSWORD_RESET_MFA),
+    MFA_REGISTRATION(SupportedCodeType.MFA, JourneyType.REGISTRATION),
+    MFA_SIGN_IN(SupportedCodeType.MFA, JourneyType.SIGN_IN),
+    MFA_REAUTHENTICATION(SupportedCodeType.MFA, JourneyType.REAUTHENTICATION);
 
     private static final Map<CodeRequestTypeKey, CodeRequestType> codeRequestTypeMap =
             new HashMap<>();
@@ -28,22 +23,23 @@ public enum CodeRequestType {
         for (CodeRequestType codeRequestType : CodeRequestType.values()) {
             CodeRequestTypeKey key =
                     new CodeRequestTypeKey(
-                            codeRequestType.getMfaMethodType(), codeRequestType.getJourneyType());
+                            codeRequestType.getSupportedCodeType(),
+                            codeRequestType.getJourneyType());
             codeRequestTypeMap.put(key, codeRequestType);
         }
     }
 
-    private final MFAMethodType mfaMethodType;
+    private final SupportedCodeType supportedCodeType;
     private final JourneyType journeyType;
 
-    CodeRequestType(MFAMethodType mfaMethodType, JourneyType journeyType) {
-        this.mfaMethodType = mfaMethodType;
+    CodeRequestType(SupportedCodeType codeType, JourneyType journeyType) {
+        this.supportedCodeType = codeType;
         this.journeyType = journeyType;
     }
 
     public static boolean isValidCodeRequestType(
-            MFAMethodType mfaMethodType, JourneyType journeyType) {
-        CodeRequestTypeKey key = new CodeRequestTypeKey(mfaMethodType, journeyType);
+            SupportedCodeType supportedCodeType, JourneyType journeyType) {
+        CodeRequestTypeKey key = new CodeRequestTypeKey(supportedCodeType, journeyType);
         return codeRequestTypeMap.containsKey(key);
     }
 
@@ -54,19 +50,40 @@ public enum CodeRequestType {
 
     public static CodeRequestType getCodeRequestType(
             MFAMethodType mfaMethodType, JourneyType journeyType) {
-        if (!isValidCodeRequestType(mfaMethodType, journeyType)) {
+        SupportedCodeType supportedCodeType = SupportedCodeType.getFromMfaMethodType(mfaMethodType);
+        return getCodeRequestType(supportedCodeType, journeyType);
+    }
+
+    public static CodeRequestType getCodeRequestType(
+            SupportedCodeType supportedCodeType, JourneyType journeyType) {
+        if (!isValidCodeRequestType(supportedCodeType, journeyType)) {
             throw new CodeRequestTypeNotFoundException(
                     String.format(
-                            "CodeRequestType not found for MFA Type and Journey Type: [%s , %s]",
-                            mfaMethodType.getValue(), journeyType.getValue()));
+                            "CodeRequestType not found for SupportedCodeType and Journey Type: [%s , %s]",
+                            supportedCodeType.getValue(), journeyType.getValue()));
         }
 
-        CodeRequestTypeKey key = new CodeRequestTypeKey(mfaMethodType, journeyType);
+        CodeRequestTypeKey key = new CodeRequestTypeKey(supportedCodeType, journeyType);
         return codeRequestTypeMap.get(key);
     }
 
-    public MFAMethodType getMfaMethodType() {
-        return mfaMethodType;
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    public static String getDeprecatedCodeRequestTypeString(
+            MFAMethodType mfaMethodType, JourneyType journeyType) {
+        SupportedCodeType supportedCodeType = SupportedCodeType.getFromMfaMethodType(mfaMethodType);
+        if (!isValidCodeRequestType(supportedCodeType, journeyType)) return null;
+        if (!mfaMethodType.equals(MFAMethodType.SMS)
+                && !mfaMethodType.equals(MFAMethodType.AUTH_APP)) return null;
+
+        if (journeyType.equals(JourneyType.PASSWORD_RESET_MFA)) {
+            return String.format("PW_RESET_MFA_%s", mfaMethodType);
+        } else {
+            return String.format("%s_%s", mfaMethodType, journeyType);
+        }
+    }
+
+    public SupportedCodeType getSupportedCodeType() {
+        return supportedCodeType;
     }
 
     public JourneyType getJourneyType() {
@@ -74,11 +91,11 @@ public enum CodeRequestType {
     }
 
     private static class CodeRequestTypeKey {
-        private final MFAMethodType mfaMethodType;
+        private final SupportedCodeType supportedCodeType;
         private final JourneyType journeyType;
 
-        CodeRequestTypeKey(MFAMethodType mfaMethodType, JourneyType journeyType) {
-            this.mfaMethodType = mfaMethodType;
+        CodeRequestTypeKey(SupportedCodeType supportedCodeType, JourneyType journeyType) {
+            this.supportedCodeType = supportedCodeType;
             this.journeyType = journeyType;
         }
 
@@ -91,12 +108,37 @@ public enum CodeRequestType {
                 return false;
             }
             CodeRequestTypeKey other = (CodeRequestTypeKey) obj;
-            return mfaMethodType == other.mfaMethodType && journeyType == other.journeyType;
+            return supportedCodeType == other.supportedCodeType && journeyType == other.journeyType;
         }
 
         @Override
         public int hashCode() {
-            return 31 * mfaMethodType.hashCode() + journeyType.hashCode();
+            return 31 * supportedCodeType.hashCode() + journeyType.hashCode();
+        }
+    }
+
+    public enum SupportedCodeType {
+        EMAIL("EMAIL"),
+        MFA("MFA");
+
+        private final String value;
+
+        SupportedCodeType(String value) {
+            this.value = value;
+        }
+
+        public static SupportedCodeType getFromMfaMethodType(MFAMethodType mfaMethodType) {
+            if (mfaMethodType.equals(MFAMethodType.EMAIL)) return SupportedCodeType.EMAIL;
+            if (mfaMethodType.equals(MFAMethodType.SMS)) return SupportedCodeType.MFA;
+            if (mfaMethodType.equals(MFAMethodType.AUTH_APP)) return SupportedCodeType.MFA;
+
+            throw new IllegalArgumentException(
+                    String.format(
+                            "Unsupported MFAMethodType provided: %s", mfaMethodType.getValue()));
+        }
+
+        public String getValue() {
+            return value;
         }
     }
 }

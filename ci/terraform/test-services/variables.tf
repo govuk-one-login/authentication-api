@@ -48,7 +48,7 @@ variable "cloudwatch_log_retention" {
 }
 
 variable "endpoint_memory_size" {
-  default = 512
+  default = 1536
   type    = number
 }
 
@@ -60,4 +60,10 @@ variable "synthetics_users" {
 variable "txma_account_id" {
   default = ""
   type    = string
+}
+
+variable "api_fms_tag_value" {
+  default     = "authenticationfrontend"
+  description = "Tag value to be used for FMS WAF association for API"
+  type        = string
 }

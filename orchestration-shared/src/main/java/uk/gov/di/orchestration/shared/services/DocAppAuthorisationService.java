@@ -7,11 +7,9 @@ import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -28,16 +26,17 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.DocAppAuthorisationServiceException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
+import uk.gov.di.orchestration.shared.helpers.RsaKeyHelper;
 
-import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
@@ -48,25 +47,38 @@ public class DocAppAuthorisationService {
 
     private static final Logger LOG = LogManager.getLogger(DocAppAuthorisationService.class);
     private final ConfigurationService configurationService;
-    private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
-    private final JwksService jwksService;
+    private final JwksCacheService jwksCacheService;
+    private final StateStorageService stateStorageService;
+    private final NowHelper.NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
     public static final String STATE_PARAM = "state";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
-    private final Json objectMapper = SerializationService.getInstance();
+    public DocAppAuthorisationService(
+            ConfigurationService configurationService,
+            KmsConnectionService kmsConnectionService,
+            JwksCacheService jwksCacheService,
+            StateStorageService stateStorageService,
+            Clock clock) {
+        this.configurationService = configurationService;
+        this.kmsConnectionService = kmsConnectionService;
+        this.jwksCacheService = jwksCacheService;
+        this.stateStorageService = stateStorageService;
+        this.nowClock = new NowHelper.NowClock(clock);
+    }
 
     public DocAppAuthorisationService(
             ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
-            JwksService jwksService) {
+            JwksCacheService jwksCacheService,
+            StateStorageService stateStorageService) {
         this.configurationService = configurationService;
-        this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
-        this.jwksService = jwksService;
+        this.jwksCacheService = jwksCacheService;
+        this.stateStorageService = stateStorageService;
+        this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
@@ -106,33 +118,20 @@ public class DocAppAuthorisationService {
     }
 
     public void storeState(String sessionId, State state) {
-        try {
-            LOG.info("Storing state");
-            redisConnectionService.saveWithExpiry(
-                    STATE_STORAGE_PREFIX + sessionId,
-                    objectMapper.writeValueAsString(state),
-                    configurationService.getSessionExpiry());
-        } catch (JsonException e) {
-            LOG.error("Unable to save state to Redis");
-            throw new DocAppAuthorisationServiceException(e);
-        }
+        stateStorageService.storeState(STATE_STORAGE_PREFIX + sessionId, state.getValue());
     }
 
     private boolean isStateValid(String sessionId, String responseState) {
-        var value =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(STATE_STORAGE_PREFIX + sessionId));
-        if (value.isEmpty()) {
-            LOG.info("No Doc Checking App state found in Redis");
+        var valueFromDynamo =
+                stateStorageService
+                        .getState(STATE_STORAGE_PREFIX + sessionId)
+                        .map(StateItem::getState);
+        if (valueFromDynamo.isEmpty()) {
+            LOG.info("No Doc Checking App state found in Dynamo");
             return false;
         }
-        State storedState;
-        try {
-            storedState = objectMapper.readValue(value.get(), State.class);
-        } catch (JsonException e) {
-            LOG.info("Error when deserializing state from redis");
-            return false;
-        }
+
+        State storedState = new State(valueFromDynamo.get());
         LOG.info(
                 "Response state: {} and Stored state: {}. Are equal: {}",
                 responseState,
@@ -147,7 +146,9 @@ public class DocAppAuthorisationService {
             ClientRegistry clientRegistry,
             String clientSessionId) {
         LOG.info("Generating request JWT");
+
         var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
+
         var signingKeyId =
                 kmsConnectionService
                         .getPublicKey(
@@ -162,8 +163,8 @@ public class DocAppAuthorisationService {
         var jwtID = IdGenerator.generate();
         var expiryDate =
                 clientRegistry.isTestClient()
-                        ? NowHelper.nowPlus(5, ChronoUnit.DAYS)
-                        : NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+                        ? nowClock.nowPlus(5, ChronoUnit.DAYS)
+                        : nowClock.nowPlus(3, ChronoUnit.MINUTES);
         var audience =
                 configurationService.isDocAppNewAudClaimEnabled()
                         ? configurationService.getDocAppAudClaim()
@@ -174,8 +175,8 @@ public class DocAppAuthorisationService {
                         .audience(audience.getValue())
                         .expirationTime(expiryDate)
                         .subject(subjectValue)
-                        .issueTime(NowHelper.now())
-                        .notBeforeTime(NowHelper.now())
+                        .issueTime(nowClock.now())
+                        .notBeforeTime(nowClock.now())
                         .jwtID(jwtID)
                         .claim(STATE_PARAM, state.getValue())
                         .claim(
@@ -219,12 +220,16 @@ public class DocAppAuthorisationService {
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
             LOG.info("Encrypting SignedJWT");
-            var publicEncryptionKey = getPublicEncryptionKey();
+            JwksCacheItem jwksCacheItem = getPublicEncryptionKey();
+            RSAPublicKey publicEncryptionKey =
+                    RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem(jwksCacheItem);
+
             var jweObject =
                     new JWEObject(
                             new JWEHeader.Builder(
                                             JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
                                     .contentType("JWT")
+                                    .keyID(jwksCacheItem.getKeyId())
                                     .build(),
                             new Payload(signedJWT));
             jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
@@ -239,23 +244,8 @@ public class DocAppAuthorisationService {
         }
     }
 
-    private RSAPublicKey getPublicEncryptionKey() {
-        try {
-            LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
-            var encryptionJWK =
-                    jwksService.retrieveJwkFromURLWithKeyId(
-                            configurationService.getDocAppJwksURI().toURL(),
-                            configurationService.getDocAppEncryptionKeyID());
-            return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
-        } catch (KeySourceException e) {
-            LOG.error("Could not find key with provided key ID", e);
-            throw new RuntimeException(e);
-        } catch (JOSEException e) {
-            LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new DocAppAuthorisationServiceException(e);
-        } catch (MalformedURLException e) {
-            LOG.error("Invalid JWKs URL", e);
-            throw new DocAppAuthorisationServiceException(e);
-        }
+    private JwksCacheItem getPublicEncryptionKey() {
+        LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
+        return jwksCacheService.getOrGenerateDocAppJwksCacheItem();
     }
 }

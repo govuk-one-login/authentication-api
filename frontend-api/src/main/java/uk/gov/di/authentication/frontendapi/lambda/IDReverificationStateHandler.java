@@ -1,8 +1,11 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.IDReverificationStateRequest;
@@ -16,17 +19,20 @@ import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
 
-public class IDReverificationStateHandler {
+public class IDReverificationStateHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
     private final IDReverificationStateService idReverificationStateService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private static final Logger LOG = LogManager.getLogger(IDReverificationStateHandler.class);
 
     public IDReverificationStateHandler(
             AuditService auditService,
@@ -49,13 +55,20 @@ public class IDReverificationStateHandler {
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent input, Context context) throws Json.JsonException {
-        ThreadContext.clearMap();
-        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        var txmaAuditEncoded = getTxmaAuditEncodedHeader(input);
-        var auditContext = AuditContext.emptyAuditContext().withTxmaAuditEncoded(txmaAuditEncoded);
-        var request = objectMapper.readValue(input.getBody(), IDReverificationStateRequest.class);
-        return fetchOrchestrationRedirectUrl(request, auditContext);
+            APIGatewayProxyRequestEvent input, Context context) {
+        try {
+            ThreadContext.clearMap();
+            attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
+            var txmaAuditEncoded = getTxmaAuditEncodedHeader(input);
+            var auditContext =
+                    AuditContext.emptyAuditContext().withTxmaAuditEncoded(txmaAuditEncoded);
+            var request =
+                    objectMapper.readValue(input.getBody(), IDReverificationStateRequest.class);
+            return fetchOrchestrationRedirectUrl(request, auditContext);
+        } catch (Json.JsonException jsonException) {
+            LOG.error("Unexpected JSON exception: ", jsonException);
+            throw new RuntimeException(jsonException);
+        }
     }
 
     private APIGatewayProxyResponseEvent fetchOrchestrationRedirectUrl(
@@ -75,7 +88,8 @@ public class IDReverificationStateHandler {
                 AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED,
                 auditContext,
                 AuditService.MetadataPair.pair(
-                        "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+                        AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                        JourneyType.ACCOUNT_RECOVERY.getValue()));
         cloudwatchMetricsService.incrementReverifyAuthorisationErrorCount();
         var response =
                 new IDReverificationStateResponse(

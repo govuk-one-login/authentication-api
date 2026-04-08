@@ -8,7 +8,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
@@ -18,12 +18,11 @@ import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.AuthenticationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.Map;
@@ -32,62 +31,52 @@ import java.util.Optional;
 
 public class UserInfoService {
     private final AuthenticationUserInfoStorageService userInfoStorageService;
-    private final AuthenticationService authenticationService;
     private final DynamoIdentityService identityService;
     private final DynamoClientService dynamoClientService;
-    private final DynamoDocAppService dynamoDocAppService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final DynamoDocAppCriService dynamoDocAppCriService;
+    private final Metrics metrics;
     private final ConfigurationService configurationService;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
-            AuthenticationService authenticationService,
             DynamoIdentityService identityService,
             DynamoClientService dynamoClientService,
-            DynamoDocAppService dynamoDocAppService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            DynamoDocAppCriService dynamoDocAppCriService,
+            Metrics metrics,
             ConfigurationService configurationService,
             AuthenticationUserInfoStorageService userInfoStorageService) {
-        this.authenticationService = authenticationService;
         this.identityService = identityService;
         this.dynamoClientService = dynamoClientService;
-        this.dynamoDocAppService = dynamoDocAppService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.dynamoDocAppCriService = dynamoDocAppCriService;
+        this.metrics = metrics;
         this.configurationService = configurationService;
         this.userInfoStorageService = userInfoStorageService;
     }
 
     public String calculateSubjectForAudit(AccessTokenInfo accessTokenInfo) {
         LOG.info("Calculating Subject for audit payload");
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
+        if (accessTokenInfo.scopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
             LOG.info("Getting subject for Doc App user");
-            return accessTokenInfo.getSubject();
+            return accessTokenInfo.subject();
         } else {
             LOG.info("Calculating internal common subject identifier");
-            var userProfile =
-                    authenticationService.getUserProfileFromSubject(
-                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
-            return ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorURI(),
-                            authenticationService)
-                    .getValue();
+            return accessTokenInfo.internalPairwiseSubjectId();
         }
     }
 
     public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo)
             throws AccessTokenException, ClientNotFoundException {
         LOG.info("Populating UserInfo");
-        UserInfo userInfo = new UserInfo(new Subject(accessTokenInfo.getSubject()));
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
+        UserInfo userInfo = new UserInfo(new Subject(accessTokenInfo.subject()));
+        if (accessTokenInfo.scopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
             return populateDocAppUserInfo(accessTokenInfo, userInfo);
         }
 
         populateInfo(userInfo, accessTokenInfo);
 
         if (configurationService.isIdentityEnabled()
-                && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
+                && Objects.nonNull(accessTokenInfo.identityClaims())) {
             return populateIdentityInfo(accessTokenInfo, userInfo);
         } else {
             LOG.info("No identity claims present");
@@ -101,8 +90,8 @@ public class UserInfoService {
         try {
             Optional<UserInfo> userInfoFromStorage =
                     userInfoStorageService.getAuthenticationUserInfo(
-                            accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId(),
-                            accessTokenInfo.getAccessTokenStore().getJourneyId());
+                            accessTokenInfo.internalPairwiseSubjectId(),
+                            accessTokenInfo.journeyId());
 
             if (userInfoFromStorage.isEmpty()) {
                 throw new AccessTokenException(
@@ -118,25 +107,25 @@ public class UserInfoService {
         // TODO-922: temporary logs for checking all is working as expected
         LOG.info("is email attached to userinfo table: {}", tmpUserInfo.getEmailAddress() != null);
         //
-        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
+        if (accessTokenInfo.scopes().contains(OIDCScopeValue.EMAIL.getValue())) {
             userInfo.setEmailAddress(tmpUserInfo.getEmailAddress());
             userInfo.setEmailVerified(tmpUserInfo.getEmailVerified());
         }
-        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
+        if (accessTokenInfo.scopes().contains(OIDCScopeValue.PHONE.getValue())) {
             userInfo.setPhoneNumber(tmpUserInfo.getPhoneNumber());
             userInfo.setPhoneNumberVerified(tmpUserInfo.getPhoneNumberVerified());
         }
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
+        if (accessTokenInfo.scopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
             userInfo.setClaim(
                     AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue(),
                     tmpUserInfo.getClaim(AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue()));
         }
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+        if (accessTokenInfo.scopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
             userInfo.setClaim(
                     AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue(),
                     tmpUserInfo.getClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()));
         }
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.WALLET_SUBJECT_ID.getValue())) {
+        if (accessTokenInfo.scopes().contains(CustomScopeValue.WALLET_SUBJECT_ID.getValue())) {
             var walletSubjectID = calculateWalletSubjectID(accessTokenInfo);
             userInfo.setClaim("wallet_subject_id", walletSubjectID);
         }
@@ -145,16 +134,13 @@ public class UserInfoService {
     private UserInfo populateIdentityInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         LOG.info("Populating IdentityInfo");
         var identityCredentials =
-                identityService
-                        .getIdentityCredentials(
-                                accessTokenInfo.getAccessTokenStore().getJourneyId())
-                        .orElse(null);
+                identityService.getIdentityCredentials(accessTokenInfo.journeyId()).orElse(null);
         if (Objects.isNull(identityCredentials)) {
             LOG.info("No identity credentials present");
             return userInfo;
         }
         var coreIdentityClaimIsPresent =
-                accessTokenInfo.getIdentityClaims().stream()
+                accessTokenInfo.identityClaims().stream()
                         .anyMatch(t -> t.equals(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         if (Objects.nonNull(identityCredentials.getCoreIdentityJWT())
                 && coreIdentityClaimIsPresent) {
@@ -163,11 +149,11 @@ public class UserInfoService {
                     ValidClaims.CORE_IDENTITY_JWT.getValue(),
                     identityCredentials.getCoreIdentityJWT());
             incrementClaimIssuedCounter(
-                    ValidClaims.CORE_IDENTITY_JWT.getValue(), accessTokenInfo.getClientID());
+                    ValidClaims.CORE_IDENTITY_JWT.getValue(), accessTokenInfo.clientID());
         }
         if (Objects.nonNull(identityCredentials.getAdditionalClaims())) {
             identityCredentials.getAdditionalClaims().entrySet().stream()
-                    .filter(t -> accessTokenInfo.getIdentityClaims().contains(t.getKey()))
+                    .filter(t -> accessTokenInfo.identityClaims().contains(t.getKey()))
                     .forEach(
                             t -> {
                                 try {
@@ -175,7 +161,7 @@ public class UserInfoService {
                                             t.getKey(),
                                             objectMapper.readValue(t.getValue(), JSONArray.class));
                                     incrementClaimIssuedCounter(
-                                            t.getKey(), accessTokenInfo.getClientID());
+                                            t.getKey(), accessTokenInfo.clientID());
                                 } catch (Json.JsonException e) {
                                     LOG.error("Unable to deserialize additional identity claims");
                                     throw new RuntimeException();
@@ -188,14 +174,14 @@ public class UserInfoService {
 
     private UserInfo populateDocAppUserInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         LOG.info("Populating DocAppUserInfo");
-        return dynamoDocAppService
-                .getDocAppCredential(accessTokenInfo.getSubject())
+        return dynamoDocAppCriService
+                .getDocAppCredential(accessTokenInfo.subject())
                 .map(
                         docAppCredential -> {
                             userInfo.setClaim(
                                     "doc-app-credential", docAppCredential.getCredential());
                             incrementClaimIssuedCounter(
-                                    "doc-app-credential", accessTokenInfo.getClientID());
+                                    "doc-app-credential", accessTokenInfo.clientID());
                             return userInfo;
                         })
                 .orElseThrow(
@@ -207,7 +193,7 @@ public class UserInfoService {
     }
 
     private void incrementClaimIssuedCounter(String claimName, String clientID) {
-        cloudwatchMetricsService.incrementCounter(
+        metrics.increment(
                 "ClaimIssued",
                 Map.of(
                         "Environment",
@@ -222,13 +208,12 @@ public class UserInfoService {
             throws ClientNotFoundException {
         var client =
                 dynamoClientService
-                        .getClient(accessTokenInfo.getClientID())
-                        .orElseThrow(
-                                () -> new ClientNotFoundException(accessTokenInfo.getClientID()));
+                        .getClient(accessTokenInfo.clientID())
+                        .orElseThrow(() -> new ClientNotFoundException(accessTokenInfo.clientID()));
         var sectorID =
                 ClientSubjectHelper.getSectorIdentifierForClient(
                         client, configurationService.getInternalSectorURI());
-        var commonSubjectID = accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId();
+        var commonSubjectID = accessTokenInfo.internalPairwiseSubjectId();
         return ClientSubjectHelper.calculateWalletSubjectIdentifier(sectorID, commonSubjectID);
     }
 }

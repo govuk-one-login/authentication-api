@@ -122,7 +122,7 @@ public class DcmawTokenTest {
 
     @Test
     @PactTestFor(
-            providerName = "DcmawCriTokenProvider",
+            providerName = "DcmawCriProvider",
             pactMethod = "validRequestReturnsValidAccessToken",
             pactVersion = PactSpecVersion.V3)
     void getDocAppTokenSuccessResponse(MockServer mockServer) {
@@ -182,13 +182,13 @@ public class DcmawTokenTest {
                                 + CLIENT_ID.getValue())
                 .matchHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 .willRespondWith()
-                .status(400)
+                .status(401)
                 .toPact();
     }
 
     @Test
     @PactTestFor(
-            providerName = "DcmawCriTokenProvider",
+            providerName = "DcmawCriProvider",
             pactMethod = "invalidAuthCodeReturnsInvalidRequest",
             pactVersion = PactSpecVersion.V3)
     void getDocAppTokenErrorResponse(MockServer mockServer) {
@@ -217,7 +217,7 @@ public class DcmawTokenTest {
         TokenResponse response = docAppCriService.sendTokenRequest(tokenRequest);
 
         assertThat(response.indicatesSuccess(), equalTo(false));
-        assertThat(response.toHTTPResponse().getStatusCode(), equalTo(400));
+        assertThat(response.toHTTPResponse().getStatusCode(), equalTo(401));
     }
 
     private SignResponse mockKmsReturn() {

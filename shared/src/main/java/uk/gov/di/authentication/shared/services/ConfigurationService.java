@@ -19,6 +19,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,8 @@ import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.entity.Environment.INTEGRATION;
+import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -117,6 +120,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean supportPasskeys() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_PASSKEYS", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
     public boolean isAuthenticationAttemptsServiceEnabled() {
         return System.getenv()
                 .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", String.valueOf(false))
@@ -131,14 +140,19 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("REDUCED_LOCKOUT_DURATION", "900"));
     }
 
-    public int getBulkUserEmailBatchQueryLimit() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_QUERY_LIMIT", "25"));
+    public int getBulkUserEmailBatchSize() {
+        return Integer.parseInt(System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_SIZE", "1"));
     }
 
-    public int getBulkUserEmailMaxBatchCount() {
+    public int getBulkUserEmailTaskTimeoutSeconds() {
         return Integer.parseInt(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_BATCH_COUNT", "20"));
+                System.getenv().getOrDefault("BULK_USER_EMAIL_TASK_TIMEOUT_SECONDS", "61"));
+    }
+
+    public int getBulkUserEmailStopNewRequestsAfterSeconds() {
+        return Integer.parseInt(
+                System.getenv()
+                        .getOrDefault("BULK_USER_EMAIL_STOP_NEW_REQUESTS_AFTER_SECONDS", "45"));
     }
 
     public long getBulkUserEmailMaxAudienceLoadUserCount() {
@@ -152,9 +166,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                         .getOrDefault("BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE", "0"));
     }
 
-    public long getBulkUserEmailBatchPauseDuration() {
+    public long getBulkUserEmailAudienceLoadPauseDuration() {
         return Long.parseLong(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));
+                System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOAD_PAUSE_DURATION", "0"));
     }
 
     public List<String> getBulkUserEmailIncludedTermsAndConditions() {
@@ -173,6 +187,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isBulkUserEmailEnabled() {
         return System.getenv().getOrDefault("BULK_USER_EMAIL_ENABLED", "0").equals("1");
+    }
+
+    public String getBulkUserEmailSenderType() {
+        return System.getenv().getOrDefault("BULK_USER_EMAIL_SENDER_TYPE", "UNKNOWN");
     }
 
     public long getDefaultOtpCodeExpiry() {
@@ -205,16 +223,18 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
     }
 
-    public boolean isEmailCheckEnabled() {
-        return System.getenv()
-                .getOrDefault("SUPPORT_EMAIL_CHECK_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public boolean isBulkUserEmailEmailSendingEnabled() {
         return System.getenv()
                 .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
+    }
+
+    public String getBulkUserEmailType() {
+        String value = System.getenv().get("BULK_USER_EMAIL_TYPE");
+        if (value == null || value.isEmpty()) {
+            throw new MissingEnvVariableException("BULK_USER_EMAIL_TYPE");
+        }
+        return value;
     }
 
     public String getBulkEmailLoaderLambdaName() {
@@ -274,10 +294,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CLIENT_ID", "");
     }
 
-    public String getDocAppEncryptionKeyID() {
-        return System.getenv().getOrDefault("DOC_APP_ENCRYPTION_KEY_ID", "");
-    }
-
     public URI getDocAppJwksUri() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_JWKS_URL", ""));
     }
@@ -315,18 +331,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
-        var orchKey = getOrchestrationToAuthenticationSigningPublicKey();
         var orchStubKey = getOrchestrationStubToAuthenticationSigningPublicKey();
-        return orchStubKey
-                .map(stubKey -> List.of(stubKey, orchKey))
-                .orElseGet(() -> List.of(orchKey));
+        var keyList = new ArrayList<String>();
+        orchStubKey.ifPresent(keyList::add);
+        return keyList;
     }
 
-    private String getOrchestrationToAuthenticationSigningPublicKey() {
-        return systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
-    }
-
-    private Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
+    public Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
         var orchStubKey =
                 systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", "");
         if (orchStubKey.isEmpty()) {
@@ -479,6 +490,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
 
+    public String getSnsEndpointUri() {
+        return System.getenv("SNS_ENDPOINT");
+    }
+
     public String getTermsAndConditionsVersion() {
         return System.getenv("TERMS_CONDITIONS_VERSION");
     }
@@ -519,8 +534,21 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public URL getAccessTokenJwksUrl() {
+        try {
+            return new URL(System.getenv().getOrDefault("ACCESS_TOKEN_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid JWKS URL: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
     public String getTokenSigningKeyRsaAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_RSA_ALIAS");
+    }
+
+    public String getTestTokenSigningKeyAlias() {
+        return System.getenv("TEST_TOKEN_SIGNING_KEY_ALIAS");
     }
 
     public boolean isRsaSigningAvailable() {
@@ -636,6 +664,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS");
     }
 
+    public String getMfaResetJarDeprecatedSigningKeyAlias() {
+        return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS");
+    }
+
     public String getMfaResetJarSigningKeyId() {
         return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS");
     }
@@ -646,6 +678,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getLegacyAccountDeletionTopicArn() {
         return System.getenv("LEGACY_ACCOUNT_DELETION_TOPIC_ARN");
+    }
+
+    private boolean getFlagOrFalse(String envVar) {
+        return System.getenv().containsKey(envVar) && Boolean.parseBoolean(System.getenv(envVar));
     }
 
     private URI getURIOrDefault(String envVar, String defaultUri) {
@@ -730,5 +766,144 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("IPV_JWKS_CALL_ENABLED", String.valueOf(false))
                 .equals(FEATURE_SWITCH_ON);
+    }
+
+    public double getDomesticSmsQuotaThreshold() {
+        return Double.parseDouble(
+                System.getenv().getOrDefault("DOMESTIC_SMS_QUOTA_THRESHOLD", "600000"));
+    }
+
+    public double getInternationalSmsQuotaThreshold() {
+        return Double.parseDouble(
+                System.getenv().getOrDefault("INTERNATIONAL_SMS_QUOTA_THRESHOLD", "15000"));
+    }
+
+    public boolean isAccountManagementInternationalSmsEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", "true")
+                .equals("true");
+    }
+
+    public boolean isInternalApiNewInternationalSmsEnabled() {
+        return System.getenv()
+                .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", "true")
+                .equals("true");
+    }
+
+    public boolean isForcedMFAResetAfterMFACheckEnabled() {
+        return System.getenv()
+                .getOrDefault("FORCED_MFA_RESET_AFTER_MFA_CHECK_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isTestSigningKeyEnabled() {
+        return System.getenv()
+                .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isBulkAccountDeletionEnabled() {
+        return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
+    }
+
+    public String getEmailSqsLambdaFunctionName() {
+        return String.format("%s-email-notification-sqs-lambda", getEnvironment());
+    }
+
+    public String getAccountManagementSqsLambdaFunctionName() {
+        return String.format("%s-account-management-sqs-lambda", getEnvironment());
+    }
+
+    public String getWebAuthnRelyingPartyId() {
+        return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_ID", "account.gov.uk");
+    }
+
+    public String getWebAuthnRelyingPartyName() {
+        return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "GOV.UK One Login");
+    }
+
+    public String getAuthToAMApiAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_API_AUDIENCE", "");
+    }
+
+    public String getAuthToAccountDataApiAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "");
+    }
+
+    public int getInternationalSmsNumberSendLimit() throws MissingEnvVariableException {
+        String key = System.getenv("INTERNATIONAL_SMS_NUMBER_SEND_LIMIT");
+
+        if (key == null || key.isEmpty()) {
+            throw new MissingEnvVariableException("INTERNATIONAL_SMS_NUMBER_SEND_LIMIT");
+        }
+
+        return Integer.parseInt(key);
+    }
+
+    public String getAuthToAMCDownstreamServiceSigningKey() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY", "");
+    }
+
+    public String getAuthToAMCTransportJWTSigningKey() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY", "");
+    }
+
+    public String getAuthToAMCPublicAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_PUBLIC_AUDIENCE", "");
+    }
+
+    public String getAuthToAMCPrivateAudience() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_PRIVATE_AUDIENCE", "");
+    }
+
+    public String getAMCSfadRedirectURI() {
+        return System.getenv().getOrDefault("AMC_SFAD_REDIRECT_URI", "");
+    }
+
+    public String getAMCCreatePasskeyRedirectURI() {
+        return System.getenv().getOrDefault("AMC_CREATE_PASSKEY_REDIRECT_URI", "");
+    }
+
+    public String getAuthToAMCPublicEncryptionKey() {
+        return System.getenv().getOrDefault("AUTH_TO_AMC_PUBLIC_ENCRYPTION_KEY", "");
+    }
+
+    public String getAMCClientId() {
+        return System.getenv().getOrDefault("AMC_CLIENT_ID", "");
+    }
+
+    public URI getAMCAuthorizeURI() {
+        return URI.create(System.getenv().getOrDefault("AMC_AUTHORIZE_URI", ""));
+    }
+
+    public URL getAuthJwksUrl() {
+        try {
+            return new URL(System.getenv().getOrDefault("AUTH_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid auth JWKS URL: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    public URI getAMCTokenEndpointURI() {
+        return URI.create(System.getenv().getOrDefault("AMC_TOKEN_URI", ""));
+    }
+
+    public URI getAMCJourneyOutcomeURI() {
+        return URI.create(System.getenv().getOrDefault("AMC_JOURNEY_OUTCOME_URI", ""));
+    }
+
+    public String getAMCJWKSBucketName() {
+        return System.getenv().getOrDefault("AMC_JWKS_BUCKET_NAME", "");
+    }
+
+    public boolean isEnhancedAuthCodeProtectionEnabled() {
+        return System.getenv()
+                .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
+                .equals("true");
+    }
+
+    public String getAccountDataURI() {
+        return System.getenv("ACCOUNT_DATA_API_URI");
     }
 }

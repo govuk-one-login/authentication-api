@@ -3,6 +3,10 @@ module "account_management_sqs_role" {
   environment = var.environment
   role_name   = "account-management-sqs"
   vpc_arn     = local.vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.dynamo_international_sms_send_count_read_write_access_policy.arn,
+  ]
 }
 
 resource "aws_sqs_queue" "email_queue" {
@@ -17,7 +21,7 @@ resource "aws_sqs_queue" "email_queue" {
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.email_dead_letter_queue.arn
-    maxReceiveCount     = 3
+    maxReceiveCount     = 1
   })
 }
 
@@ -45,7 +49,7 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
 
     principals {
       type        = "AWS"
-      identifiers = [module.account_management_api_remove_account_role.arn, module.account_management_api_update_email_role.arn, module.account_management_api_update_password_role.arn, module.account_management_api_update_phone_number_role.arn, module.account_management_api_send_notification_role.arn]
+      identifiers = [module.account_management_api_remove_account_role.arn, module.account_management_api_update_email_role.arn, module.account_management_api_update_password_role.arn, module.account_management_api_update_phone_number_role.arn, module.account_management_api_send_notification_role.arn, module.account_management_api_mfa_methods_create_role.arn, module.account_management_api_mfa_methods_delete_role.arn, module.account_management_api_mfa_methods_update_role.arn]
     }
 
     actions = [
@@ -87,6 +91,9 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
     module.account_management_api_update_password_role,
     module.account_management_api_update_phone_number_role,
     module.account_management_api_send_notification_role,
+    module.account_management_api_mfa_methods_create_role,
+    module.account_management_api_mfa_methods_delete_role,
+    module.account_management_api_mfa_methods_update_role,
   ]
 }
 
@@ -120,6 +127,9 @@ data "aws_iam_policy_document" "email_dlq_queue_policy_document" {
     module.account_management_api_update_password_role,
     module.account_management_api_update_phone_number_role,
     module.account_management_api_send_notification_role,
+    module.account_management_api_mfa_methods_create_role.arn,
+    module.account_management_api_mfa_methods_delete_role,
+    module.account_management_api_mfa_methods_update_role,
   ]
 }
 
@@ -179,12 +189,14 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = merge(var.notify_template_map, {
-      FRONTEND_BASE_URL        = "https://${local.frontend_fqdn}/"
-      CONTACT_US_LINK_ROUTE    = var.contact_us_link_route
-      NOTIFY_API_KEY           = var.notify_api_key
-      NOTIFY_URL               = var.notify_url
-      JAVA_TOOL_OPTIONS        = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
-      NOTIFY_TEST_DESTINATIONS = var.notify_test_destinations
+      ENVIRONMENT                         = var.environment
+      FRONTEND_BASE_URL                   = "https://${local.frontend_fqdn}/"
+      CONTACT_US_LINK_ROUTE               = var.contact_us_link_route
+      NOTIFY_API_KEY                      = var.notify_api_key
+      NOTIFY_URL                          = var.notify_url
+      JAVA_TOOL_OPTIONS                   = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      NOTIFY_TEST_DESTINATIONS            = var.notify_test_destinations
+      INTERNATIONAL_SMS_NUMBER_SEND_LIMIT = data.aws_ssm_parameter.international_sms_number_send_limit.value
 
       ACCOUNT_MANAGEMENT_NOTIFY_ALTERNATIVE_DESTINATION = local.account_mgmt_notify_alternative_dest
     })

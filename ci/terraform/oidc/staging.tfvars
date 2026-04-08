@@ -3,6 +3,9 @@ shared_state_bucket = "di-auth-staging-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendstaging"
 
+# Auth new strategic account
+auth_new_account_id = "851725205974"
+
 # App-specific
 internal_sector_uri  = "https://identity.staging.account.gov.uk"
 test_clients_enabled = true
@@ -29,6 +32,7 @@ orch_environment                                   = "staging"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:590183975515:key/156f87e0-001a-4ae8-a6c1-23f8f68b6e84"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:590183975515:key/b94d81a1-a41f-4e61-859c-87dcacb32e51"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:590183975515:key/d0bdb864-8478-4411-a44a-a4232fc97cf3"
+orch_client_registry_table_encryption_key_arn      = "arn:aws:kms:eu-west-2:590183975515:key/4373aa74-95b2-454c-bd86-9716f105a1c4"
 cmk_for_back_channel_logout_enabled                = true
 
 contra_state_bucket = "di-auth-staging-tfstate"
@@ -62,7 +66,6 @@ doc_app_domain                              = "https://api.review-b.staging.acco
 doc_app_aud                                 = "https://www.review-b.staging.account.gov.uk"
 doc_app_new_aud_claim_enabled               = true
 doc_app_authorisation_callback_uri          = "https://oidc.staging.account.gov.uk/doc-app-callback"
-doc_app_encryption_key_id                   = "ca6d5930-77a6-41a4-8192-125df996c084"
 doc_app_cri_data_endpoint                   = "userinfo"
 doc_app_jwks_endpoint                       = "https://api-backend-api.review-b.staging.account.gov.uk/.well-known/jwks.json"
 ipv_authorisation_client_id                 = "authOrchestrator"
@@ -138,27 +141,27 @@ performance_tuning = {
 
   reset-password = {
     memory          = 1024
-    concurrency     = 2
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reset-password-request = {
     memory          = 1024
-    concurrency     = 2
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reverification-result = {
     memory          = 1536
-    concurrency     = 1
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.6
   }
 }
-lambda_max_concurrency        = 10
-lambda_min_concurrency        = 3
+lambda_max_concurrency = 10
+
 use_strongly_consistent_reads = true
 
 ipv_jwks_call_enabled = true

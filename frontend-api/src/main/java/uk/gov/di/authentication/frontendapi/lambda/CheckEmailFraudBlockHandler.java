@@ -5,54 +5,48 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckBypassed;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckDecisionUsed;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Optional;
+import java.util.Objects;
 
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getEmailFraudCheckResponseJsonFromResult;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getRestrictedJsonFromResult;
 
 public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailFraudBlockRequest> {
 
     private static final Logger LOG = LogManager.getLogger(CheckEmailFraudBlockHandler.class);
 
-    private final AuditService auditService;
+    private final StructuredAuditService auditService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
 
     protected CheckEmailFraudBlockHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
-            AuditService auditService,
+            StructuredAuditService auditService,
             AuthSessionService authSessionService) {
         super(
                 CheckEmailFraudBlockRequest.class,
                 configurationService,
-                sessionService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
@@ -63,15 +57,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
         super(CheckEmailFraudBlockRequest.class, configurationService);
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
-        this.auditService = new AuditService(configurationService);
-    }
-
-    public CheckEmailFraudBlockHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(CheckEmailFraudBlockRequest.class, configurationService, redis);
-        this.dynamoEmailCheckResultService =
-                new DynamoEmailCheckResultService(configurationService);
-        this.auditService = new AuditService(configurationService);
+        this.auditService = new StructuredAuditService(configurationService);
     }
 
     public CheckEmailFraudBlockHandler() {
@@ -103,9 +89,11 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
 
             var checkEmailFraudBlockResponse = createResponse(request.getEmail(), status);
 
-            if (configurationService.isEmailCheckEnabled()
-                    && status.equals(EmailCheckResultStatus.PENDING)) {
-                submitAuditEvent(input, userContext, request);
+            if (status.equals(EmailCheckResultStatus.PENDING)) {
+                submitEmailFraudCheckBypassedAuditEvent(input, userContext, request);
+            } else {
+                submitEmailFraudCheckDecisionUsedAuditEvent(
+                        input, userContext, request, emailCheckResult.get());
             }
 
             return generateApiGatewayProxyResponse(200, checkEmailFraudBlockResponse);
@@ -120,34 +108,58 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
         return new CheckEmailFraudBlockResponse(email, status.getValue());
     }
 
-    private void submitAuditEvent(
+    private void submitEmailFraudCheckBypassedAuditEvent(
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             CheckEmailFraudBlockRequest request) {
+        var newAuditEvent =
+                AuthEmailFraudCheckBypassed.create(
+                        userContext.getAuthSession().getClientId(),
+                        new AuthEmailFraudCheckBypassed.User(
+                                StructuredAuditService.UNKNOWN,
+                                request.getEmail(),
+                                IpAddressHelper.extractIpAddress(input),
+                                PersistentIdHelper.extractPersistentIdFromHeaders(
+                                        input.getHeaders()),
+                                ClientSessionIdHelper.extractSessionIdFromHeaders(
+                                        input.getHeaders())),
+                        new AuthEmailFraudCheckBypassed.Extensions(
+                                JourneyType.REGISTRATION.getValue(),
+                                NowHelper.toUnixTimestamp(NowHelper.now())));
 
-        var sessionId =
-                RequestHeaderHelper.getHeaderValueOrElse(
-                        input.getHeaders(), SESSION_ID_HEADER, AuditService.UNKNOWN);
+        auditService.submitAuditEvent(newAuditEvent);
+    }
 
-        var auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
+    private void submitEmailFraudCheckDecisionUsedAuditEvent(
+            APIGatewayProxyRequestEvent input,
+            UserContext userContext,
+            CheckEmailFraudBlockRequest request,
+            EmailCheckResultStore emailCheckResult) {
+        var decision_reused =
+                !Objects.equals(
                         ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                        sessionId,
-                        AuditService.UNKNOWN,
-                        request.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        emailCheckResult.getGovukSigninJourneyId());
+        var newAuditEvent =
+                AuthEmailFraudCheckDecisionUsed.create(
+                        userContext.getAuthSession().getClientId(),
+                        new AuthEmailFraudCheckDecisionUsed.User(
+                                StructuredAuditService.UNKNOWN,
+                                request.getEmail(),
+                                IpAddressHelper.extractIpAddress(input),
+                                PersistentIdHelper.extractPersistentIdFromHeaders(
+                                        input.getHeaders()),
+                                ClientSessionIdHelper.extractSessionIdFromHeaders(
+                                        input.getHeaders())),
+                        new AuthEmailFraudCheckDecisionUsed.Extensions(
+                                JourneyType.REGISTRATION.getValue(),
+                                decision_reused ? emailCheckResult.getReferenceNumber() : null,
+                                emailCheckResult.getStatus().name(),
+                                decision_reused,
+                                decision_reused
+                                        ? getEmailFraudCheckResponseJsonFromResult(emailCheckResult)
+                                        : null),
+                        decision_reused ? getRestrictedJsonFromResult(emailCheckResult) : null);
 
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
-                auditContext,
-                AuditService.MetadataPair.pair("journey_type", JourneyType.REGISTRATION.getValue()),
-                AuditService.MetadataPair.pair(
-                        "assessment_checked_at_timestamp",
-                        NowHelper.toUnixTimestamp(NowHelper.now())),
-                AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
+        auditService.submitAuditEvent(newAuditEvent);
     }
 }

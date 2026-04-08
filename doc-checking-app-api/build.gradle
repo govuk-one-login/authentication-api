@@ -1,39 +1,41 @@
 plugins {
     id "java"
     id "jacoco"
-    id "au.com.dius.pact" version "4.6.17"
+    alias libs.plugins.pact
 }
 
-group "uk.gov.di.authentication.doccheckingapp"
-version "unspecified"
+group = "uk.gov.di.authentication.doccheckingapp"
+version = "unspecified"
 
 File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.dynamodb,
-            configurations.sns,
-            configurations.kms
+    compileOnly libs.bundles.awsLambda,
+            libs.bundles.awsDynamoDb,
+            libs.awsSns,
+            libs.awsKms
 
-    implementation configurations.gson,
-            configurations.nimbus,
-            configurations.bouncycastle
+    implementation libs.gson,
+            libs.bundles.nimbus,
+            libs.bouncyCastle
 
     implementation project(":orchestration-shared")
 
-    runtimeOnly configurations.logging_runtime
+    runtimeOnly libs.bundles.loggingRuntime,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
 
-    testImplementation configurations.tests,
-            configurations.apache,
-            configurations.lambda_tests,
+    testImplementation libs.bundles.test,
+            libs.bundles.apache,
+            libs.awsLambdaTests,
             project(":orchestration-shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.kms,
-            configurations.dynamodb,
-            configurations.pact_consumer
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsKms,
+            libs.bundles.awsDynamoDb,
+            libs.pactConsumer
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -42,12 +44,13 @@ test {
     exclude 'uk/gov/di/authentication/app/contract/**'
 }
 
-var pactDir = "$rootDir/doc-checking-app-api/src/test/pact"
+var pactDir = "$buildDir/pacts"
 
 task pactConsumerTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include 'uk/gov/di/authentication/app/contract/**'
     systemProperties['pact.rootDir'] = pactDir
+    outputs.dir pactDir
 }
 
 pact {
@@ -63,6 +66,9 @@ pact {
         ]
     }
 }
+
+// Make pactPublish depend on pactConsumerTests
+pactPublish.dependsOn pactConsumerTests
 
 task buildZip(type: Zip) {
     if (isDevDeployBuild) {
@@ -82,7 +88,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

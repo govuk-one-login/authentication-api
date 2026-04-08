@@ -12,11 +12,3 @@ bulk_user_email_max_audience_load_user_count      = 10
 
 # Logging
 cloudwatch_log_retention = 30
-
-# Sizing
-performance_tuning = {
-  bulk-user-email-send = {
-    memory  = 512
-    timeout = 300
-  }
-}

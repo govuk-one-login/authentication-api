@@ -4,7 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jose4j.base64url.Base64Url;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
@@ -12,7 +12,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.stream.Collectors;
 
 import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 
@@ -23,16 +22,15 @@ public class ClientSubjectHelper {
 
     public static Subject getSubject(
             UserProfile userProfile,
-            ClientRegistry client,
-            AuthenticationService authenticationService,
-            String internalSectorURI) {
-        if (PUBLIC.toString().equalsIgnoreCase(client.getSubjectType())) {
+            AuthSessionItem authSession,
+            AuthenticationService authenticationService) {
+        if (PUBLIC.toString().equalsIgnoreCase(authSession.getSubjectType())) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {
             return new Subject(
                     calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
-                            getSectorIdentifierForClient(client, internalSectorURI),
+                            authSession.getRpSectorIdentifierHost(),
                             authenticationService.getOrGenerateSalt(userProfile)));
         }
     }
@@ -46,36 +44,6 @@ public class ClientSubjectHelper {
                         userProfile.getSubjectID(),
                         returnHost(sectorIdentifierURI),
                         authenticationService.getOrGenerateSalt(userProfile)));
-    }
-
-    public static String getSectorIdentifierForClient(
-            ClientRegistry client, String internalSectorUri) {
-        if (client.isOneLoginService()) {
-            return returnHost(internalSectorUri);
-        }
-        if (!hasValidClientConfig(client)) {
-            String message =
-                    String.format(
-                            "ClientConfig for client %s has invalid sector id.",
-                            client.getClientID());
-            LOG.error(message);
-            throw new RuntimeException(message);
-        }
-        return client.getSectorIdentifierUri() != null
-                ? returnHost(client.getSectorIdentifierUri())
-                : returnHost(client.getRedirectUrls().stream().findFirst().orElseThrow());
-    }
-
-    static boolean hasValidClientConfig(ClientRegistry client) {
-        if (client.getRedirectUrls().size() > 1 && client.getSectorIdentifierUri() == null) {
-            return client.getRedirectUrls().stream()
-                            .map(ClientSubjectHelper::returnHost)
-                            .collect(Collectors.toSet())
-                            .size()
-                    == 1;
-        } else {
-            return true;
-        }
     }
 
     static String returnHost(String uri) {

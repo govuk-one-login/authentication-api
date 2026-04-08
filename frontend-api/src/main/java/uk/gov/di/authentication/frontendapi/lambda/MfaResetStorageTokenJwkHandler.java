@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class MfaResetStorageTokenJwkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -49,6 +50,7 @@ public class MfaResetStorageTokenJwkHandler
 
     public APIGatewayProxyResponseEvent mfaResetStorageTokenJwkHandler() {
         try {
+            attachTraceId();
             LOG.info("Request for Auth MFA storage token signature verification key received.");
 
             List<JWK> signingKeys = new ArrayList<>();

@@ -7,7 +7,6 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.LogManager;
@@ -16,6 +15,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 public class TokenValidationService {
 
@@ -26,10 +26,6 @@ public class TokenValidationService {
     public TokenValidationService(JwksService jwksService, ConfigurationService configuration) {
         this.jwksService = jwksService;
         this.configuration = configuration;
-    }
-
-    public boolean validateAccessTokenSignature(AccessToken accessToken) {
-        return isTokenSignatureValid(accessToken.getValue());
     }
 
     public boolean validateRefreshTokenSignatureAndExpiry(RefreshToken refreshToken) {
@@ -64,12 +60,33 @@ public class TokenValidationService {
 
             if (JWSAlgorithm.RS256 == jwt.getHeader().getAlgorithm()
                     && configuration.isRsaSigningAvailable()) {
-                return jwt.verify(
-                        new RSASSAVerifier(
-                                jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
+                if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
+                    var oldPublicKey = jwksService.getPublicTokenRsaJwkWithOpaqueId();
+                    var newV2PublicKey = jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2();
+                    if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
+                        return jwt.verify(new RSASSAVerifier(newV2PublicKey.toRSAKey()));
+                    } else {
+                        return jwt.verify(new RSASSAVerifier(oldPublicKey.toRSAKey()));
+                    }
+                } else {
+                    return jwt.verify(
+                            new RSASSAVerifier(
+                                    jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
+                }
             } else {
-                return jwt.verify(
-                        new ECDSAVerifier(jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
+                if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
+                    var oldPublicKey = jwksService.getPublicTokenJwkWithOpaqueId();
+                    var newV2PublicKey = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
+                    if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
+                        return jwt.verify(new ECDSAVerifier(newV2PublicKey.toECKey()));
+                    } else {
+                        return jwt.verify(new ECDSAVerifier(oldPublicKey.toECKey()));
+                    }
+                } else {
+                    return jwt.verify(
+                            new ECDSAVerifier(
+                                    jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
+                }
             }
 
         } catch (JOSEException | java.text.ParseException e) {

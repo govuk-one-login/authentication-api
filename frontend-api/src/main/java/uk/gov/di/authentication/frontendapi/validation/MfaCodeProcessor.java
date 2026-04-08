@@ -5,11 +5,13 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -24,41 +26,43 @@ public abstract class MfaCodeProcessor {
     private final int maxRetries;
     public final String emailAddress;
     private final UserContext userContext;
-    protected final AuthenticationService dynamoService;
+    protected final AuthenticationService authenticationService;
     protected final AuditService auditService;
+    protected final MFAMethodsService mfaMethodsService;
 
     MfaCodeProcessor(
             UserContext userContext,
             CodeStorageService codeStorageService,
             int maxRetries,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             AuditService auditService,
-            DynamoAccountModifiersService accountModifiersService) {
+            DynamoAccountModifiersService accountModifiersService,
+            MFAMethodsService mfaMethodsService) {
         this.emailAddress = userContext.getAuthSession().getEmailAddress();
         this.userContext = userContext;
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;
-        this.dynamoService = dynamoService;
+        this.authenticationService = authenticationService;
         this.auditService = auditService;
         this.accountModifiersService = accountModifiersService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     boolean isCodeBlockedForSession(String codeBlockedKeyPrefix) {
         return codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix);
     }
 
-    boolean hasExceededRetryLimit(MFAMethodType mfaMethodType) {
+    boolean hasExceededRetryLimit() {
         LOG.info("Max retries: {}", maxRetries);
-        return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType)
-                >= maxRetries;
+        return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) >= maxRetries;
     }
 
-    void incrementRetryCount(MFAMethodType mfaMethodType) {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
+    void incrementRetryCount() {
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
-    void resetCodeIncorrectEntryCount(MFAMethodType mfaMethodType) {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
+    void resetCodeIncorrectEntryCount() {
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
     void submitAuditEvent(
@@ -67,7 +71,8 @@ public abstract class MfaCodeProcessor {
             String phoneNumber,
             String ipAddress,
             String persistentSessionId,
-            boolean accountRecovery) {
+            boolean accountRecovery,
+            AuditService.MetadataPair... metadataPairs) {
 
         var auditContext =
                 auditContextFromUserContext(
@@ -78,11 +83,12 @@ public abstract class MfaCodeProcessor {
                         phoneNumber,
                         persistentSessionId);
 
-        auditService.submitAuditEvent(
-                auditableEvent,
-                auditContext,
-                pair("mfa-type", mfaMethodType.getValue()),
-                pair("account-recovery", accountRecovery));
+        var allPairs = new AuditService.MetadataPair[2 + metadataPairs.length];
+        allPairs[0] = pair("mfa-type", mfaMethodType.getValue());
+        allPairs[1] = pair("account-recovery", accountRecovery);
+        System.arraycopy(metadataPairs, 0, allPairs, 2, metadataPairs.length);
+
+        auditService.submitAuditEvent(auditableEvent, auditContext, allPairs);
     }
 
     void clearAccountRecoveryBlockIfPresent(
@@ -111,5 +117,6 @@ public abstract class MfaCodeProcessor {
 
     public abstract Optional<ErrorResponse> validateCode();
 
-    public abstract void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId);
+    public abstract void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, UserProfile userProfile);
 }

@@ -8,12 +8,15 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 
 public class MfaHelper {
     private static final Logger LOG = LogManager.getLogger(MfaHelper.class);
@@ -42,7 +45,7 @@ public class MfaHelper {
             UserCredentials userCredentials,
             UserProfile userProfile) {
         var isMfaRequired = mfaRequired(credentialTrustLevel);
-        if (userProfile.getMfaMethodsMigrated()) {
+        if (userProfile.isMfaMethodsMigrated()) {
             return getMfaDetailForMigratedUser(userCredentials, isMfaRequired);
         } else {
             return getMfaDetailForNonMigratedUser(
@@ -92,9 +95,19 @@ public class MfaHelper {
                     MFAMethodType.valueOf(defaultMethod.getMfaMethodType()),
                     phoneNumberForMigratedMethod);
         } else {
-            LOG.error(
-                    "Unexpected error retrieving default mfa method for migrated user: no default method exists");
+            logNoDefaultMfaMethodDebug(userCredentials.getMfaMethods(), true);
+
             return new UserMfaDetail(isMfaRequired, false, MFAMethodType.NONE, null);
         }
+    }
+
+    public static boolean hasInternationalPhoneNumber(List<MFAMethod> mfaMethods) {
+        return mfaMethods.stream()
+                .filter(m -> MFAMethodType.SMS.getValue().equals(m.getMfaMethodType()))
+                .anyMatch(
+                        m ->
+                                m.getDestination() != null
+                                        && !PhoneNumberHelper.isDomesticPhoneNumber(
+                                                m.getDestination()));
     }
 }

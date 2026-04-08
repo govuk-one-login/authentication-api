@@ -1,0 +1,96 @@
+package uk.gov.di.authentication.oidc.services;
+
+import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
+import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
+import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
+import uk.gov.di.orchestration.shared.services.Metrics;
+import uk.gov.di.orchestration.sharedtest.helper.Constants;
+
+import java.util.Map;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+class RateLimitServiceTest {
+
+    private static final RateLimitAlgorithm neverExceededAlgorithm = (client) -> false;
+    private static final RateLimitAlgorithm alwaysExceededAlgorithm = (client) -> true;
+    private final Metrics metrics = mock(Metrics.class);
+
+    @Test
+    void itReturnsNoActionDecisionWhenTheClientHasNoRateLimit() {
+        var rateLimitService = new RateLimitService(alwaysExceededAlgorithm, metrics);
+        var rateLimitDecision =
+                rateLimitService.getClientRateLimitDecision(
+                        new ClientRateLimitConfig(
+                                Constants.TEST_CLIENT_ID, Constants.CLIENT_NAME, null));
+        assertFalse(rateLimitDecision.hasExceededRateLimit());
+        assertEquals(RateLimitDecision.RateLimitAction.NONE, rateLimitDecision.getAction());
+    }
+
+    @Test
+    void itReturnsOverLimitReturnToRPWhenTheClientRateLimitIsZero() {
+        var rateLimitService = new RateLimitService(neverExceededAlgorithm, metrics);
+        var rateLimitDecision =
+                rateLimitService.getClientRateLimitDecision(
+                        new ClientRateLimitConfig(
+                                Constants.TEST_CLIENT_ID, Constants.CLIENT_NAME, 0));
+        assertTrue(rateLimitDecision.hasExceededRateLimit());
+        assertEquals(RateLimitDecision.RateLimitAction.RETURN_TO_RP, rateLimitDecision.getAction());
+
+        verify(metrics)
+                .increment(
+                        "RpRateLimitExceeded",
+                        Map.of(
+                                "clientId",
+                                Constants.TEST_CLIENT_ID,
+                                "action",
+                                RateLimitDecision.RateLimitAction.RETURN_TO_RP.toString()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("rateLimitAlgosAndOutcomes")
+    void itDelegatesToTheRateLimitAlgoWhenClientHasARateLimitConfigured(
+            RateLimitAlgorithm algorithm, RateLimitDecision outcome) {
+        var rateLimitService = new RateLimitService(algorithm, metrics);
+        var rateLimitDecision =
+                rateLimitService.getClientRateLimitDecision(
+                        new ClientRateLimitConfig(
+                                Constants.TEST_CLIENT_ID, Constants.CLIENT_NAME, 400));
+        assertEquals(outcome, rateLimitDecision);
+
+        if (outcome.hasExceededRateLimit()) {
+            verify(metrics)
+                    .increment(
+                            "RpRateLimitExceeded",
+                            Map.of(
+                                    "clientId",
+                                    Constants.TEST_CLIENT_ID,
+                                    "action",
+                                    outcome.getAction().toString()));
+        }
+    }
+
+    private static Stream<Arguments> rateLimitAlgosAndOutcomes() {
+        return Stream.of(
+                Arguments.of(
+                        Named.of("neverExceededAlgorithm", neverExceededAlgorithm),
+                        Named.of(
+                                "returns UNDER_LIMIT_NO_ACTION",
+                                RateLimitDecision.UNDER_LIMIT_NO_ACTION)),
+                Arguments.of(
+                        Named.of("alwaysExceededAlgorithm", alwaysExceededAlgorithm),
+                        Named.of(
+                                "returns OVER_LIMIT_RETURN_TO_RP",
+                                RateLimitDecision.OVER_LIMIT_RETURN_TO_RP)));
+    }
+}

@@ -21,6 +21,11 @@ data "aws_dynamodb_table" "account_modifiers_table" {
 data "aws_dynamodb_table" "email_check_results_table" {
   name = "${var.environment}-email-check-result"
 }
+
+data "aws_dynamodb_table" "international_sms_send_count_table" {
+  name = "${var.environment}-international-sms-send-count"
+}
+
 data "aws_iam_policy_document" "check_email_fraud_block_read_dynamo_read_access_policy" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -284,4 +289,49 @@ resource "aws_iam_policy" "check_email_fraud_block_read_dynamo_read_access_polic
   description = "IAM policy for managing read permissions to the Dynamo Email Check Results table"
 
   policy = data.aws_iam_policy_document.check_email_fraud_block_read_dynamo_read_access_policy.json
+}
+
+data "aws_iam_policy_document" "dynamo_international_sms_send_count_read_write_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:GetItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+
+    resources = [
+      data.aws_dynamodb_table.international_sms_send_count_table.arn,
+      "${data.aws_dynamodb_table.international_sms_send_count_table.arn}/index/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+
+    resources = [
+      data.terraform_remote_state.shared.outputs.international_sms_send_count_encryption_key_arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "dynamo_international_sms_send_count_read_write_access_policy" {
+  name_prefix = "dynamo-international-sms-send-count-read-write-policy"
+  path        = "/${var.environment}/am-shared/"
+  description = "IAM policy for managing read and write permissions to the International SMS Send Count table"
+
+  policy = data.aws_iam_policy_document.dynamo_international_sms_send_count_read_write_policy_document.json
 }

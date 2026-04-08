@@ -60,6 +60,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid ID Token Signing Algorithm");
     public static final ErrorObject INVALID_CHANNEL =
             new ErrorObject("invalid_client_metadata", "Invalid Channel");
+    public static final ErrorObject INVALID_LANDING_PAGE_URL =
+            new ErrorObject("invalid_client_metadata", "Invalid Landing Page URI");
 
     private static final Set<String> VALID_ID_TOKEN_SIGNING_ALGORITHMS =
             Stream.of(ES256.getName(), RS256.getName()).collect(Collectors.toSet());
@@ -106,7 +108,7 @@ public class ClientConfigValidationService {
                 false)) {
             return Optional.of(INCONSISTENT_PUBLIC_KEY_SOURCE);
         }
-        if (!areScopesValid(registrationRequest.getScopes())) {
+        if (!ValidScopes.areScopesValidAndPublic(registrationRequest.getScopes())) {
             return Optional.of(INVALID_SCOPE);
         }
         if (!isValidServiceType(registrationRequest.getServiceType())) {
@@ -136,6 +138,11 @@ public class ClientConfigValidationService {
                 .map(this::isValidChannel)
                 .orElse(true)) {
             return Optional.of(INVALID_CHANNEL);
+        }
+        if (!Optional.ofNullable(registrationRequest.getLandingPageUrl())
+                .map(t -> areUrisValid(singletonList(t)))
+                .orElse(true)) {
+            return Optional.of(INVALID_LANDING_PAGE_URL);
         }
         return Optional.empty();
     }
@@ -175,7 +182,7 @@ public class ClientConfigValidationService {
             return Optional.of(INCONSISTENT_PUBLIC_KEY_SOURCE);
         }
         if (!Optional.ofNullable(updateRequest.getScopes())
-                .map(this::areScopesValid)
+                .map(ValidScopes::areScopesValidAndPublic)
                 .orElse(true)) {
             return Optional.of(INVALID_SCOPE);
         }
@@ -203,6 +210,11 @@ public class ClientConfigValidationService {
                 .map(this::isValidIdTokenSigningAlgorithm)
                 .orElse(true)) {
             return Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM);
+        }
+        if (!Optional.ofNullable(updateRequest.getLandingPageUrl())
+                .map(t -> areUrisValid(singletonList(t)))
+                .orElse(true)) {
+            return Optional.of(INVALID_LANDING_PAGE_URL);
         }
         return Optional.empty();
     }
@@ -243,15 +255,6 @@ public class ClientConfigValidationService {
             kf.generatePublic(x509publicKey);
         } catch (Exception e) {
             return false;
-        }
-        return true;
-    }
-
-    private boolean areScopesValid(List<String> scopes) {
-        for (String scope : scopes) {
-            if (ValidScopes.getPublicValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
-                return false;
-            }
         }
         return true;
     }

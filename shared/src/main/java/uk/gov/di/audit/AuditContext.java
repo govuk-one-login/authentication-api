@@ -3,6 +3,8 @@ package uk.gov.di.audit;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public record AuditContext(
@@ -14,7 +16,8 @@ public record AuditContext(
         String ipAddress,
         String phoneNumber,
         String persistentSessionId,
-        Optional<String> txmaAuditEncoded) {
+        Optional<String> txmaAuditEncoded,
+        List<AuditService.MetadataPair> metadata) {
 
     public static AuditContext auditContextFromUserContext(
             UserContext userContext,
@@ -24,7 +27,7 @@ public record AuditContext(
             String phoneNumber,
             String persistentSessionId) {
         return new AuditContext(
-                userContext.getClientId(),
+                userContext.getAuthSession().getClientId(),
                 userContext.getClientSessionId(),
                 userContext.getAuthSession().getSessionId(),
                 subjectId,
@@ -32,7 +35,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                Optional.ofNullable(userContext.getTxmaAuditEncoded()),
+                new ArrayList<>());
     }
 
     public static AuditContext emptyAuditContext() {
@@ -45,7 +49,8 @@ public record AuditContext(
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                Optional.empty());
+                Optional.empty(),
+                new ArrayList<>());
     }
 
     public AuditContext withPhoneNumber(String phoneNumber) {
@@ -58,20 +63,12 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                metadata);
     }
 
     public AuditContext withUserId(String subjectId) {
-        return new AuditContext(
-                clientId,
-                clientSessionId,
-                sessionId,
-                subjectId,
-                email,
-                ipAddress,
-                phoneNumber,
-                persistentSessionId,
-                txmaAuditEncoded);
+        return withSubjectId(subjectId);
     }
 
     public AuditContext withTxmaAuditEncoded(Optional<String> txmaAuditEncoded) {
@@ -84,7 +81,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                metadata);
     }
 
     public AuditContext withSubjectId(String subjectId) {
@@ -97,7 +95,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                metadata);
     }
 
     public AuditContext withEmail(String email) {
@@ -110,7 +109,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                metadata);
     }
 
     public AuditContext withIpAddress(String ipAddress) {
@@ -123,7 +123,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                metadata);
     }
 
     public AuditContext withClientId(String clientId) {
@@ -136,7 +137,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                metadata);
     }
 
     public AuditContext withClientSessionId(String clientSessionId) {
@@ -149,7 +151,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                metadata);
     }
 
     public AuditContext withSessionId(String sessionId) {
@@ -162,6 +165,44 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                metadata);
+    }
+
+    public AuditContext withPersistentSessionId(String persistentSessionId) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded,
+                metadata);
+    }
+
+    public AuditContext withMetadataItem(AuditService.MetadataPair meta) {
+        if (meta == null) {
+            return this;
+        }
+        List<AuditService.MetadataPair> newMetadata = new ArrayList<>(metadata);
+        newMetadata.add(meta);
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded,
+                newMetadata);
+    }
+
+    public Optional<AuditService.MetadataPair> getMetadataItemByKey(String key) {
+        return metadata().stream().filter(metadata -> metadata.key().equals(key)).findFirst();
     }
 }

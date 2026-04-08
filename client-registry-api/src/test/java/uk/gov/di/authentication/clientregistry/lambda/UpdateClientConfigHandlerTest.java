@@ -62,7 +62,7 @@ class UpdateClientConfigHandlerTest {
     private UpdateClientConfigHandler handler;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(context.getAwsRequestId()).thenReturn("request-id");
         handler =
                 new UpdateClientConfigHandler(clientService, clientValidationService, auditService);
@@ -73,18 +73,18 @@ class UpdateClientConfigHandlerTest {
             new CaptureLoggingExtension(UpdateClientConfigHandler.class);
 
     @AfterEach
-    public void afterEach() {
+    void afterEach() {
         assertThat(logging.events(), not(hasItem(withMessageContaining(CLIENT_ID, CLIENT_NAME))));
         verifyNoMoreInteractions(auditService);
     }
 
     @Test
-    public void shouldReturn200ForAValidRequest() throws Json.JsonException {
+    void shouldReturn200ForAValidRequest() throws Json.JsonException {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
         when(clientValidationService.validateClientUpdateConfig(
                         any(UpdateClientConfigRequest.class)))
                 .thenReturn(Optional.empty());
-        when(clientService.updateClient(eq(CLIENT_ID), any(UpdateClientConfigRequest.class)))
+        when(clientService.updateSSEClient(eq(CLIENT_ID), any(UpdateClientConfigRequest.class)))
                 .thenReturn(createClientRegistry());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -107,7 +107,7 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestIsMissingClientID() {
+    void shouldReturn400WhenRequestIsMissingClientID() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
@@ -118,7 +118,7 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestContainsNoParameters() {
+    void shouldReturn400WhenRequestContainsNoParameters() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("");
         event.setPathParameters(Map.of("clientId", CLIENT_ID));
@@ -130,7 +130,7 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
-    public void shouldReturn401WhenClientIdIsInvalid() {
+    void shouldReturn401WhenClientIdIsInvalid() {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(false);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -144,7 +144,7 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestFailsValidation() {
+    void shouldReturn400WhenRequestFailsValidation() {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
         when(clientValidationService.validateClientUpdateConfig(
                         any(UpdateClientConfigRequest.class)))
@@ -165,7 +165,7 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestHasInvalidScope() {
+    void shouldReturn400WhenRequestHasInvalidScope() {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
         when(clientValidationService.validateClientUpdateConfig(
                         any(UpdateClientConfigRequest.class)))

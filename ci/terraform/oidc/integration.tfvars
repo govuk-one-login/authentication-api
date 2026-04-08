@@ -8,6 +8,9 @@ shared_state_bucket                  = "digital-identity-dev-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendint"
 
+# Auth new strategic account
+auth_new_account_id = "211125600642"
+
 # App-specific
 internal_sector_uri                     = "https://identity.integration.account.gov.uk"
 test_clients_enabled                    = false
@@ -42,6 +45,7 @@ orch_environment                                   = "integration"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:058264132019:key/1b5c001b-ed53-4a7b-bfbe-5d0f596110b5"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:058264132019:key/fdf1686f-2d4d-4c7b-b3be-324b6ebba370"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:058264132019:key/808a8c1e-82d8-487e-abb8-e13d6564b426"
+orch_client_registry_table_encryption_key_arn      = "arn:aws:kms:eu-west-2:058264132019:key/11948d7f-8e88-41d3-afe5-5ec9f37f979d"
 
 orch_openid_configuration_enabled    = true
 orch_jwks_enabled                    = true
@@ -66,7 +70,6 @@ doc_app_authorisation_client_id      = "authOrchestratorDocApp"
 doc_app_authorisation_callback_uri   = "https://oidc.integration.account.gov.uk/doc-app-callback"
 doc_app_authorisation_uri            = "https://www.review-b.integration.account.gov.uk/dca/oauth2/authorize"
 doc_app_jwks_endpoint                = "https://api-backend-api.review-b.integration.account.gov.uk/.well-known/jwks.json"
-doc_app_encryption_key_id            = "0948190d-384c-498d-81e2-a20dd30f147c"
 doc_app_cri_data_v2_endpoint         = "userinfo/v2"
 
 ipv_api_enabled                             = true
@@ -141,4 +144,7 @@ performance_tuning = {
     scaling_trigger = 0
   }
 }
-lambda_min_concurrency = 1
+
+
+ipv_jwks_call_enabled = true
+ipv_jwks_url          = "https://api.identity.integration.account.gov.uk/.well-known/jwks.json"

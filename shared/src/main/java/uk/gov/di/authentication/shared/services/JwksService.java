@@ -1,15 +1,9 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKMatcher;
-import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
-import com.nimbusds.jose.proc.SecurityContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
@@ -19,7 +13,6 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 
-import java.net.URL;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
@@ -46,14 +39,15 @@ public class JwksService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public JWK getPublicTokenJwkWithOpaqueId() {
-        LOG.info("Retrieving EC public key");
-        return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyAlias());
-    }
+    public JWK getPublicTestTokenJwkWithOpaqueId() {
+        LOG.info("Retrieving EC public key for acceptance tests");
+        String testTokenSigningKeyAlias = configurationService.getTestTokenSigningKeyAlias();
 
-    public JWK getPublicTokenRsaJwkWithOpaqueId() {
-        LOG.info("Retrieving RSA public key");
-        return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyRsaAlias());
+        if (testTokenSigningKeyAlias == null) {
+            return null;
+        }
+
+        return getPublicJWKWithKeyId(testTokenSigningKeyAlias);
     }
 
     public JWK getPublicDocAppSigningJwkWithOpaqueId() {
@@ -67,28 +61,30 @@ public class JwksService {
     }
 
     public JWK getPublicMfaResetJarJwkWithOpaqueId() {
-        LOG.info("Retrieving MFA Reset JAR signing public key");
+        LOG.info("Retrieving MFA Reset JAR primary signing public key");
         return getPublicJWKWithKeyId(configurationService.getMfaResetJarSigningKeyAlias());
     }
 
-    public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {
-        JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
-        JWKSource<SecurityContext> jwkSource =
-                JWKSourceBuilder.create(url)
-                        .retrying(true)
-                        .refreshAheadCache(false)
-                        .cache(false)
-                        .rateLimited(false)
-                        .build();
-        try {
-            LOG.info("Retrieving JWKSet with URL: {}", url);
-            return jwkSource.get(selector, null).stream()
-                    .findFirst()
-                    .orElseThrow(() -> new KeySourceException("No key found with given keyID"));
-        } catch (KeySourceException e) {
-            LOG.error("Unable to load JWKSet", e);
-            throw new RuntimeException(e);
+    public JWK getPublicMfaResetJarDeprecatedJwkWithOpaqueId() {
+        String deprecatedKeyAlias = configurationService.getMfaResetJarDeprecatedSigningKeyAlias();
+
+        if (deprecatedKeyAlias == null) {
+            return null;
         }
+
+        LOG.info("Retrieving MFA Reset JAR deprecated signing public key");
+        return getPublicJWKWithKeyId(deprecatedKeyAlias);
+    }
+
+    public JWK getPublicAuthToAMCSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Auth to AMC signing public key");
+        return getPublicJWKWithKeyId(configurationService.getAuthToAMCTransportJWTSigningKey());
+    }
+
+    public JWK getPublicAuthToAMCDownstreamServiceSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Auth to AMC Downstream service signing public key");
+        return getPublicJWKWithKeyId(
+                configurationService.getAuthToAMCDownstreamServiceSigningKey());
     }
 
     private JWK getPublicJWKWithKeyId(String keyId) {

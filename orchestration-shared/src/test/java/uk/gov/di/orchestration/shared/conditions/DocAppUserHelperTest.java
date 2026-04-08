@@ -22,13 +22,10 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
 import java.net.URI;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -37,13 +34,13 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class DocAppUserHelperTest {
 
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final String SESSION_ID = "a-session-id";
-    private static final Session SESSION = new Session();
     private static final String AUDIENCE = "oidc-audience";
     private static final Scope VALID_SCOPE =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
@@ -68,7 +65,7 @@ class DocAppUserHelperTest {
     @ParameterizedTest
     @MethodSource("clientTypes")
     void shouldReturnFalseIfRequestObjectDoesNotContainDocAppScope(ClientType clientType)
-            throws NoSuchAlgorithmException, JOSEException {
+            throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
@@ -96,7 +93,7 @@ class DocAppUserHelperTest {
     }
 
     @Test
-    void shouldReturnFalseIfClientIsNotAppClient() throws NoSuchAlgorithmException, JOSEException {
+    void shouldReturnFalseIfClientIsNotAppClient() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
@@ -115,8 +112,7 @@ class DocAppUserHelperTest {
     }
 
     @Test
-    void shouldReturnTrueIfClientIsDocCheckingAppUser()
-            throws NoSuchAlgorithmException, JOSEException {
+    void shouldReturnTrueIfClientIsDocCheckingAppUser() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
@@ -135,8 +131,7 @@ class DocAppUserHelperTest {
     }
 
     @Test
-    void shouldReturnTrueIfClientIsDocCheckingAppUserWithSubject()
-            throws NoSuchAlgorithmException, JOSEException {
+    void shouldReturnTrueIfClientIsDocCheckingAppUserWithSubject() throws JOSEException {
 
         JWTClaimsSet.Builder claimsSetBuilder = getBaseJWTClaimsSetBuilder();
 
@@ -150,8 +145,7 @@ class DocAppUserHelperTest {
     }
 
     @Test
-    void shouldReturnFalsIfClientIsDocCheckingAppUserWithoutSubject()
-            throws NoSuchAlgorithmException, JOSEException {
+    void shouldReturnFalsIfClientIsDocCheckingAppUserWithoutSubject() throws JOSEException {
 
         JWTClaimsSet.Builder claimsSetBuilder = getBaseJWTClaimsSetBuilder();
 
@@ -191,7 +185,7 @@ class DocAppUserHelperTest {
                         .withClientName(CLIENT_NAME)
                         .withCookieConsentShared(false)
                         .withClientType(clientType.getValue());
-        return UserContext.builder(SESSION)
+        return UserContext.builder()
                 .withSessionId(SESSION_ID)
                 .withOrchClientSession(orchClientSession)
                 .withClient(clientRegistry)
@@ -214,9 +208,8 @@ class DocAppUserHelperTest {
         return authRequestBuilder.build();
     }
 
-    private SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet)
-            throws NoSuchAlgorithmException, JOSEException {
-        var keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+    private SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet) throws JOSEException {
+        var keyPair = generateRsaKeyPair();
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         var signer = new RSASSASigner(keyPair.getPrivate());

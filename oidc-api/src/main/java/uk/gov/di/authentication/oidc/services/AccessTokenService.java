@@ -12,19 +12,18 @@ import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.text.ParseException;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -35,20 +34,18 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 public class AccessTokenService {
 
     private static final Logger LOG = LogManager.getLogger(AccessTokenService.class);
-    private final RedisConnectionService redisConnectionService;
     private final DynamoClientService clientService;
     private final TokenValidationService tokenValidationService;
-    private final Json objectMapper = SerializationService.getInstance();
-    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
+    private final OrchAccessTokenService orchAccessTokenService;
     private static final String INVALID_ACCESS_TOKEN = "Invalid Access Token";
 
     public AccessTokenService(
-            RedisConnectionService redisConnectionService,
             DynamoClientService clientService,
-            TokenValidationService tokenValidationService) {
-        this.redisConnectionService = redisConnectionService;
+            TokenValidationService tokenValidationService,
+            OrchAccessTokenService orchAccessTokenService) {
         this.clientService = clientService;
         this.tokenValidationService = tokenValidationService;
+        this.orchAccessTokenService = orchAccessTokenService;
     }
 
     public AccessTokenInfo parse(String authorizationHeader, boolean identityEnabled)
@@ -57,114 +54,103 @@ public class AccessTokenService {
         try {
             accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.warn("Unable to parse AccessToken");
             throw new AccessTokenException(
                     "Unable to parse AccessToken", BearerTokenError.INVALID_TOKEN);
         }
+
         SignedJWT signedJWT;
+        JWTClaimsSet claimsSet;
+        ClientRegistry client;
+        List<String> scopes;
+        List<String> identityClaims = null;
         try {
             signedJWT = SignedJWT.parse(accessToken.getValue());
+            claimsSet = signedJWT.getJWTClaimsSet();
+            LOG.info(
+                    "Successfully processed UserInfo request with JWT ID of {}",
+                    claimsSet.getJWTID());
 
-            var currentDateTime = NowHelper.now();
-            if (DateUtils.isBefore(
-                    signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 0)) {
-                LOG.warn(
-                        "Access Token has expired. Access Token expires at: {}. CurrentDateTime is: {}",
-                        signedJWT.getJWTClaimsSet().getExpirationTime(),
-                        currentDateTime);
+            if (hasAccessTokenExpired(claimsSet.getExpirationTime())) {
                 throw new AccessTokenException(
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
-            if (!tokenValidationService.validateAccessTokenSignature(accessToken)) {
-                LOG.warn("Unable to validate AccessToken signature");
+            if (!tokenValidationService.isTokenSignatureValid(accessToken.getValue())) {
                 throw new AccessTokenException(
                         "Unable to validate AccessToken signature", BearerTokenError.INVALID_TOKEN);
             }
-            var clientID = signedJWT.getJWTClaimsSet().getStringClaim("client_id");
-            if (Objects.isNull(clientID)) {
-                LOG.warn("ClientID is null");
-                throw new AccessTokenException("ClientID is null", BearerTokenError.INVALID_TOKEN);
-            }
+
+            var clientID =
+                    Optional.ofNullable(claimsSet.getStringClaim("client_id"))
+                            .orElseThrow(
+                                    () ->
+                                            new AccessTokenException(
+                                                    "ClientID is null",
+                                                    BearerTokenError.INVALID_TOKEN));
             attachLogFieldToLogs(CLIENT_ID, clientID);
 
-            var client = clientService.getClient(clientID).orElse(null);
-            if (Objects.isNull(client)) {
-                LOG.warn("Client not found");
-                throw new AccessTokenException("Client not found", BearerTokenError.INVALID_TOKEN);
-            }
+            client =
+                    clientService
+                            .getClient(clientID)
+                            .orElseThrow(
+                                    () ->
+                                            new AccessTokenException(
+                                                    "Client not found",
+                                                    BearerTokenError.INVALID_TOKEN));
 
-            var scopes =
-                    JSONArrayUtils.parse(
-                                    new Gson()
-                                            .toJson(signedJWT.getJWTClaimsSet().getClaim("scope")))
-                            .stream()
-                            .map(Objects::toString)
-                            .toList();
-            if (!areScopesValid(scopes) || !client.getScopes().containsAll(scopes)) {
-                LOG.warn("Invalid Scopes: {}", scopes);
+            scopes = getScopesFromClaimsSet(claimsSet);
+            List<String> clientScopes = client.getScopes();
+            if (!ValidScopes.areScopesValid(scopes) || !clientScopes.containsAll(scopes)) {
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
-            List<String> identityClaims = null;
+
             if (identityEnabled && client.isIdentityVerificationSupported()) {
                 LOG.info("Identity is enabled AND client supports identity verification");
-                identityClaims = getIdentityClaims(signedJWT.getJWTClaimsSet());
+                identityClaims = getIdentityClaims(claimsSet);
             }
-            var subject = signedJWT.getJWTClaimsSet().getSubject();
-            var accessTokenStore = getAccessTokenStore(clientID, subject);
-            if (accessTokenStore.isEmpty()) {
-                LOG.warn(
-                        "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}. JWTID in Access Token sent in request: {}",
-                        signedJWT.getJWTClaimsSet().getExpirationTime(),
-                        currentDateTime,
-                        signedJWT.getJWTClaimsSet().getJWTID());
-                throw new AccessTokenException(
-                        INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
-            }
-            if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
-                LOG.warn(
-                        "Access Token in Access Token Store is different to Access Token sent in request");
-                var storeJwtId =
-                        SignedJWT.parse(accessTokenStore.get().getToken())
-                                .getJWTClaimsSet()
-                                .getJWTID();
-                LOG.warn(
-                        "JWTID in AccessTokenStore: {} compared to JWTID in Access Token sent in request: {}",
-                        storeJwtId,
-                        signedJWT.getJWTClaimsSet().getJWTID());
-                throw new AccessTokenException(
-                        INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
-            }
-            return new AccessTokenInfo(
-                    accessTokenStore.get(), subject, scopes, identityClaims, client.getClientID());
         } catch (ParseException e) {
-            LOG.warn("Unable to parse AccessToken to SignedJWT");
             throw new AccessTokenException(
                     "Unable to parse AccessToken to SignedJWT", BearerTokenError.INVALID_TOKEN);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.warn("Unable to parse ClaimSet in AccessToken");
             throw new AccessTokenException(
                     "Unable to parse ClaimSet in AccessToken", BearerTokenError.INVALID_TOKEN);
         }
+
+        var subject = claimsSet.getSubject();
+        String clientAndRpPairwiseId = client.getClientID() + "." + subject;
+        Optional<OrchAccessTokenItem> orchAccessTokenItemMaybe =
+                orchAccessTokenService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
+                        clientAndRpPairwiseId, accessToken.getValue());
+
+        if (orchAccessTokenItemMaybe.isEmpty()) {
+            LOG.warn(
+                    "There is no access token in dynamo matching the token in the request. Access Token expires at: {}. CurrentDateTime is: {}. JWTID in Access Token sent in request: {}",
+                    claimsSet.getExpirationTime(),
+                    NowHelper.now(),
+                    claimsSet.getJWTID());
+            throw new AccessTokenException(INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
+        }
+        OrchAccessTokenItem orchAccessTokenItem = orchAccessTokenItemMaybe.get();
+
+        return new AccessTokenInfo(
+                Objects.requireNonNullElse(
+                        orchAccessTokenItem.getInternalPairwiseSubjectId(), "missing"),
+                Objects.requireNonNullElse(orchAccessTokenItem.getClientSessionId(), "missing"),
+                subject,
+                scopes,
+                identityClaims,
+                client.getClientID());
     }
 
-    private Optional<AccessTokenStore> getAccessTokenStore(String clientId, String subjectId) {
-        String result =
-                redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + clientId + "." + subjectId);
-        try {
-            return Optional.ofNullable(objectMapper.readValue(result, AccessTokenStore.class));
-        } catch (JsonException | IllegalArgumentException e) {
-            LOG.error("Error getting AccessToken from Redis", e);
-            return Optional.empty();
+    private boolean hasAccessTokenExpired(Date expirationTime) {
+        var currentDateTime = NowHelper.now();
+        if (DateUtils.isBefore(expirationTime, currentDateTime, 0)) {
+            LOG.warn(
+                    "Access Token has expired. Access Token expires at: {}. CurrentDateTime is: {}",
+                    expirationTime,
+                    currentDateTime);
+            return true;
         }
-    }
-
-    private boolean areScopesValid(List<String> scopes) {
-        for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
-                return false;
-            }
-        }
-        return true;
+        return false;
     }
 
     private List<String> getIdentityClaims(JWTClaimsSet claimsSet)
@@ -183,5 +169,12 @@ public class AccessTokenService {
         }
         LOG.info("Identity claims present in Access token");
         return identityClaims;
+    }
+
+    private List<String> getScopesFromClaimsSet(JWTClaimsSet claimsSet)
+            throws com.nimbusds.oauth2.sdk.ParseException {
+        return JSONArrayUtils.parse(new Gson().toJson(claimsSet.getClaim("scope"))).stream()
+                .map(Objects::toString)
+                .toList();
     }
 }

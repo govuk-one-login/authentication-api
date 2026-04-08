@@ -7,7 +7,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.HashMap;
 import java.util.Map;
 
-public enum NotificationType implements TemplateAware {
+public enum NotificationType implements TemplateAware, NotifiableType {
     VERIFY_EMAIL(
             "VERIFY_EMAIL_TEMPLATE_ID",
             Map.of(SupportedLanguage.CY, "VERIFY_EMAIL_TEMPLATE_ID_CY"),
@@ -65,7 +65,12 @@ public enum NotificationType implements TemplateAware {
             true,
             false),
     TERMS_AND_CONDITIONS_BULK_EMAIL(
-            "TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID", MFAMethodType.NONE, true, false);
+            "TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID", MFAMethodType.NONE, true, false),
+    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL(
+            "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL_TEMPLATE_ID",
+            MFAMethodType.NONE,
+            true,
+            false);
 
     private final String templateName;
     private final MFAMethodType mfaMethodType;
@@ -111,6 +116,7 @@ public enum NotificationType implements TemplateAware {
         return isEmail;
     }
 
+    @Override
     public boolean isForPhoneNumber() {
         return isForPhoneNumber;
     }

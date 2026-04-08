@@ -1,17 +1,16 @@
 resource "aws_sqs_queue" "pending_email_check_queue" {
   name                       = "${var.environment}-pending-email-check-queue"
-  delay_seconds              = 10
   max_message_size           = 2048
   message_retention_seconds  = 1209600
   receive_wait_time_seconds  = 10
-  visibility_timeout_seconds = 46
+  visibility_timeout_seconds = 270
 
   kms_master_key_id                 = aws_kms_key.pending_email_check_queue_encryption_key.arn
   kms_data_key_reuse_period_seconds = 300
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.pending_email_check_dead_letter_queue.arn
-    maxReceiveCount     = 1
+    maxReceiveCount     = 3
   })
 }
 
@@ -63,12 +62,12 @@ resource "aws_cloudwatch_metric_alarm" "pending_email_check_dlq_cloudwatch_alarm
   metric_name         = "ApproximateNumberOfMessagesVisible"
   namespace           = "AWS/SQS"
   period              = "300"
-  statistic           = "Sum"
+  statistic           = "Average"
   threshold           = var.dlq_alarm_threshold
 
   dimensions = {
     QueueName = aws_sqs_queue.pending_email_check_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.pending_email_check_dead_letter_queue.name}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/4164649233/BAU+Daytime+Support+Hygiene+and+Optimisation+Rota#SUP-7%3A-Resolve-DLQ-messages"
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.pending_email_check_dead_letter_queue.name}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/5752979509/Runbook+Handling+Email+Blocks"
   alarm_actions     = [aws_sns_topic.slack_events.arn]
 }

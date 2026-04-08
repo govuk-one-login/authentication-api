@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.oidc.exceptions;
 
-public class PostRequestFailureException extends RuntimeException {
+import java.io.IOException;
+
+public class PostRequestFailureException extends IOException {
     public PostRequestFailureException(String message) {
         super(message);
     }

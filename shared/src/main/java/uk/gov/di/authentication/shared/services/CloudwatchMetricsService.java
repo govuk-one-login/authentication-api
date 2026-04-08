@@ -5,30 +5,56 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
+import uk.gov.di.authentication.entity.Application;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.NotifiableType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.service.notify.NotificationClientException;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import static java.lang.String.valueOf;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.APPLICATION;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.COUNTRY;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IPV_RESPONSE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IS_TEST;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_PRIORITY_IDENTIFIER;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_REQUIRED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NOTIFICATION_HTTP_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.REQUESTED_LEVEL_OF_CONFIDENCE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.SMS_DESTINATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.DOMESTIC_SMS_SENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHECK_DURATION;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOTIFICATION_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOTIFICATION_SENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.INTERNATIONAL_SMS_SENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_AUTHORISATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_LIMIT_EXCEEDED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_NOTIFICATION_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_NOTIFICATION_SENT;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.maybeGetCountry;
 
 public class CloudwatchMetricsService {
 
     private static final Logger LOG = LogManager.getLogger(CloudwatchMetricsService.class);
+    public static final String INTERNATIONAL_SMS_DESTINATION = "INTERNATIONAL";
+    public static final String DOMESTIC_SMS_DESTINATION = "DOMESTIC";
 
     private final ConfigurationService configurationService;
 
@@ -65,30 +91,110 @@ public class CloudwatchMetricsService {
         putEmbeddedValue(name, 1, dimensions);
     }
 
-    public void incrementAuthenticationSuccess(
+    public void incrementMfaMethodCounter(
+            String environment,
+            String operation,
+            String result,
+            JourneyType journeyType,
+            String mfaMethodType,
+            PriorityIdentifier priorityIdentifier) {
+        incrementCounter(
+                "MfaMethodOperationCount",
+                Map.of(
+                        "Environment",
+                        environment,
+                        "Operation",
+                        operation,
+                        "Result",
+                        result,
+                        "JourneyType",
+                        valueOf(journeyType),
+                        "MfaMethodType",
+                        valueOf(mfaMethodType),
+                        "PriorityIdentifier",
+                        valueOf(priorityIdentifier)));
+    }
+
+    public void incrementAuthenticationSuccessWithoutMfa(
+            AuthSessionItem.AccountState accountState,
+            String clientId,
+            String clientName,
+            String requestedLevelOfConfidence,
+            boolean isTestJourney) {
+        incrementAuthenticationSuccess(
+                accountState,
+                clientId,
+                clientName,
+                requestedLevelOfConfidence,
+                isTestJourney,
+                false,
+                null,
+                null,
+                null);
+    }
+
+    public void incrementAuthenticationSuccessWithMfa(
             AuthSessionItem.AccountState accountState,
             String clientId,
             String clientName,
             String requestedLevelOfConfidence,
             boolean isTestJourney,
-            boolean mfaRequired) {
-        incrementCounter(
-                AUTHENTICATION_SUCCESS.getValue(),
-                Map.of(
-                        ACCOUNT.getValue(),
-                        accountState.name(),
-                        ENVIRONMENT.getValue(),
-                        configurationService.getEnvironment(),
-                        CLIENT.getValue(),
-                        clientId,
-                        IS_TEST.getValue(),
-                        Boolean.toString(isTestJourney),
-                        REQUESTED_LEVEL_OF_CONFIDENCE.getValue(),
-                        requestedLevelOfConfidence,
-                        MFA_REQUIRED.getValue(),
-                        Boolean.toString(mfaRequired),
-                        CLIENT_NAME.getValue(),
-                        clientName));
+            JourneyType journeyType,
+            MFAMethodType mfaMethodType,
+            PriorityIdentifier mfaMethodPriorityIdentifier) {
+        incrementAuthenticationSuccess(
+                accountState,
+                clientId,
+                clientName,
+                requestedLevelOfConfidence,
+                isTestJourney,
+                true,
+                journeyType,
+                mfaMethodType,
+                mfaMethodPriorityIdentifier);
+    }
+
+    private void incrementAuthenticationSuccess(
+            AuthSessionItem.AccountState accountState,
+            String clientId,
+            String clientName,
+            String requestedLevelOfConfidence,
+            boolean isTestJourney,
+            boolean mfaRequired,
+            JourneyType journeyType,
+            MFAMethodType mfaMethodType,
+            PriorityIdentifier mfaMethodPriorityIdentifier) {
+        Map<String, String> dimensions =
+                new java.util.HashMap<>(
+                        Map.of(
+                                ACCOUNT.getValue(),
+                                accountState.name(),
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                clientId,
+                                IS_TEST.getValue(),
+                                Boolean.toString(isTestJourney),
+                                REQUESTED_LEVEL_OF_CONFIDENCE.getValue(),
+                                requestedLevelOfConfidence,
+                                MFA_REQUIRED.getValue(),
+                                Boolean.toString(mfaRequired),
+                                CLIENT_NAME.getValue(),
+                                clientName));
+        if (journeyType != null) {
+            dimensions.put(JOURNEY_TYPE.getValue(), journeyType.toString());
+        }
+        if (mfaMethodType != null) {
+            dimensions.put(MFA_METHOD_TYPE.getValue(), mfaMethodType.toString());
+        }
+        if (mfaMethodPriorityIdentifier != null) {
+            dimensions.put(
+                    MFA_METHOD_PRIORITY_IDENTIFIER.getValue(),
+                    mfaMethodPriorityIdentifier.toString());
+        }
+
+        incrementCounter(AUTHENTICATION_SUCCESS.getValue(), dimensions);
+
         if (AuthSessionItem.AccountState.NEW.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT.getValue(),
@@ -100,6 +206,7 @@ public class CloudwatchMetricsService {
                             CLIENT_NAME.getValue(),
                             clientName));
         }
+
         if (AuthSessionItem.AccountState.EXISTING.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
@@ -149,5 +256,105 @@ public class CloudwatchMetricsService {
         dimensions.forEach(dimensionSet::addDimension);
 
         return dimensionSet;
+    }
+
+    public void emitMetricForNotificationError(
+            NotifiableType notificationType,
+            String destination,
+            Boolean isTestDestination,
+            Application application,
+            NotificationClientException notificationClientException) {
+        String metricName;
+        var dimensions =
+                getNotificationBaseMetricDimensions(
+                        notificationType, isTestDestination, application);
+
+        if (notificationType.isForPhoneNumber()) {
+            var countryCode = maybeGetCountry(destination).orElse("INVALID");
+            dimensions.put(COUNTRY.getValue(), countryCode);
+
+            var smsDestinationType =
+                    "44".equals(countryCode)
+                            ? DOMESTIC_SMS_DESTINATION
+                            : INTERNATIONAL_SMS_DESTINATION;
+            dimensions.put(SMS_DESTINATION_TYPE.getValue(), smsDestinationType);
+
+            metricName = SMS_NOTIFICATION_ERROR.getValue();
+        } else {
+            metricName = EMAIL_NOTIFICATION_ERROR.getValue();
+        }
+        if (notificationClientException != null) {
+            dimensions.put(
+                    NOTIFICATION_HTTP_ERROR.getValue(),
+                    Integer.toString(notificationClientException.getHttpResult()));
+        }
+        incrementCounter(metricName, dimensions);
+    }
+
+    public void emitMetricForNotification(
+            NotifiableType notificationType,
+            String destination,
+            boolean isTestDestination,
+            Application application) {
+        String metricName;
+        var dimensions =
+                getNotificationBaseMetricDimensions(
+                        notificationType, isTestDestination, application);
+
+        if (notificationType.isForPhoneNumber()) {
+            var countryCode = maybeGetCountry(destination).orElse("INVALID");
+            dimensions.put(COUNTRY.getValue(), countryCode);
+
+            var smsDestinationType =
+                    "44".equals(countryCode)
+                            ? DOMESTIC_SMS_DESTINATION
+                            : INTERNATIONAL_SMS_DESTINATION;
+            dimensions.put(SMS_DESTINATION_TYPE.getValue(), smsDestinationType);
+
+            metricName = SMS_NOTIFICATION_SENT.getValue();
+            incrementCounter(metricName, dimensions);
+
+            // Emit additional metrics for SMS quota monitoring
+            if (!isTestDestination) {
+                var quotaDimensions = new HashMap<String, String>();
+                quotaDimensions.put(ENVIRONMENT.getValue(), configurationService.getEnvironment());
+                quotaDimensions.put(APPLICATION.getValue(), application.getValue());
+
+                if (INTERNATIONAL_SMS_DESTINATION.equals(smsDestinationType)) {
+                    incrementCounter(INTERNATIONAL_SMS_SENT.getValue(), quotaDimensions);
+                } else {
+                    incrementCounter(DOMESTIC_SMS_SENT.getValue(), quotaDimensions);
+                }
+            }
+        } else {
+            metricName = EMAIL_NOTIFICATION_SENT.getValue();
+            incrementCounter(metricName, dimensions);
+        }
+    }
+
+    public void emitSmsLimitExceededMetric(
+            Boolean isTestDestination, Application application, String destinationType) {
+        var dimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(APPLICATION.getValue(), application.getValue()),
+                        Map.entry(IS_TEST.getValue(), isTestDestination.toString()),
+                        Map.entry(SMS_DESTINATION_TYPE.getValue(), destinationType));
+
+        incrementCounter(SMS_LIMIT_EXCEEDED.getValue(), dimensions);
+    }
+
+    private HashMap<String, String> getNotificationBaseMetricDimensions(
+            NotifiableType notificationType, Boolean isTestDestination, Application application) {
+        return new HashMap<>(
+                Map.of(
+                        ENVIRONMENT.getValue(),
+                        configurationService.getEnvironment(),
+                        APPLICATION.getValue(),
+                        application.getValue(),
+                        NOTIFICATION_TYPE.getValue(),
+                        notificationType.toString(),
+                        IS_TEST.getValue(),
+                        isTestDestination.toString()));
     }
 }

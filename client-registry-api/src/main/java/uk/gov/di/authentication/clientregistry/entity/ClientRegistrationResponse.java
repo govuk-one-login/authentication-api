@@ -111,6 +111,10 @@ public class ClientRegistrationResponse {
     @Required
     private boolean pkceEnforced;
 
+    @SerializedName("landing_page_url")
+    @Expose
+    private String landingPageUrl;
+
     public ClientRegistrationResponse(
             String clientName,
             String clientId,
@@ -131,7 +135,8 @@ public class ClientRegistrationResponse {
             String idTokenSigningAlgorithm,
             String channel,
             boolean maxAgeEnabled,
-            boolean pkceEnforced) {
+            boolean pkceEnforced,
+            String landingPageUrl) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
@@ -152,6 +157,7 @@ public class ClientRegistrationResponse {
         this.channel = channel;
         this.maxAgeEnabled = maxAgeEnabled;
         this.pkceEnforced = pkceEnforced;
+        this.landingPageUrl = landingPageUrl;
     }
 
     public ClientRegistrationResponse() {}
@@ -244,5 +250,9 @@ public class ClientRegistrationResponse {
 
     public boolean isPKCEEnforced() {
         return pkceEnforced;
+    }
+
+    public String getLandingPageUrl() {
+        return landingPageUrl;
     }
 }

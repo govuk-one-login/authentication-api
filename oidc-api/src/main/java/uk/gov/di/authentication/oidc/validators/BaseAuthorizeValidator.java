@@ -11,8 +11,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
@@ -146,6 +149,25 @@ public abstract class BaseAuthorizeValidator {
         return Optional.empty();
     }
 
+    protected void logIfIdentityLoCAndIdentityUnsupported(
+            List<VectorOfTrust> vtrList, ClientRegistry client) {
+        List<LevelOfConfidence> identityLoCs =
+                List.of(
+                        LevelOfConfidence.LOW_LEVEL,
+                        LevelOfConfidence.MEDIUM_LEVEL,
+                        LevelOfConfidence.HIGH_LEVEL,
+                        LevelOfConfidence.VERY_HIGH_LEVEL);
+        boolean hasRequestedIdentityLoC =
+                vtrList.stream()
+                        .map(VectorOfTrust::getLevelOfConfidence)
+                        .filter(Objects::nonNull)
+                        .anyMatch(identityLoCs::contains);
+        if (hasRequestedIdentityLoC && !client.isIdentityVerificationSupported()) {
+            LOG.info(
+                    "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.");
+        }
+    }
+
     protected void validateResponseMode(String responseMode) throws InvalidResponseModeException {
         if (!responseMode.equals(ResponseMode.QUERY.getValue())
                 && !responseMode.equals(ResponseMode.FRAGMENT.getValue())) {
@@ -155,5 +177,19 @@ public abstract class BaseAuthorizeValidator {
             logErrorInProdElseWarn(errorMessage);
             throw new InvalidResponseModeException(errorMessage);
         }
+    }
+
+    protected Optional<ErrorObject> validateChannel(String channel) {
+        if (!Channel.WEB.getValue().equals(channel)
+                && !Channel.GENERIC_APP.getValue().equals(channel)) {
+            var errorMessage = String.format("Invalid channel included in request: %s", channel);
+
+            logErrorInProdElseWarn(errorMessage);
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid value for channel parameter."));
+        }
+        return Optional.empty();
     }
 }

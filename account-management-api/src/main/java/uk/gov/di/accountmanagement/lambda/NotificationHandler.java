@@ -14,12 +14,15 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.InternationalSmsSendLimitService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +35,13 @@ import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_SENDI
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_WHEN_MAPPING_MESSAGE_FROM_QUEUE_TO_A_NOTIFY_REQUEST;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.TEXT_HAS_BEEN_SENT_USING_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.UNEXPECTED_ERROR_SENDING_NOTIFICATION;
+import static uk.gov.di.authentication.entity.Application.ONE_LOGIN_HOME;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -49,14 +54,20 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService;
     private final S3Client s3Client;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final InternationalSmsSendLimitService internationalSmsSendLimitService;
 
     public NotificationHandler(
             NotificationService notificationService,
             ConfigurationService configService,
-            S3Client s3Client) {
+            S3Client s3Client,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            InternationalSmsSendLimitService internationalSmsSendLimitService) {
         this.notificationService = notificationService;
         this.configurationService = configService;
         this.s3Client = s3Client;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.internationalSmsSendLimitService = internationalSmsSendLimitService;
     }
 
     public NotificationHandler() {
@@ -78,6 +89,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         this.notificationService = new NotificationService(client, configurationService);
         this.s3Client =
                 S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.internationalSmsSendLimitService =
+                new InternationalSmsSendLimitService(configurationService);
     }
 
     @Override
@@ -89,6 +103,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     public void notificationRequestHandler(SQSEvent event) {
+        attachTraceId();
         for (SQSMessage msg : event.getRecords()) {
             processMessage(msg);
         }
@@ -113,6 +128,12 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             case DELETE_ACCOUNT -> sendDeleteAccountNotification(notifyRequest);
             case PHONE_NUMBER_UPDATED -> sendPhoneNumberUpdatedNotification(notifyRequest);
             case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
+            case BACKUP_METHOD_ADDED -> sendBackupAddedNotification(notifyRequest);
+            case BACKUP_METHOD_REMOVED -> sendBackupRemovedNotification(notifyRequest);
+            case CHANGED_AUTHENTICATOR_APP -> sendChangedAuthenticatorAppNotification(
+                    notifyRequest);
+            case CHANGED_DEFAULT_MFA -> sendChangedDefaultMFANotification(notifyRequest);
+            case SWITCHED_MFA_METHODS -> sendSwitchedMFAMethodsNotification(notifyRequest);
         }
     }
 
@@ -169,6 +190,41 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 String.valueOf(NotificationType.PASSWORD_UPDATED));
     }
 
+    private void sendBackupAddedNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.BACKUP_METHOD_ADDED));
+    }
+
+    private void sendBackupRemovedNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.BACKUP_METHOD_REMOVED));
+    }
+
+    private void sendChangedAuthenticatorAppNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.CHANGED_AUTHENTICATOR_APP));
+    }
+
+    private void sendChangedDefaultMFANotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.CHANGED_DEFAULT_MFA));
+    }
+
+    private void sendSwitchedMFAMethodsNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.SWITCHED_MFA_METHODS));
+    }
+
     private void sendEmailNotification(
             NotifyRequest notifyRequest,
             Map<String, Object> personalisation,
@@ -182,8 +238,19 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         notificationService.sendEmail(
                                 destination, per, NotificationType.valueOf(type));
                         LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+                        cloudwatchMetricsService.emitMetricForNotification(
+                                notifyRequest.getNotificationType(),
+                                destination,
+                                false,
+                                ONE_LOGIN_HOME);
                     } catch (NotificationClientException e) {
                         LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                        cloudwatchMetricsService.emitMetricForNotificationError(
+                                notifyRequest.getNotificationType(),
+                                destination,
+                                false,
+                                ONE_LOGIN_HOME,
+                                e);
                     } catch (RuntimeException e) {
                         LOG.error(
                                 UNEXPECTED_ERROR_SENDING_NOTIFICATION,
@@ -197,6 +264,17 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             NotifyRequest notifyRequest,
             Map<String, Object> personalisation,
             String notificationType) {
+        if (!internationalSmsSendLimitService.canSendSms(notifyRequest.getDestination())) {
+            LOG.warn(
+                    "International SMS send limit reached. NotificationType: {}, sessionId: {}, clientSessionId: {}",
+                    notificationType,
+                    notifyRequest.getSessionId(),
+                    notifyRequest.getClientSessionId());
+            return;
+        }
+
+        var reference = notifyRequest.getClientSessionId();
+
         sendNotification(
                 notifyRequest,
                 personalisation,
@@ -205,9 +283,21 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     try {
                         notificationService.sendText(
                                 destination, per, NotificationType.valueOf(type));
+                        internationalSmsSendLimitService.recordSmsSent(destination, reference);
                         LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+                        cloudwatchMetricsService.emitMetricForNotification(
+                                notifyRequest.getNotificationType(),
+                                destination,
+                                false,
+                                ONE_LOGIN_HOME);
                     } catch (NotificationClientException e) {
                         LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                        cloudwatchMetricsService.emitMetricForNotificationError(
+                                notifyRequest.getNotificationType(),
+                                destination,
+                                false,
+                                ONE_LOGIN_HOME,
+                                e);
                     } catch (RuntimeException e) {
                         LOG.error(
                                 UNEXPECTED_ERROR_SENDING_NOTIFICATION,

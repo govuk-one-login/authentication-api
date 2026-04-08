@@ -72,7 +72,7 @@ class ClientRegistrationHandlerTest {
     private ClientRegistrationHandler handler;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         when(context.getAwsRequestId()).thenReturn("request-id");
         handler =
                 new ClientRegistrationHandler(clientService, configValidationService, auditService);
@@ -83,7 +83,7 @@ class ClientRegistrationHandlerTest {
             new CaptureLoggingExtension(UpdateClientConfigHandler.class);
 
     @AfterEach
-    public void afterEach() {
+    void afterEach() {
         assertThat(logging.events(), not(hasItem(withMessageContaining(clientId))));
         verifyNoMoreInteractions(auditService);
     }
@@ -98,7 +98,7 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
 
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"], \"public_key_source\": \"STATIC\",  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\", \"channel\": \"web\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"], \"public_key_source\": \"STATIC\",  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\", \"channel\": \"web\", \"landing_page_url\": \"https://landing-page.com\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
@@ -134,7 +134,9 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        "https://landing-page.com",
+                        2000);
     }
 
     @Test
@@ -176,7 +178,9 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        null,
+                        2000);
     }
 
     @Test
@@ -218,7 +222,9 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        null,
+                        2000);
     }
 
     @Test

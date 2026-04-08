@@ -10,14 +10,6 @@ data "aws_dynamodb_table" "client_registry_table" {
   name = "${var.environment}-client-registry"
 }
 
-data "aws_dynamodb_table" "identity_credentials_table" {
-  name = "${var.environment}-identity-credentials"
-}
-
-data "aws_dynamodb_table" "doc_app_cri_credential_table" {
-  name = "${var.environment}-doc-app-credential"
-}
-
 data "aws_dynamodb_table" "common_passwords_table" {
   name = "${var.environment}-common-passwords"
 }
@@ -99,10 +91,8 @@ data "aws_iam_policy_document" "dynamo_user_read_policy_document" {
     resources = [
       data.aws_dynamodb_table.user_credentials_table.arn,
       data.aws_dynamodb_table.user_profile_table.arn,
-      data.aws_dynamodb_table.doc_app_cri_credential_table.arn,
       "${data.aws_dynamodb_table.user_profile_table.arn}/index/*",
       "${data.aws_dynamodb_table.user_credentials_table.arn}/index/*",
-      "${data.aws_dynamodb_table.doc_app_cri_credential_table.arn}/index/*",
     ]
   }
 
@@ -179,162 +169,8 @@ data "aws_iam_policy_document" "dynamo_client_registration_read_policy_document"
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.client_registry_encryption_key_arn]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_identity_write_access_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:UpdateItem",
-      "dynamodb:PutItem",
-    ]
     resources = [
-      data.aws_dynamodb_table.identity_credentials_table.arn,
-    ]
-  }
-
-  statement {
-    sid    = "AllowAccessToKms"
-    effect = "Allow"
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = [local.identity_credentials_encryption_key_arn]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_identity_delete_access_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:DeleteItem",
-    ]
-    resources = [
-      data.aws_dynamodb_table.identity_credentials_table.arn,
-    ]
-  }
-
-  statement {
-    sid    = "AllowAccessToKms"
-    effect = "Allow"
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = [local.identity_credentials_encryption_key_arn]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_identity_read_access_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:BatchGetItem",
-      "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
-      "dynamodb:Scan",
-    ]
-    resources = [
-      data.aws_dynamodb_table.identity_credentials_table.arn,
-    ]
-  }
-
-  statement {
-    sid    = "AllowAccessToKms"
-    effect = "Allow"
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = [local.identity_credentials_encryption_key_arn]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_doc_app_write_access_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:UpdateItem",
-      "dynamodb:PutItem",
-    ]
-    resources = [
-      data.aws_dynamodb_table.doc_app_cri_credential_table.arn,
-    ]
-  }
-
-  statement {
-    sid    = "AllowAccessToDocAppCredentialTableKmsEncryptionKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = [
-      local.doc_app_credential_encryption_key_arn
-    ]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_doc_app_read_access_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:BatchGetItem",
-      "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
-      "dynamodb:Scan",
-    ]
-    resources = [
-      data.aws_dynamodb_table.doc_app_cri_credential_table.arn,
-    ]
-  }
-
-  statement {
-    sid    = "AllowAccessToDocAppCredentialTableKmsEncryptionKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = [
-      local.doc_app_credential_encryption_key_arn
+      local.client_registry_encryption_key_arn,
     ]
   }
 }
@@ -563,6 +399,42 @@ data "aws_iam_policy_document" "dynamo_authentication_attempt_read_policy_docume
     effect = "Allow"
     actions = [
       "kms:Decrypt",
+    ]
+    resources = [local.authentication_attempt_kms_key_arn]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_authentication_attempt_read_write_delete_policy_document" {
+  statement {
+    sid    = "AllowReadWriteAndDeleteActions"
+    effect = "Allow"
+
+    actions = [
+      # Read actions
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      # Write actions
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+      # Delete actions
+      "dynamodb:DeleteItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.authentication_attempt_table.arn,
+      "${data.aws_dynamodb_table.authentication_attempt_table.arn}/index/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowEncryptionDecryptionActions"
+    effect = "Allow"
+    actions = [
+      # Read
+      "kms:Decrypt",
+      # Write
+      "kms:Encrypt",
+      "kms:GenerateDataKey",
     ]
     resources = [local.authentication_attempt_kms_key_arn]
   }
@@ -866,6 +738,42 @@ data "aws_iam_policy_document" "dynamo_orch_identity_credentials_cross_account_r
   }
 }
 
+data "aws_iam_policy_document" "dynamo_orch_client_registry_cross_account_read_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-client-registry",
+    ]
+  }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [
+      var.orch_client_registry_table_encryption_key_arn
+    ]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_id_reverification_state_write_policy_document" {
   statement {
     sid    = "AllowWrite"
@@ -947,46 +855,6 @@ resource "aws_iam_policy" "dynamo_user_write_access_policy" {
   description = "IAM policy for managing write permissions to the Dynamo User tables"
 
   policy = data.aws_iam_policy_document.dynamo_user_write_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_identity_credentials_write_access_policy" {
-  name_prefix = "dynamo-access-policy"
-  path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing write permissions to the Dynamo Identity credentials table"
-
-  policy = data.aws_iam_policy_document.dynamo_identity_write_access_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_identity_credentials_read_access_policy" {
-  name_prefix = "dynamo-access-policy"
-  path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing read permissions to the Dynamo Identity credentials table"
-
-  policy = data.aws_iam_policy_document.dynamo_identity_read_access_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_identity_credentials_delete_access_policy" {
-  name_prefix = "dynamo-access-policy"
-  path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing delete permissions to the Dynamo Identity credentials table"
-
-  policy = data.aws_iam_policy_document.dynamo_identity_delete_access_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_doc_app_write_access_policy" {
-  name_prefix = "dynamo-access-policy"
-  path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing write permissions to the Dynamo Doc App CRI credential table"
-
-  policy = data.aws_iam_policy_document.dynamo_doc_app_write_access_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_doc_app_read_access_policy" {
-  name_prefix = "dynamo-access-policy"
-  path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing read permissions to the Dynamo Doc App CRI credential table"
-
-  policy = data.aws_iam_policy_document.dynamo_doc_app_read_access_policy_document.json
 }
 
 resource "aws_iam_policy" "dynamo_common_passwords_read_access_policy" {
@@ -1091,6 +959,17 @@ resource "aws_iam_policy" "dynamo_authentication_attempt_delete_policy" {
   description = "IAM policy for managing delete permissions to the authentication attempts table"
 
   policy = data.aws_iam_policy_document.dynamo_authentication_attempt_delete_policy_document.json
+}
+
+
+// This is required because we've reached the managed polices per role quota limit (20)
+// Ticket raised to request quota increase (ATO-1056)
+resource "aws_iam_policy" "dynamo_authentication_attempt_read_write_delete_policy" {
+  name_prefix = "dynamo-authentication-attempt-read-write-delete-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing combined read, write and, delete permissions to the authentication attempts table"
+
+  policy = data.aws_iam_policy_document.dynamo_authentication_attempt_read_write_delete_policy_document.json
 }
 
 resource "aws_iam_policy" "dynamo_auth_session_write_policy" {
@@ -1250,6 +1129,16 @@ resource "aws_iam_policy" "dynamo_orch_identity_credentials_cross_account_read_a
   description = "IAM policy for managing read permissions to the orch identity credentials table"
 
   policy = data.aws_iam_policy_document.dynamo_orch_identity_credentials_cross_account_read_access_policy_document[count.index].json
+}
+
+resource "aws_iam_policy" "dynamo_orch_client_registry_cross_account_read_access_policy" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  name_prefix = "dynamo-orch-client-registry-cross-account-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the orch client registry table"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_client_registry_cross_account_read_access_policy_document[count.index].json
 }
 
 resource "aws_iam_policy" "dynamo_id_reverification_state_write_policy" {

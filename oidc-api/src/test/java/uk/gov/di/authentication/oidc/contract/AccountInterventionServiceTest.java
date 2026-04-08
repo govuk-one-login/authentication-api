@@ -33,8 +33,7 @@ import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditabl
 @MockServerConfig(hostInterface = "localhost", port = "1234")
 class AccountInterventionServiceTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
     private final AuditService auditService = mock(AuditService.class);
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private AccountInterventionService accountInterventionService;
@@ -88,8 +87,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -112,8 +110,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -136,8 +133,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -161,8 +157,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -186,8 +181,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -207,8 +201,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -233,8 +226,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -255,8 +247,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -287,8 +278,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -318,8 +308,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         RuntimeException exception =
                 assertThrows(
@@ -342,8 +331,7 @@ class AccountInterventionServiceTest {
         when(configService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create(mockServer.getUrl()));
         accountInterventionService =
-                new AccountInterventionService(
-                        configService, httpClient, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configService, httpClient, metrics, auditService);
 
         AccountIntervention intervention =
                 accountInterventionService.getAccountIntervention(
@@ -378,8 +366,8 @@ class AccountInterventionServiceTest {
 
         assertThat(intervention.getStatus(), equalTo(accountInterventionStatus));
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         "AISResult",
                         Map.of(
                                 "blocked",

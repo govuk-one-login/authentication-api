@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.claims.PersonClaims;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
+import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
@@ -39,14 +41,16 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
+import uk.gov.di.orchestration.shared.exceptions.SessionNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -54,23 +58,24 @@ import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -80,10 +85,9 @@ import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED;
-import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
+import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
+import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -96,9 +100,9 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class AuthenticationCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -107,20 +111,20 @@ public class AuthenticationCallbackHandler
     private final ConfigurationService configurationService;
     private final AuthenticationAuthorizationService authorisationService;
     private final AuthenticationTokenService tokenService;
-    private final SessionService sessionService;
+    private final OrchAccessTokenService orchAccessTokenService;
+    private final OrchRefreshTokenService orchRefreshTokenService;
     private final OrchSessionService orchSessionService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Metrics metrics;
     private final OrchAuthCodeService orchAuthCodeService;
     private final ClientService clientService;
     private final InitiateIPVAuthorisationService initiateIPVAuthorisationService;
     private final AccountInterventionService accountInterventionService;
     private final LogoutService logoutService;
     private final AuthFrontend authFrontend;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
 
     public AuthenticationCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -128,20 +132,21 @@ public class AuthenticationCallbackHandler
 
     public AuthenticationCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
-        var redisConnectionService = new RedisConnectionService(configurationService);
+        var stateStorageService = new StateStorageService(configurationService);
         var oidcApi = new OidcAPI(configurationService);
         this.configurationService = configurationService;
-        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
+        this.authorisationService =
+                new AuthenticationAuthorizationService(configurationService, stateStorageService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
-        this.sessionService = new SessionService(configurationService);
+        this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
+        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.metrics = new Metrics(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
 
@@ -149,107 +154,64 @@ public class AuthenticationCallbackHandler
                 new InitiateIPVAuthorisationService(
                         configurationService,
                         auditService,
-                        new IPVAuthorisationService(
-                                configurationService, redisConnectionService, kmsConnectionService),
-                        cloudwatchMetricsService,
-                        new NoSessionOrchestrationService(configurationService),
+                        new IPVAuthorisationService(configurationService, kmsConnectionService),
+                        metrics,
+                        new CrossBrowserOrchestrationService(configurationService),
                         new TokenService(
                                 configurationService,
-                                redisConnectionService,
                                 kmsConnectionService,
+                                orchAccessTokenService,
+                                orchRefreshTokenService,
                                 oidcApi));
         this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
+                new AccountInterventionService(configurationService, metrics, auditService);
         this.logoutService = new LogoutService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
-    }
-
-    public AuthenticationCallbackHandler(
-            ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService) {
-
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        this.configurationService = configurationService;
-        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
-        this.tokenService =
-                new AuthenticationTokenService(configurationService, kmsConnectionService);
-        this.sessionService = new SessionService(configurationService, redisConnectionService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.clientSessionService =
-                new ClientSessionService(configurationService, redisConnectionService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.userInfoStorageService =
-                new AuthenticationUserInfoStorageService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
-        this.initiateIPVAuthorisationService =
-                new InitiateIPVAuthorisationService(
-                        configurationService,
-                        auditService,
-                        new IPVAuthorisationService(
-                                configurationService, redisConnectionService, kmsConnectionService),
-                        cloudwatchMetricsService,
-                        new NoSessionOrchestrationService(
-                                configurationService, redisConnectionService),
-                        new TokenService(
-                                configurationService,
-                                redisConnectionService,
-                                kmsConnectionService,
-                                new OidcAPI(configurationService)));
-        this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
-        this.logoutService = new LogoutService(configurationService, redisConnectionService);
-        this.authFrontend = new AuthFrontend(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redisConnectionService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService);
     }
 
     public AuthenticationCallbackHandler(
             ConfigurationService configurationService,
             AuthenticationAuthorizationService responseService,
             AuthenticationTokenService tokenService,
-            SessionService sessionService,
+            OrchAccessTokenService orchAccessTokenService,
+            OrchRefreshTokenService orchRefreshTokenService,
             OrchSessionService orchSessionService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
-            CloudwatchMetricsService cloudwatchMetricsService,
+            Metrics metrics,
             OrchAuthCodeService orchAuthCodeService,
             ClientService clientService,
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
             AccountInterventionService accountInterventionService,
             LogoutService logoutService,
             AuthFrontend authFrontend,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
-        this.sessionService = sessionService;
+        this.orchAccessTokenService = orchAccessTokenService;
+        this.orchRefreshTokenService = orchRefreshTokenService;
         this.orchSessionService = orchSessionService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.userInfoStorageService = dynamoAuthUserInfoService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.metrics = metrics;
         this.orchAuthCodeService = orchAuthCodeService;
         this.clientService = clientService;
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
         this.accountInterventionService = accountInterventionService;
         this.logoutService = logoutService;
         this.authFrontend = authFrontend;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         LOG.info("Request received to AuthenticationCallbackHandler");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
@@ -264,32 +226,18 @@ public class AuthenticationCallbackHandler
 
             var sessionId = sessionCookiesIds.getSessionId();
             var clientSessionId = sessionCookiesIds.getClientSessionId();
-            var session =
-                    sessionService
-                            .getSession(sessionId)
-                            .orElseThrow(
-                                    () ->
-                                            new AuthenticationCallbackException(
-                                                    "Shared session not found in Redis"));
             var orchSession =
                     orchSessionService
                             .getSession(sessionId)
                             .orElseThrow(
                                     () ->
-                                            new AuthenticationCallbackException(
+                                            new SessionNotFoundException(
                                                     "Orchestration session not found in DynamoDB"));
 
             attachSessionIdToLogs(sessionId);
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
-            var clientSession =
-                    clientSessionService
-                            .getClientSession(clientSessionId)
-                            .orElseThrow(
-                                    () ->
-                                            new AuthenticationCallbackException(
-                                                    "ClientSession not found"));
             var orchClientSession =
                     orchClientSessionService
                             .getClientSession(clientSessionId)
@@ -297,7 +245,6 @@ public class AuthenticationCallbackHandler
                                     () ->
                                             new AuthenticationCallbackException(
                                                     "OrchClientSession not found"));
-            logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
@@ -314,15 +261,66 @@ public class AuthenticationCallbackHandler
             String clientId = authenticationRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
 
+            boolean reauthRequested =
+                    getCustomParameterOpt(authenticationRequest, "id_token_hint").isPresent()
+                            && authenticationRequest.getPrompt() != null
+                            && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN);
             var validationFailureResponse =
                     generateAuthenticationErrorResponseIfRequestInvalid(
-                            authenticationRequest, input, user, sessionId, orchSession);
+                            authenticationRequest,
+                            input,
+                            user,
+                            sessionId,
+                            orchSession,
+                            reauthRequested);
             if (validationFailureResponse.isPresent()) {
                 return validationFailureResponse.get();
             }
 
             auditService.submitAuditEvent(
                     OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED, clientId, user);
+            var errorCode = input.getQueryStringParameters().get("error");
+            if (configurationService.isSingleFactorAccountDeletionEnabled()
+                    && SFAD_ERROR.toString().equals(errorCode)) {
+                LOG.info(
+                        "Single factor account deletion error received. Deleting old sessions and generating new ones");
+                var newSessionId = IdGenerator.generate();
+                var newClientSessionId = IdGenerator.generate();
+                LOG.info(
+                        "Generating new session with ID {} and client session with ID {}",
+                        newSessionId,
+                        newClientSessionId);
+                attachSessionIdToLogs(newSessionId);
+                attachLogFieldToLogs(CLIENT_SESSION_ID, newClientSessionId);
+                attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, newClientSessionId);
+                generateNewSession(orchSession, newSessionId, newClientSessionId);
+                generateNewClientSession(orchClientSession, newClientSessionId);
+                var newSessionCookie =
+                        CookieHelper.buildCookieString(
+                                CookieHelper.SESSION_COOKIE_NAME,
+                                newSessionId + "." + newClientSessionId,
+                                configurationService.getSessionCookieMaxAge(),
+                                configurationService.getSessionCookieAttributes(),
+                                configurationService.getDomainName());
+                var client = clientService.getClient(clientId).orElse(null);
+                var clientAuthRequest =
+                        AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
+                var authRequest =
+                        authorisationService.generateAuthRedirectRequest(
+                                newSessionId,
+                                newClientSessionId,
+                                clientAuthRequest,
+                                client,
+                                false,
+                                orchClientSession.getVtrList().get(0),
+                                Optional.of(sessionId),
+                                orchSession);
+                return generateApiGatewayProxyResponse(
+                        302,
+                        "",
+                        Map.of(ResponseHeaders.LOCATION, authRequest.toURI().toString()),
+                        Map.of(ResponseHeaders.SET_COOKIE, List.of(newSessionCookie)));
+            }
 
             var tokenRequest =
                     tokenService.constructTokenRequest(
@@ -339,7 +337,7 @@ public class AuthenticationCallbackHandler
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         authFrontend.errorURI(),
                         new Error(
                                 String.format(
@@ -382,75 +380,35 @@ public class AuthenticationCallbackHandler
                                 client.isIdentityVerificationSupported(),
                                 configurationService.isIdentityEnabled());
 
-                boolean isTestJourney = false;
-                if (nonNull(userInfo.getEmailAddress())) {
-                    isTestJourney =
-                            clientService.isTestJourney(clientId, userInfo.getEmailAddress());
-                }
-
-                // TODO-922: temporary logs for checking all is working as expected
-                LOG.info(
-                        "is email attached to auth-external-api userinfo response: {}",
-                        userInfo.getEmailAddress() != null);
-                LOG.info(
-                        "is verified_mfa_method_type attached to auth-external-api userinfo response: {}",
-                        userInfo.getClaim(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue())
-                                != null);
-                LOG.info(
-                        "is current_credential_strength attached to auth-external-api userinfo response: {}",
-                        userInfo.getClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue())
-                                != null);
-                LOG.info(
-                        "is uplift_required attached to auth-external-api userinfo response: {}",
-                        userInfo.getClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()) != null);
-                LOG.info(
-                        "is rpPairwiseId attached to auth-external-api userinfo response: {}",
-                        userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue())
-                                != null);
-                LOG.info(
-                        "is salt attached to auth-external-api userinfo response: {}",
-                        userInfo.getStringClaim(AuthUserInfoClaims.SALT.getValue()) != null);
-                //
-
                 Boolean newAccount =
                         userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
-                AccountState accountState = deduceAccountState(newAccount);
                 OrchSessionItem.AccountState orchAccountState = deduceOrchAccountState(newAccount);
-                session.setNewAccount(accountState);
                 orchSession.withAccountState(orchAccountState);
 
                 if (!orchSession.getAuthenticated() || deduceUpliftRequired(userInfo)) {
                     orchSession.setAuthTime(NowHelper.now().toInstant().getEpochSecond());
                 }
 
-                if (configurationService.supportMaxAgeEnabled()
-                        && Objects.nonNull(orchSession.getPreviousSessionId())) {
+                if (Objects.nonNull(orchSession.getPreviousSessionId())) {
                     LOG.info("Previous session id is present - handling max age");
                     handleMaxAgeSession(orchSession, user);
                 }
 
                 orchSession.setAuthenticated(true);
-                clientSession.setRpPairwiseId(
-                        userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
                 orchClientSession.setRpPairwiseId(
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
                 orchClientSession.setPublicSubjectId(
                         userInfo.getStringClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()));
 
-                sessionService.storeOrUpdateSession(session, sessionId);
                 orchSessionService.updateSession(orchSession);
-                clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
 
-                var docAppJourney = isDocCheckingAppUserWithSubjectId(orchClientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
-                                accountState,
+                                orchAccountState,
                                 clientId,
                                 orchClientSession.getClientName(),
                                 orchClientSession.getVtrList(),
-                                isTestJourney,
-                                docAppJourney,
                                 userInfo.getClaim(
                                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                                         String.class));
@@ -467,29 +425,32 @@ public class AuthenticationCallbackHandler
                                                 .orElse(UNKNOWN))
                                 .withIpAddress(IpAddressHelper.extractIpAddress(input));
 
-                CredentialTrustLevel requestedCredentialTrustLevel =
+                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
                 CredentialTrustLevel credentialTrustLevel =
-                        Optional.ofNullable(session.getCurrentCredentialStrength())
+                        Optional.ofNullable(
+                                        userInfo.getStringClaim(
+                                                AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH
+                                                        .getValue()))
+                                .map(CredentialTrustLevel::valueOf)
                                 .map(
-                                        sessionValue ->
+                                        achievedCredentialTrust ->
                                                 CredentialTrustLevel.max(
-                                                        sessionValue,
-                                                        requestedCredentialTrustLevel))
-                                .orElse(requestedCredentialTrustLevel);
+                                                        achievedCredentialTrust,
+                                                        lowestRequestedCredentialTrustLevel))
+                                .orElse(lowestRequestedCredentialTrustLevel);
 
                 logComparisonRequestCredentialTrustAndAchieved(
-                        userInfo, requestedCredentialTrustLevel);
+                        userInfo, lowestRequestedCredentialTrustLevel);
 
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         clientId,
                         user,
                         pair("new_account", newAccount),
-                        pair("test_user", isTestJourney),
                         pair("credential_trust_level", credentialTrustLevel.toString()));
 
-                cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
+                metrics.increment("AuthenticationCallback", dimensions);
 
                 var auditContext =
                         new AuditContext(
@@ -567,61 +528,27 @@ public class AuthenticationCallbackHandler
                         clientRedirectURI,
                         stateHash);
 
-                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
-                if (isNull(session.getCurrentCredentialStrength())
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        session.getCurrentCredentialStrength())
-                                > 0) {
-                    session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
-                }
-
                 var authCode =
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
                                 clientId,
                                 clientSessionId,
                                 userInfo.getEmailAddress(),
-                                orchSession.getAuthTime());
+                                orchSession.getAuthTime(),
+                                orchSession.getInternalCommonSubjectId());
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
-                sessionService.storeOrUpdateSession(session, sessionId);
-                var currentCredentialStrength =
-                        userInfo.getStringClaim(
-                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
-                if (isNull(currentCredentialStrength)
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        CredentialTrustLevel.valueOf(currentCredentialStrength))
-                                > 0) {
-                    orchSessionService.updateSession(
-                            orchSession.withCurrentCredentialStrength(
-                                    lowestRequestedCredentialTrustLevel));
-                } else {
-                    orchSessionService.updateSession(
-                            orchSession.withCurrentCredentialStrength(
-                                    CredentialTrustLevel.valueOf(currentCredentialStrength)));
-                }
-                // ATO-975 logging to make sure there are no differences in production
-                LOG.info(
-                        "Shared session current credential strength: {}",
-                        session.getCurrentCredentialStrength());
-                LOG.info(
-                        "Orch session current credential strength: {}",
-                        orchSession.getCurrentCredentialStrength());
-                LOG.info(
-                        "Is shared session CCS equal to Orch session CCS: {}",
-                        Objects.equals(
-                                session.getCurrentCredentialStrength(),
-                                orchSession.getCurrentCredentialStrength()));
-                cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
-                cloudwatchMetricsService.incrementSignInByClient(
-                        orchAccountState,
-                        clientId,
-                        orchClientSession.getClientName(),
-                        isTestJourney);
+                orchSessionService.updateSession(orchSession);
 
+                metrics.increment("SignIn", dimensions);
+                metrics.incrementSignInByClient(
+                        orchAccountState, clientId, orchClientSession.getClientName());
+                metrics.increment(
+                        "orchAuthJourneyCompleted",
+                        Map.of("clientName", client.getClientName(), "clientId", clientId));
+                metrics.increment("orchJourneyCompleted", Map.of("journeyType", "auth"));
                 LOG.info("Successfully processed request");
 
                 var metadataPairs = new ArrayList<AuditService.MetadataPair>();
@@ -644,25 +571,30 @@ public class AuthenticationCallbackHandler
                         user,
                         metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
-                return generateApiGatewayProxyResponse(
-                        302,
-                        "",
-                        Map.of(ResponseHeaders.LOCATION, authenticationResponse.toURI().toString()),
-                        null);
+                var headers = new HashMap<String, String>();
+                headers.put(ResponseHeaders.LOCATION, authenticationResponse.toURI().toString());
+                headers.put("Cache-Control", "no-store");
+
+                return generateApiGatewayProxyResponse(302, "", headers, null);
 
             } catch (UnsuccessfulCredentialResponseException e) {
                 auditService.submitAuditEvent(
                         AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED, clientId, user);
-                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
+                return RedirectService.redirectToFrontendErrorPageWithWarnLog(
+                        authFrontend.errorURI(), e);
             }
-        } catch (AuthenticationCallbackException | OrchAuthCodeException e) {
-            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
+        } catch (OrchAuthCodeException | AuthenticationAuthorisationRequestException e) {
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(
+                    authFrontend.errorURI(), e);
+        } catch (AuthenticationCallbackException e) {
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                    authFrontend.errorURI(), e);
         } catch (ParseException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
-        } catch (NoSessionException e) {
-            return RedirectService.redirectToFrontendErrorPageForNoSessionCookies(
+        } catch (NoSessionException | SessionNotFoundException e) {
+            return RedirectService.redirectToFrontendErrorPageForNoSession(
                     authFrontend.errorURI(), e);
         }
     }
@@ -670,7 +602,7 @@ public class AuthenticationCallbackHandler
     private APIGatewayProxyResponseEvent handleCrossBrowserError(APIGatewayProxyRequestEvent input)
             throws NoSessionException, ParseException {
         var noSessionEntity =
-                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(
                         input.getQueryStringParameters());
         var authenticationRequest =
                 AuthenticationRequest.parse(
@@ -702,16 +634,6 @@ public class AuthenticationCallbackHandler
         }
     }
 
-    private AccountState deduceAccountState(Boolean newAccount) {
-        AccountState accountState;
-        if (newAccount == null) {
-            accountState = AccountState.UNKNOWN;
-        } else {
-            accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
-        }
-        return accountState;
-    }
-
     private OrchSessionItem.AccountState deduceOrchAccountState(Boolean newAccount) {
         OrchSessionItem.AccountState accountState;
         if (newAccount == null) {
@@ -726,12 +648,10 @@ public class AuthenticationCallbackHandler
     }
 
     private Map<String, String> buildDimensions(
-            AccountState accountState,
+            OrchSessionItem.AccountState accountState,
             String clientId,
             String clientName,
             List<VectorOfTrust> vtrList,
-            boolean isTestJourney,
-            boolean docAppJourney,
             String verifiedMfaMethodType) {
         Map<String, String> dimensions =
                 new HashMap<>(
@@ -742,10 +662,8 @@ public class AuthenticationCallbackHandler
                                 configurationService.getEnvironment(),
                                 "Client",
                                 clientId,
-                                "IsTest",
-                                Boolean.toString(isTestJourney),
                                 "IsDocApp",
-                                Boolean.toString(docAppJourney),
+                                "false",
                                 "ClientName",
                                 clientName));
 
@@ -775,9 +693,11 @@ public class AuthenticationCallbackHandler
                     APIGatewayProxyRequestEvent input,
                     TxmaAuditUser user,
                     String sessionId,
-                    OrchSessionItem orchSession) {
+                    OrchSessionItem orchSession,
+                    boolean reauthRequested) {
         try {
-            authorisationService.validateRequest(input.getQueryStringParameters(), sessionId);
+            authorisationService.validateRequest(
+                    input.getQueryStringParameters(), sessionId, reauthRequested);
         } catch (AuthenticationCallbackValidationException e) {
             return Optional.of(
                     generateAuthenticationErrorResponse(
@@ -822,6 +742,31 @@ public class AuthenticationCallbackHandler
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, errorResponseUri.toString()), null);
         }
+    }
+
+    private OrchSessionItem generateNewSession(
+            OrchSessionItem oldSession, String newSessionId, String newClientSessionId) {
+        var newSession =
+                new OrchSessionItem(newSessionId)
+                        .withBrowserSessionId(oldSession.getBrowserSessionId())
+                        .addClientSession(newClientSessionId);
+        orchSessionService.addSession(newSession);
+        orchSessionService.deleteSession(oldSession.getSessionId());
+        return newSession;
+    }
+
+    public OrchClientSessionItem generateNewClientSession(
+            OrchClientSessionItem oldClientSession, String newClientSessionId) {
+        var newClientSession =
+                new OrchClientSessionItem(
+                        newClientSessionId,
+                        oldClientSession.getAuthRequestParams(),
+                        LocalDateTime.now(),
+                        oldClientSession.getVtrList(),
+                        oldClientSession.getClientName());
+        orchClientSessionService.storeClientSession(newClientSession);
+        orchClientSessionService.deleteStoredClientSession(oldClientSession.getClientSessionId());
+        return newClientSession;
     }
 
     private Long getPasswordResetTimeClaim(UserInfo userInfo) {
@@ -869,10 +814,9 @@ public class AuthenticationCallbackHandler
 
     private void handleMaxAgeSession(OrchSessionItem currentOrchSession, TxmaAuditUser user) {
         var previousSessionId = currentOrchSession.getPreviousSessionId();
-        var previousSharedSession = sessionService.getSession(previousSessionId);
         var previousOrchSession = orchSessionService.getSession(previousSessionId);
 
-        if (previousSharedSession.isEmpty() || previousOrchSession.isEmpty()) {
+        if (previousOrchSession.isEmpty()) {
             LOG.warn(
                     "Cannot retrieve previous OrchSession or previous shared session required for to handle max_age");
             currentOrchSession.setPreviousSessionId(null);
@@ -905,7 +849,8 @@ public class AuthenticationCallbackHandler
 
     private void logComparisonRequestCredentialTrustAndAchieved(
             UserInfo authUserInfo, CredentialTrustLevel requestedCredentialStrength) {
-
+        // TODO: This logging currently looks fine but in future we should validate that
+        // this value is non-null and >= the requested credential strength
         try {
             var userInfoAchievedCredentialStrength =
                     authUserInfo.getStringClaim(

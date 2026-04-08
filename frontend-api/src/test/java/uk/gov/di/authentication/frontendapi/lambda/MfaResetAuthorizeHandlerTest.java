@@ -15,25 +15,22 @@ import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -47,16 +44,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.MFA_RESET_JAR_GENERATION_ERROR;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -70,12 +67,8 @@ class MfaResetAuthorizeHandlerTest {
             mock(IPVReverificationService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
-    private static final ClientService clientService = mock(ClientService.class);
-    private static final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private static final Context context = mock(Context.class);
-    private static final SessionService sessionService = mock(SessionService.class);
     private static final UserContext userContext = mock(UserContext.class);
-    private static final Session session = mock(Session.class);
     private static final AuditService auditService = mock(AuditService.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -93,7 +86,8 @@ class MfaResetAuthorizeHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
     private static final String ORCHESTRATION_STATE = "ORCHESTRATION_STATE";
     private static final APIGatewayProxyRequestEvent TEST_INVOKE_EVENT =
             ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
@@ -104,7 +98,9 @@ class MfaResetAuthorizeHandlerTest {
     private static final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
-                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withClientId(CLIENT_ID)
+                    .withRpSectorIdentifierHost("gov.uk");
     private static MfaResetAuthorizeHandler handler;
     private static UserProfile userProfile = new UserProfile();
 
@@ -112,19 +108,11 @@ class MfaResetAuthorizeHandlerTest {
     static void globalSetup() {
         userProfile.setSubjectID(INTERNAL_COMMON_SUBJECT_ID);
 
-        when(userContext.getSession()).thenReturn(new Session());
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
-        when(userContext.getSession()).thenReturn(session);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 
-        when(clientRegistry.getSectorIdentifierUri()).thenReturn("htttps://gov.uk");
-
-        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         when(authenticationService.getOrGenerateSalt(userProfile))
@@ -136,8 +124,6 @@ class MfaResetAuthorizeHandlerTest {
         handler =
                 new MfaResetAuthorizeHandler(
                         configurationService,
-                        sessionService,
-                        clientService,
                         authenticationService,
                         ipvReverificationService,
                         auditService,
@@ -203,7 +189,7 @@ class MfaResetAuthorizeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
         assertThat(response, hasStatus(500));
-        assertThat(response, hasBody(ERROR_1060.getMessage()));
+        assertThat(response, hasBody(MFA_RESET_JAR_GENERATION_ERROR.getMessage()));
     }
 
     @Test
@@ -215,6 +201,6 @@ class MfaResetAuthorizeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
         assertThat(response, hasStatus(500));
-        assertThat(response, hasBody(ERROR_1060.getMessage()));
+        assertThat(response, hasBody(MFA_RESET_JAR_GENERATION_ERROR.getMessage()));
     }
 }

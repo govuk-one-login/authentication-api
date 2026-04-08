@@ -1,0 +1,38 @@
+plugins {
+    id "java-library"
+    id "jacoco"
+}
+
+group = "uk.gov.di.authentication.auditevents"
+version = "unspecified"
+
+dependencies {
+    implementation project(":shared")
+    implementation libs.gson
+
+    compileOnly libs.bundles.awsLambda
+    runtimeOnly libs.bundles.loggingRuntime
+
+    testImplementation project(":shared-test")
+    testImplementation libs.bundles.test
+    testImplementation libs.awsSqs
+    testImplementation libs.bundles.loggingRuntime
+    testRuntimeOnly libs.bundles.testRuntime
+}
+
+test {
+    useJUnitPlatform()
+    environment "TRACING_ENABLED", "false"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+    dependsOn "test"
+}

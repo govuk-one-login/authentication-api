@@ -32,8 +32,10 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.ArrayList;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -42,6 +44,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -97,6 +100,7 @@ public class UpdatePhoneNumberHandler
             APIGatewayProxyRequestEvent input, Context context) {
         String sessionId =
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachTraceId();
         attachSessionIdToLogs(sessionId);
         LOG.info("UpdatePhoneNumberHandler received request");
         SupportedLanguage userLanguage =
@@ -112,7 +116,7 @@ public class UpdatePhoneNumberHandler
                             updatePhoneNumberRequest.getOtp(),
                             NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.INVALID_OTP);
             }
             var userProfile =
                     dynamoService
@@ -160,16 +164,18 @@ public class UpdatePhoneNumberHandler
                             IpAddressHelper.extractIpAddress(input),
                             updatePhoneNumberRequest.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                            new ArrayList<>());
 
-            auditService.submitAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_UPDATE_PHONE_NUMBER, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         } catch (JsonException | IllegalArgumentException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

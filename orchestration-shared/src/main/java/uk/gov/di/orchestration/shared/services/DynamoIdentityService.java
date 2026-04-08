@@ -20,7 +20,7 @@ public class DynamoIdentityService extends BaseDynamoService<OrchIdentityCredent
         this.timeToExist = configurationService.getAccessTokenExpiry();
     }
 
-    public void addCoreIdentityJWT(
+    public OrchIdentityCredentials addCoreIdentityJWT(
             String clientSessionId, String subjectID, String coreIdentityJWT) {
         var identityCredentials =
                 get(clientSessionId)
@@ -33,6 +33,7 @@ public class DynamoIdentityService extends BaseDynamoService<OrchIdentityCredent
                                         .toInstant()
                                         .getEpochSecond());
         update(identityCredentials);
+        return identityCredentials;
     }
 
     public Optional<OrchIdentityCredentials> getIdentityCredentials(String clientSessionId) {
@@ -49,7 +50,8 @@ public class DynamoIdentityService extends BaseDynamoService<OrchIdentityCredent
             String subjectID,
             Map<String, String> additionalClaims,
             String ipvVot,
-            String ipvCoreIdentity) {
+            String ipvCoreIdentity,
+            Long spotQueuedAt) {
         var identityCredentials =
                 new OrchIdentityCredentials()
                         .withClientSessionId(clientSessionId)
@@ -57,6 +59,7 @@ public class DynamoIdentityService extends BaseDynamoService<OrchIdentityCredent
                         .withAdditionalClaims(additionalClaims)
                         .withIpvVot(ipvVot)
                         .withIpvCoreIdentity(ipvCoreIdentity)
+                        .withSpotQueuedAtMs(spotQueuedAt)
                         .withTimeToExist(
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()

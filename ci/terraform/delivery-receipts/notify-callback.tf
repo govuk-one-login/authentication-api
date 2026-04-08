@@ -57,3 +57,75 @@ module "notify_callback" {
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,
   ]
 }
+
+resource "aws_cloudwatch_metric_alarm" "notify_delivery_duration_anomaly_email" {
+  alarm_name          = "${var.environment}-notify-delivery-duration-anomaly-email"
+  alarm_description   = "AUT-4897 TESTING. Anomaly detected in EMAIL delivery duration. Note that anomaly alarms are being investigated under AUT-4897, these alarms do not need to be actioned at present as they are being tested and may produce noise (no actions set up). ACCOUNT: ${local.aws_account_alias}"
+  comparison_operator = "LessThanLowerOrGreaterThanUpperThreshold"
+  evaluation_periods  = 2
+  threshold_metric_id = "ad1"
+  treat_missing_data  = "notBreaching"
+
+  metric_query {
+    id          = "m1"
+    return_data = true
+
+    metric {
+      metric_name = "NotifyDeliveryDuration"
+      namespace   = "Authentication"
+      period      = 300
+      stat        = "Average"
+
+      dimensions = {
+        Environment      = var.environment
+        NotificationType = "email"
+        LogGroup         = module.notify_callback.endpoint_lambda_function.function_name
+        ServiceName      = module.notify_callback.endpoint_lambda_function.function_name
+        ServiceType      = "AWS::Lambda::Function"
+      }
+    }
+  }
+
+  metric_query {
+    id          = "ad1"
+    expression  = "ANOMALY_DETECTION_BAND(m1, 2)"
+    label       = "Expected email duration"
+    return_data = true
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "notify_delivery_duration_anomaly_sms" {
+  alarm_name          = "${var.environment}-notify-delivery-duration-anomaly-sms"
+  alarm_description   = "AUT-4897 TESTING. Anomaly detected in SMS delivery duration. Note that anomaly alarms are being investigated under AUT-4897, these alarms do not need to be actioned at present as they are being tested and may produce noise (no actions set up). ACCOUNT: ${local.aws_account_alias}"
+  comparison_operator = "LessThanLowerOrGreaterThanUpperThreshold"
+  evaluation_periods  = 2
+  threshold_metric_id = "ad1"
+  treat_missing_data  = "notBreaching"
+
+  metric_query {
+    id          = "m1"
+    return_data = true
+
+    metric {
+      metric_name = "NotifyDeliveryDuration"
+      namespace   = "Authentication"
+      period      = 300
+      stat        = "Average"
+
+      dimensions = {
+        Environment      = var.environment
+        NotificationType = "sms"
+        LogGroup         = module.notify_callback.endpoint_lambda_function.function_name
+        ServiceName      = module.notify_callback.endpoint_lambda_function.function_name
+        ServiceType      = "AWS::Lambda::Function"
+      }
+    }
+  }
+
+  metric_query {
+    id          = "ad1"
+    expression  = "ANOMALY_DETECTION_BAND(m1, 3)"
+    label       = "Expected SMS duration"
+    return_data = true
+  }
+}

@@ -16,7 +16,6 @@ module "oidc_authorize_role" {
     aws_iam_policy.orch_to_auth_kms_policy.arn,
     aws_iam_policy.auth_public_encryption_key_parameter_policy.arn,
     local.client_registry_encryption_policy_arn,
-    local.doc_app_credential_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.oidc_token_kms_signing_policy.arn
   ]
@@ -30,7 +29,7 @@ module "authorize" {
 
   endpoint_name   = "authorize"
   path_part       = var.orch_authorisation_enabled ? "authorize-auth" : "authorize"
-  endpoint_method = ["GET", "POST"]
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -50,7 +49,6 @@ module "authorize" {
     DOC_APP_AUTHORISATION_CALLBACK_URI   = var.doc_app_authorisation_callback_uri
     DOC_APP_AUTHORISATION_CLIENT_ID      = var.doc_app_authorisation_client_id
     DOC_APP_JWKS_URL                     = var.doc_app_jwks_endpoint
-    DOC_APP_ENCRYPTION_KEY_ID            = var.doc_app_encryption_key_id
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS      = local.doc_app_auth_key_alias_name
     DOC_APP_DOMAIN                       = var.doc_app_domain
     DOC_APP_AUD                          = var.doc_app_aud

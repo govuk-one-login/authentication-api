@@ -9,7 +9,6 @@ import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.approvaltests.JsonApprovals;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
@@ -21,7 +20,6 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -33,11 +31,6 @@ class WellknownHandlerTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
     private final OidcAPI oidcApi = mock(OidcAPI.class);
-
-    @BeforeEach
-    public void setUp() {
-        when(configService.isPkceEnabled()).thenReturn(true);
-    }
 
     @Test
     void shouldReturn200WhenRequestIsSuccessful() {
@@ -77,16 +70,6 @@ class WellknownHandlerTest {
         var metadata = OIDCProviderMetadata.parse(result.getBody());
 
         assertThat(metadata.getCodeChallengeMethods(), equalTo(List.of(CodeChallengeMethod.S256)));
-    }
-
-    @Test
-    void shouldNotContainCodeChallengeMethodsWhenPkceNotEnabled() throws ParseException {
-        when(configService.isPkceEnabled()).thenReturn(false);
-
-        APIGatewayProxyResponseEvent result = getWellKnown();
-        var metadata = OIDCProviderMetadata.parse(result.getBody());
-
-        assertNull(metadata.getCodeChallengeMethods());
     }
 
     @Test

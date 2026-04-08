@@ -12,6 +12,18 @@ import static org.mockito.AdditionalAnswers.returnsElementsOf;
 import static org.mockito.Mockito.mockStatic;
 
 public class TestIdGeneratorHelper {
+    /**
+     * This test helper runs some code while static mocking the IdGenerator. When provided with a
+     * list of IDs, it will iterate through the list and return the element for each
+     * IdGenerator.generate() call.
+     *
+     * <p>For examples, check out the test for this helper class: {@link TestIdGeneratorHelperTest}
+     *
+     * @param method The code that uses IdGenerator.generate() you want to run
+     * @param ids The ordered list of ids you want the generator to return
+     * @param <T> The return type of the method
+     * @return The result of calling the method
+     */
     public static <T> T runWithIds(Supplier<T> method, List<String> ids) {
         try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
             mockIdGenerator.when(IdGenerator::generate).then(returnsElementsOf(ids));

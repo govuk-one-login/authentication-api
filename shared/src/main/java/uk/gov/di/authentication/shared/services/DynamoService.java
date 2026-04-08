@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex;
@@ -10,6 +11,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
@@ -47,8 +49,11 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.numberValue;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfAnyMfaMethodHasNullPriority;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfMfaMethodHasNullPriority;
 
 public class DynamoService implements AuthenticationService {
     private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
@@ -72,7 +77,8 @@ public class DynamoService implements AuthenticationService {
         this.dynamoUserCredentialsTable =
                 dynamoDbEnhancedClient.table(
                         userCredentialsTableName, TableSchema.fromBean(UserCredentials.class));
-        warmUp();
+        warmUp(dynamoUserProfileTable);
+        warmUp(dynamoUserCredentialsTable);
     }
 
     @Override
@@ -298,6 +304,15 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public UserCredentials getUserCredentialsFromEmailWithStronglyConsistentRead(String email) {
+        return dynamoUserCredentialsTable.getItem(
+                GetItemEnhancedRequest.builder()
+                        .consistentRead(true)
+                        .key(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                        .build());
+    }
+
+    @Override
     public void migrateLegacyPassword(String email, String password) {
         dynamoUserCredentialsTable.updateItem(
                 dynamoUserCredentialsTable
@@ -459,6 +474,9 @@ public class DynamoService implements AuthenticationService {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         mfaMethod.setUpdated(dateTime);
 
+        logDebugIfMfaMethodHasNullPriority(
+                mfaMethod, "addMFAMethodSupportingMultiple (user should be migrated)");
+
         dynamoUserCredentialsTable.updateItem(
                 dynamoUserCredentialsTable
                         .getItem(
@@ -472,6 +490,10 @@ public class DynamoService implements AuthenticationService {
             String email, List<MFAMethod> mfaMethods) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         mfaMethods.forEach(mfaMethod -> mfaMethod.setUpdated(dateTime));
+
+        logDebugIfAnyMfaMethodHasNullPriority(
+                mfaMethods,
+                "overwriteUserCredentialsMfaMethods (user is being migrated in the same transaction)");
 
         return dynamoUserCredentialsTable
                 .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
@@ -539,14 +561,31 @@ public class DynamoService implements AuthenticationService {
     public UserProfile getUserProfileFromSubject(String subject) {
         Optional<UserProfile> userProfile = getOptionalUserProfileFromSubject(subject);
         if (userProfile.isEmpty()) {
-            throw new RuntimeException("No userCredentials found with query search");
+            throw new RuntimeException("No userProfile found with query search");
         }
         return userProfile.get();
+    }
+
+    @Override
+    public void deleteMigratedMfaMethods(String email) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withMfaMethods(null)
+                        .withUpdated(dateTime));
     }
 
     public Optional<UserProfile> getOptionalUserProfileFromSubject(String subject) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
+
+        // NOTE: We can't perform a strongly consistent read here as we are operating on a global
+        // secondary index (which is eventually consistent).
         QueryEnhancedRequest queryEnhancedRequest =
                 QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
         return dynamoUserProfileTable.index("SubjectIDIndex").query(queryEnhancedRequest).stream()
@@ -777,67 +816,6 @@ public class DynamoService implements AuthenticationService {
                         .withUpdated(dateTime));
     }
 
-    private List<MFAMethod> updateMigratedMfaMethod(
-            MFAMethod updatedMFAMethod,
-            String mfaMethodIdentifier,
-            UserCredentials userCredentials) {
-        var dateTime = NowHelper.toTimestampString(NowHelper.now());
-        var updatedUserCredentials =
-                dynamoUserCredentialsTable.updateItem(
-                        userCredentials
-                                .withUpdated(dateTime)
-                                .withUpdatedMfaMethod(mfaMethodIdentifier, updatedMFAMethod));
-
-        return updatedUserCredentials.getMfaMethods();
-    }
-
-    private Result<String, MFAMethod> getMfaMethodByIdentifier(
-            UserCredentials userCredentials, String mfaMethodIdentifier) {
-        var maybeExistingMethod =
-                userCredentials.getMfaMethods().stream()
-                        .filter(
-                                mfaMethod ->
-                                        mfaMethod.getMfaIdentifier().equals(mfaMethodIdentifier))
-                        .findFirst();
-        return maybeExistingMethod
-                .<Result<String, MFAMethod>>map(Result::success)
-                .orElseGet(
-                        () ->
-                                Result.failure(
-                                        format(
-                                                "Mfa method with identifier %s does not exist",
-                                                mfaMethodIdentifier)));
-    }
-
-    public Result<String, List<MFAMethod>> updateMigratedDefaultMfaMethod(
-            String email, MFAMethodType type, String target, String mfaMethodIdentifier) {
-        var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-
-        var maybeExistingMethod = getMfaMethodByIdentifier(userCredentials, mfaMethodIdentifier);
-
-        if (maybeExistingMethod.isFailure()) {
-            return Result.failure(
-                    "Mfa method with identifier %s does not exist".formatted(mfaMethodIdentifier));
-        }
-
-        return maybeExistingMethod.flatMap(
-                existingMethod -> {
-                    existingMethod.setMfaMethodType(type.getValue());
-                    if (type.equals(MFAMethodType.AUTH_APP)) {
-                        existingMethod.setCredentialValue(target);
-                        existingMethod.setDestination(null);
-                    } else {
-                        existingMethod.setDestination(target);
-                        existingMethod.setCredentialValue(null);
-                    }
-                    return Result.success(
-                            updateMigratedMfaMethod(
-                                    existingMethod, mfaMethodIdentifier, userCredentials));
-                });
-    }
-
     private Result<String, Void> validateMfaMethods(List<MFAMethod> methods) {
         if (methods.isEmpty()) {
             return Result.failure("Mfa methods cannot be empty");
@@ -871,6 +849,21 @@ public class DynamoService implements AuthenticationService {
         }
 
         return Result.success(null);
+    }
+
+    public Result<String, List<MFAMethod>> updateMfaMethods(
+            List<MFAMethod> updatedMfaMethods, String email) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+
+        var updatedUserCredentials =
+                dynamoUserCredentialsTable.updateItem(
+                        userCredentials
+                                .withUpdated(NowHelper.toTimestampString(NowHelper.now()))
+                                .withMfaMethods(updatedMfaMethods));
+
+        return Result.success(updatedUserCredentials.getMfaMethods());
     }
 
     @Override
@@ -980,11 +973,86 @@ public class DynamoService implements AuthenticationService {
         return dynamoUserProfileTable.scan(scanRequest).items().stream();
     }
 
-    private static String hashPassword(String password) {
-        return Argon2EncoderHelper.argon2Hash(password);
+    public Stream<UserProfile> getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
+            Map<String, AttributeValue> exclusiveStartKey) {
+        final String expressionString =
+                "attribute_exists(PhoneNumber)"
+                        + " AND PhoneNumber <> :empty"
+                        + " AND begins_with(PhoneNumber, :plus)"
+                        + " AND NOT begins_with(PhoneNumber, :ukCountryCode)";
+
+        final Map<String, AttributeValue> expressionValues =
+                Map.of(
+                        ":empty", AttributeValue.builder().s("").build(),
+                        ":plus", AttributeValue.builder().s("+").build(),
+                        ":ukCountryCode", AttributeValue.builder().s("+44").build());
+
+        ScanEnhancedRequest scanRequest =
+                ScanEnhancedRequest.builder()
+                        .addAttributeToProject("SubjectID")
+                        .addAttributeToProject("Email")
+                        .exclusiveStartKey(exclusiveStartKey)
+                        .filterExpression(
+                                Expression.builder()
+                                        .expression(expressionString)
+                                        .expressionValues(expressionValues)
+                                        .build())
+                        .build();
+
+        return dynamoUserProfileTable.scan(scanRequest).items().stream();
     }
 
-    private void warmUp() {
-        dynamoUserProfileTable.describeTable();
+    public Stream<UserCredentials>
+            getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(
+                    Map<String, AttributeValue> exclusiveStartKey) {
+        List<String> clauses = getUserCredentialsMfaMethodsInternationalNumberClause();
+        String expressionString = String.join(" OR ", clauses);
+
+        final Map<String, AttributeValue> expressionValues =
+                Map.of(
+                        ":sms", AttributeValue.builder().s(MFAMethodType.SMS.getValue()).build(),
+                        ":verified", AttributeValue.builder().n("1").build(),
+                        ":empty", AttributeValue.builder().s("").build(),
+                        ":plus", AttributeValue.builder().s("+").build(),
+                        ":ukCountryCode", AttributeValue.builder().s("+44").build());
+
+        ScanEnhancedRequest scanRequest =
+                ScanEnhancedRequest.builder()
+                        .addAttributeToProject("SubjectID")
+                        .addAttributeToProject("Email")
+                        .exclusiveStartKey(exclusiveStartKey)
+                        .filterExpression(
+                                Expression.builder()
+                                        .expression(expressionString)
+                                        .expressionValues(expressionValues)
+                                        .build())
+                        .build();
+
+        return dynamoUserCredentialsTable.scan(scanRequest).items().stream();
+    }
+
+    @NotNull
+    private static List<String> getUserCredentialsMfaMethodsInternationalNumberClause() {
+        final int MAX_MFA_METHODS = 2;
+        final String mfaMethodExpressionClause =
+                "(attribute_exists(MfaMethods)"
+                        + " AND attribute_exists(MfaMethods[%1$d])"
+                        + " AND MfaMethods[%1$d].MfaMethodType = :sms"
+                        + " AND MfaMethods[%1$d].MethodVerified = :verified"
+                        + " AND attribute_exists(MfaMethods[%1$d].Destination)"
+                        + " AND MfaMethods[%1$d].Destination <> :empty"
+                        + " AND begins_with(MfaMethods[%1$d].Destination, :plus)"
+                        + " AND NOT begins_with(MfaMethods[%1$d].Destination, :ukCountryCode))";
+
+        List<String> clauses = new ArrayList<>();
+        for (int i = 0; i < MAX_MFA_METHODS; i++) {
+            clauses.add(format(mfaMethodExpressionClause, i));
+        }
+
+        return clauses;
+    }
+
+    private static String hashPassword(String password) {
+        return Argon2EncoderHelper.argon2Hash(password);
     }
 }

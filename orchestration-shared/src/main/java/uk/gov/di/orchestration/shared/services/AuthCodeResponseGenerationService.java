@@ -5,15 +5,11 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 
 public class AuthCodeResponseGenerationService {
     private static final Logger LOG = LogManager.getLogger(AuthCodeResponseGenerationService.class);
@@ -31,8 +27,7 @@ public class AuthCodeResponseGenerationService {
     public Map<String, String> getDimensions(
             OrchSessionItem orchSession,
             String clientName,
-            String clientSessionId,
-            boolean isTestJourney,
+            String clientId,
             boolean docAppJourney) {
         Map<String, String> dimensions =
                 new HashMap<>(
@@ -42,9 +37,7 @@ public class AuthCodeResponseGenerationService {
                                 "Environment",
                                 configurationService.getEnvironment(),
                                 "Client",
-                                clientSessionId,
-                                "IsTest",
-                                Boolean.toString(isTestJourney),
+                                clientId,
                                 "IsDocApp",
                                 Boolean.toString(docAppJourney),
                                 "ClientName",
@@ -72,36 +65,18 @@ public class AuthCodeResponseGenerationService {
 
     public void saveSession(
             boolean docAppJourney,
-            SessionService sessionService,
-            Session session,
-            String sessionId,
             OrchSessionService orchSessionService,
             OrchSessionItem orchSession) {
 
         if (docAppJourney) {
-            sessionService.storeOrUpdateSession(
-                    session.setNewAccount(EXISTING_DOC_APP_JOURNEY), sessionId);
             orchSessionService.updateSession(
                     orchSession.withAccountState(
                             OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
         } else {
-            sessionService.storeOrUpdateSession(session.setNewAccount(EXISTING), sessionId);
             orchSessionService.updateSession(
                     orchSession
                             .withAuthenticated(true)
                             .withAccountState(OrchSessionItem.AccountState.EXISTING));
         }
-        // ATO-975 logging to make sure there are no differences in production
-        LOG.info(
-                "Shared session current credential strength: {}",
-                session.getCurrentCredentialStrength());
-        LOG.info(
-                "Orch session current credential strength: {}",
-                orchSession.getCurrentCredentialStrength());
-        LOG.info(
-                "Is shared session CCS equal to Orch session CCS: {}",
-                Objects.equals(
-                        session.getCurrentCredentialStrength(),
-                        orchSession.getCurrentCredentialStrength()));
     }
 }

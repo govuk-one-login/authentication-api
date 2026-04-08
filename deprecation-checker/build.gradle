@@ -1,0 +1,41 @@
+plugins {
+    id "java"
+    id "application"
+    id "jacoco"
+}
+
+dependencies {
+    implementation libs.javaParser
+    implementation libs.jgit
+    implementation libs.gson
+    implementation libs.bundles.loggingRuntime
+
+    testImplementation libs.bundles.test
+    testRuntimeOnly libs.bundles.testRuntime
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events = ["passed", "skipped", "failed"]
+        exceptionFormat = "full"
+    }
+}
+
+application {
+    mainClass = 'DeprecationChecker'
+}
+
+task checkDeprecations(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'uk.gov.di.deprecationchecker.DeprecationChecker'
+    workingDir = project.rootDir
+    ignoreExitValue = false
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+    dependsOn "test"
+}

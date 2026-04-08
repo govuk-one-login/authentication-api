@@ -9,14 +9,13 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.LogoutRequest;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.util.Map;
@@ -26,15 +25,16 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segme
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class LogoutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(LogoutHandler.class);
 
-    private final SessionService sessionService;
     private final DynamoClientService dynamoClientService;
     private final TokenValidationService tokenValidationService;
     private final OrchSessionService orchSessionService;
@@ -46,20 +46,6 @@ public class LogoutHandler
     }
 
     public LogoutHandler(ConfigurationService configurationService) {
-        this.sessionService = new SessionService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
-        this.tokenValidationService =
-                new TokenValidationService(
-                        new JwksService(
-                                configurationService,
-                                new KmsConnectionService(configurationService)),
-                        configurationService);
-        this.logoutService = new LogoutService(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-    }
-
-    public LogoutHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        this.sessionService = new SessionService(configurationService, redis);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
@@ -72,12 +58,10 @@ public class LogoutHandler
     }
 
     public LogoutHandler(
-            SessionService sessionService,
             DynamoClientService dynamoClientService,
             TokenValidationService tokenValidationService,
             LogoutService logoutService,
             OrchSessionService orchSessionService) {
-        this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.tokenValidationService = tokenValidationService;
         this.logoutService = logoutService;
@@ -88,6 +72,7 @@ public class LogoutHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(), () -> logoutRequestHandler(input));
@@ -99,11 +84,7 @@ public class LogoutHandler
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        input,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, input, orchSessionService);
 
         logoutRequest
                 .sessionId()
@@ -124,5 +105,7 @@ public class LogoutHandler
         attachSessionIdToLogs(sessionId);
         attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
+        var persistentSessionId = PersistentIdHelper.extractPersistentIdFromHeaders(headers);
+        attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
     }
 }

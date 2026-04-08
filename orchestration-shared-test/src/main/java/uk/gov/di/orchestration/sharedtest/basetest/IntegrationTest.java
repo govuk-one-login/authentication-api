@@ -4,16 +4,20 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SystemService;
-import uk.gov.di.orchestration.sharedtest.extensions.*;
+import uk.gov.di.orchestration.sharedtest.extensions.AuditSnsTopicExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.ClientStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.IdentityStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.ParameterStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.HttpCookie;
 import java.net.URI;
@@ -26,10 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 
 public class IntegrationTest {
-    private static final String REDIS_HOST = "localhost";
-    private static final int REDIS_PORT = 6379;
-    private static final String REDIS_PASSWORD = null;
-    private static final boolean DOES_REDIS_USE_TLS = false;
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
 
     private static final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
@@ -57,24 +57,16 @@ public class IntegrationTest {
         }
     }
 
-    protected static RedisConnectionService redisConnectionService;
-
-    @BeforeAll
-    static void setUp() {
-        redisConnectionService = new RedisConnectionService(TEST_CONFIGURATION_SERVICE);
-    }
-
-    @AfterAll
-    static void tearDown() {
-        redisConnectionService.close();
-    }
-
     @RegisterExtension
     protected static final SqsQueueExtension notificationsQueue =
             new SqsQueueExtension("notification-queue");
 
     @RegisterExtension
     protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
+
+    @RegisterExtension
+    protected static final SqsQueueExtension spotRequestQueue =
+            new SqsQueueExtension("spot-request-queue");
 
     @RegisterExtension
     protected static final SqsQueueExtension txmaAuditQueue =
@@ -118,22 +110,6 @@ public class IntegrationTest {
     protected static final ParameterStoreExtension configurationParameters =
             new ParameterStoreExtension(
                     Map.ofEntries(
-                            Map.entry("local-session-redis-master-host", REDIS_HOST),
-                            Map.entry(
-                                    "local-session-redis-password", String.valueOf(REDIS_PASSWORD)),
-                            Map.entry("local-session-redis-port", String.valueOf(REDIS_PORT)),
-                            Map.entry(
-                                    "local-session-redis-tls", String.valueOf(DOES_REDIS_USE_TLS)),
-                            Map.entry("local-account-management-redis-master-host", REDIS_HOST),
-                            Map.entry(
-                                    "local-account-management-redis-password",
-                                    String.valueOf(REDIS_PASSWORD)),
-                            Map.entry(
-                                    "local-account-management-redis-port",
-                                    String.valueOf(REDIS_PORT)),
-                            Map.entry(
-                                    "local-account-management-redis-tls",
-                                    String.valueOf(DOES_REDIS_USE_TLS)),
                             Map.entry("local-password-pepper", "pepper"),
                             Map.entry("local-auth-public-signing-key", EC_PUBLIC_KEY),
                             Map.entry("local-notify-callback-bearer-token", BEARER_TOKEN)));
@@ -144,6 +120,7 @@ public class IntegrationTest {
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
+                    spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
 
@@ -153,6 +130,7 @@ public class IntegrationTest {
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
+                    spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters) {
 
@@ -168,6 +146,7 @@ public class IntegrationTest {
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
+                    spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters) {
 
@@ -187,13 +166,6 @@ public class IntegrationTest {
             };
 
     protected final Json objectMapper = SerializationService.getInstance();
-
-    @RegisterExtension
-    protected static final RedisExtension redis =
-            new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
-
-    @RegisterExtension
-    protected static final UserStoreExtension userStore = new UserStoreExtension();
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
@@ -258,6 +230,7 @@ public class IntegrationTest {
         private final TokenSigningExtension storageTokenSigningKey;
         private final TokenSigningExtension ipvPrivateKeyJwtSigner;
         private final SqsQueueExtension spotQueue;
+        private final SqsQueueExtension spotRequestQueue;
         private final TokenSigningExtension docAppPrivateKeyJwtSigner;
 
         public IntegrationTestConfigurationService(
@@ -265,6 +238,7 @@ public class IntegrationTest {
                 TokenSigningExtension storageTokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
+                SqsQueueExtension spotRequestQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension) {
             super(parameterStoreExtension.getClient());
@@ -272,6 +246,7 @@ public class IntegrationTest {
             this.storageTokenSigningKey = storageTokenSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
             this.spotQueue = spotQueue;
+            this.spotRequestQueue = spotRequestQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
         }
 
@@ -280,6 +255,7 @@ public class IntegrationTest {
                 TokenSigningExtension storageTokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
+                SqsQueueExtension spotRequestQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension,
                 SystemService systemService) {
@@ -288,13 +264,23 @@ public class IntegrationTest {
             this.storageTokenSigningKey = storageTokenSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
             this.spotQueue = spotQueue;
+            this.spotRequestQueue = spotRequestQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
             super.systemService = systemService;
+        }
+
+        public String getKeyId() {
+            return externalTokenSigningKey.getKeyId();
         }
 
         @Override
         public String getExternalTokenSigningKeyAlias() {
             return externalTokenSigningKey.getKeyAlias();
+        }
+
+        @Override
+        public String getNextExternalTokenSigningKeyAliasV2() {
+            return externalTokenSigningKey.getNewKeyAliasV2();
         }
 
         @Override
@@ -313,6 +299,11 @@ public class IntegrationTest {
         }
 
         @Override
+        public String getAuthSigningKeyAlias() {
+            return orchestrationPrivateKeyJwtSigner.getKeyAlias();
+        }
+
+        @Override
         public URI getAuthFrontendBaseURL() {
             return URI.create("http://localhost:3000/");
         }
@@ -323,18 +314,13 @@ public class IntegrationTest {
         }
 
         @Override
+        public String getSpotRequestQueueURI() {
+            return spotRequestQueue.getQueueUrl();
+        }
+
+        @Override
         public Optional<String> getIPVCapacity() {
             return Optional.of("1");
-        }
-
-        @Override
-        public boolean supportMaxAgeEnabled() {
-            return true;
-        }
-
-        @Override
-        public boolean isReturnAuthTimeInIdTokenEnabled() {
-            return false;
         }
     }
 }

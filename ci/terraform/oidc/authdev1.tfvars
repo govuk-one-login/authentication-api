@@ -66,12 +66,13 @@ reauth_enter_password_count_ttl           = 120
 reauth_enter_auth_app_code_count_ttl      = 120
 reauth_enter_sms_code_count_ttl           = 120
 
+# Auth new strategic account
+auth_new_account_id = "975050272416"
+
 orch_account_id = "816047645251"
 is_orch_stubbed = true
 
 contra_state_bucket = "di-auth-development-tfstate"
-
-orch_frontend_api_gateway_integration_enabled = false
 
 orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-redirect"
 

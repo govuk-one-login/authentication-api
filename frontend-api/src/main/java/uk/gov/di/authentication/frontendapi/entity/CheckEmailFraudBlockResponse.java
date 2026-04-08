@@ -2,8 +2,15 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 public record CheckEmailFraudBlockResponse(
-        @SerializedName("email") @Expose @Required String email,
-        @SerializedName("isBlockedStatus") @Expose String isBlockedStatus) {}
+        @SerializedName("email") @Expose @NotNull String email,
+        @SerializedName("isBlockedStatus") @Expose String isBlockedStatus) {
+
+    public CheckEmailFraudBlockResponse {
+        Objects.requireNonNull(email);
+    }
+}

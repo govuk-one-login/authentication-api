@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.helpers;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
+import com.google.i18n.phonenumbers.Phonenumber;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -45,43 +46,52 @@ public class ValidationHelper {
     private ValidationHelper() {}
 
     public static Optional<ErrorResponse> validatePhoneNumber(
-            String currentPhoneNumber, String newPhoneNumber, String environment) {
-        if (Objects.nonNull(currentPhoneNumber)
-                && currentPhoneNumber.equals(PhoneNumberHelper.formatPhoneNumber(newPhoneNumber))) {
-            return Optional.of(ErrorResponse.ERROR_1044);
-        }
-        return validatePhoneNumber(newPhoneNumber, environment, false);
+            String phoneNumberInput, String environment, boolean isSmokeTest) {
+        return validatePhoneNumber(phoneNumberInput, environment, isSmokeTest, true);
     }
 
     public static Optional<ErrorResponse> validatePhoneNumber(
-            String phoneNumberInput, String environment, boolean isSmokeTest) {
+            String phoneNumberInput,
+            String environment,
+            boolean isSmokeTest,
+            boolean allowInternational) {
         if (isValidTestNumberForEnvironment(phoneNumberInput, environment, isSmokeTest)) {
             return Optional.empty();
         }
+
         if ((phoneNumberInput.length() < 5) || (phoneNumberInput.length() > 25)) {
             LOG.warn("Invalid phone number: length check");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         }
+
         var phoneUtil = PhoneNumberUtil.getInstance();
+
+        Phonenumber.PhoneNumber phoneNumber;
+
         try {
-            var phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
-            var phoneNumberType = phoneUtil.getNumberType(phoneNumber);
-            if (!isAcceptedPhoneNumberType(phoneNumberType)) {
-                LOG.warn(
-                        "Invalid phone number: not a mobile number.  NumberType {}",
-                        phoneNumberType);
-                return Optional.of(ErrorResponse.ERROR_1012);
-            }
-            LOG.info("Accepted phone NumberType {}", phoneNumberType);
-            if (phoneUtil.isValidNumber(phoneNumber)) {
-                return Optional.empty();
-            }
-            LOG.warn("Invalid phone number: failed isValidNumber check");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
         } catch (NumberParseException e) {
             LOG.warn("Invalid phone number: parsing failure");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         }
+
+        var phoneNumberType = phoneUtil.getNumberType(phoneNumber);
+        if (!isAcceptedPhoneNumberType(phoneNumberType)) {
+            LOG.warn("Invalid phone number: not a mobile number.  NumberType {}", phoneNumberType);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
+        }
+
+        if (!allowInternational && isInternationalNumber(phoneNumber)) {
+            LOG.warn("International phone number not allowed");
+            return Optional.of(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED);
+        }
+
+        LOG.info("Accepted phone NumberType {}", phoneNumberType);
+        return Optional.empty();
+    }
+
+    private static boolean isInternationalNumber(Phonenumber.PhoneNumber phoneNumber) {
+        return phoneNumber.getCountryCode() != 44; // UK country code is 44
     }
 
     static boolean isAcceptedPhoneNumberType(PhoneNumberType phoneNumberType) {
@@ -91,7 +101,7 @@ public class ValidationHelper {
     public static Optional<ErrorResponse> validateEmailAddressUpdate(
             String existingEmail, String replacementEmail) {
         if (existingEmail.equals(replacementEmail)) {
-            return Optional.of(ErrorResponse.ERROR_1019);
+            return Optional.of(ErrorResponse.EMAIL_ADDRESSES_MATCH);
         }
         Optional<ErrorResponse> existingEmailError = validateEmailAddress(existingEmail);
         if (existingEmailError.isPresent()) {
@@ -102,27 +112,27 @@ public class ValidationHelper {
 
     public static Optional<ErrorResponse> validateEmailAddress(String email) {
         if (email == null || email.isBlank()) {
-            return Optional.of(ErrorResponse.ERROR_1003);
+            return Optional.of(ErrorResponse.EMAIL_ADDRESS_EMPTY);
         }
         Matcher matcher = EMAIL_NOTIFY_REGEX.matcher(email);
         if (!matcher.matches()) {
-            return Optional.of(ErrorResponse.ERROR_1004);
+            return Optional.of(ErrorResponse.INVALID_EMAIL_FORMAT);
         }
         if (email.contains("..")) {
-            return Optional.of(ErrorResponse.ERROR_1004);
+            return Optional.of(ErrorResponse.INVALID_EMAIL_FORMAT);
         }
         var hostname = matcher.group(1);
         String[] parts = hostname.split("\\.");
         if (parts.length < 2) {
-            return Optional.of(ErrorResponse.ERROR_1004);
+            return Optional.of(ErrorResponse.INVALID_EMAIL_FORMAT);
         }
         for (String part : parts) {
             if (!HOSTNAME_REGEX.matcher(part).matches()) {
-                return Optional.of(ErrorResponse.ERROR_1004);
+                return Optional.of(ErrorResponse.INVALID_EMAIL_FORMAT);
             }
         }
         if (!TLD_PART_REGEX.matcher(parts[parts.length - 1]).matches()) {
-            return Optional.of(ErrorResponse.ERROR_1004);
+            return Optional.of(ErrorResponse.INVALID_EMAIL_FORMAT);
         }
         return Optional.empty();
     }
@@ -149,7 +159,7 @@ public class ValidationHelper {
                 case RESET_PASSWORD_WITH_CODE:
                     return Optional.empty();
             }
-            return Optional.of(ErrorResponse.ERROR_1002);
+            return Optional.of(ErrorResponse.INVALID_NOTIFICATION_TYPE);
         }
 
         return getErrorResponse(
@@ -179,31 +189,32 @@ public class ValidationHelper {
                     >= configurationService.getCodeMaxRetries()) {
                 switch (notificationType) {
                     case MFA_SMS:
-                        return Optional.of(ErrorResponse.ERROR_1027);
+                        return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
                     case VERIFY_EMAIL:
-                        return Optional.of(ErrorResponse.ERROR_1033);
+                        return Optional.of(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED);
                     case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                        return Optional.of(ErrorResponse.ERROR_1048);
+                        return Optional.of(
+                                ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED);
                     case VERIFY_PHONE_NUMBER:
-                        return Optional.of(ErrorResponse.ERROR_1034);
+                        return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
                     case RESET_PASSWORD_WITH_CODE:
-                        return Optional.of(ErrorResponse.ERROR_1039);
+                        return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
                 }
             }
         }
 
         switch (notificationType) {
             case MFA_SMS:
-                return Optional.of(ErrorResponse.ERROR_1035);
+                return Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED);
             case VERIFY_EMAIL:
             case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                return Optional.of(ErrorResponse.ERROR_1036);
+                return Optional.of(ErrorResponse.INVALID_EMAIL_CODE_ENTERED);
             case VERIFY_PHONE_NUMBER:
-                return Optional.of(ErrorResponse.ERROR_1037);
+                return Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED);
             case RESET_PASSWORD_WITH_CODE:
-                return Optional.of(ErrorResponse.ERROR_1021);
+                return Optional.of(ErrorResponse.INVALID_PW_RESET_CODE);
         }
-        return Optional.of(ErrorResponse.ERROR_1002);
+        return Optional.of(ErrorResponse.INVALID_NOTIFICATION_TYPE);
     }
 
     public static boolean isValidTestNumberForEnvironment(

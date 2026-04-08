@@ -1,0 +1,107 @@
+package uk.gov.di.authentication.oidc.entity;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ObjectMessage;
+import uk.gov.di.authentication.oidc.services.ClientRateLimitDataService;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
+
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Map;
+
+public class SlidingWindowAlgorithm implements RateLimitAlgorithm {
+    private static final Logger LOG = LogManager.getLogger(SlidingWindowAlgorithm.class);
+    private static final int PERIOD_LENGTH_IN_SECONDS = 60;
+    private final ClientRateLimitDataService rateLimitDataService;
+    private final NowHelper.NowClock nowClock;
+    private final Metrics metrics;
+
+    public SlidingWindowAlgorithm(ConfigurationService configurationService) {
+        this(
+                new ClientRateLimitDataService(configurationService),
+                new Metrics(configurationService));
+    }
+
+    public SlidingWindowAlgorithm(
+            ClientRateLimitDataService clientRateLimitDataService, Metrics metrics) {
+        this(clientRateLimitDataService, Clock.systemUTC(), metrics);
+    }
+
+    public SlidingWindowAlgorithm(
+            ClientRateLimitDataService clientRateLimitDataService, Clock clock, Metrics metrics) {
+        this.rateLimitDataService = clientRateLimitDataService;
+        this.nowClock = new NowHelper.NowClock(clock);
+        this.metrics = metrics;
+    }
+
+    @Override
+    public boolean hasRateLimitExceeded(ClientRateLimitConfig rateLimitConfig) {
+        var clientId = rateLimitConfig.clientID();
+        var rateLimit = rateLimitConfig.rateLimit();
+
+        var currentTimestamp = nowClock.now().toInstant().atZone(ZoneOffset.UTC).toLocalDateTime();
+        var currentPeriod = getTimeToMinPrecision(currentTimestamp);
+        var previousTimestamp = currentTimestamp.minusSeconds(PERIOD_LENGTH_IN_SECONDS);
+        var previousPeriod = getTimeToMinPrecision(previousTimestamp);
+
+        long currentCount =
+                rateLimitDataService
+                        .getData(clientId, currentPeriod)
+                        .map(SlidingWindowData::getRequestCount)
+                        .orElse(0L);
+        long previousCount =
+                rateLimitDataService
+                        .getData(clientId, previousPeriod)
+                        .map(SlidingWindowData::getRequestCount)
+                        .orElse(0L);
+
+        // Calculate how many seconds into the current period we are in
+        var secondsFromCurrentPeriodInWindow =
+                currentTimestamp.toEpochSecond(ZoneOffset.UTC)
+                        - currentPeriod.toEpochSecond(ZoneOffset.UTC);
+
+        // Calculate how many seconds from the previous period should be included in this window
+        // e.g 20 seconds into current period means the rest of the 60-second window sits in the
+        // last 40 seconds of the previous period
+        // Note that the window has the same length as the period (60 seconds)
+        var secondsFromPreviousPeriodInWindow =
+                PERIOD_LENGTH_IN_SECONDS - secondsFromCurrentPeriodInWindow;
+
+        // Scale previous period count by the ratio of seconds from the previous period that are in
+        // the current window, to seconds in the current window
+        // e.g If previous period has 10 requests, and the window is 30 seconds (halfway) into the
+        // current period, then we would scale 10 by 1/2 (30/60), to give us 5 requests
+        var previousCountInWindow =
+                previousCount
+                        * ((double) secondsFromPreviousPeriodInWindow / PERIOD_LENGTH_IN_SECONDS);
+
+        if (rateLimit > 0) {
+            var consumption = (previousCountInWindow + currentCount) / rateLimit;
+            LOG.info(new ObjectMessage(Map.of("client", clientId, "consumption", consumption)));
+            metrics.emit(
+                    "RateLimitConsumption",
+                    consumption,
+                    Map.of("ClientID", clientId, "Client", rateLimitConfig.clientName()));
+        }
+
+        if (previousCountInWindow + currentCount > rateLimit) {
+            LOG.warn(
+                    "Client with ID {} has exceeded rate limit. Current count: {}. Limit {}",
+                    rateLimitConfig.clientID(),
+                    (int) previousCountInWindow + currentCount,
+                    rateLimit);
+            return true;
+        } else {
+            rateLimitDataService.increment(clientId, currentPeriod);
+        }
+        return false;
+    }
+
+    private static LocalDateTime getTimeToMinPrecision(LocalDateTime fullTime) {
+        return fullTime.withSecond(0).withNano(0);
+    }
+}

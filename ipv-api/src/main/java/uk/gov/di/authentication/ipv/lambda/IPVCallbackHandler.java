@@ -17,16 +17,17 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
+import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.ipv.services.IdentityProgressService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
-import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -39,25 +40,25 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -69,12 +70,14 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class IPVCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -83,7 +86,6 @@ public class IPVCallbackHandler
     private final ConfigurationService configurationService;
     private final IPVAuthorisationService ipvAuthorisationService;
     private final IPVTokenService ipvTokenService;
-    private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final OrchClientSessionService orchClientSessionService;
@@ -92,8 +94,9 @@ public class IPVCallbackHandler
     private final LogoutService logoutService;
     private final AccountInterventionService accountInterventionService;
     private final IPVCallbackHelper ipvCallbackHelper;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final CommonFrontend frontend;
+    private final IdentityProgressService identityProgressService;
     protected final Json objectMapper = SerializationService.getInstance();
 
     public IPVCallbackHandler() {
@@ -104,7 +107,6 @@ public class IPVCallbackHandler
             ConfigurationService configurationService,
             IPVAuthorisationService responseService,
             IPVTokenService ipvTokenService,
-            SessionService sessionService,
             OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             OrchClientSessionService orchClientSessionService,
@@ -112,13 +114,13 @@ public class IPVCallbackHandler
             AuditService auditService,
             LogoutService logoutService,
             AccountInterventionService accountInterventionService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             IPVCallbackHelper ipvCallbackHelper,
-            CommonFrontend frontend) {
+            CommonFrontend frontend,
+            IdentityProgressService identityProgressService) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
         this.orchClientSessionService = orchClientSessionService;
@@ -126,21 +128,18 @@ public class IPVCallbackHandler
         this.auditService = auditService;
         this.logoutService = logoutService;
         this.accountInterventionService = accountInterventionService;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.ipvCallbackHelper = ipvCallbackHelper;
         this.frontend = frontend;
+        this.identityProgressService = identityProgressService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
         this.ipvAuthorisationService =
-                new IPVAuthorisationService(
-                        configurationService,
-                        new RedisConnectionService(configurationService),
-                        kmsConnectionService);
+                new IPVAuthorisationService(configurationService, kmsConnectionService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
-        this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
@@ -150,51 +149,20 @@ public class IPVCallbackHandler
         this.logoutService = new LogoutService(configurationService);
         this.accountInterventionService =
                 new AccountInterventionService(
-                        configurationService,
-                        new CloudwatchMetricsService(configurationService),
-                        auditService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
+                        configurationService, new Metrics(configurationService), auditService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
-        this.frontend = getFrontend(configurationService);
-    }
-
-    public IPVCallbackHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        this.configurationService = configurationService;
-        this.ipvAuthorisationService =
-                new IPVAuthorisationService(configurationService, redis, kmsConnectionService);
-        this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
-        this.sessionService = new SessionService(configurationService, redis);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.authUserInfoStorageService =
-                new AuthenticationUserInfoStorageService(configurationService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.logoutService = new LogoutService(configurationService, redis);
-        this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService,
-                        new CloudwatchMetricsService(configurationService),
-                        auditService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redis);
-        this.ipvCallbackHelper = new IPVCallbackHelper(configurationService, redis);
-        this.frontend = getFrontend(configurationService);
-    }
-
-    public static CommonFrontend getFrontend(ConfigurationService configurationService) {
-        return configurationService.getOrchFrontendEnabled()
-                ? new OrchFrontend(configurationService)
-                : new AuthFrontend(configurationService);
+        this.frontend = new AuthFrontend(configurationService);
+        this.identityProgressService = new IdentityProgressService(configurationService);
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         LOG.info("Request received to IPVCallbackHandler");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
@@ -205,7 +173,7 @@ public class IPVCallbackHandler
                     CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
             if (Objects.isNull(sessionCookiesIds)) {
                 var noSessionEntity =
-                        noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                        crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(
                                 input.getQueryStringParameters());
                 var authRequest =
                         AuthenticationRequest.parse(
@@ -219,11 +187,6 @@ public class IPVCallbackHandler
                         AuditService.UNKNOWN);
             }
             var sessionId = sessionCookiesIds.getSessionId();
-            var session =
-                    sessionService
-                            .getSession(sessionId)
-                            .orElseThrow(
-                                    () -> new IPVCallbackNoSessionException("Session not found"));
             OrchSessionItem orchSession =
                     orchSessionService
                             .getSession(sessionId)
@@ -247,6 +210,26 @@ public class IPVCallbackHandler
                                             new IPVCallbackNoSessionException(
                                                     "ClientSession not found"));
 
+            var mismatchedEntity =
+                    crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
+                            input.getQueryStringParameters(), clientSessionId, orchSession);
+
+            if (mismatchedEntity.isPresent()) {
+
+                var authRequestFromStateDerivedRP =
+                        AuthenticationRequest.parse(
+                                mismatchedEntity.get().getClientSession().getAuthRequestParams());
+                attachLogFieldToLogs(
+                        CLIENT_ID, authRequestFromStateDerivedRP.getClientID().getValue());
+
+                return ipvCallbackHelper.generateAuthenticationErrorResponse(
+                        authRequestFromStateDerivedRP,
+                        mismatchedEntity.get().getErrorObject(),
+                        false,
+                        mismatchedEntity.get().getClientSessionId(),
+                        AuditService.UNKNOWN);
+            }
+
             var authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
@@ -265,14 +248,48 @@ public class IPVCallbackHandler
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(), sessionId));
 
+            var ipAddress = IpAddressHelper.extractIpAddress(input);
+
+            if (errorObject.isPresent()) {
+                var auditContext =
+                        new AuditContext(
+                                clientSessionId,
+                                sessionId,
+                                clientId,
+                                orchSession.getInternalCommonSubjectId(),
+                                AuditService.UNKNOWN,
+                                ipAddress,
+                                AuditService.UNKNOWN,
+                                persistentId);
+                var aisResponseOpt =
+                        checkForAisIntervention(orchSession, auditContext, input, clientId);
+                if (aisResponseOpt.isPresent()) {
+                    return aisResponseOpt.get();
+                }
+
+                var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
+                if (errorObject.get().isSessionInvalidation()) {
+                    return logoutService.handleSessionInvalidationLogout(
+                            destroySessionRequest,
+                            orchSession.getInternalCommonSubjectId(),
+                            input,
+                            clientId);
+                }
+
+                return ipvCallbackHelper.generateAuthenticationErrorResponse(
+                        authRequest,
+                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().errorDescription()),
+                        false,
+                        clientSessionId,
+                        sessionId);
+            }
+
             UserInfo authUserInfo =
                     getAuthUserInfo(
                                     authUserInfoStorageService,
                                     orchSession.getInternalCommonSubjectId(),
                                     clientSessionId)
                             .orElseThrow(() -> new IpvCallbackException("authUserInfo not found"));
-
-            var ipAddress = IpAddressHelper.extractIpAddress(input);
 
             var auditContext =
                     new AuditContext(
@@ -286,32 +303,6 @@ public class IPVCallbackHandler
                                     ? AuditService.UNKNOWN
                                     : authUserInfo.getPhoneNumber(),
                             persistentId);
-
-            if (errorObject.isPresent()) {
-                AccountIntervention intervention =
-                        segmentedFunctionCall(
-                                "AIS: getAccountIntervention",
-                                () ->
-                                        this.accountInterventionService.getAccountIntervention(
-                                                orchSession.getInternalCommonSubjectId(),
-                                                auditContext));
-                if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (intervention.getBlocked() || intervention.getSuspended())) {
-                    return logoutService.handleAccountInterventionLogout(
-                            new DestroySessionsRequest(sessionId, orchSession),
-                            orchSession.getInternalCommonSubjectId(),
-                            input,
-                            clientId,
-                            intervention);
-                }
-
-                return ipvCallbackHelper.generateAuthenticationErrorResponse(
-                        authRequest,
-                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
-                        false,
-                        clientSessionId,
-                        sessionId);
-            }
 
             var rpPairwiseSubject =
                     new Subject(
@@ -342,7 +333,7 @@ public class IPVCallbackHandler
             if (!tokenResponse.indicatesSuccess()) {
                 auditService.submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
-                return RedirectService.redirectToFrontendErrorPage(
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         frontend.errorURI(),
                         new Exception(
                                 String.format(
@@ -369,21 +360,10 @@ public class IPVCallbackHandler
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
-                AccountIntervention intervention =
-                        segmentedFunctionCall(
-                                "AIS: getAccountIntervention",
-                                () ->
-                                        this.accountInterventionService.getAccountIntervention(
-                                                orchSession.getInternalCommonSubjectId(),
-                                                auditContext));
-                if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (intervention.getBlocked() || intervention.getSuspended())) {
-                    return logoutService.handleAccountInterventionLogout(
-                            new DestroySessionsRequest(sessionId, orchSession),
-                            orchSession.getInternalCommonSubjectId(),
-                            input,
-                            clientId,
-                            intervention);
+                var aisResponseOpt =
+                        checkForAisIntervention(orchSession, auditContext, input, clientId);
+                if (aisResponseOpt.isPresent()) {
+                    return aisResponseOpt.get();
                 }
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
                 if (returnCodePresentInIPVResponse(returnCode)) {
@@ -393,13 +373,8 @@ public class IPVCallbackHandler
                         var authenticationResponse =
                                 ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                                         authRequest,
-                                        clientSessionId,
-                                        session,
-                                        sessionId,
                                         orchSession,
-                                        orchClientSession.getClientName(),
-                                        rpPairwiseSubject,
-                                        orchSession.getInternalCommonSubjectId(),
+                                        orchClientSession,
                                         userIdentityUserInfo,
                                         ipAddress,
                                         persistentId,
@@ -461,37 +436,117 @@ public class IPVCallbackHandler
                     userIdentityUserInfo,
                     clientId);
 
+            var spotQueuedAt = NowHelper.now().toInstant().toEpochMilli();
+
             auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
             segmentedFunctionCall(
                     "saveIdentityClaims",
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
-                                    clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
-            var redirectURI = frontend.ipvCallbackURI();
-            LOG.info("Successful IPV callback. Redirecting to frontend");
+                                    clientSessionId,
+                                    rpPairwiseSubject,
+                                    userIdentityUserInfo,
+                                    spotQueuedAt));
+
+            URI redirectURI = null;
+            if (configurationService.isSyncWaitForSpotEnabled()) {
+                var status = identityProgressService.pollForStatus(clientSessionId, auditContext);
+                if (status == IdentityProgressStatus.NO_ENTRY) {
+                    return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                            frontend.errorURI(), new Error("Identity processing failed"));
+                }
+                if (status == IdentityProgressStatus.ERROR) {
+                    return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                            frontend.errorURI(),
+                            new Error("Identity processing returned NO_ENTRY"));
+                }
+                if (status == IdentityProgressStatus.COMPLETED) {
+                    var aisResponseOpt =
+                            checkForAisIntervention(orchSession, auditContext, input, clientId);
+                    if (aisResponseOpt.isPresent()) {
+                        return aisResponseOpt.get();
+                    }
+                    redirectURI =
+                            ipvCallbackHelper
+                                    .generateAuthenticationResponse(
+                                            authRequest,
+                                            orchSession,
+                                            clientSessionId,
+                                            ipAddress,
+                                            persistentId,
+                                            clientId,
+                                            clientRegistry.getClientName(),
+                                            authUserInfo.getEmailAddress(),
+                                            authUserInfo.getSubject().getValue(),
+                                            rpPairwiseSubject.getValue(),
+                                            orchSession.getInternalCommonSubjectId())
+                                    .toURI();
+                }
+            } else {
+                redirectURI = frontend.ipvCallbackURI();
+                LOG.info("Successful IPV callback. Redirecting to frontend");
+            }
+            if (redirectURI == null) {
+                // Should be impossible, but compiler seems to think otherwise
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                        frontend.errorURI(), new Error("Failed to create redirectURI"));
+            }
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {
-            return RedirectService.redirectToFrontendErrorPageForNoSessionCookies(
+            return RedirectService.redirectToFrontendErrorPageForNoSession(
                     frontend.errorIpvCallbackURI(), e);
-        } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
-            return RedirectService.redirectToFrontendErrorPage(frontend.errorURI(), e);
+        } catch (UnsuccessfulCredentialResponseException e) {
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(frontend.errorURI(), e);
+        } catch (IpvCallbackException e) {
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(frontend.errorURI(), e);
         } catch (ParseException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
         } catch (JsonException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Error("Unable to serialize SPOTRequest when placing on queue"));
         } catch (OrchAuthCodeException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(
                     frontend.errorURI(),
                     new Error(
                             String.format(
                                     "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: %s",
                                     e.getMessage())));
+        } catch (InterruptedException e) {
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                    frontend.errorURI(),
+                    new Error(
+                            String.format(
+                                    "Failed to poll for identity progress status. Error: %s",
+                                    e.getMessage())));
         }
+    }
+
+    private Optional<APIGatewayProxyResponseEvent> checkForAisIntervention(
+            OrchSessionItem orchSession,
+            AuditContext auditContext,
+            APIGatewayProxyRequestEvent input,
+            String clientId) {
+        AccountIntervention intervention =
+                segmentedFunctionCall(
+                        "AIS: getAccountIntervention",
+                        () ->
+                                this.accountInterventionService.getAccountIntervention(
+                                        orchSession.getInternalCommonSubjectId(), auditContext));
+        if (configurationService.isAccountInterventionServiceActionEnabled()
+                && (intervention.getBlocked() || intervention.getSuspended())) {
+            return Optional.of(
+                    logoutService.handleAccountInterventionLogout(
+                            new DestroySessionsRequest(orchSession.getSessionId(), orchSession),
+                            orchSession.getInternalCommonSubjectId(),
+                            input,
+                            clientId,
+                            intervention));
+        }
+        return Optional.empty();
     }
 
     private static Optional<UserInfo> getAuthUserInfo(

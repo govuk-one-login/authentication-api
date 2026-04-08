@@ -201,18 +201,6 @@ output "client_registry_encryption_policy_arn" {
   value = aws_iam_policy.client_registry_encryption_key_kms_policy.arn
 }
 
-output "identity_credentials_encryption_policy_arn" {
-  value = aws_iam_policy.identity_credentials_encryption_key_kms_policy.arn
-}
-
-output "doc_app_credential_encryption_policy_arn" {
-  value = aws_iam_policy.doc_app_credential_encryption_key_kms_policy.arn
-}
-
-output "doc_app_credential_encryption_key_arn" {
-  value = aws_kms_key.doc_app_credential_table_encryption_key.arn
-}
-
 output "user_credentials_encryption_policy_arn" {
   value = aws_iam_policy.user_credentials_encryption_key_kms_policy.arn
 }
@@ -227,10 +215,6 @@ output "email_check_results_encryption_policy_arn" {
 
 output "client_registry_encryption_key_arn" {
   value = aws_kms_key.client_registry_table_encryption_key.arn
-}
-
-output "identity_credentials_encryption_key_arn" {
-  value = aws_kms_key.identity_credentials_table_encryption_key.arn
 }
 
 output "user_profile_kms_key_arn" {
@@ -251,4 +235,16 @@ output "auth_session_table_encryption_key_arn" {
 
 output "id_reverification_state_key_arn" {
   value = aws_kms_key.id_reverification_state_table_encryption_key.arn
+}
+
+output "test_client_allow_list_secret_access_policy_arn" {
+  value = var.provision_test_client_secret ? aws_iam_policy.test_client_allow_list_secret_policy[0].arn : null
+}
+
+output "international_sms_send_count_encryption_key_arn" {
+  value = aws_kms_key.international_sms_send_count_encryption_key.arn
+}
+
+output "authenticator_table_encryption_key_arn" {
+  value = aws_kms_key.authenticator_table_encryption_key.arn
 }

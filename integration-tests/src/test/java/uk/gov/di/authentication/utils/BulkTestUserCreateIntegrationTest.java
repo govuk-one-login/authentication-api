@@ -13,7 +13,7 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.BulkTestUserS3Extension;
+import uk.gov.di.authentication.sharedtest.extensions.S3BucketExtension;
 import uk.gov.di.authentication.sharedtest.helper.S3TestEventHelper;
 import uk.gov.di.authentication.utils.lambda.BulkTestUserCreateHandler;
 
@@ -24,8 +24,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.sharedtest.extensions.BulkTestUserS3Extension.BULK_TEST_USER_BUCKET;
-import static uk.gov.di.authentication.sharedtest.extensions.BulkTestUserS3Extension.TEST_FILE_NAME;
 import static uk.gov.di.authentication.testsupport.helpers.BulkTestUserCsvHelper.getTestUsersProfilesAndCredentials;
 
 class BulkTestUserCreateIntegrationTest extends HandlerIntegrationTest<S3Event, Void> {
@@ -35,12 +33,19 @@ class BulkTestUserCreateIntegrationTest extends HandlerIntegrationTest<S3Event, 
     private static final String S3_ENDPOINT =
             Optional.ofNullable(System.getenv().get("LOCALSTACK_ENDPOINT"))
                     .orElse("http://localhost:45678");
-    private static final S3Event testS3Event =
-            S3TestEventHelper.generateS3TestEvent(
-                    REGION, "ObjectCreated:Put", BULK_TEST_USER_BUCKET, TEST_FILE_NAME);
+    private static final String BULK_TEST_USER_BUCKET = "local-bulk-test-user";
+    private static final String BULK_TEST_USER_FILE_KEY = "local-bulk-test-user-test-file";
 
     @RegisterExtension
-    protected static final BulkTestUserS3Extension bulkTestUserS3 = new BulkTestUserS3Extension();
+    protected static final S3BucketExtension bulkTestUserS3 =
+            new S3BucketExtension(
+                    BULK_TEST_USER_BUCKET,
+                    BULK_TEST_USER_FILE_KEY,
+                    "test_users_integration_test.txt");
+
+    private static final S3Event testS3Event =
+            S3TestEventHelper.generateS3TestEvent(
+                    REGION, "ObjectCreated:Put", BULK_TEST_USER_BUCKET, BULK_TEST_USER_FILE_KEY);
 
     @BeforeEach
     void setup() {

@@ -33,9 +33,11 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PASSWORD;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -44,6 +46,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class UpdatePasswordHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -103,6 +106,7 @@ public class UpdatePasswordHandler
             APIGatewayProxyRequestEvent input, Context context) {
         String sessionId =
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachTraceId();
         attachSessionIdToLogs(sessionId);
         LOG.info("UpdatePasswordHandler received request");
         SupportedLanguage userLanguage =
@@ -146,7 +150,7 @@ public class UpdatePasswordHandler
 
             if (isNewPasswordSameAsCurrentPassword(
                     currentPassword, updatePasswordRequest.getNewPassword())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.NEW_PW_MATCHES_OLD);
             }
 
             dynamoService.updatePassword(
@@ -182,16 +186,18 @@ public class UpdatePasswordHandler
                             IpAddressHelper.extractIpAddress(input),
                             userProfile.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                            new ArrayList<>());
 
-            auditService.submitAuditEvent(AUTH_UPDATE_PASSWORD, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_UPDATE_PASSWORD, auditContext, AUDIT_EVENT_COMPONENT_ID_AUTH);
 
             return generateEmptySuccessApiGatewayResponse();
 
         } catch (UserNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         } catch (JsonException | IllegalArgumentException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 

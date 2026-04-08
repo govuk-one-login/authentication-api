@@ -30,7 +30,7 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
     public void beforeAll(ExtensionContext context) throws Exception {
         dynamoDB =
                 DynamoDbClient.builder()
-                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .region(Region.of(REGION))
                         .endpointOverride(URI.create(DYNAMO_ENDPOINT))
                         .build();
@@ -41,7 +41,7 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
     protected void createInstance() {
         dynamoDB =
                 DynamoDbClient.builder()
-                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .region(Region.of(REGION))
                         .endpointOverride(URI.create(DYNAMO_ENDPOINT))
                         .build();

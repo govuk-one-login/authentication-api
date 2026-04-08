@@ -16,7 +16,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -26,7 +25,7 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -37,6 +36,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class UserInfoHandler
@@ -47,7 +47,6 @@ public class UserInfoHandler
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
-    private final SessionService sessionService;
     private final AuthSessionService authSessionService;
 
     public UserInfoHandler(
@@ -55,13 +54,11 @@ public class UserInfoHandler
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
             AuditService auditService,
-            SessionService sessionService,
             AuthSessionService authSessionService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
-        this.sessionService = sessionService;
         this.authSessionService = authSessionService;
     }
 
@@ -72,12 +69,14 @@ public class UserInfoHandler
     public UserInfoHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.userInfoService =
-                new UserInfoService(new DynamoService(configurationService), configurationService);
+                new UserInfoService(
+                        new DynamoService(configurationService),
+                        new MFAMethodsService(configurationService),
+                        configurationService);
         this.accessTokenService =
                 new AccessTokenService(
                         configurationService, new CloudwatchMetricsService(configurationService));
         this.auditService = new AuditService(configurationService);
-        this.sessionService = new SessionService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
     }
 
@@ -89,13 +88,14 @@ public class UserInfoHandler
                     "auth-external-api::" + getClass().getSimpleName(),
                     () -> userInfoRequestHandler(input));
         } catch (Exception e) {
-            LOG.error("Unexpected exception: {}", e.getMessage());
+            LOG.error("Unexpected exception", e);
             return generateApiGatewayProxyResponse(500, "server_error");
         }
     }
 
     public APIGatewayProxyResponseEvent userInfoRequestHandler(APIGatewayProxyRequestEvent input) {
         ThreadContext.clearMap();
+        attachTraceId();
         LOG.info("Request received to the UserInfoHandler");
         Map<String, String> headers = input.getHeaders();
 
@@ -115,30 +115,13 @@ public class UserInfoHandler
                             .getHeaderMap());
         }
 
-        try {
-
-            // ATO-982: We should remove this once auth is fully moved from
-            // using the shared session store
-            Optional<Session> optionalSession =
-                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
-
-            if (optionalSession.isEmpty()) {
-                LOG.warn("Session cannot be found");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-
-        } catch (Exception e) {
-            LOG.error("Error retrieving session from redis: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
-
         AuthSessionItem authSession;
 
         Optional<AuthSessionItem> optionalAuthSession =
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
 
         if (optionalAuthSession.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         }
         authSession = optionalAuthSession.get();
 

@@ -13,7 +13,6 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.orchestration.shared.helpers.CryptoProviderHelper;
-import uk.gov.di.orchestration.shared.helpers.EncryptionJwkCache;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
 import java.net.URL;
@@ -52,6 +51,17 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getExternalTokenSigningKeyRsaAlias());
     }
 
+    public JWK getNextPublicTokenJwkWithOpaqueIdV2() {
+        LOG.info("Retrieving next EC public key version 2");
+        return getPublicJWKWithKeyId(configurationService.getNextExternalTokenSigningKeyAliasV2());
+    }
+
+    public JWK getNextPublicTokenRsaJwkWithOpaqueIdV2() {
+        LOG.info("Retrieving next RSA public key version 2");
+        return getPublicJWKWithKeyId(
+                configurationService.getNextExternalTokenSigningKeyRsaAliasV2());
+    }
+
     public JWK getPublicDocAppSigningJwkWithOpaqueId() {
         LOG.info("Retrieving Doc App public key");
         return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
@@ -67,13 +77,9 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    public JWK getIpvJwk() {
-        EncryptionJwkCache encryptionJwkCache = EncryptionJwkCache.getInstance();
-        var ipvJwkCacheEntry =
-                encryptionJwkCache.getOrCreateEntry(
-                        configurationService.getIPVJwksUrl(),
-                        configurationService.getIPVJwkCacheExpirationInSeconds());
-        return ipvJwkCacheEntry.getKey();
+    public JWK getPublicAuthSigningJwkWithOpaqueId() {
+        LOG.info("Retrieving Auth public signing key");
+        return getPublicJWKWithKeyId(configurationService.getAuthSigningKeyAlias());
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {

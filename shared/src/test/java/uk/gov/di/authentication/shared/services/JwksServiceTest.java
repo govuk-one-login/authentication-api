@@ -27,62 +27,6 @@ class JwksServiceTest {
             new JwksService(configurationService, kmsConnectionService);
 
     @Test
-    void shouldRetrievePublicTokenSigningKeyFromKmsAndParseToJwk() {
-        byte[] publicKey =
-                Base64.getDecoder()
-                        .decode(
-                                "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEpRm+QZsh2IkUWcqXUhBI9ulOzO8dz0Z8HIS6m77tI4eWoZgKYUcbByshDtN4gWPql7E5mN4uCLsg5+6SDXlQcA==");
-
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn("14342354354353");
-
-        var result =
-                GetPublicKeyResponse.builder()
-                        .keyUsage(KeyUsageType.SIGN_VERIFY)
-                        .keyId("14342354354353")
-                        .signingAlgorithms(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .publicKey(SdkBytes.fromByteArray(publicKey))
-                        .build();
-
-        System.out.println(result.signingAlgorithms());
-
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
-
-        JWK publicKeyJwk = jwksService.getPublicTokenJwkWithOpaqueId();
-
-        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String("14342354354353")));
-        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
-        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
-    }
-
-    @Test
-    void shouldRetrievePublicTokenSigningRsaKeyFromKmsAndParseToJwk() {
-        byte[] publicKey =
-                Base64.getDecoder()
-                        .decode(
-                                "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCKFDNUYzkMs+SY+SPqN+o+37hFVVF/CP3CRDsQB0Fxyn0gSY/UW0rJ5a4x8XyyD44PJhSfRt5ZmXe+lm+nD2iILIw/yOJDPW6T65eGmW5b4ewj8nH2ZcE1YhHybmY6hD/VMzPWbQKOR9xepIFO57EzLHyhEMvL6ONonQ1QFpon+QIDAQAB");
-
-        when(configurationService.getTokenSigningKeyRsaAlias()).thenReturn("25252525252525");
-
-        var result =
-                GetPublicKeyResponse.builder()
-                        .keyUsage(KeyUsageType.SIGN_VERIFY)
-                        .keyId("25252525252525")
-                        .signingAlgorithms(SigningAlgorithmSpec.RSASSA_PKCS1_V1_5_SHA_256)
-                        .publicKey(SdkBytes.fromByteArray(publicKey))
-                        .build();
-
-        System.out.println(result.signingAlgorithms());
-
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
-
-        JWK publicKeyJwk = jwksService.getPublicTokenRsaJwkWithOpaqueId();
-
-        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String("25252525252525")));
-        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.RS256));
-        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
-    }
-
-    @Test
     void shouldRetrievePublicMfaResetStorageTokenSigningKeyFromKmsAndParseToJwk() {
         byte[] publicKey =
                 Base64.getDecoder()
@@ -114,7 +58,6 @@ class JwksServiceTest {
 
     @Test
     void shouldReturnMfaResetJarSigningKeyAndParseToJwk() {
-
         String mockKeyId = "123456789";
         when(configurationService.getMfaResetJarSigningKeyAlias()).thenReturn(mockKeyId);
 
@@ -134,6 +77,33 @@ class JwksServiceTest {
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
 
         JWK publicKeyJwk = jwksService.getPublicMfaResetJarJwkWithOpaqueId();
+
+        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(mockKeyId)));
+        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
+    }
+
+    @Test
+    void shouldReturnMfaResetJarDeprecatedSigningKeyAndParseToJwk() {
+        String mockKeyId = "123456789";
+        when(configurationService.getMfaResetJarDeprecatedSigningKeyAlias()).thenReturn(mockKeyId);
+
+        byte[] publicKey =
+                Base64.getDecoder()
+                        .decode(
+                                "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE9cKBC5iJvCv5TD5E+nqI0yes8bXlpqWza/cgYXX6QfL7xTjkgI7gblEYGctJgGTD8HbvO9pQX8n0H6+ibF4ewg==");
+
+        var result =
+                GetPublicKeyResponse.builder()
+                        .keyUsage(KeyUsageType.SIGN_VERIFY)
+                        .keyId(mockKeyId)
+                        .signingAlgorithms(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .publicKey(SdkBytes.fromByteArray(publicKey))
+                        .build();
+
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
+
+        JWK publicKeyJwk = jwksService.getPublicMfaResetJarDeprecatedJwkWithOpaqueId();
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(mockKeyId)));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));

@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +19,6 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
     public static final String ATTRIBUTE_AUTHENTICATED = "Authenticated";
     public static final String ATTRIBUTE_AUTH_TIME = "AuthTime";
-    public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "CurrentCredentialStrength";
     public static final String ATTRIBUTE_PROCESSING_IDENTITY_ATTEMPTS =
             "ProcessingIdentityAttempts";
     public static final String ATTRIBUTE_CLIENT_SESSIONS = "ClientSessions";
@@ -152,6 +152,7 @@ public class OrchSessionItem {
         return this;
     }
 
+    @DynamoDbSecondaryPartitionKey(indexNames = {"InternalCommonSubjectIdIndex"})
     @DynamoDbAttribute(ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID)
     public String getInternalCommonSubjectId() {
         return internalCommonSubjectId;
@@ -191,21 +192,6 @@ public class OrchSessionItem {
 
     public OrchSessionItem withAuthTime(Long authTime) {
         this.authTime = authTime;
-        return this;
-    }
-
-    @DynamoDbAttribute(ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH)
-    public CredentialTrustLevel getCurrentCredentialStrength() {
-        return this.currentCredentialStrength;
-    }
-
-    public void setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
-    }
-
-    public OrchSessionItem withCurrentCredentialStrength(
-            CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
         return this;
     }
 

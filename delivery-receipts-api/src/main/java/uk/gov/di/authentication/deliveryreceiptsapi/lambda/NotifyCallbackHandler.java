@@ -29,9 +29,11 @@ import java.util.Map;
 import java.util.Objects;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class NotifyCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -88,6 +90,7 @@ public class NotifyCallbackHandler
 
     public APIGatewayProxyResponseEvent notifyCallbackRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        attachTraceId();
         LOG.info("Received request");
         validateBearerToken(input.getHeaders());
         NotifyDeliveryReceipt deliveryReceipt;
@@ -112,8 +115,15 @@ public class NotifyCallbackHandler
                 var templateId = deliveryReceipt.templateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
                 var templateName = getTemplateName(templateId);
+                var smsDestinationType = countryCode == 44 ? "DOMESTIC" : "INTERNATIONAL";
                 var additionalMetricsContext =
-                        Map.of("SmsType", templateName, "CountryCode", String.valueOf(countryCode));
+                        Map.of(
+                                "SmsType",
+                                templateName,
+                                "CountryCode",
+                                String.valueOf(countryCode),
+                                "SmsDestinationType",
+                                smsDestinationType);
                 incrementCounters("SmsSent", additionalMetricsContext, deliveryReceipt);
                 LOG.info("SMS callback request processed");
             } else if (deliveryReceipt.notificationType().equals("email")) {
@@ -123,8 +133,10 @@ public class NotifyCallbackHandler
                 var templateName = getTemplateName(templateId);
                 incrementCounters("EmailSent", Map.of("EmailName", templateName), deliveryReceipt);
                 if (configurationService.isBulkUserEmailEnabled()
-                        && templateName.equals(
-                                TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())) {
+                        && (templateName.equals(TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())
+                                || templateName.equals(
+                                        INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL
+                                                .getTemplateAlias()))) {
                     LOG.info("Updating bulk email table for delivery receipt");
                     var maybeProfile =
                             dynamoService.getUserProfileByEmailMaybe(deliveryReceipt.to());
@@ -216,7 +228,7 @@ public class NotifyCallbackHandler
                 .map(DeliveryReceiptsNotificationType::getTemplateAlias)
                 .orElseThrow(
                         () -> {
-                            LOG.warn("No template found with template ID: {}", templateID);
+                            LOG.error("No template found with template ID: {}", templateID);
                             throw new RuntimeException("No template found with template ID");
                         });
     }

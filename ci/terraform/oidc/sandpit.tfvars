@@ -4,6 +4,8 @@ shared_state_bucket = "digital-identity-dev-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendsp"
 
+# Auth new strategic account
+auth_new_account_id = "975050272416"
 
 # App-specific
 test_clients_enabled                        = true
@@ -49,8 +51,6 @@ otp_code_ttl_duration                     = 60
 email_acct_creation_otp_code_ttl_duration = 60
 
 
-orch_frontend_api_gateway_integration_enabled = true
-
 orch_redirect_uri                  = "https://oidc.sandpit.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
@@ -77,6 +77,7 @@ orch_environment                                   = "dev"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:816047645251:key/645669ba-b288-4b63-bfe1-9d8bde9956ec"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:816047645251:key/4cd7c551-128f-4579-99c2-a7f1bff64fb7"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:816047645251:key/590f841e-3eec-45f1-a9bc-4b32b2edece4"
+orch_client_registry_table_encryption_key_arn      = "arn:aws:kms:eu-west-2:816047645251:key/97c19476-82ba-433f-8500-981857e7367e"
 
 cmk_for_back_channel_logout_enabled = true
 use_strongly_consistent_reads       = true

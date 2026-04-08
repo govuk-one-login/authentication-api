@@ -16,13 +16,12 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.util.List;
 import java.util.Map;
@@ -48,19 +47,22 @@ class UserInfoHandlerTest {
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
     private static final Subject SUBJECT = new Subject();
-    private static final String TOKEN = "token";
-    private static final String INTERNAL_SUBJECT_ID = "internal-subject-id";
-    private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
     private static final String JOURNEY_ID = "client-session-id";
     private static final Subject AUDIT_SUBJECT_ID = new Subject();
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserInfoService userInfoService = mock(UserInfoService.class);
-    private final AccessTokenInfo accessTokenInfo = mock(AccessTokenInfo.class);
+    private final AccessTokenInfo accessTokenInfo =
+            new AccessTokenInfo(
+                    "internal-pairwise-subject-id",
+                    JOURNEY_ID,
+                    SUBJECT.getValue(),
+                    List.of("openid", "email", "phone"),
+                    List.of(),
+                    "client-id");
     private final AccessTokenService accessTokenService = mock(AccessTokenService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
+    private final Metrics metrics = mock(Metrics.class);
 
     private static final Map<String, List<String>> INVALID_TOKEN_RESPONSE =
             new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap();
@@ -74,17 +76,9 @@ class UserInfoHandlerTest {
                         userInfoService,
                         accessTokenService,
                         auditService,
-                        cloudwatchMetricsService);
+                        metrics);
         when(context.getAwsRequestId()).thenReturn("aws-request-id");
-        when(accessTokenInfo.getClientID()).thenReturn("client-id");
-        when(accessTokenInfo.getSubject()).thenReturn(SUBJECT.getValue());
-        when(accessTokenInfo.getAccessTokenStore())
-                .thenReturn(
-                        new AccessTokenStore(
-                                TOKEN,
-                                INTERNAL_SUBJECT_ID,
-                                TEST_INTERNAL_COMMON_SUBJECT_ID,
-                                JOURNEY_ID));
+
         when(configurationService.getEnvironment()).thenReturn("test");
     }
 
@@ -123,8 +117,8 @@ class UserInfoHandlerTest {
                                 .withUserId(AUDIT_SUBJECT_ID.getValue())
                                 .withGovukSigninJourneyId(JOURNEY_ID));
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
+        verify(metrics)
+                .increment(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
@@ -173,8 +167,8 @@ class UserInfoHandlerTest {
         assertThat(result, hasStatus(401));
         assertEquals(INVALID_TOKEN_RESPONSE, result.getMultiValueHeaders());
 
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
+        verify(metrics, never())
+                .increment(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),
@@ -193,8 +187,8 @@ class UserInfoHandlerTest {
                 new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap();
         assertEquals(missingTokenExpectedResponse, result.getMultiValueHeaders());
 
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
+        verify(metrics, never())
+                .increment(
                         USER_INFO_RETURNED.getValue(),
                         Map.of(
                                 ENVIRONMENT.getValue(),

@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class IpvJwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -48,6 +49,7 @@ public class IpvJwksHandler
 
     public APIGatewayProxyResponseEvent ipvJwksRequestHandler() {
         try {
+            attachTraceId();
             LOG.info("IpvJwks request received");
 
             List<JWK> signingKeys = new ArrayList<>();

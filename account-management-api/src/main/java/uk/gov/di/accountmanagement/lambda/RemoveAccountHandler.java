@@ -35,6 +35,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class RemoveAccountHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -102,6 +103,7 @@ public class RemoveAccountHandler
             String sessionId =
                     RequestHeaderHelper.getHeaderValueOrElse(
                             input.getHeaders(), SESSION_ID_HEADER, "");
+            attachTraceId();
             attachSessionIdToLogs(sessionId);
             LOG.info("RemoveAccountHandler received request");
             RemoveAccountRequest removeAccountRequest =
@@ -126,9 +128,9 @@ public class RemoveAccountHandler
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 

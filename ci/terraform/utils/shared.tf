@@ -18,6 +18,7 @@ locals {
   authentication_security_group_id          = data.terraform_remote_state.shared.outputs.authentication_security_group_id
   authentication_egress_security_group_id   = data.terraform_remote_state.shared.outputs.authentication_egress_security_group_id
   user_profile_encryption_policy_arn        = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
+  user_credentials_encryption_policy_arn    = data.terraform_remote_state.shared.outputs.user_credentials_encryption_policy_arn
   email_check_results_encryption_policy_arn = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
   default_performance_parameters = {
     memory  = 1024,

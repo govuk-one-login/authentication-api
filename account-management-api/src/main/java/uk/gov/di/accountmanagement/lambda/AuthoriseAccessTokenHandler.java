@@ -16,9 +16,9 @@ import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.Date;
@@ -27,6 +27,7 @@ import java.util.Map;
 
 import static uk.gov.di.accountmanagement.entity.AuthPolicy.PolicyDocument.getAllowAllPolicy;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class AuthoriseAccessTokenHandler
         implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
@@ -34,12 +35,9 @@ public class AuthoriseAccessTokenHandler
     private static final Logger LOG = LogManager.getLogger(AuthoriseAccessTokenHandler.class);
 
     private final TokenValidationService tokenValidationService;
-    private final DynamoClientService clientService;
 
-    public AuthoriseAccessTokenHandler(
-            TokenValidationService tokenValidationService, DynamoClientService clientService) {
+    public AuthoriseAccessTokenHandler(TokenValidationService tokenValidationService) {
         this.tokenValidationService = tokenValidationService;
-        this.clientService = clientService;
     }
 
     public AuthoriseAccessTokenHandler() {
@@ -52,8 +50,8 @@ public class AuthoriseAccessTokenHandler
                         new JwksService(
                                 configurationService,
                                 new KmsConnectionService(configurationService)),
+                        new RemoteJwksService(configurationService.getAccessTokenJwksUrl()),
                         configurationService);
-        clientService = new DynamoClientService(configurationService);
     }
 
     @Override
@@ -65,6 +63,7 @@ public class AuthoriseAccessTokenHandler
     }
 
     public AuthPolicy authoriseAccessTokenHandler(TokenAuthorizerContext input) {
+        attachTraceId();
         LOG.info("Request received in AuthoriseAccessTokenHandler");
         try {
             String token = input.getAuthorizationToken();
@@ -101,16 +100,11 @@ public class AuthoriseAccessTokenHandler
                 LOG.warn("Access Token client_id is missing");
                 throw new RuntimeException("Unauthorized");
             }
-            if (!clientService.isValidClient(clientId)) {
-                LOG.warn("Access Token client_id does not exist in Dynamo. ClientId {}", clientId);
-                throw new RuntimeException("Unauthorized");
-            }
             String subject = claimsSet.getSubject();
             if (subject == null) {
                 LOG.warn("Access Token subject is missing");
                 throw new RuntimeException("Unauthorized");
             }
-            LOG.info("User found in Dynamo with given SubjectID");
             String methodArn = input.getMethodArn();
             String[] arnPartials = methodArn.split(":");
             String region = arnPartials[3];

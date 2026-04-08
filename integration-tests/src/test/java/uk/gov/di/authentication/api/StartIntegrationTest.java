@@ -1,12 +1,8 @@
 package uk.gov.di.authentication.api;
 
 import com.google.gson.JsonParser;
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -19,11 +15,9 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
-import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -35,8 +29,6 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.net.URI;
-import java.security.KeyPair;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +37,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -57,7 +48,6 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LE
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -71,16 +61,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     public static final String PREVIOUS_SESSION_ID = "4waJ14KA9IyxKzY7bIGIA3hUDos";
-    public static final String REQUEST_BODY =
-            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\", "
-                    + "\"authenticated\": %s, "
-                    + "\"state\": \"%s\","
-                    + "\"client_id\": \"%s\","
-                    + "\"redirect_uri\": \"%s\","
-                    + "\"requested_level_of_confidence\": \"%s\", "
-                    + "\"requested_credential_strength\": \"%s\", "
-                    + "\"scope\": \"%s\""
-                    + "}";
+    private static final Optional<String> WITH_PREVIOUS_SESSION = Optional.of(PREVIOUS_SESSION_ID);
+    private static final Optional<String> NO_PREVIOUS_SESSION = Optional.empty();
+    private static final String TEST_SUBJECT_TYPE = "pairwise";
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
@@ -91,24 +74,28 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+        handler = new StartHandler(new TestConfigurationService());
         txmaAuditQueue.clear();
     }
 
     private static Stream<Arguments> successfulRequests() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, false),
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, true),
-                Arguments.of(jsonArrayOf("Cl.Cm", "P0.Cl.Cm"), false, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, false));
+                Arguments.of(Optional.empty(), MEDIUM_LEVEL, false, false),
+                Arguments.of(Optional.empty(), MEDIUM_LEVEL, false, true),
+                Arguments.of(Optional.of(LevelOfConfidence.NONE), MEDIUM_LEVEL, false, false),
+                Arguments.of(
+                        Optional.of(LevelOfConfidence.MEDIUM_LEVEL), MEDIUM_LEVEL, true, false));
     }
 
     @ParameterizedTest
     @MethodSource("successfulRequests")
     void shouldReturn200AndStartResponse(
-            String vtrStringList, boolean identityRequired, boolean isAuthenticated)
+            Optional<LevelOfConfidence> requestedLevelOfConfidenceOpt,
+            CredentialTrustLevel requestedCredentialTrustLevel,
+            boolean identityRequired,
+            boolean isAuthenticated)
             throws Json.JsonException {
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
@@ -116,29 +103,20 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        var builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("state", state.getValue())
-                        .customParameter("vtr", vtrStringList)
-                        .state(state);
-        var authRequest = builder.build();
 
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
-        var requestedVtr = VectorOfTrust.parseFromAuthRequestAttribute(List.of(vtrStringList));
-        var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
-        var credentialTrustLevel = requestedVtr.getCredentialTrustLevel();
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var response =
                 makeRequest(
                         Optional.of(
                                 makeRequestBody(
                                         isAuthenticated,
-                                        authRequest,
-                                        levelOfConfidenceOpt,
-                                        credentialTrustLevel.getValue())),
+                                        WITH_PREVIOUS_SESSION,
+                                        state.getValue(),
+                                        scope.toString(),
+                                        REDIRECT_URI.toString(),
+                                        requestedLevelOfConfidenceOpt,
+                                        requestedCredentialTrustLevel,
+                                        identityRequired)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -181,33 +159,28 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
         var actualAuthSession = authSessionExtension.getSession(sessionId).orElseThrow();
         assertThat(
-                actualAuthSession.getRequestedCredentialStrength(), equalTo(credentialTrustLevel));
+                actualAuthSession.getRequestedCredentialStrength(),
+                equalTo(requestedCredentialTrustLevel));
         assertThat(
                 actualAuthSession.getRequestedLevelOfConfidence(),
-                equalTo(levelOfConfidenceOpt.orElse(null)));
+                equalTo(requestedLevelOfConfidenceOpt.orElse(null)));
         assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
+        assertThat(actualAuthSession.getClientName(), equalTo(TEST_CLIENT_NAME));
+        assertFalse(actualAuthSession.getIsSmokeTest());
+        assertThat(actualAuthSession.getSubjectType(), equalTo(TEST_SUBJECT_TYPE));
     }
 
     @Test
     void shouldReturn200AndStartResponseWithAuthenticatedFalseWhenReauthenticationIsRequested()
             throws Json.JsonException {
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        var builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .state(state)
-                        .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"));
-        var authRequest = builder.build();
 
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
@@ -217,9 +190,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(
                                 makeRequestBody(
                                         true,
-                                        authRequest,
+                                        NO_PREVIOUS_SESSION,
+                                        state.getValue(),
+                                        scope.toString(),
+                                        REDIRECT_URI.toString(),
                                         Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                        "Cl.Cm")),
+                                        MEDIUM_LEVEL,
+                                        false)),
                         headers,
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -234,6 +211,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 actualAuthSession.getRequestedLevelOfConfidence(),
                 equalTo(LevelOfConfidence.LOW_LEVEL));
         assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
+        assertThat(actualAuthSession.getClientName(), equalTo(TEST_CLIENT_NAME));
+        assertFalse(actualAuthSession.getIsSmokeTest());
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND, AUTH_REAUTH_REQUESTED));
     }
@@ -248,7 +227,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             MFAMethodType mfaMethodType) throws Json.JsonException {
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var isAuthenticated = true;
-        var sessionId = redis.createSession();
+        var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
         authSessionExtension.addSession(sessionId);
@@ -264,21 +243,21 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var state = new State();
         var scope = new Scope(OIDCScopeValue.OPENID);
-        var builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .state(state)
-                        .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("vtr", jsonArrayOf("Cl.Cm"));
-        var authRequest = builder.build();
 
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(isAuthenticated, authRequest)),
+                        Optional.of(
+                                makeRequestBody(
+                                        isAuthenticated,
+                                        WITH_PREVIOUS_SESSION,
+                                        state.getValue(),
+                                        scope.toString(),
+                                        REDIRECT_URI.toString(),
+                                        Optional.empty(),
+                                        MEDIUM_LEVEL,
+                                        false)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -307,23 +286,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn400WhenRedirectURIIsInvalid() throws Exception {
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        var builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .state(state)
-                        .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", "invalid-redirect-uri/@'[]l.#,;][")
-                        .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"));
-        var authRequest = builder.build();
 
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
@@ -333,9 +303,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(
                                 makeRequestBody(
                                         true,
-                                        authRequest,
+                                        NO_PREVIOUS_SESSION,
+                                        state.getValue(),
+                                        scope.toString(),
+                                        "invalid-redirect-uri/@'[]l.#,;][",
                                         Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                        "Cl.Cm")),
+                                        MEDIUM_LEVEL,
+                                        false)),
                         headers,
                         Map.of());
         assertThat(response, hasStatus(400));
@@ -347,23 +321,22 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var isAuthenticated = true;
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .state(STATE)
-                        .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("vtr", jsonArrayOf("Cl.Cm"))
-                        .build();
-        var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var sessionId = redis.createSession();
+        var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(sessionId);
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(isAuthenticated, authRequest)),
+                        Optional.of(
+                                makeRequestBody(
+                                        isAuthenticated,
+                                        NO_PREVIOUS_SESSION,
+                                        STATE.getValue(),
+                                        scope.toString(),
+                                        REDIRECT_URI.toString(),
+                                        Optional.empty(),
+                                        MEDIUM_LEVEL,
+                                        false)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
 
@@ -386,15 +359,15 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @BeforeEach
         void setup() throws Json.JsonException {
-            handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+            handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
-            sessionId = redis.createSession();
+            sessionId = IdGenerator.generate();
             userStore.signUp(EMAIL, "password");
             authSessionExtension.addSession(sessionId);
             state = new State();
             scope = new Scope();
             scope.add(OIDCScopeValue.OPENID);
-            registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+            KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         }
 
         @Test
@@ -403,19 +376,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Optional.of(
                             makeRequestBody(
                                     false,
-                                    Map.of(
-                                            "state",
-                                            state.getValue(),
-                                            "redirect_uri",
-                                            REDIRECT_URI.toString(),
-                                            "scope",
-                                            scope.toString(),
-                                            "client_id",
-                                            CLIENT_ID,
-                                            "requested_level_of_confidence",
-                                            "P1",
-                                            "requested_credential_strength",
-                                            "Cl.Cm"))),
+                                    NO_PREVIOUS_SESSION,
+                                    state.getValue(),
+                                    scope.toString(),
+                                    REDIRECT_URI.toString(),
+                                    Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                    MEDIUM_LEVEL,
+                                    false)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -433,19 +400,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Optional.of(
                             makeRequestBody(
                                     false,
-                                    Map.of(
-                                            "state",
-                                            state.getValue(),
-                                            "redirect_uri",
-                                            REDIRECT_URI.toString(),
-                                            "scope",
-                                            scope.toString(),
-                                            "client_id",
-                                            CLIENT_ID,
-                                            "requested_level_of_confidence",
-                                            "P1",
-                                            "requested_credential_strength",
-                                            "Cl.Cm"))),
+                                    WITH_PREVIOUS_SESSION,
+                                    state.getValue(),
+                                    scope.toString(),
+                                    REDIRECT_URI.toString(),
+                                    Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                    MEDIUM_LEVEL,
+                                    false)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -461,19 +422,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Optional.of(
                             makeRequestBody(
                                     false,
-                                    Map.of(
-                                            "state",
-                                            state.getValue(),
-                                            "redirect_uri",
-                                            REDIRECT_URI.toString(),
-                                            "scope",
-                                            scope.toString(),
-                                            "client_id",
-                                            CLIENT_ID,
-                                            "requested_level_of_confidence",
-                                            "P1",
-                                            "requested_credential_strength",
-                                            "Cl.Cm"))),
+                                    WITH_PREVIOUS_SESSION,
+                                    state.getValue(),
+                                    scope.toString(),
+                                    REDIRECT_URI.toString(),
+                                    Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                    MEDIUM_LEVEL,
+                                    false)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -492,12 +447,11 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @BeforeEach
         void setup() throws Json.JsonException {
-            handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+            handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
             sessionId = IdGenerator.generate();
-            redis.createSession(sessionId);
             userStore.signUp(EMAIL, "password");
-            registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+            KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             scope.add(OIDCScopeValue.OPENID);
         }
 
@@ -509,19 +463,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Optional.of(
                                     makeRequestBody(
                                             false,
-                                            Map.of(
-                                                    "state",
-                                                    state.getValue(),
-                                                    "redirect_uri",
-                                                    REDIRECT_URI.toString(),
-                                                    "scope",
-                                                    scope.toString(),
-                                                    "client_id",
-                                                    CLIENT_ID,
-                                                    "requested_level_of_confidence",
-                                                    "P1",
-                                                    "requested_credential_strength",
-                                                    MEDIUM_LEVEL.getValue()))),
+                                            NO_PREVIOUS_SESSION,
+                                            state.getValue(),
+                                            scope.toString(),
+                                            REDIRECT_URI.toString(),
+                                            Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                            MEDIUM_LEVEL,
+                                            false)),
                             standardHeadersWithSessionId(sessionId),
                             Map.of());
 
@@ -545,19 +493,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Optional.of(
                                     makeRequestBody(
                                             false,
-                                            Map.of(
-                                                    "state",
-                                                    state.getValue(),
-                                                    "redirect_uri",
-                                                    REDIRECT_URI.toString(),
-                                                    "scope",
-                                                    scope.toString(),
-                                                    "client_id",
-                                                    CLIENT_ID,
-                                                    "requested_level_of_confidence",
-                                                    "P1",
-                                                    "requested_credential_strength",
-                                                    requestedCredentialStrength.getValue()))),
+                                            WITH_PREVIOUS_SESSION,
+                                            state.getValue(),
+                                            scope.toString(),
+                                            REDIRECT_URI.toString(),
+                                            Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                            requestedCredentialStrength,
+                                            false)),
                             standardHeadersWithSessionId(sessionId),
                             Map.of());
 
@@ -575,68 +517,41 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
     }
 
-    private String makeRequestBody(boolean isAuthenticated, AuthenticationRequest authRequest) {
-        return makeRequestBody(isAuthenticated, authRequest, Optional.empty(), "Cl.Cm");
-    }
-
     private String makeRequestBody(
             boolean isAuthenticated,
-            AuthenticationRequest authRequest,
-            Optional<LevelOfConfidence> levelOfConfidenceOpt,
-            String credentialStrength) {
+            Optional<String> previousSessionIdOpt,
+            String state,
+            String scope,
+            String redirectUri,
+            Optional<LevelOfConfidence> requestedLevelOfConfidenceOpt,
+            CredentialTrustLevel requestedCredentialStrength,
+            boolean isIdentityRequired) {
         Map<String, Object> requestBodyMap =
                 new HashMap<>(
-                        Map.of(
-                                "previous-session-id",
-                                "4waJ14KA9IyxKzY7bIGIA3hUDos",
-                                "authenticated",
-                                isAuthenticated,
-                                "state",
-                                authRequest.getState().getValue(),
-                                "requested_credential_strength",
-                                credentialStrength,
-                                "scope",
-                                authRequest.getScope().toString()));
-        Optional.ofNullable(authRequest.getCustomParameter("client_id"))
-                .map(l -> l.get(0))
-                .ifPresent(clientId -> requestBodyMap.put("client_id", clientId));
-        Optional.ofNullable(authRequest.getCustomParameter("redirect_uri"))
-                .map(l -> l.get(0))
-                .ifPresent(redirectUri -> requestBodyMap.put("redirect_uri", redirectUri));
-        levelOfConfidenceOpt.ifPresent(
+                        Map.ofEntries(
+                                Map.entry("authenticated", isAuthenticated),
+                                Map.entry("state", state),
+                                Map.entry(
+                                        "requested_credential_strength",
+                                        requestedCredentialStrength.getValue()),
+                                Map.entry("scope", scope),
+                                Map.entry("client_id", CLIENT_ID),
+                                Map.entry("redirect_uri", redirectUri),
+                                Map.entry("client_name", TEST_CLIENT_NAME),
+                                Map.entry("service_type", ServiceType.MANDATORY.toString()),
+                                Map.entry("cookie_consent_shared", false),
+                                Map.entry("is_smoke_test", false),
+                                Map.entry("is_one_login_service", false),
+                                Map.entry("subject_type", TEST_SUBJECT_TYPE),
+                                Map.entry(
+                                        "is_identity_verification_required", isIdentityRequired)));
+        previousSessionIdOpt.ifPresent(
+                previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));
+        requestedLevelOfConfidenceOpt.ifPresent(
                 levelOfConfidence ->
                         requestBodyMap.put(
                                 "requested_level_of_confidence", levelOfConfidence.getValue()));
         return SerializationService.getInstance().writeValueAsString(requestBodyMap);
-    }
-
-    private String makeRequestBody(boolean isAuthenticated, Map<String, Object> customAuthParams) {
-        return String.format(
-                REQUEST_BODY,
-                isAuthenticated,
-                customAuthParams.get("state"),
-                customAuthParams.get("client_id"),
-                customAuthParams.get("redirect_uri"),
-                customAuthParams.get("requested_level_of_confidence"),
-                customAuthParams.get("requested_credential_strength"),
-                customAuthParams.get("scope"));
-    }
-
-    private void registerWebClient(KeyPair keyPair) {
-        clientStore.registerClient(
-                CLIENT_ID,
-                TEST_CLIENT_NAME,
-                singletonList(REDIRECT_URI.toString()),
-                singletonList(EMAIL),
-                List.of("openid", "email"),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                ClientType.WEB,
-                true);
     }
 
     private void verifyStandardClientInformationSetOnResponse(

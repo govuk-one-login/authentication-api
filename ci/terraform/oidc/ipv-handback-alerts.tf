@@ -10,7 +10,7 @@ data "aws_cloudwatch_log_group" "ipv_callback_lambda_log_group" {
 data "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
   name = replace("/aws/lambda/${var.environment}-spot-response-lambda", ".", "")
   depends_on = [
-    module.ipv_spot_response_role
+    module.ipv_spot_response_role_2
   ]
 }
 
@@ -72,7 +72,7 @@ resource "aws_cloudwatch_metric_alarm" "ipv_handback_p1_cloudwatch_alarm" {
   period              = var.ipv_p1_alarm_error_time_period
   statistic           = "Sum"
   threshold           = var.ipv_p1_alarm_error_threshold
-  alarm_description   = "${var.ipv_p1_alarm_error_threshold} or more IPV handback errors have occurred in ${var.environment}.ACCOUNT: ${local.aws_account_alias}"
+  alarm_description   = "${var.ipv_p1_alarm_error_threshold} or more IPV handback errors have occurred in ${var.environment}.ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5761204264/Runbook+IPV+handback+alarm"
   alarm_actions       = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
   treat_missing_data  = "notBreaching"
 }

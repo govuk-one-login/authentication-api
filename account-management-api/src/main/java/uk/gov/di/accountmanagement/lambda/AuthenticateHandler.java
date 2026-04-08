@@ -19,14 +19,17 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.*;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class AuthenticateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -74,6 +77,7 @@ public class AuthenticateHandler
             APIGatewayProxyRequestEvent input, Context context) {
         String sessionId =
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachTraceId();
         attachSessionIdToLogs(sessionId);
         LOG.info("Request received to the AuthenticateHandler");
 
@@ -87,7 +91,8 @@ public class AuthenticateHandler
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                        new ArrayList<>());
 
         try {
             AuthenticateRequest loginRequest =
@@ -97,8 +102,10 @@ public class AuthenticateHandler
                     authenticationService.getUserProfileByEmailMaybe(loginRequest.getEmail());
             if (userProfile.isEmpty()) {
                 auditService.submitAuditEvent(
-                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        auditContext,
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
             }
             var internalCommonSubjectIdentifier =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -111,8 +118,10 @@ public class AuthenticateHandler
                             loginRequest.getEmail(), loginRequest.getPassword());
             if (!hasValidCredentials) {
                 auditService.submitAuditEvent(
-                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
-                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        auditContext,
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_LOGIN_CREDS);
             }
 
             if (configurationService.isAccountInterventionServiceCallInAuthenticateEnabled()) {
@@ -121,37 +130,51 @@ public class AuthenticateHandler
                             accountInterventionsService.sendAccountInterventionsOutboundRequest(
                                     internalCommonSubjectIdentifier.getValue());
 
-                    if (interventions.state().suspended()) {
+                    if (interventions.state().suspended()
+                            && !interventions.state().resetPassword()
+                            && !interventions.state().reproveIdentity()) {
                         auditService.submitAuditEvent(
                                 AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
-                                auditContext);
+                                auditContext,
+                                AUDIT_EVENT_COMPONENT_ID_AUTH);
                         LOG.info("Users account is suspended.");
-                        return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1083);
+                        return generateApiGatewayProxyErrorResponse(
+                                403, ErrorResponse.ACCT_SUSPENDED);
                     }
 
                     if (interventions.state().blocked()) {
                         auditService.submitAuditEvent(
                                 AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
-                                auditContext);
+                                auditContext,
+                                AUDIT_EVENT_COMPONENT_ID_AUTH);
                         LOG.info("Users account is blocked.");
-                        return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1084);
+                        return generateApiGatewayProxyErrorResponse(
+                                403, ErrorResponse.ACCT_BLOCKED);
                     }
                 } catch (UnsuccessfulAccountInterventionsResponseException e) {
                     auditService.submitAuditEvent(
-                            AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                            AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                            auditContext,
+                            AUDIT_EVENT_COMPONENT_ID_AUTH);
                     LOG.info("Request to Account Intervention Service failed.");
-                    return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1055);
+                    return generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR);
                 }
             }
             LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
 
-            auditService.submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                    auditContext,
+                    AUDIT_EVENT_COMPONENT_ID_AUTH);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {
             auditService.submitAuditEvent(
-                    AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+                    AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                    auditContext,
+                    AUDIT_EVENT_COMPONENT_ID_AUTH);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

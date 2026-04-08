@@ -9,6 +9,7 @@ import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
+import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -77,13 +79,8 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getBulkUserEmailBatchQueryLimitShouldDefault() {
-        assertEquals(25, configurationService.getBulkUserEmailBatchQueryLimit());
-    }
-
-    @Test
-    void getBulkUserEmailMaxBatchCountShouldDefault() {
-        assertEquals(20, configurationService.getBulkUserEmailMaxBatchCount());
+    void getBulkUserEmailBatchSizeShouldDefault() {
+        assertEquals(1, configurationService.getBulkUserEmailBatchSize());
     }
 
     @Test
@@ -97,8 +94,8 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getBulkUserEmailBatchPauseDurationShouldDefault() {
-        assertEquals(0, configurationService.getBulkUserEmailBatchPauseDuration());
+    void getBulkUserEmailAudienceLoadPauseDurationShouldDefault() {
+        assertEquals(0, configurationService.getBulkUserEmailAudienceLoadPauseDuration());
     }
 
     @Test
@@ -151,6 +148,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getBulkUserEmailSenderTypeShouldDefault() {
+        assertEquals("UNKNOWN", configurationService.getBulkUserEmailSenderType());
+    }
+
+    @Test
     void getDefaultOtpCodeExpiryShouldDefault() {
         assertEquals(900, configurationService.getDefaultOtpCodeExpiry());
     }
@@ -178,11 +180,6 @@ class ConfigurationServiceTest {
     @Test
     void getAuthAppCodeAllowedWindowsShouldDefault() {
         assertEquals(9, configurationService.getAuthAppCodeAllowedWindows());
-    }
-
-    @Test
-    void isEmailCheckEnabledShouldDefault() {
-        assertFalse(configurationService.isEmailCheckEnabled());
     }
 
     @Test
@@ -256,11 +253,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getDocAppEncryptionKeyIDShouldDefault() {
-        assertEquals("", configurationService.getDocAppEncryptionKeyID());
-    }
-
-    @Test
     void getDocAppJwksUriShouldDefault() {
         assertEquals(URI.create(""), configurationService.getDocAppJwksUri());
     }
@@ -301,9 +293,7 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getOrchestrationToAuthenticationSigningPublicKeysShouldReturnSingleValue() {
-        var expectedKey = "expectedKey";
-        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY")).thenReturn(expectedKey);
+    void shouldNotReturnOrchStubSigningKeyIfNotPresent() {
         when(systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", ""))
                 .thenReturn("");
 
@@ -312,25 +302,23 @@ class ConfigurationServiceTest {
         configurationServiceWithMockedSystemService.setSystemService(systemService);
 
         assertEquals(
-                Collections.singletonList(expectedKey),
+                List.of(),
                 configurationServiceWithMockedSystemService
                         .getOrchestrationToAuthenticationSigningPublicKeys());
     }
 
     @Test
-    void getOrchestrationToAuthenticationSigningPublicKeysShouldReturnTwoValues() {
-        var expectedKey = "expectedKey";
-        when(systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY")).thenReturn(expectedKey);
-        var secondExpectedKey = "expectedKey2";
+    void shouldReturnOrchStubSigningKeyIfPresent() {
+        var stubKey = "expectedKey";
         when(systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", ""))
-                .thenReturn(secondExpectedKey);
+                .thenReturn(stubKey);
 
         ConfigurationService configurationServiceWithMockedSystemService =
                 new ConfigurationService();
         configurationServiceWithMockedSystemService.setSystemService(systemService);
 
         assertEquals(
-                List.of(secondExpectedKey, expectedKey),
+                List.of(stubKey),
                 configurationServiceWithMockedSystemService
                         .getOrchestrationToAuthenticationSigningPublicKeys());
     }
@@ -569,6 +557,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getMfaResetJarDeprecatedSigningKeyAliasShouldNotDefault() {
+        assertNull(configurationService.getMfaResetJarDeprecatedSigningKeyAlias());
+    }
+
+    @Test
     void getMfaResetJarSigningKeyIdShouldNotDefault() {
         assertNull(configurationService.getMfaResetJarSigningKeyId());
     }
@@ -655,6 +648,23 @@ class ConfigurationServiceTest {
     @Test
     void isAccountInterventionServiceCallInAuthenticateEnabledShouldDefaultFalse() {
         assertFalse(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled());
+    }
+
+    @Test
+    void getInternationalSmsNumberSentLimitShouldThrowWhenEnvVarUnset() {
+        assertThrows(
+                MissingEnvVariableException.class,
+                () -> configurationService.getInternationalSmsNumberSendLimit());
+    }
+
+    @Test
+    void isForcedMFAResetAfterMFACheckEnabledShouldDefaultFalse() {
+        assertFalse(configurationService.isForcedMFAResetAfterMFACheckEnabled());
+    }
+
+    @Test
+    void isEnhancedAuthCodeProtectionEnabledShouldDefault() {
+        assertFalse(configurationService.isEnhancedAuthCodeProtectionEnabled());
     }
 
     private static Stream<Arguments> commaSeparatedStringContains() {

@@ -4,7 +4,6 @@ public enum CloudwatchMetricDimensions {
     ACCOUNT("Account"),
     ENVIRONMENT("Environment"),
     CLIENT("Client"),
-    IS_TEST("IsTest"),
     REQUESTED_LEVEL_OF_CONFIDENCE("RequestedLevelOfConfidence"),
     MFA_REQUIRED("MfaRequired"),
     CLIENT_NAME("ClientName"),

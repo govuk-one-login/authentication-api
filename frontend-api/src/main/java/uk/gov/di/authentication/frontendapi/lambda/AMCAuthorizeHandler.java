@@ -1,0 +1,122 @@
+package uk.gov.di.authentication.frontendapi.lambda;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.State;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
+import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.TransportJWTConfig;
+import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
+import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.frontendapi.services.JwtService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.time.Clock;
+import java.util.List;
+
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+
+public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest> {
+    private final AMCService amcService;
+    private final DynamoAmcStateService dynamoAmcStateService;
+
+    public AMCAuthorizeHandler() {
+        this(ConfigurationService.getInstance());
+    }
+
+    public AMCAuthorizeHandler(ConfigurationService configurationService) {
+        super(AMCAuthorizeRequest.class, configurationService);
+        this.amcService =
+                new AMCService(
+                        configurationService,
+                        new NowHelper.NowClock(Clock.systemUTC()),
+                        new JwtService(new KmsConnectionService(configurationService)));
+        this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
+    }
+
+    @SuppressWarnings("java:S1185")
+    @Override
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return super.handleRequest(input, context);
+    }
+
+    public AMCAuthorizeHandler(
+            ConfigurationService configurationService,
+            AuthenticationService authenticationService,
+            AuthSessionService authSessionService,
+            AMCService amcService,
+            DynamoAmcStateService amcStateService) {
+        super(
+                AMCAuthorizeRequest.class,
+                configurationService,
+                authenticationService,
+                authSessionService);
+        this.amcService = amcService;
+        this.dynamoAmcStateService = amcStateService;
+    }
+
+    @Override
+    public APIGatewayProxyResponseEvent handleRequestWithUserContext(
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            AMCAuthorizeRequest request,
+            UserContext userContext) {
+
+        AuthSessionItem authSessionItem = userContext.getAuthSession();
+        var userProfile =
+                authenticationService
+                        .getUserProfileByEmailMaybe(authSessionItem.getEmailAddress())
+                        .orElse(null);
+
+        if (userProfile == null) {
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+        }
+
+        List<AccessTokenConfig> accessTokenConfigsForJourneyType =
+                request.amcJourneyType().getAccessTokenConfigs(configurationService);
+        TransportJWTConfig transportJwtConfig =
+                request.amcJourneyType().getTransportJwtConfig(configurationService);
+        var state = new State();
+        dynamoAmcStateService.store(state.getValue(), userContext.getClientSessionId());
+
+        Result<JwtFailureReason, AMCAuthorizationUrlAndCookie> result =
+                amcService.buildAuthorizationResult(
+                        authSessionItem.getInternalCommonSubjectId(),
+                        transportJwtConfig.scope(),
+                        authSessionItem,
+                        userProfile.getPublicSubjectID(),
+                        transportJwtConfig.redirectUri(),
+                        accessTokenConfigsForJourneyType,
+                        state);
+
+        return result.fold(
+                AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,
+                success -> {
+                    try {
+                        return generateApiGatewayProxyResponse(
+                                200, new AMCAuthorizeResponse(success.url(), success.amcCookie()));
+                    } catch (Json.JsonException e) {
+                        return generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.SERIALIZATION_ERROR);
+                    }
+                });
+    }
+}

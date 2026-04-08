@@ -34,13 +34,9 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
-import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.RequestBodyHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -58,32 +54,30 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segme
 public class TokenService {
 
     private final ConfigurationService configService;
-    private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final OrchAccessTokenService orchAccessTokenService;
+    private final OrchRefreshTokenService orchRefreshTokenService;
     private final OidcAPI oidcApi;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOG = LogManager.getLogger(TokenService.class);
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
-    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final List<String> ALLOWED_GRANTS =
             List.of(GrantType.AUTHORIZATION_CODE.getValue(), GrantType.REFRESH_TOKEN.getValue());
 
-    private final Json objectMapper = SerializationService.getInstance();
-
     public TokenService(
             ConfigurationService configService,
-            RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
+            OrchAccessTokenService orchAccessTokenService,
+            OrchRefreshTokenService orchRefreshTokenService,
             OidcAPI oidcApi) {
         this.configService = configService;
-        this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
+        this.orchAccessTokenService = orchAccessTokenService;
+        this.orchRefreshTokenService = orchRefreshTokenService;
         this.oidcApi = oidcApi;
     }
 
     public OIDCTokenResponse generateTokenResponse(
             String clientID,
-            Subject internalSubject,
             Scope authRequestScopes,
             Map<String, Object> additionalTokenClaims,
             Subject rpPairwiseSubject,
@@ -93,7 +87,8 @@ public class TokenService {
             JWSAlgorithm signingAlgorithm,
             String journeyId,
             String vot,
-            Long authTime) {
+            Long authTime,
+            String authCode) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
                 segmentedFunctionCall(
@@ -101,13 +96,13 @@ public class TokenService {
                         () ->
                                 generateAndStoreAccessToken(
                                         clientID,
-                                        internalSubject,
                                         scopesForToken,
                                         rpPairwiseSubject,
                                         internalPairwiseSubject,
                                         claimsRequest,
                                         signingAlgorithm,
-                                        journeyId));
+                                        journeyId,
+                                        authCode));
         AccessTokenHash accessTokenHash =
                 segmentedFunctionCall(
                         "AccessTokenHash.compute",
@@ -134,11 +129,12 @@ public class TokenService {
                             () ->
                                     generateAndStoreRefreshToken(
                                             clientID,
-                                            internalSubject,
                                             scopesForToken,
                                             rpPairwiseSubject,
                                             internalPairwiseSubject,
-                                            signingAlgorithm));
+                                            signingAlgorithm,
+                                            authCode,
+                                            journeyId));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -147,29 +143,31 @@ public class TokenService {
 
     public OIDCTokenResponse generateRefreshTokenResponse(
             String clientID,
-            Subject internalSubject,
             List<String> scopes,
             Subject rpPaiwiseSubject,
             Subject internalPairwiseSubject,
-            JWSAlgorithm signingAlgorithm) {
+            JWSAlgorithm signingAlgorithm,
+            String authCode,
+            String clientSessionId) {
         AccessToken accessToken =
                 generateAndStoreAccessToken(
                         clientID,
-                        internalSubject,
                         scopes,
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
                         null,
                         signingAlgorithm,
-                        "refreshToken");
+                        clientSessionId,
+                        authCode);
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(
                         clientID,
-                        internalSubject,
                         scopes,
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
-                        signingAlgorithm);
+                        signingAlgorithm,
+                        authCode,
+                        clientSessionId);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -191,7 +189,7 @@ public class TokenService {
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request is missing redirect_uri parameter"));
             }
-            if (!requestBody.containsKey("code")) {
+            if (requestBody.get("code") == null || requestBody.get("code").isEmpty()) {
                 return Optional.of(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
@@ -247,9 +245,7 @@ public class TokenService {
         idTokenClaims.putAll(additionalTokenClaims);
         if (!isDocAppJourney) {
             idTokenClaims.setClaim("vot", vot);
-            if (configService.isReturnAuthTimeInIdTokenEnabled()) {
-                idTokenClaims.setClaim("auth_time", authTime);
-            }
+            idTokenClaims.setClaim("auth_time", authTime);
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
 
@@ -294,13 +290,13 @@ public class TokenService {
 
     private AccessToken generateAndStoreAccessToken(
             String clientId,
-            Subject internalSubject,
             List<String> scopes,
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
             OIDCClaimsRequest claimsRequest,
             JWSAlgorithm signingAlgorithm,
-            String journeyId) {
+            String journeyId,
+            String authCode) {
 
         LOG.info("Generating AccessToken");
         Date expiryDate =
@@ -339,30 +335,26 @@ public class TokenService {
                 new BearerAccessToken(
                         signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
 
-        try {
-            redisConnectionService.saveWithExpiry(
-                    ACCESS_TOKEN_PREFIX + clientId + "." + rpPairwiseSubject.getValue(),
-                    objectMapper.writeValueAsString(
-                            new AccessTokenStore(
-                                    accessToken.getValue(),
-                                    internalSubject.getValue(),
-                                    internalPairwiseSubject.getValue(),
-                                    journeyId)),
-                    configService.getAccessTokenExpiry());
-        } catch (JsonException e) {
-            LOG.error("Unable to save access token to Redis");
-            throw new RuntimeException(e);
-        }
+        String clientAndRpPairwiseId = clientId + "." + rpPairwiseSubject.getValue();
+
+        orchAccessTokenService.saveAccessToken(
+                clientAndRpPairwiseId,
+                authCode,
+                accessToken.getValue(),
+                internalPairwiseSubject.getValue(),
+                journeyId);
+
         return accessToken;
     }
 
     private RefreshToken generateAndStoreRefreshToken(
             String clientId,
-            Subject internalSubject,
             List<String> scopes,
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
-            JWSAlgorithm signingAlgorithm) {
+            JWSAlgorithm signingAlgorithm,
+            String authCode,
+            String journeyId) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         var jwtId = IdGenerator.generate();
@@ -381,40 +373,38 @@ public class TokenService {
                 generateSignedJwtUsingExternalKey(claimsSet, Optional.empty(), signingAlgorithm);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
-        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
-        var store =
-                new RefreshTokenStore(
-                        refreshToken.getValue(),
-                        internalSubject.toString(),
-                        internalPairwiseSubject.toString());
-        try {
-            redisConnectionService.saveWithExpiry(
-                    redisKey,
-                    objectMapper.writeValueAsString(store),
-                    configService.getSessionExpiry());
-        } catch (JsonException e) {
-            throw new RuntimeException("Error serializing refresh token store", e);
-        }
+        orchRefreshTokenService.saveRefreshToken(
+                jwtId,
+                internalPairwiseSubject.toString(),
+                refreshToken.getValue(),
+                authCode,
+                journeyId);
 
         return refreshToken;
     }
 
     public SignedJWT generateSignedJwtUsingExternalKey(
             JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
-        String alias =
-                algorithm == JWSAlgorithm.ES256
-                        ? configService.getExternalTokenSigningKeyAlias()
-                        : configService.getExternalTokenSigningKeyRsaAlias();
+        String alias;
+        if (configService.isUseNewV2TokenSigningKeysEnabled()) {
+            alias =
+                    algorithm == JWSAlgorithm.ES256
+                            ? configService.getNextExternalTokenSigningKeyAliasV2()
+                            : configService.getNextExternalTokenSigningKeyRsaAliasV2();
+        } else {
+            alias =
+                    algorithm == JWSAlgorithm.ES256
+                            ? configService.getExternalTokenSigningKeyAlias()
+                            : configService.getExternalTokenSigningKeyRsaAlias();
+        }
         return generateSignedJWT(claimsSet, type, algorithm, alias);
     }
 
     public SignedJWT generateSignedJwtUsingStorageKey(
             JWTClaimsSet claimsSet, Optional<String> type) {
-        return generateSignedJWT(
-                claimsSet,
-                type,
-                JWSAlgorithm.ES256,
-                configService.getStorageTokenSigningKeyAlias());
+        String storageTokenSigningKeyAlias = configService.getStorageTokenSigningKeyAlias();
+
+        return generateSignedJWT(claimsSet, type, JWSAlgorithm.ES256, storageTokenSigningKeyAlias);
     }
 
     private SignedJWT generateSignedJWT(

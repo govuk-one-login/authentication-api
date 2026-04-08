@@ -1,10 +1,10 @@
-module "frontend_api_verify_code_role" {
+module "frontend_api_verify_code_role_with_combined_auth_attempts_policy" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "frontend-api-verify-code-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
@@ -13,20 +13,19 @@ module "frontend_api_verify_code_role" {
     aws_iam_policy.dynamo_account_modifiers_write_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
-    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
-    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_read_write_delete_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_policy.arn,
     aws_iam_policy.dynamo_auth_session_write_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
-  ]
+  ], var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
   extra_tags = {
     Service = "verify-code"
   }
 }
+
 
 module "verify_code" {
   source = "../modules/endpoint-module-v2"
@@ -77,7 +76,7 @@ module "verify_code" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.frontend_api_verify_code_role.arn
+  lambda_role_arn                        = module.frontend_api_verify_code_role_with_combined_auth_attempts_policy.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention

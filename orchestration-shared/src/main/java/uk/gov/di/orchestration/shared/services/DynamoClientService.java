@@ -6,6 +6,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ManualUpdateClientRegistryRequest;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -13,10 +14,8 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
-import static uk.gov.di.orchestration.shared.helpers.TestClientHelper.emailMatchesAllowlist;
 
 public class DynamoClientService implements ClientService {
 
@@ -24,28 +23,21 @@ public class DynamoClientService implements ClientService {
     private final DynamoDbTable<ClientRegistry> dynamoClientRegistryTable;
 
     public DynamoClientService(ConfigurationService configurationService) {
-        var tableName = CLIENT_REGISTRY_TABLE;
-        if (configurationService.getDynamoArnPrefix().isPresent()) {
-            tableName = configurationService.getDynamoArnPrefix().get() + tableName;
-        } else {
-            tableName = configurationService.getEnvironment() + "-" + tableName;
-        }
+        var tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
 
+        // This is for processing identity handler
+        if (configurationService.getOrchDynamoArnPrefix().isPresent()) {
+            tableName = configurationService.getOrchDynamoArnPrefix().get() + CLIENT_REGISTRY_TABLE;
+        }
         var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService);
         this.dynamoClientRegistryTable =
                 dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
-        warmUp();
     }
 
     public DynamoClientService(
             ConfigurationService configurationService,
             DynamoDbEnhancedClient dynamoDbEnhancedClient) {
-        var tableName = CLIENT_REGISTRY_TABLE;
-        if (configurationService.getDynamoArnPrefix().isPresent()) {
-            tableName = configurationService.getDynamoArnPrefix().get() + CLIENT_REGISTRY_TABLE;
-        } else {
-            tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
-        }
+        var tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
         this.dynamoClientRegistryTable =
                 dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(ClientRegistry.class));
     }
@@ -54,6 +46,61 @@ public class DynamoClientService implements ClientService {
     public boolean isValidClient(String clientId) {
         return dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build())
                 != null;
+    }
+
+    public void addClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            String publicKeySource,
+            String publicKey,
+            String jwksUrl,
+            List<String> scopes,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean jarValidationRequired,
+            List<String> claims,
+            String clientType,
+            boolean identityVerificationSupported,
+            String clientSecret,
+            String tokenAuthMethod,
+            String idTokenSigningAlgorithm,
+            List<String> clientLoCs,
+            String channel,
+            boolean maxAgeEnabled,
+            boolean pkceEnforced,
+            String landingPageUrl) {
+        addClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                publicKeySource,
+                publicKey,
+                jwksUrl,
+                scopes,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                jarValidationRequired,
+                claims,
+                clientType,
+                identityVerificationSupported,
+                clientSecret,
+                tokenAuthMethod,
+                idTokenSigningAlgorithm,
+                clientLoCs,
+                channel,
+                maxAgeEnabled,
+                pkceEnforced,
+                landingPageUrl,
+                null);
     }
 
     @Override
@@ -81,7 +128,9 @@ public class DynamoClientService implements ClientService {
             List<String> clientLoCs,
             String channel,
             boolean maxAgeEnabled,
-            boolean pkceEnforced) {
+            boolean pkceEnforced,
+            String landingPageUrl,
+            Integer rateLimit) {
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(clientID)
@@ -106,18 +155,24 @@ public class DynamoClientService implements ClientService {
                         .withActive(true)
                         .withChannel(channel)
                         .withMaxAgeEnabled(maxAgeEnabled)
-                        .withPKCEEnforced(pkceEnforced);
+                        .withPKCEEnforced(pkceEnforced)
+                        .withLandingPageUrl(landingPageUrl);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
         }
         if (Objects.nonNull(clientLoCs)) {
             clientRegistry.withClientLoCs(clientLoCs);
         }
+
+        if (rateLimit != null) {
+            clientRegistry.withRateLimit(rateLimit);
+        }
         dynamoClientRegistryTable.putItem(clientRegistry);
     }
 
     @Override
-    public ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest) {
+    public ClientRegistry updateSSEClient(
+            String clientId, UpdateClientConfigRequest updateRequest) {
         ClientRegistry clientRegistry =
                 dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build());
         Optional.ofNullable(updateRequest.getRedirectUris())
@@ -154,6 +209,22 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withMaxAgeEnabled);
         Optional.ofNullable(updateRequest.getPKCEEnforced())
                 .ifPresent(clientRegistry::withPKCEEnforced);
+        Optional.ofNullable(updateRequest.getLandingPageUrl())
+                .ifPresent(clientRegistry::withLandingPageUrl);
+        dynamoClientRegistryTable.putItem(clientRegistry);
+        return clientRegistry;
+    }
+
+    @Override
+    public ClientRegistry manualUpdateClient(
+            String clientId, ManualUpdateClientRegistryRequest updateRequest) {
+        ClientRegistry clientRegistry =
+                dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build());
+        Optional.ofNullable(updateRequest.rateLimit())
+                .ifPresent(
+                        rateLimit ->
+                                clientRegistry.withRateLimit(
+                                        rateLimit.isBlank() ? null : Integer.parseInt(rateLimit)));
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }
@@ -167,19 +238,5 @@ public class DynamoClientService implements ClientService {
     @Override
     public ClientID generateClientID() {
         return new ClientID(IdGenerator.generate());
-    }
-
-    @Override
-    public boolean isTestJourney(String clientID, String emailAddress) {
-        var client = getClient(clientID);
-
-        return client.map(ClientRegistry::getTestClientEmailAllowlist)
-                .filter(Predicate.not(List::isEmpty))
-                .map(list -> emailMatchesAllowlist(emailAddress, list))
-                .orElse(false);
-    }
-
-    private void warmUp() {
-        dynamoClientRegistryTable.describeTable();
     }
 }

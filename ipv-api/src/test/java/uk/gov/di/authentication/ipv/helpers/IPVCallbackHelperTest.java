@@ -24,31 +24,25 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
-import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.entity.AccountIntervention;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -78,19 +72,15 @@ import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMes
 
 class IPVCallbackHelperTest {
     protected final Json objectMapper = SerializationService.getInstance();
-    private final AccountInterventionService accountInterventionService =
-            mock(AccountInterventionService.class);
-    private final AuditContext auditContext = mock(AuditContext.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthCodeResponseGenerationService authCodeResponseService =
             mock(AuthCodeResponseGenerationService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final Metrics metrics = mock(Metrics.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient spotSqsClient = mock(AwsSqsClient.class);
     private final OidcAPI oidcAPI = mock(OidcAPI.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
 
@@ -103,27 +93,61 @@ class IPVCallbackHelperTest {
     private static final Subject SUBJECT = new Subject("subject-id");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
-    private static final String TEST_INTERNAL_COMMON_SUBJECT_ID_WITH_INTERVENTION =
-            "internal-common-subject-id-with-intervention";
     private static final byte[] salt =
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
     private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(salt);
-    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2 =
+    private static final List<VectorOfTrust> VTR_LIST_P0_AND_P2 =
             List.of(
                     VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
                     VectorOfTrust.of(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
+
+    private static final List<VectorOfTrust> VTR_LIST_P1_ONLY =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL));
     private static final List<VectorOfTrust> VTR_LIST_P2_ONLY =
             List.of(
                     VectorOfTrust.of(
                             CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                     VectorOfTrust.of(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
+
+    private static final List<VectorOfTrust> VTR_LIST_P3_ONLY =
+            List.of(
+                    VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.HIGH_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
+    private static final List<VectorOfTrust> VTR_LIST_P2_AND_P3 =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
+
+    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P3 =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
+
+    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2_AND_P3 =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
     private static final Subject RP_PAIRWISE_SUBJECT = new Subject("rp-pairwise-id");
     private static final State RP_STATE = new State();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final Long AUTH_TIME = 1234L;
     private static final UserInfo authUserInfo = generateAuthUserInfo();
+    private static final Long fakeSpotQueuedAt = 1771589314135L;
 
     private static final UserInfo p0VotUserIdentityUserInfo =
             new UserInfo(
@@ -132,12 +156,32 @@ class IPVCallbackHelperTest {
                                     "sub", "sub-val",
                                     "vot", "P0",
                                     "vtm", OIDC_TRUSTMARK_URI.toString())));
+
+    private static final UserInfo p1VotUserIdentityUserInfo =
+            new UserInfo(
+                    new JSONObject(
+                            Map.of(
+                                    "sub", "sub-val",
+                                    "vot", "P1",
+                                    "vtm", OIDC_TRUSTMARK_URI.toString(),
+                                    "https://vocab.account.gov.uk/v1/coreIdentity", "core-identity",
+                                    "https://vocab.account.gov.uk/v1/passport", "passport")));
     private static final UserInfo p2VotUserIdentityUserInfo =
             new UserInfo(
                     new JSONObject(
                             Map.of(
                                     "sub", "sub-val",
                                     "vot", "P2",
+                                    "vtm", OIDC_TRUSTMARK_URI.toString(),
+                                    "https://vocab.account.gov.uk/v1/coreIdentity", "core-identity",
+                                    "https://vocab.account.gov.uk/v1/passport", "passport")));
+
+    private static final UserInfo p3VotUserIdentityUserInfo =
+            new UserInfo(
+                    new JSONObject(
+                            Map.of(
+                                    "sub", "sub-val",
+                                    "vot", "P3",
                                     "vtm", OIDC_TRUSTMARK_URI.toString(),
                                     "https://vocab.account.gov.uk/v1/coreIdentity", "core-identity",
                                     "https://vocab.account.gov.uk/v1/passport", "passport")));
@@ -150,8 +194,13 @@ class IPVCallbackHelperTest {
 
     private static Stream<Arguments> validUserIdentities() {
         return Stream.of(
-                Arguments.of(p0VotUserIdentityUserInfo, VTR_LIST_P1_AND_P2),
-                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_ONLY));
+                Arguments.of(p0VotUserIdentityUserInfo, VTR_LIST_P0_AND_P2),
+                Arguments.of(p1VotUserIdentityUserInfo, VTR_LIST_P1_ONLY),
+                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_ONLY),
+                Arguments.of(p3VotUserIdentityUserInfo, VTR_LIST_P3_ONLY),
+                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_AND_P3),
+                Arguments.of(p3VotUserIdentityUserInfo, VTR_LIST_P1_AND_P3),
+                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P1_AND_P2_AND_P3));
     }
 
     @BeforeEach
@@ -163,33 +212,24 @@ class IPVCallbackHelperTest {
                         auditService,
                         authCodeResponseService,
                         orchAuthCodeService,
-                        cloudwatchMetricsService,
-                        dynamoClientService,
+                        metrics,
+                        configurationService,
                         dynamoIdentityService,
                         SerializationService.getInstance(),
-                        sessionService,
                         sqsClient,
+                        spotSqsClient,
                         oidcAPI,
                         orchSessionService);
-        when(accountInterventionService.getAccountIntervention(
-                        TEST_INTERNAL_COMMON_SUBJECT_ID, auditContext))
-                .thenReturn(
-                        new AccountIntervention(
-                                new AccountInterventionState(false, false, false, false)));
-        when(accountInterventionService.getAccountIntervention(
-                        TEST_INTERNAL_COMMON_SUBJECT_ID_WITH_INTERVENTION, auditContext))
-                .thenReturn(
-                        new AccountIntervention(
-                                new AccountInterventionState(false, true, false, false)));
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        anyLong()))
+                        anyLong(),
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(AUTH_CODE);
-
-        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
+        when(configurationService.isNewSpotRequestQueueWritingEnabled()).thenReturn(true);
+        when(configurationService.isOldSpotRequestQueueWritingEnabled()).thenReturn(true);
     }
 
     @Test
@@ -228,8 +268,8 @@ class IPVCallbackHelperTest {
     @MethodSource("validUserIdentities")
     void shouldReturnEmptyErrorObjectIfUserIdentityVotInVtrList(
             UserInfo userInfo, List<VectorOfTrust> vtrList) throws IpvCallbackException {
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         var response = helper.validateUserIdentityResponse(userInfo, vtrList);
-
         assertEquals(Optional.empty(), response);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
@@ -263,6 +303,7 @@ class IPVCallbackHelperTest {
 
     @Test
     void shouldThrowIpvCallbackExceptionIfTrustmarkIsInvalid() {
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         var invalidTrustmarkUserIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -286,6 +327,7 @@ class IPVCallbackHelperTest {
 
     @Test
     void shouldQueueSPOTRequestIfValidFormat() throws JsonException {
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         helper.queueSPOTRequest(
                 new LogIds(),
                 "sector-identifier",
@@ -305,24 +347,26 @@ class IPVCallbackHelperTest {
                         + CLIENT_ID.getValue()
                         + "\"}";
         verify(sqsClient).send(spotRequestString);
+        verify(spotSqsClient).send(spotRequestString);
         assertThat(
                 logging.events(), hasItem(withMessageContaining("SPOT request placed on queue")));
     }
 
     @Test
     void shouldThrowJsonExceptionAndDoesNotInteractWithSqsIfCannotMapRequestToJson() {
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         var objectMapperMock = mock(SerializationService.class);
         helper =
                 new IPVCallbackHelper(
                         auditService,
                         authCodeResponseService,
                         orchAuthCodeService,
-                        cloudwatchMetricsService,
-                        dynamoClientService,
+                        metrics,
+                        configurationService,
                         dynamoIdentityService,
                         objectMapperMock,
-                        sessionService,
                         sqsClient,
+                        spotSqsClient,
                         oidcAPI,
                         orchSessionService);
         when(objectMapperMock.writeValueAsString(any()))
@@ -345,6 +389,7 @@ class IPVCallbackHelperTest {
                 logging.events(),
                 hasItem(withMessageContaining("Constructing SPOT request ready to queue")));
         verifyNoInteractions(sqsClient);
+        verifyNoInteractions(spotSqsClient);
         assertEquals("json-exception", exception.getMessage());
 
         assertNoAuthorisationCodeGeneratedAndSaved();
@@ -353,7 +398,10 @@ class IPVCallbackHelperTest {
     @Test
     void shouldSaveAdditionalIdentityClaimsToDynamo() {
         helper.saveIdentityClaimsToDynamo(
-                CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, p2VotUserIdentityUserInfo);
+                CLIENT_SESSION_ID,
+                RP_PAIRWISE_SUBJECT,
+                p2VotUserIdentityUserInfo,
+                fakeSpotQueuedAt);
 
         assertThat(
                 logging.events(),
@@ -369,7 +417,8 @@ class IPVCallbackHelperTest {
                         "rp-pairwise-id",
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
-                        "core-identity");
+                        "core-identity",
+                        fakeSpotQueuedAt);
     }
 
     @Test
@@ -382,7 +431,8 @@ class IPVCallbackHelperTest {
                                         "vot", "P2",
                                         "vtm", OIDC_TRUSTMARK_URI.toString(),
                                         "https://vocab.account.gov.uk/v1/passport", "passport")));
-        helper.saveIdentityClaimsToDynamo(CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo);
+        helper.saveIdentityClaimsToDynamo(
+                CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo, fakeSpotQueuedAt);
 
         assertThat(
                 logging.events(),
@@ -398,7 +448,8 @@ class IPVCallbackHelperTest {
                         "rp-pairwise-id",
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
-                        "");
+                        "",
+                        fakeSpotQueuedAt);
     }
 
     @Test
@@ -415,7 +466,8 @@ class IPVCallbackHelperTest {
                                         put("https://vocab.account.gov.uk/v1/passport", "passport");
                                     }
                                 }));
-        helper.saveIdentityClaimsToDynamo(CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo);
+        helper.saveIdentityClaimsToDynamo(
+                CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo, fakeSpotQueuedAt);
 
         assertThat(
                 logging.events(),
@@ -431,22 +483,59 @@ class IPVCallbackHelperTest {
                         "rp-pairwise-id",
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
-                        "");
+                        "",
+                        fakeSpotQueuedAt);
     }
 
     @Test
-    void shouldGenerateAndSaveAuthorisationCode() throws UserNotFoundException {
-        OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID).withAuthTime(AUTH_TIME);
+    void handlesNullSpotQueuedAtTimestamp() {
+        var userInfo =
+                new UserInfo(
+                        new JSONObject(
+                                new HashMap<String, String>() {
+                                    {
+                                        put("sub", "sub-val");
+                                        put("vot", "P2");
+                                        put("vtm", OIDC_TRUSTMARK_URI.toString());
+                                        put("https://vocab.account.gov.uk/v1/coreIdentity", null);
+                                        put("https://vocab.account.gov.uk/v1/passport", "passport");
+                                    }
+                                }));
+        helper.saveIdentityClaimsToDynamo(CLIENT_SESSION_ID, RP_PAIRWISE_SUBJECT, userInfo, null);
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Checking for additional identity claims to save to dynamo")));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Additional identity claims present: true")));
+        verify(dynamoIdentityService)
+                .saveIdentityClaims(
+                        CLIENT_SESSION_ID,
+                        "rp-pairwise-id",
+                        Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
+                        "P2",
+                        "",
+                        null);
+    }
+
+    @Test
+    void shouldGenerateAndSaveAuthorisationCode() {
+        OrchSessionItem orchSession =
+                new OrchSessionItem(SESSION_ID)
+                        .withAuthTime(AUTH_TIME)
+                        .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT_ID);
+        var orchClientSession =
+                new OrchClientSessionItem(CLIENT_SESSION_ID)
+                        .withClientName(CLIENT_NAME)
+                        .withRpPairwiseId(RP_PAIRWISE_SUBJECT.getValue());
 
         helper.generateReturnCodeAuthenticationResponse(
                 generateAuthRequest(new OIDCClaimsRequest()),
-                CLIENT_SESSION_ID,
-                new Session(),
-                SESSION_ID,
                 orchSession,
-                CLIENT_NAME,
-                RP_PAIRWISE_SUBJECT,
-                "an-internal-pairwise-subject-id",
+                orchClientSession,
                 new UserInfo(new Subject()),
                 "127.0.0.1",
                 "a-persistent-session-id",
@@ -495,11 +584,12 @@ class IPVCallbackHelperTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        eq(AUTH_TIME));
+                        eq(AUTH_TIME),
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_ID));
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any(), any());
     }
 }

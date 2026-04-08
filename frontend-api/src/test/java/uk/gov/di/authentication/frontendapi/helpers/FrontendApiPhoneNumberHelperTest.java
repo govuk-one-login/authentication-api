@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
+import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
 
 class FrontendApiPhoneNumberHelperTest {
 
@@ -30,5 +31,21 @@ class FrontendApiPhoneNumberHelperTest {
                 Arguments.of(
                         new UserMfaDetail(false, false, MFAMethodType.SMS, "123456789"), "789"),
                 Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, "12"), null));
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberRedactionCases")
+    void shouldRedactPhoneNumber(String phoneNumber, String expected) {
+        var result = redactPhoneNumber(phoneNumber);
+        assertThat(result, equalTo(expected));
+    }
+
+    private static Stream<Arguments> phoneNumberRedactionCases() {
+        return Stream.of(
+                Arguments.of("+447123456789", "*********6789"),
+                Arguments.of("07987654321", "*******4321"),
+                Arguments.of("1234", "1234"),
+                Arguments.of("123456789", "*****6789"),
+                Arguments.of("+11234567890", "********7890"));
     }
 }

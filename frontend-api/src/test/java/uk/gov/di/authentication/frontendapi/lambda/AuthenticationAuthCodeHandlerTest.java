@@ -9,28 +9,27 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,6 +40,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -54,17 +54,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.lambda.CheckEmailFraudBlockHandlerTest.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_MOBILE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -74,6 +74,10 @@ class AuthenticationAuthCodeHandlerTest {
     private static final String LOCATION = "location";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
+    private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
+    private static final String TEST_INTERNAL_COMMON_SUBJECT =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_SUBJECT_ID, TEST_SECTOR_IDENTIFIER, TEST_SALT);
     private static final String CALCULATED_PAIRWISE_ID = "some-rp-pairwise-id";
     private static final Long PASSWORD_RESET_TIME = 1696869005821L;
 
@@ -82,57 +86,54 @@ class AuthenticationAuthCodeHandlerTest {
     private final Context context = mock(Context.class);
     private final DynamoAuthCodeService dynamoAuthCodeService = mock(DynamoAuthCodeService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private Session session;
     private AuthSessionItem authSession;
     private final AuditService auditService = mock(AuditService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
 
     private final AuditContext auditContext =
             new AuditContext(
                     CLIENT_ID,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    TEST_SUBJECT_ID,
+                    TEST_INTERNAL_COMMON_SUBJECT,
                     EMAIL,
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
 
     @BeforeEach
     void setUp() throws Json.JsonException {
-        session = new Session();
         authSession =
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
                         .withEmailAddress(CommonTestVariables.EMAIL)
-                        .withClientId(CLIENT_ID);
+                        .withClientId(CLIENT_ID)
+                        .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(clientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(new ClientRegistry().withClientID(CLIENT_ID)));
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         UserProfile userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(configurationService.getEnvironment()).thenReturn("test");
+        when(configurationService.isEnhancedAuthCodeProtectionEnabled()).thenReturn(true);
+        when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(true);
         handler =
                 new AuthenticationAuthCodeHandler(
                         dynamoAuthCodeService,
                         configurationService,
-                        sessionService,
-                        clientService,
                         authenticationService,
                         auditService,
                         cloudwatchMetricsService,
-                        authSessionService);
+                        authSessionService,
+                        permissionDecisionManager);
     }
 
     @Test
@@ -145,7 +146,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -158,7 +161,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -171,7 +176,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -188,7 +195,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -199,7 +208,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
     }
 
     @Test
@@ -252,10 +263,7 @@ class AuthenticationAuthCodeHandlerTest {
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
             mockedClientSubjectHelperClass
-                    .when(
-                            () ->
-                                    ClientSubjectHelper.getSubject(
-                                            eq(userProfile), any(), any(), any()))
+                    .when(() -> ClientSubjectHelper.getSubject(eq(userProfile), any(), any()))
                     .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
             var existingPasswordCount = 1;
             var existingEmailCount = 2;
@@ -311,10 +319,7 @@ class AuthenticationAuthCodeHandlerTest {
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
             mockedClientSubjectHelperClass
-                    .when(
-                            () ->
-                                    ClientSubjectHelper.getSubject(
-                                            eq(userProfile), any(), any(), any()))
+                    .when(() -> ClientSubjectHelper.getSubject(eq(userProfile), any(), any()))
                     .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
             // This is already the case but just to make it explicit here
             authSession.setPreservedReauthCountsForAuditMap(null);
@@ -402,6 +407,87 @@ class AuthenticationAuthCodeHandlerTest {
                         eq(PASSWORD_RESET_TIME),
                         eq(CLIENT_SESSION_ID));
         assertThat(result, hasStatus(200));
+    }
+
+    @Test
+    void shouldReturn500WhenNotPermittedToIssueAuthCode() throws Json.JsonException {
+        // Arrange
+        var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
+        userProfile.setSubjectID(TEST_SUBJECT_ID);
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
+        var event = validAuthCodeRequest();
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(500));
+        assertThat(
+                result,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR)));
+        verify(dynamoAuthCodeService, never())
+                .saveAuthCode(any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(), any());
+    }
+
+    @Test
+    void shouldReturn200WhenNotPermittedToIssueAuthCodeAndFeatureFlagDisabled() {
+        // Arrange
+        when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
+        when(configurationService.isEnhancedAuthCodeProtectionEnabled()).thenReturn(false);
+        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+        var userProfile = new UserProfile();
+        userProfile.setSubjectID(TEST_SUBJECT_ID);
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        var event = validAuthCodeRequest();
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+        verify(dynamoAuthCodeService, times(1))
+                .saveAuthCode(
+                        eq(userProfile.getSubjectID()),
+                        anyString(),
+                        anyList(),
+                        eq(false),
+                        anyString(),
+                        eq(false),
+                        eq(null),
+                        eq(CLIENT_SESSION_ID));
+    }
+
+    @Test
+    void shouldReturn200WhenPermittedToIssueAuthCode() {
+        // Arrange
+        when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(true);
+        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+        var userProfile = new UserProfile();
+        userProfile.setSubjectID(TEST_SUBJECT_ID);
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        var event = validAuthCodeRequest();
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+        verify(dynamoAuthCodeService, times(1))
+                .saveAuthCode(
+                        eq(userProfile.getSubjectID()),
+                        anyString(),
+                        anyList(),
+                        eq(false),
+                        anyString(),
+                        eq(false),
+                        eq(null),
+                        eq(CLIENT_SESSION_ID));
     }
 
     private APIGatewayProxyRequestEvent validAuthCodeRequest() {

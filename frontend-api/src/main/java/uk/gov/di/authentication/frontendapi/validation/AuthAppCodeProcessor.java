@@ -4,10 +4,10 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import javax.crypto.Mac;
@@ -26,8 +27,14 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -42,18 +49,20 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             UserContext userContext,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             int maxRetries,
             CodeRequest codeRequest,
             AuditService auditService,
-            DynamoAccountModifiersService accountModifiersService) {
+            DynamoAccountModifiersService accountModifiersService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 userContext,
                 codeStorageService,
                 maxRetries,
-                dynamoService,
+                authenticationService,
                 auditService,
-                accountModifiersService);
+                accountModifiersService,
+                mfaMethodsService);
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
         this.codeRequest = codeRequest;
@@ -73,16 +82,25 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
         if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
             LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.ERROR_1042);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
+        }
+
+        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+        var deprecatedCodeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(
+                        AUTH_APP, codeRequest.getJourneyType());
+        if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+            LOG.info("Code blocked for session");
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
         }
 
         if (codeRequestType.getJourneyType() != JourneyType.REAUTHENTICATION) {
-            incrementRetryCount(MFAMethodType.AUTH_APP);
+            incrementRetryCount();
         }
 
-        if (hasExceededRetryLimit(MFAMethodType.AUTH_APP)) {
+        if (hasExceededRetryLimit()) {
             LOG.info("Exceeded code retry limit");
-            return Optional.of(ErrorResponse.ERROR_1042);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
         }
 
         var authAppSecret =
@@ -92,29 +110,30 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
         if (Objects.isNull(authAppSecret)) {
             LOG.info("No auth app secret found");
-            return Optional.of(ErrorResponse.ERROR_1081);
+            return Optional.of(ErrorResponse.AUTH_APP_METHOD_NOT_FOUND);
         }
 
         if (!nonRegistrationJourneyTypes.contains(codeRequest.getJourneyType())
                 && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
-            return Optional.of(ErrorResponse.ERROR_1041);
+            return Optional.of(ErrorResponse.INVALID_AUTH_APP_SECRET);
         }
 
         if (!isCodeValid(codeRequest.getCode(), authAppSecret)) {
             LOG.info("Auth code is not valid");
-            return Optional.of(ErrorResponse.ERROR_1043);
+            return Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED);
         }
         LOG.info("Auth code valid. Resetting code request count");
-        resetCodeIncorrectEntryCount(MFAMethodType.AUTH_APP);
+        resetCodeIncorrectEntryCount();
 
         return Optional.empty();
     }
 
     @Override
-    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+    public void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, UserProfile userProfile) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
-                dynamoService.setAuthAppAndAccountVerified(
+                authenticationService.setAuthAppAndAccountVerified(
                         emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
                         FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
@@ -122,18 +141,34 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
-                        false);
+                        false,
+                        AuditService.MetadataPair.pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, REGISTRATION));
                 break;
             case ACCOUNT_RECOVERY:
-                dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
-                        emailAddress, codeRequest.getProfileInformation());
+                if (userProfile.isMfaMethodsMigrated()) {
+                    String uuid = UUID.randomUUID().toString();
+                    MFAMethod authAppMfa =
+                            MFAMethod.authAppMfaMethod(
+                                    codeRequest.getProfileInformation(), true, true, DEFAULT, uuid);
+                    mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
+                            emailAddress, authAppMfa);
+                } else {
+                    authenticationService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
+                            emailAddress, codeRequest.getProfileInformation());
+                }
+
                 submitAuditEvent(
                         FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
                         AUTH_APP,
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
-                        true);
+                        true,
+                        AuditService.MetadataPair.pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY));
                 break;
             case SIGN_IN:
             case PASSWORD_RESET_MFA:
@@ -160,29 +195,28 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     }
 
     private Optional<String> getMfaCredentialValue() {
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(emailAddress);
-        var userProfile = dynamoService.getUserProfileByEmail(emailAddress);
+        var userCredentials = authenticationService.getUserCredentialsFromEmail(emailAddress);
+        var userProfile = authenticationService.getUserProfileByEmail(emailAddress);
 
         if (userCredentials == null) {
             LOG.info("User credentials not found");
             return Optional.empty();
         }
 
-        if (userProfile.getMfaMethodsMigrated()) {
-            var maybeDefaultMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
-            if (maybeDefaultMethod.isEmpty()) {
-                LOG.error("No default method found for migrated user");
+        if (userProfile.isMfaMethodsMigrated()) {
+            var maybeAuthAppMfaMethod =
+                    userCredentials.getMfaMethods().stream()
+                            .filter(
+                                    mfaMethod ->
+                                            mfaMethod
+                                                    .getMfaMethodType()
+                                                    .equals(AUTH_APP.getValue()))
+                            .findFirst();
+            if (maybeAuthAppMfaMethod.isEmpty()) {
+                LOG.error("No auth app method found for migrated user");
                 return Optional.empty();
             }
-            var defaultMethod = maybeDefaultMethod.get();
-            if (defaultMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
-                return Optional.of(defaultMethod.getCredentialValue());
-            } else {
-                LOG.error(
-                        "Attempting to validate auth app code for user with a default mfa method of type {}",
-                        defaultMethod.getMfaMethodType());
-                return Optional.empty();
-            }
+            return Optional.of(maybeAuthAppMfaMethod.get().getCredentialValue());
         } else {
             var mfaMethod =
                     userCredentials.getMfaMethods().stream()

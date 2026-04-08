@@ -73,6 +73,11 @@ variable "notify_template_map" {
     CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID = "10b2ebeb-16fb-450a-8dc3-5f94d2b7029f"
     TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID            = "067548f2-420d-4da9-923f-ec9a941706cf"
     REPORT_SUSPICIOUS_ACTIVITY_EMAIL_TEMPLATE_ID           = "2b3170b5-159e-457f-a282-f30f6006dc32"
+    BACKUP_METHOD_ADDED_TEMPLATE_ID                        = "2abd5f54-15b6-4957-b4d3-f310f2437b9f"
+    BACKUP_METHOD_REMOVED_TEMPLATE_ID                      = "5a101e35-8b8d-456d-bcfe-8c7470bf63e4"
+    CHANGED_AUTHENTICATOR_APP_TEMPLATE_ID                  = "b0bb3667-985b-428c-9eb3-6b778b50fb6b"
+    CHANGED_DEFAULT_MFA_TEMPLATE_ID                        = "ab62d5fa-79a8-4dba-beb0-283118d2450f"
+    SWITCHED_MFA_METHODS_TEMPLATE_ID                       = "be78564b-b9a6-4b3d-b438-7b30e45caf54"
   }
 }
 
@@ -80,4 +85,10 @@ variable "vpc_environment" {
   description = "The name of the environment this environment is sharing the VPC , this var is only for Authdevs env and must be overide using Authdevs.tfvars, default value should be null always."
   type        = string
   default     = null
+}
+
+variable "api_fms_tag_value" {
+  default     = "authenticationfrontend"
+  description = "Tag value to be used for FMS WAF association for API"
+  type        = string
 }

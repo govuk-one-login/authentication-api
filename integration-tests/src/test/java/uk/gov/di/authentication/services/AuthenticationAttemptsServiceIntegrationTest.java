@@ -13,7 +13,9 @@ import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStor
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,6 +38,42 @@ class AuthenticationAttemptsServiceIntegrationTest {
 
     AuthenticationAttemptsService authenticationAttemptsService =
             new AuthenticationAttemptsService(ConfigurationService.getInstance());
+
+    // TODO remove temporary ZDD measure to sum deprecated count types
+    @Test
+    void shouldIncludeDeprecatedMfaCountsWhenFetching() {
+        var ttl = Instant.now().getEpochSecond() + 60L;
+
+        authenticationAttemptsService.createOrIncrementCount(
+                INTERNAL_SUBJECT_ID, ttl, JOURNEY_TYPE, CountType.ENTER_SMS_CODE);
+        authenticationAttemptsService.createOrIncrementCount(
+                INTERNAL_SUBJECT_ID, ttl, JOURNEY_TYPE, CountType.ENTER_AUTH_APP_CODE);
+        authenticationAttemptsService.createOrIncrementCount(
+                INTERNAL_SUBJECT_ID, ttl, JOURNEY_TYPE, CountType.ENTER_MFA_CODE);
+
+        authenticationAttemptsService.createOrIncrementCount(
+                RP_PAIRWISE_ID, ttl, JOURNEY_TYPE, CountType.ENTER_SMS_CODE);
+        authenticationAttemptsService.createOrIncrementCount(
+                RP_PAIRWISE_ID, ttl, JOURNEY_TYPE, CountType.ENTER_AUTH_APP_CODE);
+        authenticationAttemptsService.createOrIncrementCount(
+                RP_PAIRWISE_ID, ttl, JOURNEY_TYPE, CountType.ENTER_MFA_CODE);
+
+        assertEquals(
+                3,
+                authenticationAttemptsService.getCount(
+                        INTERNAL_SUBJECT_ID, JOURNEY_TYPE, CountType.ENTER_MFA_CODE));
+        assertEquals(
+                3,
+                authenticationAttemptsService
+                        .getCountsByJourney(INTERNAL_SUBJECT_ID, JOURNEY_TYPE)
+                        .get(CountType.ENTER_MFA_CODE));
+        assertEquals(
+                6,
+                authenticationAttemptsService
+                        .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID, JOURNEY_TYPE)
+                        .get(CountType.ENTER_MFA_CODE));
+    }
 
     @Test
     void shouldGetIncorrectReauthEmailCountForUser() {
@@ -142,7 +180,7 @@ class AuthenticationAttemptsServiceIntegrationTest {
                     Map.ofEntries(
                             Map.entry(CountType.ENTER_EMAIL, 2),
                             Map.entry(CountType.ENTER_PASSWORD, 4),
-                            Map.entry(CountType.ENTER_SMS_CODE, 5));
+                            Map.entry(CountType.ENTER_MFA_CODE, 5));
 
             incrementCountsForIdentifier(
                     INTERNAL_SUBJECT_ID,
@@ -153,10 +191,7 @@ class AuthenticationAttemptsServiceIntegrationTest {
             authenticationAttemptsService.createOrIncrementCount(
                     INTERNAL_SUBJECT_ID, EXPECTEDTTL, otherJourneyType, CountType.ENTER_EMAIL);
             authenticationAttemptsService.createOrIncrementCount(
-                    INTERNAL_SUBJECT_ID,
-                    EXPECTEDTTL,
-                    otherJourneyType,
-                    CountType.ENTER_AUTH_APP_CODE);
+                    INTERNAL_SUBJECT_ID, EXPECTEDTTL, otherJourneyType, CountType.ENTER_MFA_CODE);
 
             // Read the count
             var authenticationAttempts =
@@ -182,13 +217,13 @@ class AuthenticationAttemptsServiceIntegrationTest {
                     Map.ofEntries(
                             Map.entry(CountType.ENTER_EMAIL, 2),
                             Map.entry(CountType.ENTER_PASSWORD, 4),
-                            Map.entry(CountType.ENTER_SMS_CODE, 5));
+                            Map.entry(CountType.ENTER_MFA_CODE, 5));
 
             var countsForRpPairwiseId =
                     Map.ofEntries(
                             Map.entry(CountType.ENTER_EMAIL, 1),
                             Map.entry(CountType.ENTER_PASSWORD, 2),
-                            Map.entry(CountType.ENTER_AUTH_APP_CODE, 1));
+                            Map.entry(CountType.ENTER_MFA_CODE, 1));
 
             incrementCountsForIdentifier(
                     INTERNAL_SUBJECT_ID, requestedJourneyType, countsForSubjectId);
@@ -199,10 +234,7 @@ class AuthenticationAttemptsServiceIntegrationTest {
             authenticationAttemptsService.createOrIncrementCount(
                     INTERNAL_SUBJECT_ID, EXPECTEDTTL, otherJourneyType, CountType.ENTER_EMAIL);
             authenticationAttemptsService.createOrIncrementCount(
-                    INTERNAL_SUBJECT_ID,
-                    EXPECTEDTTL,
-                    otherJourneyType,
-                    CountType.ENTER_AUTH_APP_CODE);
+                    INTERNAL_SUBJECT_ID, EXPECTEDTTL, otherJourneyType, CountType.ENTER_MFA_CODE);
 
             // Read the count
             var authenticationAttempts =
@@ -213,10 +245,104 @@ class AuthenticationAttemptsServiceIntegrationTest {
                     Map.ofEntries(
                             Map.entry(CountType.ENTER_EMAIL, 3),
                             Map.entry(CountType.ENTER_PASSWORD, 6),
-                            Map.entry(CountType.ENTER_SMS_CODE, 5),
-                            Map.entry(CountType.ENTER_AUTH_APP_CODE, 1));
+                            Map.entry(CountType.ENTER_MFA_CODE, 6));
 
             assertEquals(expectedCountTypesAcrossBothIdentifiers, authenticationAttempts);
+        }
+    }
+
+    @Test
+    void shouldCombineSmsAndAuthAppCodesIntoMfaCode() {
+        var requestedJourneyType = JourneyType.REAUTHENTICATION;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            var countsForSubjectId = Map.ofEntries(Map.entry(CountType.ENTER_MFA_CODE, 3));
+
+            var countsForRpPairwiseId = Map.ofEntries(Map.entry(CountType.ENTER_MFA_CODE, 3));
+
+            incrementCountsForIdentifier(
+                    INTERNAL_SUBJECT_ID, requestedJourneyType, countsForSubjectId);
+            incrementCountsForIdentifier(
+                    RP_PAIRWISE_ID, requestedJourneyType, countsForRpPairwiseId);
+
+            var authenticationAttempts =
+                    authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID, JOURNEY_TYPE);
+
+            var expectedCounts = Map.ofEntries(Map.entry(CountType.ENTER_MFA_CODE, 6));
+
+            assertEquals(expectedCounts, authenticationAttempts);
+        }
+    }
+
+    @Test
+    void shouldGetCountsByJourneyForIdentifiers() {
+        var requestedJourneyType = JourneyType.REAUTHENTICATION;
+        var thirdIdentifier = "THIRD_IDENTIFIER";
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            incrementCountsForIdentifier(
+                    INTERNAL_SUBJECT_ID,
+                    requestedJourneyType,
+                    Map.of(CountType.ENTER_EMAIL, 2, CountType.ENTER_PASSWORD, 4));
+            incrementCountsForIdentifier(
+                    RP_PAIRWISE_ID, requestedJourneyType, Map.of(CountType.ENTER_EMAIL, 1));
+            incrementCountsForIdentifier(
+                    thirdIdentifier, requestedJourneyType, Map.of(CountType.ENTER_EMAIL, 3));
+
+            assertEquals(
+                    Map.of(CountType.ENTER_EMAIL, 2, CountType.ENTER_PASSWORD, 4),
+                    authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            List.of(INTERNAL_SUBJECT_ID), JOURNEY_TYPE));
+
+            assertEquals(
+                    Map.of(CountType.ENTER_EMAIL, 3, CountType.ENTER_PASSWORD, 4),
+                    authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            List.of(INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID), JOURNEY_TYPE));
+
+            assertEquals(
+                    Map.of(CountType.ENTER_EMAIL, 6, CountType.ENTER_PASSWORD, 4),
+                    authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            List.of(INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID, thirdIdentifier),
+                            JOURNEY_TYPE));
+        }
+    }
+
+    @Test
+    void shouldFilterNullsAndDuplicatesWhenGettingCountsByJourneyForIdentifiers() {
+        var requestedJourneyType = JourneyType.REAUTHENTICATION;
+        var spyService = Mockito.spy(authenticationAttemptsService);
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            incrementCountsForIdentifier(
+                    RP_PAIRWISE_ID, requestedJourneyType, Map.of(CountType.ENTER_EMAIL, 1));
+
+            spyService.getCountsByJourneyForIdentifiers(
+                    Arrays.asList(null, null, RP_PAIRWISE_ID, RP_PAIRWISE_ID, RP_PAIRWISE_ID, null),
+                    JOURNEY_TYPE);
+
+            Mockito.verify(spyService, Mockito.times(4))
+                    .getCount(Mockito.eq(RP_PAIRWISE_ID), Mockito.any(), Mockito.any());
+            Mockito.verify(spyService, Mockito.never())
+                    .getCount(Mockito.isNull(), Mockito.any(), Mockito.any());
         }
     }
 

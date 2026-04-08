@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 
 public class CommonPasswordsService {
     private static final Logger LOG = LogManager.getLogger(CommonPasswordsService.class);
@@ -30,7 +31,7 @@ public class CommonPasswordsService {
         dynamoDbEnhancedClient = createDynamoEnhancedClient(configurationService);
         this.dynamoCommonPasswordTable =
                 dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(CommonPassword.class));
-        warmUp();
+        warmUp(dynamoCommonPasswordTable);
     }
 
     public boolean isCommonPassword(String password) {
@@ -81,9 +82,5 @@ public class CommonPasswordsService {
                 LOG.error("Batch write failed");
             }
         }
-    }
-
-    private void warmUp() {
-        dynamoCommonPasswordTable.describeTable();
     }
 }

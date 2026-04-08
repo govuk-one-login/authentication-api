@@ -29,7 +29,6 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
-import java.net.URI;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -38,10 +37,8 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.Optional;
-
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
+import java.util.Set;
 
 public class ClientSignatureValidationService {
 
@@ -68,22 +65,18 @@ public class ClientSignatureValidationService {
     public ClientSignatureValidationService(
             ConfigurationService configurationService,
             RpPublicKeyCacheService rpPublicKeyCacheService,
-            LambdaClient lambdaClient) {
+            LambdaClient lambdaClient,
+            OidcAPI oidcAPI) {
         this.configurationService = configurationService;
         this.rpPublicKeyCacheService = rpPublicKeyCacheService;
         this.lambdaClient = lambdaClient;
-        this.oidcAPI = new OidcAPI(configurationService);
+        this.oidcAPI = oidcAPI;
     }
 
     public void validate(SignedJWT signedJWT, ClientRegistry client)
             throws ClientSignatureValidationException, JwksException {
         try {
-            PublicKey publicKey;
-            if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
-                publicKey = retrievePublicKey(client, signedJWT.getHeader().getKeyID());
-            } else {
-                publicKey = convertPemToPublicKey(client.getPublicKey());
-            }
+            PublicKey publicKey = retrievePublicKey(client, signedJWT.getHeader().getKeyID());
 
             JWSVerifier verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
             if (!signedJWT.verify(verifier)) {
@@ -103,26 +96,24 @@ public class ClientSignatureValidationService {
     public void validateTokenClientAssertion(PrivateKeyJWT privateKeyJWT, ClientRegistry client)
             throws ClientSignatureValidationException, JwksException {
         try {
-            PublicKey publicKey;
-            if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
-                publicKey =
-                        retrievePublicKey(
-                                client, privateKeyJWT.getClientAssertion().getHeader().getKeyID());
-            } else {
-                publicKey = convertPemToPublicKey(client.getPublicKey());
-            }
+            PublicKey publicKey =
+                    retrievePublicKey(
+                            client, privateKeyJWT.getClientAssertion().getHeader().getKeyID());
             ClientAuthenticationVerifier<?> authenticationVerifier =
                     new ClientAuthenticationVerifier<>(
                             new PrivateKeyJwtAuthPublicKeySelector(publicKey),
-                            Collections.singleton(new Audience(getTokenURI().toString())));
+                            Set.of(
+                                    new Audience(oidcAPI.tokenURI().toString()),
+                                    new Audience(oidcAPI.getIssuerURI().toString())));
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException
                 | NoSuchAlgorithmException
                 | InvalidKeySpecException
                 | JOSEException e) {
             LOG.error(
-                    "Error validating Token Client Assertion JWT for Client: {}",
-                    client.getClientID());
+                    "Error validating Token Client Assertion JWT for Client: {}. Error: {}",
+                    client.getClientID(),
+                    e.getMessage());
             throw new ClientSignatureValidationException(e);
         }
     }
@@ -214,9 +205,5 @@ public class ClientSignatureValidationService {
             LOG.error("LambdaException thrown while invoking FetchJwksFunction");
             throw new JwksException(e.getMessage());
         }
-    }
-
-    private URI getTokenURI() {
-        return buildURI(oidcAPI.baseURI(), TOKEN_PATH);
     }
 }

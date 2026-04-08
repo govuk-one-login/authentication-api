@@ -11,7 +11,18 @@ public enum CloudwatchMetricDimensions {
     CREDENTIAL_TYPE("CredentialType"),
     JOURNEY_TYPE("JourneyType"),
     FAILURE_REASON("FailureReason"),
-    IPV_RESPONSE("IpvResponse");
+    IPV_RESPONSE("IpvResponse"),
+    MFA_METHOD_TYPE("MfaMethodType"),
+    MFA_METHOD_PRIORITY_IDENTIFIER("MfaMethodPriorityIdentifier"),
+    APPLICATION("Application"),
+    NOTIFICATION_TYPE("NotificationType"),
+    COUNTRY("Country"),
+    NOTIFICATION_HTTP_ERROR("NotificationHttpError"),
+    SMS_DESTINATION_TYPE("SmsDestinationType"),
+    LOG_GROUP("LogGroup"),
+    SERVICE_TYPE("ServiceType"),
+    SERVICE_NAME("ServiceName"),
+    MFA_RESET_TYPE("MfaResetType");
 
     private String value;
 

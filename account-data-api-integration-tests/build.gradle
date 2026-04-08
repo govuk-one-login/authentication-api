@@ -1,0 +1,70 @@
+plugins {
+    id "java"
+    id "jacoco"
+}
+
+group = "uk.gov.di"
+version = "unspecified"
+
+dependencies {
+    testImplementation libs.bouncyCastle,
+            libs.bundles.apache,
+            libs.bundles.nimbus,
+            libs.gson,
+            libs.bundles.test,
+            libs.awsKms,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.bundles.awsDynamoDb,
+            libs.bundles.awsLambda,
+            libs.bundles.lettuce,
+            libs.libphonenumber
+
+    implementation project(':audit-events')
+
+    testImplementation project(":shared"), noXray
+    testImplementation project(":account-data-api"), noXray
+    testImplementation libs.jetbrainsKotlin
+    testImplementation libs.jacksonDatabind
+    testImplementation libs.jsonAssertJ
+
+    testRuntimeOnly libs.bundles.testRuntime
+
+    constraints {
+        testImplementation('org.assertj:assertj-core:[3.27.7,)') {
+            because 'CVE-2026-24400 is fixed in org.assertj:assertj-core:3.27.7 and higher'
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+
+    environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
+    environment "AWS_REGION", "eu-west-2"
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey"
+    environment "DYNAMO_ENDPOINT", "http://localhost:8000"
+    environment "ENVIRONMENT", "local"
+
+    testLogging {
+        showStandardStreams = false
+    }
+
+    doLast {
+        tasks.getByName("jacocoTestReport").sourceDirectories.from(
+                project(":account-data-api").sourceSets.main.java,
+                project(":shared").sourceSets.main.java)
+
+        tasks.getByName("jacocoTestReport").classDirectories.from(
+                project(":account-data-api").sourceSets.main.output,
+                project(":shared").sourceSets.main.output)
+    }
+    dependsOn ":composeUp"
+    finalizedBy ":composeDown"
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+}

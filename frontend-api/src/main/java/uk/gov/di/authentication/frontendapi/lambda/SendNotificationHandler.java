@@ -10,20 +10,19 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
+import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -31,15 +30,18 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.List;
 import java.util.Map;
@@ -56,9 +58,11 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_INVALID_CODE_REQUEST;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_MISSING;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -68,29 +72,30 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.FraudCheckMetricsHelper.incrementUserSubmittedCredentialIfNotificationSetupJourney;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class SendNotificationHandler extends BaseFrontendHandler<SendNotificationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(SendNotificationHandler.class);
-    private static final CloudwatchMetricsService METRICS = new CloudwatchMetricsService();
     private static final List<NotificationType> CONFIRMATION_NOTIFICATION_TYPES =
             List.of(ACCOUNT_CREATED_CONFIRMATION, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION);
+    public static final String AUDIT_EVENT_MFA_METHOD_FIELD = "mfa-method";
+    public static final String AUDIT_EVENT_DEFAULT_MFA_VALUE =
+            PriorityIdentifier.DEFAULT.toString().toLowerCase();
 
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AwsSqsClient emailSqsClient;
     private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AuditService auditService;
+    private final TestUserHelper testUserHelper;
+    private final PermissionDecisionManager permissionDecisionManager;
+    private final UserActionsManager userActionsManager;
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AwsSqsClient emailSqsClient,
             AwsSqsClient pendingEmailCheckSqsClient,
@@ -98,13 +103,16 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             CodeStorageService codeStorageService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            TestUserHelper testUserHelper,
+            PermissionDecisionManager permissionDecisionManager,
+            UserActionsManager userActionsManager) {
         super(
                 SendNotificationRequest.class,
                 configurationService,
-                sessionService,
-                clientService,
                 authenticationService,
+                true,
                 authSessionService);
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
@@ -112,6 +120,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.codeStorageService = codeStorageService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.testUserHelper = testUserHelper;
+        this.permissionDecisionManager = permissionDecisionManager;
+        this.userActionsManager = userActionsManager;
     }
 
     public SendNotificationHandler() {
@@ -135,11 +147,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.testUserHelper = new TestUserHelper(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     public SendNotificationHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(SendNotificationRequest.class, configurationService, redis);
+        super(SendNotificationRequest.class, configurationService);
         this.emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -155,6 +171,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.testUserHelper = new TestUserHelper(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     @Override
@@ -180,61 +200,74 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        try {
-            if (!userContext.getAuthSession().validateSession(request.getEmail())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-            if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
-                LOG.info("Placing message on queue for {}", request.getNotificationType());
-                var notifyRequest =
-                        new NotifyRequest(
-                                request.getEmail(),
-                                request.getNotificationType(),
-                                userContext.getUserLanguage(),
-                                userContext.getAuthSession().getSessionId(),
-                                userContext.getClientSessionId());
-                if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
+        if (!userContext.getAuthSession().validateSession(request.getEmail())) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
+        }
+
+        if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
+            LOG.info("Placing message on queue for {}", request.getNotificationType());
+            var notifyRequest =
+                    new NotifyRequest(
+                            request.getEmail(),
+                            request.getNotificationType(),
+                            userContext.getUserLanguage(),
+                            userContext.getAuthSession().getSessionId(),
+                            userContext.getClientSessionId());
+
+            try {
+                if (!testUserHelper.isTestJourney(userContext)) {
                     emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info(
                             "{} EMAIL placed on queue with reference: {}",
                             notifyRequest.getNotificationType(),
                             notifyRequest.getUniqueNotificationReference());
                 }
+            } catch (Exception e) {
                 return generateEmptySuccessApiGatewayResponse();
             }
+            return generateEmptySuccessApiGatewayResponse();
+        }
 
-            Optional<ErrorResponse> userHasExceededMaximumAllowedCodeRequests =
-                    isCodeRequestAttemptValid(
-                            request.getEmail(),
-                            userContext.getSession(),
-                            userContext.getAuthSession(),
-                            request.getNotificationType(),
-                            request.getJourneyType());
+        var permissionContext =
+                PermissionContext.builder()
+                        .withEmailAddress(request.getEmail())
+                        .withAuthSessionItem(userContext.getAuthSession())
+                        .withE164FormattedPhoneNumber(
+                                request.getPhoneNumber() != null
+                                        ? PhoneNumberHelper.formatPhoneNumber(
+                                                request.getPhoneNumber())
+                                        : null)
+                        .build();
 
-            if (userHasExceededMaximumAllowedCodeRequests.isPresent()) {
-                auditService.submitAuditEvent(
-                        getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
-                        auditContext);
-                return generateApiGatewayProxyErrorResponse(
-                        400, userHasExceededMaximumAllowedCodeRequests.get());
+        var preSendNotificationBlockResponse =
+                getResponseIfNotPermitted(
+                        request.getNotificationType(),
+                        request.getJourneyType(),
+                        permissionContext,
+                        auditContext,
+                        false);
+        if (preSendNotificationBlockResponse.isPresent()) {
+            return preSendNotificationBlockResponse.get();
+        }
+
+        try {
+            if (request.getNotificationType().isForPhoneNumber()) {
+                userActionsManager.sentSmsOtpNotification(
+                        request.getJourneyType(), permissionContext);
+            } else {
+                userActionsManager.sentEmailOtpNotification(
+                        request.getJourneyType(), permissionContext);
             }
 
-            incrementCountOfNotificationsSent(request, userContext.getAuthSession());
-
-            Optional<ErrorResponse> thisRequestExceedsMaxAllowed =
-                    isCodeRequestAttemptValid(
-                            request.getEmail(),
-                            userContext.getSession(),
-                            userContext.getAuthSession(),
+            var postSendNotificationBlockResponse =
+                    getResponseIfNotPermitted(
                             request.getNotificationType(),
-                            request.getJourneyType());
-
-            if (thisRequestExceedsMaxAllowed.isPresent()) {
-                auditService.submitAuditEvent(
-                        getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
-                        auditContext);
-                return generateApiGatewayProxyErrorResponse(
-                        400, thisRequestExceedsMaxAllowed.get());
+                            request.getJourneyType(),
+                            permissionContext,
+                            auditContext,
+                            true);
+            if (postSendNotificationBlockResponse.isPresent()) {
+                return postSendNotificationBlockResponse.get();
             }
 
             switch (request.getNotificationType()) {
@@ -248,47 +281,63 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             input,
                             auditContext);
                 case VERIFY_PHONE_NUMBER:
-                    if (request.getPhoneNumber() == null) {
-                        return generateApiGatewayProxyResponse(400, ERROR_1011);
-                    }
-                    var isSmokeTest =
-                            userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
-                    var errorResponse =
-                            ValidationHelper.validatePhoneNumber(
-                                    request.getPhoneNumber(),
-                                    configurationService.getEnvironment(),
-                                    isSmokeTest);
-                    if (errorResponse.isPresent()) {
-                        return generateApiGatewayProxyResponse(400, errorResponse.get());
-                    }
-                    return handleNotificationRequest(
-                            PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
-                                    request.getPhoneNumber()),
-                            request.getNotificationType(),
-                            userContext,
-                            request.isRequestNewCode(),
-                            request,
-                            input,
-                            auditContext);
+                    return handlePhoneNumberVerification(input, request, userContext, auditContext);
                 default:
-                    return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+                    return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
             }
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-        } catch (ClientNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
+            return generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS);
         }
     }
 
-    private void incrementCountOfNotificationsSent(
-            SendNotificationRequest request, AuthSessionItem authSessionItem) {
-        LOG.info("Incrementing code request count");
-        authSessionService.updateSession(
-                authSessionItem.incrementCodeRequestCount(
-                        request.getNotificationType(), request.getJourneyType()));
+    private APIGatewayProxyResponseEvent handlePhoneNumberVerification(
+            APIGatewayProxyRequestEvent input,
+            SendNotificationRequest request,
+            UserContext userContext,
+            AuditContext auditContext)
+            throws JsonException {
+        if (request.getPhoneNumber() == null) {
+            return generateApiGatewayProxyResponse(400, PHONE_NUMBER_MISSING);
+        }
+
+        boolean isSmokeTest = userContext.getAuthSession().getIsSmokeTest();
+
+        var errorResponse =
+                ValidationHelper.validatePhoneNumber(
+                        request.getPhoneNumber(),
+                        configurationService.getEnvironment(),
+                        isSmokeTest,
+                        configurationService.isInternalApiNewInternationalSmsEnabled());
+
+        if (errorResponse.isPresent()) {
+            return generateApiGatewayProxyResponse(400, errorResponse.get());
+        }
+
+        auditContext =
+                auditContext.withMetadataItem(
+                        new AuditService.MetadataPair(
+                                AUDIT_EVENT_MFA_METHOD_FIELD,
+                                AUDIT_EVENT_DEFAULT_MFA_VALUE,
+                                false));
+
+        auditContext =
+                auditContext.withMetadataItem(
+                        new AuditService.MetadataPair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                request.getJourneyType(),
+                                false));
+
+        return handleNotificationRequest(
+                PhoneNumberHelper.removeWhitespaceFromPhoneNumber(request.getPhoneNumber()),
+                request.getNotificationType(),
+                userContext,
+                request.isRequestNewCode(),
+                request,
+                input,
+                auditContext);
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
@@ -299,7 +348,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             SendNotificationRequest request,
             APIGatewayProxyRequestEvent input,
             AuditContext auditContext)
-            throws JsonException, ClientNotFoundException {
+            throws JsonException {
         var authSession = userContext.getAuthSession();
         var sessionId = authSession.getSessionId();
 
@@ -315,27 +364,19 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             code =
                     codeStorageService
                             .getOtpCode(codeIdentifier, notificationType)
-                            .or( // Temporary fallback for old phone number key with just email
-                                    () ->
-                                            notificationType.isForPhoneNumber()
-                                                    ? codeStorageService.getOtpCode(
-                                                            emailAddress, notificationType)
-                                                    : Optional.empty())
                             .orElseGet(
                                     () -> generateAndSaveNewCode(codeIdentifier, notificationType));
         }
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
-                METRICS,
+                cloudwatchMetricsService,
                 request.getJourneyType(),
                 request.getNotificationType().name(),
                 configurationService.getEnvironment());
 
-        var testClientWithAllowedEmail =
-                isTestClientWithAllowedEmail(userContext, configurationService);
+        var testClientWithAllowedEmail = testUserHelper.isTestJourney(userContext);
 
-        if (configurationService.isEmailCheckEnabled()
-                && notificationType == NotificationType.VERIFY_EMAIL
+        if (notificationType == NotificationType.VERIFY_EMAIL
                 && request.getJourneyType() == JourneyType.REGISTRATION) {
 
             var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(destination);
@@ -370,7 +411,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         if (!testClientWithAllowedEmail) {
             if (notificationType == VERIFY_PHONE_NUMBER) {
-                METRICS.putEmbeddedValue(
+                cloudwatchMetricsService.putEmbeddedValue(
                         "SendingSms",
                         1,
                         Map.of(
@@ -399,6 +440,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 getSuccessfulAuditEventFromNotificationType(
                         notificationType, testClientWithAllowedEmail),
                 auditContext);
+
         return generateEmptySuccessApiGatewayResponse();
     }
 
@@ -415,53 +457,78 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         return newCode;
     }
 
-    private Optional<ErrorResponse> isCodeRequestAttemptValid(
-            String email,
-            Session session,
-            AuthSessionItem authSession,
+    private Optional<APIGatewayProxyResponseEvent> getResponseIfNotPermitted(
             NotificationType notificationType,
-            JourneyType journeyType) {
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            AuditContext auditContext,
+            boolean afterActionRecorded) {
 
-        var codeRequestCount = authSession.getCodeRequestCount(notificationType, journeyType);
-        LOG.info("CodeRequestCount is: {}", codeRequestCount);
+        Result<DecisionError, Decision> canSendResult =
+                notificationType.isForPhoneNumber()
+                        ? permissionDecisionManager.canSendSmsOtpNotification(
+                                journeyType, permissionContext)
+                        : permissionDecisionManager.canSendEmailOtpNotification(
+                                journeyType, permissionContext);
 
-        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        var codeAttemptsBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-            LOG.info(
-                    "User has requested too many OTP codes. Setting block with prefix: {}",
-                    newCodeRequestBlockPrefix);
-            codeStorageService.saveBlockedForEmail(
-                    email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
-
-            LOG.info("Resetting code request count");
-            authSessionService.updateSession(
-                    authSession.resetCodeRequestCount(notificationType, journeyType));
-            return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));
+        if (canSendResult.isFailure()) {
+            return Optional.of(
+                    DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                            canSendResult.getFailure()));
         }
-        if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    newCodeRequestBlockPrefix);
-            return Optional.of(getErrorResponseForMaxCodeRequests(notificationType));
+
+        boolean isIndefinitelyLockedOutOfSendingNotification =
+                canSendResult.getSuccess() instanceof Decision.IndefinitelyLockedOut;
+        if (isIndefinitelyLockedOutOfSendingNotification) {
+            return Optional.of(
+                    generateApiGatewayProxyErrorResponse(
+                            400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
         }
-        if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedPrefix)) {
-            LOG.info(
-                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    codeAttemptsBlockedPrefix);
-            return Optional.of(getErrorResponseForMaxCodeAttempts(notificationType));
+
+        boolean isTemporarilyLockedOutOfSendingNotification =
+                canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
+        if (isTemporarilyLockedOutOfSendingNotification) {
+            auditService.submitAuditEvent(
+                    getInvalidCodeAuditEventFromNotificationType(notificationType), auditContext);
+            var errorResponse =
+                    afterActionRecorded
+                            ? getErrorResponseForCodeRequestLimitReached(notificationType)
+                            : getErrorResponseForMaxCodeRequests(notificationType);
+            return Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse));
         }
+
+        Result<DecisionError, Decision> canVerifyResult =
+                notificationType.isForPhoneNumber()
+                        ? permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext)
+                        : permissionDecisionManager.canVerifyEmailOtp(
+                                journeyType, permissionContext);
+
+        if (canVerifyResult.isFailure()) {
+            return Optional.of(
+                    DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                            canVerifyResult.getFailure()));
+        }
+
+        boolean isTemporarilyLockedOutOfVerifyingOtp =
+                canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
+        if (isTemporarilyLockedOutOfVerifyingOtp) {
+            auditService.submitAuditEvent(
+                    getInvalidCodeAuditEventFromNotificationType(notificationType), auditContext);
+            return Optional.of(
+                    generateApiGatewayProxyErrorResponse(
+                            400, getErrorResponseForMaxCodeAttempts(notificationType)));
+        }
+
         return Optional.empty();
     }
 
     private ErrorResponse getErrorResponseForCodeRequestLimitReached(
             NotificationType notificationType) {
         return switch (notificationType) {
-            case VERIFY_EMAIL -> ErrorResponse.ERROR_1029;
-            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1030;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1046;
+            case VERIFY_EMAIL -> ErrorResponse.TOO_MANY_EMAIL_CODES_SENT;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.TOO_MANY_PHONE_VERIFICATION_CODES_SENT;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
+                    .TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -471,9 +538,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private ErrorResponse getErrorResponseForMaxCodeRequests(NotificationType notificationType) {
         return switch (notificationType) {
-            case VERIFY_EMAIL -> ErrorResponse.ERROR_1031;
-            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1032;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1047;
+            case VERIFY_EMAIL -> ErrorResponse.BLOCKED_FOR_EMAIL_VERIFICATION_CODES;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
+                    .BLOCKED_FOR_EMAIL_CODES_FOR_MFA_RESET;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -483,9 +551,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private ErrorResponse getErrorResponseForMaxCodeAttempts(NotificationType notificationType) {
         return switch (notificationType) {
-            case VERIFY_EMAIL -> ErrorResponse.ERROR_1033;
-            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1034;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1048;
+            case VERIFY_EMAIL -> ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
+                    .TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");

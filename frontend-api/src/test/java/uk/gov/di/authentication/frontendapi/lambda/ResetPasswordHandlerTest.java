@@ -5,19 +5,19 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -27,21 +27,27 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +60,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -61,15 +68,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.partiallyContainsJsonString;
@@ -79,15 +87,17 @@ class ResetPasswordHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private final AuditService auditService = mock(AuditService.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
@@ -126,34 +136,25 @@ class ResetPasswordHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
 
     private ResetPasswordHandler handler;
-    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
                     .withClientId(TEST_CLIENT_ID);
 
-    private final ClientRegistry testClientRegistry =
-            new ClientRegistry()
-                    .withTestClient(true)
-                    .withClientID(TEST_CLIENT_ID)
-                    .withTestClientEmailAllowlist(
-                            List.of(
-                                    "joe.bloggs@digital.cabinet-office.gov.uk",
-                                    EMAIL,
-                                    "jb2@digital.cabinet-office.gov.uk"));
-
     @BeforeEach
-    public void setUp() {
-        doReturn(Optional.of(ErrorResponse.ERROR_1007))
+    void setUp() {
+        doReturn(Optional.of(ErrorResponse.INVALID_PW_CHARS))
                 .when(passwordValidator)
                 .validate("password");
-        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
         usingValidSession();
         handler =
                 new ResetPasswordHandler(
@@ -161,313 +162,560 @@ class ResetPasswordHandlerTest {
                         sqsClient,
                         codeStorageService,
                         configurationService,
-                        sessionService,
-                        clientService,
                         auditService,
                         commonPasswordsService,
                         passwordValidator,
                         accountModifiersService,
-                        authSessionService);
+                        authSessionService,
+                        permissionDecisionManager,
+                        userActionsManager,
+                        testUserHelper);
     }
 
-    @Test
-    void shouldReturn204ButNotPlaceMessageOnQueueForTestClient() {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentials());
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+    @Nested
+    class SuccessfulPasswordReset {
+        @Test
+        void shouldReturn204ButNotPlaceMessageOnQueueForTestClient() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
-        var result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(204));
-        verifyNoInteractions(sqsClient);
-        verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
-                        auditContext);
-    }
+            assertThat(result, hasStatus(204));
+            verifyNoInteractions(sqsClient);
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
+                            auditContext);
+        }
 
-    @Test
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentials());
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
+        @Test
+        void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
 
-        var result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(204));
-        verifyNoInteractions(sqsClient);
-        verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
-                        auditContext.withTxmaAuditEncoded(Optional.empty()));
-    }
+            assertThat(result, hasStatus(204));
+            verifyNoInteractions(sqsClient);
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
+                            auditContext.withTxmaAuditEncoded(Optional.empty()));
+        }
 
-    @Test
-    void shouldReturn204ForSuccessfulRequestAndDontSendConfirmationToSMSWhenPhoneNumberNotVerified()
-            throws Json.JsonException {
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentials());
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+        @Test
+        void
+                shouldReturn204ForSuccessfulRequestAndDontSendConfirmationToSMSWhenPhoneNumberNotVerified()
+                        throws Json.JsonException {
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
-        var result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(204));
-        verify(sqsClient)
-                .send(
-                        argThat(
-                                partiallyContainsJsonString(
-                                        objectMapper.writeValueAsString(
-                                                EXPECTED_EMAIL_NOTIFY_REQUEST),
-                                        "unique_notification_reference")));
-        verify(sqsClient, never())
-                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
-        verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountModifiersService);
-        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
-    }
+            assertThat(result, hasStatus(204));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(sqsClient, never())
+                    .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verifyNoInteractions(accountModifiersService);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
 
-    @Test
-    void
-            shouldReturn204ForSuccessfulPasswordResetSendConfirmationToSMSAndUpdateModifiersTableWithBlock() {
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentials());
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(true));
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+        @Test
+        void shouldNotSendSmsWhenUserIsIndefinitelyLockedOut() throws Json.JsonException {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(true));
+            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.IndefinitelyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                            10)));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
-        var result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(204));
-        verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
-        verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
-        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
-    }
+            assertThat(result, hasStatus(204));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(sqsClient, never())
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_SMS_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+        }
 
-    private static Stream<Arguments> requestsToExpectedWriteToAccountModifersTable() {
-        return Stream.of(
-                Arguments.of(format("{ \"password\": \"%s\"}", NEW_PASSWORD), true),
-                Arguments.of(
-                        format(
-                                "{ \"password\": \"%s\", \"allowMfaResetAfterPasswordReset\": false}",
-                                NEW_PASSWORD),
-                        true),
-                Arguments.of(
-                        format(
-                                "{ \"password\": \"%s\", \"allowMfaResetAfterPasswordReset\": true}",
-                                NEW_PASSWORD),
-                        false));
-    }
+        @Test
+        void shouldSendSmsWhenUserIsPermitted() throws Json.JsonException {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(true));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
-    @ParameterizedTest
-    @MethodSource("requestsToExpectedWriteToAccountModifersTable")
-    void
-            shouldReturn204ForSuccessfulResetAndWriteToAccountModifiersTableDependentOnFlagPassedThroughInRequest(
-                    String requestBody, boolean expectedWriteToAccountModifiers)
-                    throws Json.JsonException {
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentials());
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(true));
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, requestBody);
+            var result = handler.handleRequest(event, context);
 
-        var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(204));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_SMS_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+        }
 
-        assertThat(result, hasStatus(204));
-        verify(sqsClient)
-                .send(
-                        argThat(
-                                partiallyContainsJsonString(
-                                        objectMapper.writeValueAsString(
-                                                EXPECTED_EMAIL_NOTIFY_REQUEST),
-                                        "unique_notification_reference")));
-        verify(sqsClient)
-                .send(
-                        argThat(
-                                partiallyContainsJsonString(
-                                        objectMapper.writeValueAsString(
-                                                EXPECTED_SMS_NOTIFY_REQUEST),
-                                        "unique_notification_reference")));
-        verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        @Test
+        void
+                shouldReturn204ForSuccessfulPasswordResetSendConfirmationToSMSAndUpdateModifiersTableWithBlock() {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(true));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
-        if (expectedWriteToAccountModifiers) {
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
             verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
-        } else {
+            verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        private static Stream<Arguments> requestsToExpectedWriteToAccountModifersTable() {
+            return Stream.of(
+                    Arguments.of(
+                            """
+                            {
+                                "password": "%s"
+                            }
+                            """
+                                    .formatted(NEW_PASSWORD),
+                            true),
+                    Arguments.of(
+                            """
+                            {
+                                "password": "%s",
+                                "allowMfaResetAfterPasswordReset": false
+                            }
+                            """
+                                    .formatted(NEW_PASSWORD),
+                            true),
+                    Arguments.of(
+                            """
+                            {
+                                "password": "%s",
+                                "allowMfaResetAfterPasswordReset": true
+                            }
+                            """
+                                    .formatted(NEW_PASSWORD),
+                            false));
+        }
+
+        @ParameterizedTest
+        @MethodSource("requestsToExpectedWriteToAccountModifersTable")
+        void shouldReturn204AndConditionallySetAccountRecoveryBlock(
+                String requestBody, boolean expectedWriteToAccountModifiers)
+                throws Json.JsonException {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(true));
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, requestBody);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_SMS_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+
+            if (expectedWriteToAccountModifiers) {
+                verify(accountModifiersService)
+                        .setAccountRecoveryBlock(expectedCommonSubject, true);
+            } else {
+                verify(accountModifiersService, never())
+                        .setAccountRecoveryBlock(anyString(), anyBoolean());
+            }
+        }
+
+        @Test
+        void shouldReturn204ForSuccessfulMigratedUserRequestAndNoVerifiedMFAMethodIsPresent()
+                throws Json.JsonException {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateMigratedUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verifyNoInteractions(accountModifiersService);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        @Test
+        void shouldCallUserActionsManagerPasswordResetOnSuccessfulRequest()
+                throws Json.JsonException {
+            // Arrange
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            // Act
+            var result = handler.handleRequest(event, context);
+
+            // Assert
+            assertThat(result, hasStatus(204));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verify(userActionsManager)
+                    .passwordReset(
+                            eq(JourneyType.PASSWORD_RESET),
+                            argThat(
+                                    pc ->
+                                            pc.emailAddress() != null
+                                                    && pc.authSessionItem() != null));
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(sqsClient, never())
+                    .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        @Test
+        void
+                shouldUpdateAccountModifiersWithBlockWhenPasswordResetSuccessfullyAndVerifiedAuthAppIsPresent()
+                        throws Json.JsonException {
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
+
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
+            verify(sqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(
+                                                    EXPECTED_EMAIL_NOTIFY_REQUEST),
+                                            "unique_notification_reference")));
+            verify(sqsClient, never())
+                    .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
+            verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        @Test
+        void shouldRecordPasswordResetSuccessInSession() {
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
+
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            handler.handleRequest(event, context);
+
+            verify(authSessionService)
+                    .updateSession(
+                            argThat(
+                                    state ->
+                                            state.getResetPasswordState()
+                                                    .equals(
+                                                            AuthSessionItem.ResetPasswordState
+                                                                    .SUCCEEDED)));
+        }
+
+        @Test
+        void shouldSubmitInterventionAuditEventWhenForcedPasswordReset() {
+            when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            var event = generateForcedPasswordResetRequest();
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(auditService)
+                    .submitAuditEvent(AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE, auditContext);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        @Test
+        void shouldNotUpdateAccountModifiersWhenNoMfaMethodsPresent() {
+            when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentialsWithNoMfaMethods());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verify(userActionsManager).passwordReset(any(), any());
+            verifyNoInteractions(accountModifiersService);
+            verify(auditService, never())
+                    .submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        @Test
+        void shouldNotUpdateAccountModifiersWhenAuthAppNotVerified() {
+            when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentialsWithUnverifiedAuthApp());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verify(userActionsManager).passwordReset(any(), any());
+            verifyNoInteractions(accountModifiersService);
+            verify(auditService, never())
+                    .submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        @Test
+        void shouldEmitInterventionAuditButNotSetAccountBlockWhenForcedResetWithAllowMfaReset() {
+            when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentials());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(true));
+            var body =
+                    """
+                    {
+                        "password": "%s",
+                        "isForcedPasswordReset": true,
+                        "allowMfaResetAfterPasswordReset": true
+                    }
+                    """
+                            .formatted(NEW_PASSWORD);
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
             verify(accountModifiersService, never())
                     .setAccountRecoveryBlock(anyString(), anyBoolean());
+            verify(auditService)
+                    .submitAuditEvent(AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE, auditContext);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+            verify(auditService, never())
+                    .submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+        }
+
+        @Test
+        void shouldSetAccountBlockWhenUserHasMultipleMfaMethodsWithAtLeastOneVerified() {
+            when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentialsWithMultipleMfaMethods());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(true));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
+            verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+        }
+
+        @Test
+        void shouldNotSetAccountBlockWhenUserHasMultipleMfaMethodsButNoneVerified() {
+            when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentialsWithMultipleUnverifiedMfaMethods());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
+            verifyNoInteractions(accountModifiersService);
+            verify(auditService, never())
+                    .submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+            verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
         }
     }
 
-    @Test
-    void shouldReturn204ForSuccessfulMigratedUserRequestAndNoVerifiedMFAMethodIsPresent()
-            throws Json.JsonException {
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateMigratedUserCredentials());
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+    @Nested
+    class ClientErrorTests {
+        @Test
+        void shouldReturn400ForRequestIsMissingPassword() {
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setBody("{ }");
+            event.setHeaders(Map.of("Session-Id", SESSION_ID));
 
-        var result = handler.handleRequest(event, context);
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(204));
-        verify(sqsClient)
-                .send(
-                        argThat(
-                                partiallyContainsJsonString(
-                                        objectMapper.writeValueAsString(
-                                                EXPECTED_EMAIL_NOTIFY_REQUEST),
-                                        "unique_notification_reference")));
-        verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountModifiersService);
-        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
-    }
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(accountModifiersService);
+        }
 
-    @Test
-    void shouldReturn400ForRequestIsMissingPassword() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("{ }");
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
+        @Test
+        void shouldReturn400IfPasswordFailsValidation() {
+            var event = generateRequest("password", VALID_HEADERS);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(accountModifiersService);
-    }
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_PW_CHARS));
+            verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(accountModifiersService);
+        }
 
-    @Test
-    void shouldReturn400IfPasswordFailsValidation() {
-        var event = generateRequest("password", VALID_HEADERS);
+        @Test
+        void shouldReturn400IfNewPasswordEqualsExistingPassword() {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(
+                            generateUserCredentials(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD)));
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
-        var result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
-        verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(accountModifiersService);
-    }
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.NEW_PW_MATCHES_OLD));
+            verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
+            verifyNoInteractions(accountModifiersService);
+            verifyNoInteractions(sqsClient);
+            verifyNoInteractions(auditService);
+        }
 
-    @Test
-    void shouldReturn400IfNewPasswordEqualsExistingPassword() {
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentials(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD)));
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+        @Test
+        void shouldReturn400WhenUserHasInvalidSession() {
+            when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                    .thenReturn(Optional.empty());
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHeaders(Map.of("Session-Id", SESSION_ID));
+            event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
 
-        var result = handler.handleRequest(event, context);
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
-        verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountModifiersService);
-        verifyNoInteractions(sqsClient);
-        verifyNoInteractions(auditService);
-    }
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+            verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(accountModifiersService);
+        }
 
-    @Test
-    void shouldDeleteIncorrectPasswordCountOnSuccessfulRequest() throws Json.JsonException {
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentials());
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(2);
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+        @Test
+        void shouldReturn400ForMalformedJson() {
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setBody("{ \"password\": \"test\", }");
+            event.setHeaders(Map.of("Session-Id", SESSION_ID));
 
-        var result = handler.handleRequest(event, context);
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(204));
-        verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
-        verify(sqsClient)
-                .send(
-                        argThat(
-                                partiallyContainsJsonString(
-                                        objectMapper.writeValueAsString(
-                                                EXPECTED_EMAIL_NOTIFY_REQUEST),
-                                        "unique_notification_reference")));
-        verify(sqsClient, never())
-                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
-        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
-    }
-
-    @Test
-    void shouldReturn400WhenUserHasInvalidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
-        event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
-        verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(accountModifiersService);
-    }
-
-    @Test
-    void
-            shouldUpdateAccountModifiersWithBlockWhenPasswordResetSuccessfullyAndVerifiedAuthAppIsPresent()
-                    throws Json.JsonException {
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
-
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-        verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
-        verify(sqsClient)
-                .send(
-                        argThat(
-                                partiallyContainsJsonString(
-                                        objectMapper.writeValueAsString(
-                                                EXPECTED_EMAIL_NOTIFY_REQUEST),
-                                        "unique_notification_reference")));
-        verify(sqsClient, never())
-                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
-        verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
-        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
-    }
-
-    @Test
-    void shouldRecordPasswordResetSuccessInSession() {
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
-
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
-        handler.handleRequest(event, context);
-
-        verify(authSessionService)
-                .updateSession(
-                        argThat(
-                                state ->
-                                        state.getResetPasswordState()
-                                                .equals(
-                                                        AuthSessionItem.ResetPasswordState
-                                                                .SUCCEEDED)));
+            assertThat(result, hasStatus(400));
+            verifyNoInteractions(authenticationService);
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(accountModifiersService);
+        }
     }
 
     private APIGatewayProxyRequestEvent generateRequest(
             String password, Map<String, String> headers) {
-        var body = format("{ \"password\": \"%s\"}", password);
+        var body =
+                """
+                {
+                    "password": "%s"
+                }
+                """
+                        .formatted(password);
         return apiRequestEventWithHeadersAndBody(headers, body);
     }
 
@@ -507,9 +755,77 @@ class ResetPasswordHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
+    }
+
+    private APIGatewayProxyRequestEvent generateForcedPasswordResetRequest() {
+        var body =
+                """
+                {
+                    "password": "%s",
+                    "isForcedPasswordReset": true
+                }
+                """
+                        .formatted(NEW_PASSWORD);
+        return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+    }
+
+    private UserCredentials generateUserCredentialsWithNoMfaMethods() {
+        return new UserCredentials()
+                .withEmail(EMAIL)
+                .withPassword("old-password1")
+                .withSubjectID(SUBJECT);
+    }
+
+    private UserCredentials generateUserCredentialsWithUnverifiedAuthApp() {
+        return generateUserCredentials()
+                .setMfaMethod(
+                        new MFAMethod(
+                                MFAMethodType.AUTH_APP.getValue(),
+                                "auth-app-credential",
+                                false,
+                                true,
+                                NowHelper.nowMinus(50, ChronoUnit.DAYS).toString()));
+    }
+
+    private UserCredentials generateUserCredentialsWithMultipleMfaMethods() {
+        var credentials = generateUserCredentials();
+        var mfaMethods =
+                List.of(
+                        new MFAMethod(
+                                MFAMethodType.AUTH_APP.getValue(),
+                                "auth-app-credential",
+                                true,
+                                true,
+                                NowHelper.nowMinus(50, ChronoUnit.DAYS).toString()),
+                        new MFAMethod(
+                                MFAMethodType.SMS.getValue(),
+                                "sms-credential",
+                                false,
+                                true,
+                                NowHelper.nowMinus(30, ChronoUnit.DAYS).toString()));
+        credentials.setMfaMethods(mfaMethods);
+        return credentials;
+    }
+
+    private UserCredentials generateUserCredentialsWithMultipleUnverifiedMfaMethods() {
+        var credentials = generateUserCredentials();
+        var mfaMethods =
+                List.of(
+                        new MFAMethod(
+                                MFAMethodType.AUTH_APP.getValue(),
+                                "auth-app-credential",
+                                false,
+                                true,
+                                NowHelper.nowMinus(50, ChronoUnit.DAYS).toString()),
+                        new MFAMethod(
+                                MFAMethodType.SMS.getValue(),
+                                "sms-credential",
+                                false,
+                                true,
+                                NowHelper.nowMinus(30, ChronoUnit.DAYS).toString()));
+        credentials.setMfaMethods(mfaMethods);
+        return credentials;
     }
 }

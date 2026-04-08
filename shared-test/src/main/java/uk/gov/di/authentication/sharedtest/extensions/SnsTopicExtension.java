@@ -2,7 +2,7 @@ package uk.gov.di.authentication.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.CreateTopicRequest;
@@ -35,7 +35,7 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
         this.snsClient =
                 SnsClient.builder()
                         .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
-                        .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .region(Region.of(REGION))
                         .build();
     }
