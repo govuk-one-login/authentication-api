@@ -963,6 +963,12 @@ Resources:
                 aws:PrincipalArn: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedServiceSupport*
       ManagedPolicyArns:
         - !Ref InvokeAccountDeletionLambdaPolicy
+      PermissionsBoundary:
+        !If [
+          UsePermissionsBoundary,
+          !Ref PermissionsBoundary,
+          !Ref AWS::NoValue,
+        ]
 
   # ----------------
   # Managed policies
