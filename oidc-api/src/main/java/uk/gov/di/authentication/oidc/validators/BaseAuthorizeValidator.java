@@ -149,7 +149,8 @@ public abstract class BaseAuthorizeValidator {
         return Optional.empty();
     }
 
-    protected Optional<ErrorObject> validateVtr(List<String> authRequestVtr, ClientRegistry client) {
+    protected Optional<ErrorObject> validateVtr(
+            List<String> authRequestVtr, ClientRegistry client) {
         try {
             var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
@@ -160,8 +161,7 @@ public abstract class BaseAuthorizeValidator {
                                 levelOfConfidenceValues));
                 return Optional.of(
                         new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE,
-                                "Request vtr is not permitted"));
+                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
             }
             var vtrError = errorIfIdentityLoCAndIdentityUnsupported(vtrList, client);
             if (vtrError.isPresent()) {
@@ -178,8 +178,7 @@ public abstract class BaseAuthorizeValidator {
                             "vtr in AuthRequest is not valid. vtr in request: %s. IllegalArgumentException: %s",
                             authRequestVtr, e));
             return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
         return Optional.empty();
     }

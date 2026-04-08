@@ -162,17 +162,15 @@ class RequestObjectAuthorizeValidatorTest {
 
         @Test
         void validatorReturnsErrorWhenCannotParseVtr()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-                var invalidVtr = false;
-                var jwtClaimsSet =
-                    getDefaultJWTClaimsSetBuilder()
-                        .claim("vtr", invalidVtr).build();
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var invalidVtr = false;
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("vtr", invalidVtr).build();
 
-                var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-                var requestObjectError = validator.validate(authRequest);
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
 
-                assertTrue(requestObjectError.isPresent());
-                assertThat(
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
                     requestObjectError.get().errorObject().toJSONObject(),
                     equalTo(
                             new ErrorObject(

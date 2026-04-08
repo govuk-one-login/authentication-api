@@ -663,8 +663,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             setupForAuthJourney();
             String sessionId = givenAnExistingSession();
 
-            var queryParams = constructQueryStringParameters(
-                    CLIENT_ID, null, "openid", "[P2.Cl.Cm,Cl.Cm]");
+            var queryParams =
+                    constructQueryStringParameters(CLIENT_ID, null, "openid ", "[P2.Cl.Cm,Cl.Cm]");
             queryParams.put("vtr", jsonArrayOf("P2.Cl.Cm", "Cl.Cm"));
             var response =
                     makeRequest(
@@ -688,19 +688,18 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void
-        shouldReturnRequestVtrNotValidErrorToRPWhenIdentityLoCRequestedAndIdentityNotSupported() {
+                shouldReturnRequestVtrNotValidErrorToRPWhenIdentityLoCRequestedAndIdentityNotSupported() {
             setupForAuthJourney(false);
             String sessionId = givenAnExistingSession();
 
-            var queryParams = constructQueryStringParameters(
-                    CLIENT_ID, null, "openid", "P2.Cl.Cm");
+            var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
             var response =
                     makeRequest(
                             Optional.empty(),
                             constructHeaders(
-                                    new HttpCookie[]{
-                                            buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
-                                            new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    new HttpCookie[] {
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
                                     }),
                             queryParams,
                             Optional.of("GET"));
@@ -2197,6 +2196,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         return queryStringParameters;
     }
+
     private void setupForAuthJourney() {
         setupForAuthJourney(true);
     }

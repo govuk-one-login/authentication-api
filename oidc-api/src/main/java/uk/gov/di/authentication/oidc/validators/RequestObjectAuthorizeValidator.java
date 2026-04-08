@@ -327,14 +327,16 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         throw new ParseException("vtr is in an invalid format. Could not be parsed.", 0);
     }
 
-    private Optional<ErrorObject> parseAndValidateVtr(JWTClaimsSet jwtClaimsSet, ClientRegistry client){
+    private Optional<ErrorObject> parseAndValidateVtr(
+            JWTClaimsSet jwtClaimsSet, ClientRegistry client) {
         try {
             var authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
             return validateVtr(authRequestVtr, client);
         } catch (ParseException | Json.JsonException e) {
             logErrorInProdElseWarn(
                     String.format("Parse exception thrown when validating vtr: %s", e));
-            return Optional.of(new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+            return Optional.of(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
     }
 
