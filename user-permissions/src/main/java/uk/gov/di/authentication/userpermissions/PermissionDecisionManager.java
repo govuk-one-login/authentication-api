@@ -289,6 +289,21 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canVerifyMfaOtp(
             JourneyType journeyType, PermissionContext permissionContext) {
+        if (permissionContext == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            if (permissionContext.internalSubjectIds() == null
+                    || permissionContext.rpPairwiseId() == null) {
+                return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+            }
+            return this.checkForAnyReauthLockout(
+                    permissionContext.internalSubjectIds(),
+                    permissionContext.rpPairwiseId(),
+                    CountType.ENTER_MFA_CODE);
+        }
+
         if (permissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
