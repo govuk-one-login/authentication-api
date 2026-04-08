@@ -10,6 +10,7 @@ public class TrackingErrorMapper {
     public static ErrorResponse toErrorResponse(TrackingError trackingError) {
         return switch (trackingError) {
             case STORAGE_SERVICE_ERROR -> ErrorResponse.STORAGE_LAYER_ERROR;
+            case INVALID_USER_CONTEXT -> ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR;
         };
     }
 }

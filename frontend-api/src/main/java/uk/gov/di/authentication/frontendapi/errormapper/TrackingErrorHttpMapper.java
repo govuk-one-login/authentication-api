@@ -14,7 +14,7 @@ public class TrackingErrorHttpMapper {
         ErrorResponse errorResponse = TrackingErrorMapper.toErrorResponse(trackingError);
         int statusCode =
                 switch (trackingError) {
-                    case STORAGE_SERVICE_ERROR -> 500;
+                    case STORAGE_SERVICE_ERROR, INVALID_USER_CONTEXT -> 500;
                 };
         return new ErrorResponseWithStatus(statusCode, errorResponse);
     }
