@@ -40,10 +40,18 @@ Resources:
         - "/aws/lambda/${EnvironmentName}-bulk-test-user-delete-lambda"
         - EnvironmentName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      RetentionInDays: !FindInMap
-        - EnvironmentConfiguration
-        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - logRetentionDays
+      RetentionInDays: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            logRetentionDays,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            logRetentionDays,
+          ]
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   BulkTestUserDeleteLogSubscription:
@@ -68,10 +76,18 @@ Resources:
       Statistic: Sum
       Period: 900
       EvaluationPeriods: 1
-      Threshold: !FindInMap
-        - EnvironmentConfiguration
-        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - lambdaErrorThreshold
+      Threshold: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            lambdaErrorThreshold,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaErrorThreshold,
+          ]
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: FunctionName

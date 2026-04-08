@@ -26,44 +26,104 @@ Resources:
         Variables:
           ENVIRONMENT:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          NOTIFY_URL: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - notifyUrl
-          NOTIFY_TEMPLATE_MAP: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - notifyTemplateMap
-          BULK_USER_EMAIL_BATCH_SIZE: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailBatchSize
-          BULK_USER_EMAIL_SEND_MODE: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailSendMode
-          BULK_USER_EMAIL_SENDER_TYPE: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailSenderType
-          BULK_USER_EMAIL_EMAIL_SENDING_ENABLED: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - bulkEmailSendingEnabled
+          NOTIFY_URL: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                notifyUrl,
+              ]
+            - !FindInMap [EnvironmentConfiguration, !Ref Environment, notifyUrl]
+          NOTIFY_TEMPLATE_MAP: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                notifyTemplateMap,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                notifyTemplateMap,
+              ]
+          BULK_USER_EMAIL_BATCH_SIZE: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                bulkEmailBatchSize,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                bulkEmailBatchSize,
+              ]
+          BULK_USER_EMAIL_SEND_MODE: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                bulkEmailSendMode,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                bulkEmailSendMode,
+              ]
+          BULK_USER_EMAIL_SENDER_TYPE: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                bulkEmailSenderType,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                bulkEmailSenderType,
+              ]
+          BULK_USER_EMAIL_EMAIL_SENDING_ENABLED: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                bulkEmailSendingEnabled,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                bulkEmailSendingEnabled,
+              ]
       Events:
         ScheduledEvent:
           Type: Schedule
           Properties:
-            Schedule: !FindInMap
-              - EnvironmentConfiguration
-              - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-              - bulkEmailSendScheduleExpression
+            Schedule: !If
+              - UseSubEnvironment
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref SubEnvironment,
+                  bulkEmailSendScheduleExpression,
+                ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  bulkEmailSendScheduleExpression,
+                ]
             Description: Triggers bulk user email send Lambda on schedule
             Enabled: !Equals
-              - !FindInMap
-                - EnvironmentConfiguration
-                - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-                - bulkEmailSendScheduleState
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    bulkEmailSendScheduleState,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    bulkEmailSendScheduleState,
+                  ]
               - ENABLED
       Tags:
         Name: !Sub
@@ -81,10 +141,18 @@ Resources:
         - "/aws/lambda/${EnvironmentName}-bulk-user-email-send-lambda"
         - EnvironmentName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      RetentionInDays: !FindInMap
-        - EnvironmentConfiguration
-        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - logRetentionDays
+      RetentionInDays: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            logRetentionDays,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            logRetentionDays,
+          ]
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   BulkUserEmailSendLogSubscription:
@@ -109,10 +177,18 @@ Resources:
       Statistic: Sum
       Period: 900
       EvaluationPeriods: 1
-      Threshold: !FindInMap
-        - EnvironmentConfiguration
-        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - lambdaErrorThreshold
+      Threshold: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            lambdaErrorThreshold,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaErrorThreshold,
+          ]
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: FunctionName

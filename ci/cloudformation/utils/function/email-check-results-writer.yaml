@@ -21,10 +21,18 @@ Resources:
       AutoPublishAlias: live
       ProvisionedConcurrencyConfig: !If
         - EnableEmailCheckResultsProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - EnvironmentConfiguration
-            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - emailCheckResultsWriterProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                emailCheckResultsWriterProvisionedConcurrency,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                emailCheckResultsWriterProvisionedConcurrency,
+              ]
         - !Ref AWS::NoValue
       Tags:
         Name: !Sub
@@ -41,10 +49,18 @@ Resources:
         - "/aws/lambda/${EnvironmentName}-email-check-results-writer-lambda"
         - EnvironmentName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      RetentionInDays: !FindInMap
-        - EnvironmentConfiguration
-        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - logRetentionDays
+      RetentionInDays: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            logRetentionDays,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            logRetentionDays,
+          ]
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   EmailCheckResultsWriterLogSubscription:
@@ -69,10 +85,18 @@ Resources:
       Statistic: Sum
       Period: 900
       EvaluationPeriods: 1
-      Threshold: !FindInMap
-        - EnvironmentConfiguration
-        - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        - lambdaErrorThreshold
+      Threshold: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            lambdaErrorThreshold,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaErrorThreshold,
+          ]
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: FunctionName
