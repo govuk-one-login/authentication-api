@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
-import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
@@ -75,6 +74,16 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     @Nested
     class EmailVerification {
 
+        public static String verifyEmailRequestBody(String email) {
+            return """
+                    {
+                    "email": "%s",
+                    "notificationType": "VERIFY_EMAIL"
+                    }
+                    """
+                    .formatted(email);
+        }
+
         @Nested
         class UserReceivesVerificationEmail {
             @Test
@@ -93,9 +102,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 var response =
                         makeRequest(
-                                Optional.of(
-                                        new SendNotificationRequest(
-                                                TEST_NEW_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
+                                Optional.of(verifyEmailRequestBody(TEST_NEW_EMAIL)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -130,9 +137,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 var response =
                         makeRequest(
-                                Optional.of(
-                                        new SendNotificationRequest(
-                                                TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
+                                Optional.of(verifyEmailRequestBody(TEST_EMAIL)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -154,6 +159,17 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     @Nested
     class PhoneNumberVerification {
 
+        public static String requestWithPhoneNumberAndEmail(String phoneNumber, String email) {
+            return """
+                        {
+                            "email": "%s",
+                            "notificationType": "VERIFY_PHONE_NUMBER",
+                            "phoneNumber": "%s"
+                        }
+                        """
+                    .formatted(email, phoneNumber);
+        }
+
         @Nested
         class UserReceivesVerificationSms {
             @Test
@@ -167,10 +183,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 var response =
                         makeRequest(
                                 Optional.of(
-                                        new SendNotificationRequest(
-                                                TEST_EMAIL,
-                                                VERIFY_PHONE_NUMBER,
-                                                TEST_PHONE_NUMBER)),
+                                        requestWithPhoneNumberAndEmail(
+                                                TEST_PHONE_NUMBER, TEST_EMAIL)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -217,10 +231,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 var response =
                         makeRequest(
                                 Optional.of(
-                                        new SendNotificationRequest(
-                                                nonExistentUserEmail,
-                                                VERIFY_PHONE_NUMBER,
-                                                TEST_PHONE_NUMBER)),
+                                        requestWithPhoneNumberAndEmail(
+                                                TEST_PHONE_NUMBER, nonExistentUserEmail)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -243,8 +255,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 var response =
                         makeRequest(
                                 Optional.of(
-                                        new SendNotificationRequest(
-                                                TEST_EMAIL, VERIFY_PHONE_NUMBER, badPhoneNumber)),
+                                        requestWithPhoneNumberAndEmail(badPhoneNumber, TEST_EMAIL)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -265,7 +276,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
             void shouldReturn400WhenNewPhoneNumberIsTheSameAsCurrentPhoneNumber()
                     throws Json.JsonException {
                 userStore.signUp(TEST_EMAIL, "password");
-                userStore.addVerifiedPhoneNumber(TEST_EMAIL, "+447755551084");
+                var phoneNumber = "+447755551084";
+                userStore.addVerifiedPhoneNumber(TEST_EMAIL, phoneNumber);
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
@@ -273,8 +285,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 var response =
                         makeRequest(
                                 Optional.of(
-                                        new SendNotificationRequest(
-                                                TEST_EMAIL, VERIFY_PHONE_NUMBER, "+447755551084")),
+                                        requestWithPhoneNumberAndEmail(phoneNumber, TEST_EMAIL)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -302,10 +313,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 var response =
                         makeRequest(
                                 Optional.of(
-                                        new SendNotificationRequest(
-                                                TEST_EMAIL,
-                                                VERIFY_PHONE_NUMBER,
-                                                INTERNATIONAL_MOBILE_NUMBER)),
+                                        requestWithPhoneNumberAndEmail(
+                                                INTERNATIONAL_MOBILE_NUMBER, TEST_EMAIL)),
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
