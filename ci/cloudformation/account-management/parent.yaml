@@ -948,7 +948,7 @@ Resources:
     Type: AWS::IAM::Role
     Condition: ShouldCreateAccountDeletionPolicy
     Properties:
-      RoleName: support-account-deletion-role
+      RoleName: ${AWS::StackName}-support-account-deletion-role
       Path: /runbooks/
       Description: Role for support users to perform account deletions using lambda exec action
       AssumeRolePolicyDocument:
