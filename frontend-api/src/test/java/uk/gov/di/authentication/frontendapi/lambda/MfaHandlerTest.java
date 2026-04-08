@@ -915,6 +915,31 @@ class MfaHandlerTest {
         verify(sqsClient, never()).send(any());
     }
 
+    @Test
+    void shouldReturn500WhenCanVerifyMfaOtpReturnsReauthLockedOut() {
+        usingValidSession();
+
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.ReauthLockedOut(
+                                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                        6,
+                                        Instant.now(),
+                                        false,
+                                        java.util.Map.of(),
+                                        List.of())));
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
+        verify(sqsClient, never()).send(any());
+    }
+
     @ParameterizedTest
     @MethodSource("mfaJourneyTypes")
     void shouldReturn400WhenInternationalSendLimitServiceBlocks(JourneyType journeyType) {

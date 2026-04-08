@@ -11,13 +11,16 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -237,12 +240,23 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             var requestSmsMfaMethod = maybeRequestedSmsMfaMethod.get();
             var phoneNumber = requestSmsMfaMethod.getDestination();
 
-            var permissionContext =
+            var permissionContextBuilder =
                     PermissionContext.builder()
                             .withEmailAddress(email)
                             .withE164FormattedPhoneNumber(phoneNumber)
-                            .withAuthSessionItem(userContext.getAuthSession())
-                            .build();
+                            .withAuthSessionItem(userContext.getAuthSession());
+
+            userContext
+                    .getUserProfile()
+                    .ifPresent(
+                            userProfile -> {
+                                permissionContextBuilder.withInternalSubjectId(
+                                        userProfile.getSubjectID());
+                                getRpPairwiseId(userProfile, userContext.getAuthSession())
+                                        .ifPresent(permissionContextBuilder::withRpPairwiseId);
+                            });
+
+            var permissionContext = permissionContextBuilder.build();
             var lockoutStateHolder = new InMemoryLockoutStateHolder();
 
             var maybeResponseIfNotPermitted =
@@ -360,6 +374,13 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
                             canVerifyResult.getFailure()));
         }
+        if (canVerifyResult.getSuccess() instanceof Decision.ReauthLockedOut) {
+            LOG.warn(
+                    "Unexpected ReauthLockedOut from canVerifyMfaOtp - "
+                            + "should have been checked in an earlier handler in the journey");
+            return Optional.of(
+                    generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR));
+        }
         if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
             auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
             return Optional.of(
@@ -367,5 +388,16 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         }
 
         return Optional.empty();
+    }
+
+    private Optional<String> getRpPairwiseId(UserProfile userProfile, AuthSessionItem authSession) {
+        try {
+            return Optional.of(
+                    ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService)
+                            .getValue());
+        } catch (RuntimeException e) {
+            LOG.warn("Failed to derive RP pairwise ID: {}", e.getMessage());
+            return Optional.empty();
+        }
     }
 }

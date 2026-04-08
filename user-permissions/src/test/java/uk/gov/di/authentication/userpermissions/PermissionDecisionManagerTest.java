@@ -728,81 +728,194 @@ class PermissionDecisionManagerTest {
     class CanVerifyMfaOtp {
 
         @Test
-        void shouldReturnPermittedWhenNotBlocked() {
-            var userContext = createUserContext(0);
-            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
-
-            var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
-
-            assertTrue(result.isSuccess());
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
-            assertEquals(0, decision.attemptCount());
-        }
-
-        @Test
-        void shouldReturnPermittedWithAttemptCountWhenNotBlocked() {
-            var userContext = createUserContext(0);
-            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
-
-            var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
-
-            assertTrue(result.isSuccess());
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
-            assertEquals(3, decision.attemptCount());
-        }
-
-        @Test
-        void shouldReturnLockedOutWhenBlocked() {
-            var userContext = createUserContext(0);
-            long blockTtl = 1234567890L;
-            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(blockTtl);
-
-            var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
-
-            assertTrue(result.isSuccess());
-            var lockedOut =
-                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
-            assertEquals(
-                    ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
-                    lockedOut.forbiddenReason());
-            assertEquals(6, lockedOut.attemptCount());
-        }
-
-        @Test
-        void shouldReturnStorageErrorWhenExceptionThrown() {
-            var userContext = createUserContext(0);
-            doThrow(new RuntimeException("Storage error"))
-                    .when(codeStorageService)
-                    .getTTL(eq(EMAIL), anyString());
-
-            var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+        void shouldReturnErrorWhenPermissionContextIsNull() {
+            var result = permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, null);
 
             assertTrue(result.isFailure());
-            assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
+            assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
         }
 
-        @Test
-        void shouldReturnLockedOutWhenAuthAppDeprecatedKeyIsBlocked() {
-            var userContext = createUserContext(0);
-            long blockTtl = 1234567890L;
-            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "MFA_SIGN_IN"))
-                    .thenReturn(0L);
-            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "SMS_SIGN_IN"))
-                    .thenReturn(0L);
-            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "AUTH_APP_SIGN_IN"))
-                    .thenReturn(blockTtl);
+        @Nested
+        class StandardJourneys {
 
-            var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+            @Test
+            void shouldReturnErrorWhenEmailAddressIsNull() {
+                var userContext =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-id")
+                                .withAuthSessionItem(new AuthSessionItem())
+                                .build();
 
-            assertTrue(result.isSuccess());
-            assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+                assertTrue(result.isFailure());
+                assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnPermittedWhenNotBlocked() {
+                var userContext = createUserContext(0);
+                when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
+                when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+                assertTrue(result.isSuccess());
+                var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+                assertEquals(0, decision.attemptCount());
+            }
+
+            @Test
+            void shouldReturnPermittedWithAttemptCountWhenNotBlocked() {
+                var userContext = createUserContext(0);
+                when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
+                when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+                assertTrue(result.isSuccess());
+                var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+                assertEquals(3, decision.attemptCount());
+            }
+
+            @Test
+            void shouldReturnLockedOutWhenBlocked() {
+                var userContext = createUserContext(0);
+                long blockTtl = 1234567890L;
+                when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(blockTtl);
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+                assertTrue(result.isSuccess());
+                var lockedOut =
+                        assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+                assertEquals(
+                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                        lockedOut.forbiddenReason());
+                assertEquals(6, lockedOut.attemptCount());
+            }
+
+            @Test
+            void shouldReturnStorageErrorWhenExceptionThrown() {
+                var userContext = createUserContext(0);
+                doThrow(new RuntimeException("Storage error"))
+                        .when(codeStorageService)
+                        .getTTL(eq(EMAIL), anyString());
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+                assertTrue(result.isFailure());
+                assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnLockedOutWhenAuthAppDeprecatedKeyIsBlocked() {
+                var userContext = createUserContext(0);
+                long blockTtl = 1234567890L;
+                when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "MFA_SIGN_IN"))
+                        .thenReturn(0L);
+                when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "SMS_SIGN_IN"))
+                        .thenReturn(0L);
+                when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + "AUTH_APP_SIGN_IN"))
+                        .thenReturn(blockTtl);
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+                assertTrue(result.isSuccess());
+                assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            }
+        }
+
+        @Nested
+        class ReauthenticationJourney {
+
+            @Test
+            void shouldReturnErrorWhenInternalSubjectIdIsNull() {
+                var userContext =
+                        PermissionContext.builder()
+                                .withRpPairwiseId("pairwise")
+                                .withEmailAddress(EMAIL)
+                                .withAuthSessionItem(new AuthSessionItem())
+                                .build();
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(
+                                JourneyType.REAUTHENTICATION, userContext);
+
+                assertTrue(result.isFailure());
+                assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnErrorWhenRpPairwiseIdIsNull() {
+                var userContext =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-id")
+                                .withEmailAddress(EMAIL)
+                                .withAuthSessionItem(new AuthSessionItem())
+                                .build();
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(
+                                JourneyType.REAUTHENTICATION, userContext);
+
+                assertTrue(result.isFailure());
+                assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnPermittedWhenNotBlocked() {
+                var userContext = createUserContext(0);
+                var identifiers = new ArrayList<String>();
+                identifiers.add(userContext.internalSubjectId());
+                identifiers.add(userContext.rpPairwiseId());
+                when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                                identifiers, JourneyType.REAUTHENTICATION))
+                        .thenReturn(Map.of(CountType.ENTER_MFA_CODE, 2));
+                when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+                when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+                when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(
+                                JourneyType.REAUTHENTICATION, userContext);
+
+                assertTrue(result.isSuccess());
+                var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+                assertEquals(2, decision.attemptCount());
+            }
+
+            @Test
+            void shouldReturnReauthLockedOutWhenMfaCountExceeded() {
+                var userContext = createUserContext(0);
+                var identifiers = new ArrayList<String>();
+                identifiers.add(userContext.internalSubjectId());
+                identifiers.add(userContext.rpPairwiseId());
+                when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                                identifiers, JourneyType.REAUTHENTICATION))
+                        .thenReturn(Map.of(CountType.ENTER_MFA_CODE, 6));
+                when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+                when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+                when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(
+                                JourneyType.REAUTHENTICATION, userContext);
+
+                assertTrue(result.isSuccess());
+                var lockedOut =
+                        assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
+                assertEquals(
+                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                        lockedOut.forbiddenReason());
+                assertEquals(6, lockedOut.attemptCount());
+            }
         }
 
         @Test
