@@ -9,5 +9,6 @@ class TrackingErrorTest {
     @Test
     void shouldHaveCorrectEnumValues() {
         assertEquals("STORAGE_SERVICE_ERROR", TrackingError.STORAGE_SERVICE_ERROR.name());
+        assertEquals("INVALID_USER_CONTEXT", TrackingError.INVALID_USER_CONTEXT.name());
     }
 }
