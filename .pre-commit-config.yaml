@@ -33,6 +33,11 @@ repos:
           orchestration-api-spec.yaml"
         files: ^.*\.(yml|yaml)$
 
+  - repo: https://github.com/govuk-one-login/pre-commit-hooks.git
+    rev: 0.0.1
+    hooks:
+      - id: gradle-spotless-apply
+
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.97.3
     hooks:
