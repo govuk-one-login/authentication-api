@@ -2,11 +2,14 @@ package uk.gov.di.orchestration.shared.serialization;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import com.google.gson.stream.MalformedJsonException;
 
 import java.io.IOException;
+import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 public class LocalDateTimeAdapter extends TypeAdapter<LocalDateTime> {
     @Override

@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.google.gson.reflect.TypeToken;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
@@ -10,16 +11,21 @@ import org.apache.logging.log4j.Logger;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.json.JSONArray;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.orchestration.shared.helpers.CryptoProviderHelper;
+import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
@@ -34,6 +40,7 @@ public class JwksService {
     private final KmsConnectionService kmsConnectionService;
     private static final Map<String, JWK> KEY_CACHE = new HashMap<>();
     private static final Logger LOG = LogManager.getLogger(JwksService.class);
+    private final Json objectMapper = SerializationService.getInstance();
 
     public JwksService(
             ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
@@ -49,6 +56,32 @@ public class JwksService {
     public JWK getPublicTokenRsaJwkWithOpaqueId() {
         LOG.info("Retrieving RSA public key");
         return getPublicJWKWithKeyId(configurationService.getExternalTokenSigningKeyRsaAlias());
+    }
+
+    public ArrayList<ECKey> getStoredOldPublicTokenJwksWithOpaqueId() {
+        try {
+            LOG.info("Retrieving stored EC public key");
+            Type listType = new TypeToken<ArrayList<ECKey>>() {}.getType();
+            return objectMapper.readValue(configurationService.getStoredOldTokenECPublicKeys(), listType);
+        }
+        catch (Json.JsonException e) {
+            String error = "Error parsing stored EC public key: " + e.getMessage();
+            LOG.error(error);
+            throw new RuntimeException();
+        }
+    }
+
+    public ArrayList<RSAKey> getStoredOldPublicTokenRsaJwksWithOpaqueId() {
+        try {
+            LOG.info("Retrieving stored RSA public key");
+            Type listType = new TypeToken<ArrayList<RSAKey>>() {}.getType();
+            return objectMapper.readValue(configurationService.getStoredOldTokenRSAPublicKeys(), listType);
+        }
+        catch (Json.JsonException e) {
+            String error = "Error parsing stored RSA public key: " + e.getMessage();
+            LOG.error(error);
+            throw new RuntimeException();
+        }
     }
 
     public JWK getNextPublicTokenJwkWithOpaqueIdV2() {

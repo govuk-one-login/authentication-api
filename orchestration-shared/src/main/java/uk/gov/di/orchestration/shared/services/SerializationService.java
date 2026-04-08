@@ -4,17 +4,22 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.serialization.ECKeyAdapter;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.LocalDateTimeAdapter;
+import uk.gov.di.orchestration.shared.serialization.RSAKeyAdapter;
 import uk.gov.di.orchestration.shared.serialization.StateAdapter;
 import uk.gov.di.orchestration.shared.serialization.SubjectAdapter;
 import uk.gov.di.orchestration.shared.validation.RequiredFieldValidator;
 import uk.gov.di.orchestration.shared.validation.Validator;
 
+import java.lang.reflect.Type;
+import java.security.interfaces.RSAPublicKey;
 import java.time.LocalDateTime;
 
 import static java.util.Objects.isNull;
@@ -37,6 +42,8 @@ public class SerializationService implements Json {
                         .registerTypeAdapter(State.class, new StateAdapter())
                         .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                         .registerTypeAdapter(Subject.class, new SubjectAdapter())
+                        .registerTypeAdapter(ECKey.class, new ECKeyAdapter())
+                        .registerTypeAdapter(RSAPublicKey.class, new RSAKeyAdapter())
                         .create();
     }
 
@@ -55,6 +62,11 @@ public class SerializationService implements Json {
     }
 
     @Override
+    public <T> T readValue(String body, Type typeOfT) throws JsonException {
+        return readValue(body, typeOfT, defaultValidator);
+    }
+
+    @Override
     public <T> T readValue(String jsonString, Class<T> clazz, Validator validator)
             throws JsonException {
         try {
@@ -62,6 +74,31 @@ public class SerializationService implements Json {
                     segmentedFunctionCall(
                             "SerializationService::GSON::fromJson",
                             () -> gson.fromJson(jsonString, clazz));
+            var violations =
+                    segmentedFunctionCall(
+                            "SerializationService::validator::validate",
+                            () -> validator.validate(value));
+            if (violations.isEmpty()) {
+                return value;
+            }
+            violations.forEach(
+                    v -> LOG.warn("Json validation failed due to missing required field: {}", v));
+            throw new JsonException(
+                    "JSON validation error, missing required field(s): "
+                            + String.join(", ", violations));
+        } catch (JsonSyntaxException | IllegalArgumentException e) {
+            throw new JsonException(e);
+        }
+    }
+
+    @Override
+    public <T> T readValue(String jsonString, Type typeOfT, Validator validator)
+            throws JsonException {
+        try {
+            T value =
+                    segmentedFunctionCall(
+                            "SerializationService::GSON::fromJson",
+                            () -> gson.fromJson(jsonString, typeOfT));
             var violations =
                     segmentedFunctionCall(
                             "SerializationService::validator::validate",
