@@ -53,6 +53,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -212,6 +213,10 @@ class VerifyMfaCodeHandlerTest {
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
+        when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -1593,6 +1598,8 @@ class VerifyMfaCodeHandlerTest {
         when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
         var codeRequest =
@@ -1612,11 +1619,40 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Test
+    void shouldReturn500WhenCorrectSmsOtpReceivedReturnsInvalidUserContext()
+            throws Json.JsonException {
+        // Arrange
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(phoneNumberCodeProcessor));
+        when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.failure(TrackingError.INVALID_USER_CONTEXT));
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        CODE,
+                        JourneyType.SIGN_IN,
+                        DEFAULT_SMS_METHOD.getDestination());
+
+        // Act
+        var result = makeCallWithCode(codeRequest);
+
+        // Assert
+        assertThat(result, hasStatus(500));
+    }
+
+    @Test
     void shouldCallCorrectAuthAppOtpReceivedWhenAuthAppCodeIsValid() throws Json.JsonException {
         // Arrange
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
         var codeRequest =
@@ -1630,5 +1666,27 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verify(userActionsManager)
                 .correctAuthAppOtpReceived(any(), argThat(pc -> pc.authSessionItem() != null));
+    }
+
+    @Test
+    void shouldReturn500WhenCorrectAuthAppOtpReceivedReturnsInvalidUserContext()
+            throws Json.JsonException {
+        // Arrange
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.failure(TrackingError.INVALID_USER_CONTEXT));
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, AUTH_APP_SECRET);
+
+        // Act
+        var result = makeCallWithCode(codeRequest);
+
+        // Assert
+        assertThat(result, hasStatus(500));
     }
 }
