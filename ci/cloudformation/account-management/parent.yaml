@@ -949,7 +949,6 @@ Resources:
     Condition: ShouldCreateAccountDeletionPolicy
     Properties:
       RoleName: !Sub ${AWS::StackName}-support-account-deletion-role
-      Path: /runbooks/
       Description: Role for support users to perform account deletions using lambda exec action
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
