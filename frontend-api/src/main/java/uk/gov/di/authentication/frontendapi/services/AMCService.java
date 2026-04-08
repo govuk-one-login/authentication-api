@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -72,6 +71,7 @@ public class AMCService {
             String publicSubject,
             String amcRedirectUri,
             List<AccessTokenConfig> accessTokenConfigs,
+            RSAPublicKey publicEncryptionKey,
             State state) {
         LOG.info("Building AMC authorization URL");
 
@@ -82,6 +82,7 @@ public class AMCService {
                         authSessionItem,
                         publicSubject,
                         accessTokenConfigs,
+                        publicEncryptionKey,
                         state)
                 .map(
                         encryptedJWTAndAmcCookie -> {
@@ -170,6 +171,7 @@ public class AMCService {
             AuthSessionItem authSessionItem,
             String publicSubject,
             List<AccessTokenConfig> accessTokenConfigs,
+            RSAPublicKey publicEncryptionKey,
             State state) {
         Date issueTime = nowClock.now();
         Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
@@ -213,23 +215,12 @@ public class AMCService {
                         })
                 .flatMap(
                         signedJWT -> {
-                            try {
-                                var hashedCookie =
-                                        HashHelper.hashSha256String(signedJWT.serialize());
-                                RSAPublicKey publicKey =
-                                        JWK.parseFromPEMEncodedObjects(
-                                                        configurationService
-                                                                .getAuthToAMCPublicEncryptionKey())
-                                                .toRSAKey()
-                                                .toRSAPublicKey();
-                                return encryptJWT(signedJWT, publicKey)
-                                        .map(
-                                                encryptedJWT ->
-                                                        new EncryptedJWTAndAmcCookie(
-                                                                encryptedJWT, hashedCookie));
-                            } catch (JOSEException e) {
-                                return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
-                            }
+                            var hashedCookie = HashHelper.hashSha256String(signedJWT.serialize());
+                            return encryptJWT(signedJWT, publicEncryptionKey)
+                                    .map(
+                                            encryptedJWT ->
+                                                    new EncryptedJWTAndAmcCookie(
+                                                            encryptedJWT, hashedCookie));
                         });
     }
 
