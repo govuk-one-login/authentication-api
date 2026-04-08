@@ -21,18 +21,10 @@ Resources:
       AutoPublishAlias: live
       ProvisionedConcurrencyConfig: !If
         - EnableEmailCheckResultsProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                emailCheckResultsWriterProvisionedConcurrency,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                emailCheckResultsWriterProvisionedConcurrency,
-              ]
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - EnvironmentConfiguration
+            - !Ref Environment
+            - emailCheckResultsWriterProvisionedConcurrency
         - !Ref AWS::NoValue
       Tags:
         Name: !Sub
