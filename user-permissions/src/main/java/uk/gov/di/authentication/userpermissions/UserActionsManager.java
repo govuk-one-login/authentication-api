@@ -20,6 +20,7 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -391,9 +392,7 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctSmsOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
-        getAuthSessionService().updateSession(updatedSession);
-        return Result.success(null);
+        return correctMfaOtpReceived(journeyType, permissionContext);
     }
 
     @Override
@@ -456,9 +455,67 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        return correctMfaOtpReceived(journeyType, permissionContext);
+    }
+
+    private Result<TrackingError, Void> correctMfaOtpReceived(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        if (permissionContext == null) {
+            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+        }
+        var authSession = permissionContext.authSessionItem();
+        if (authSession == null) {
+            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+        }
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            var internalSubjectId = permissionContext.internalSubjectId();
+            var rpPairwiseId = permissionContext.rpPairwiseId();
+            if (internalSubjectId == null || rpPairwiseId == null) {
+                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+            }
+
+            if (configurationService.supportReauthSignoutEnabled()
+                    && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                var counts =
+                        getAuthenticationAttemptsService()
+                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                        internalSubjectId,
+                                        rpPairwiseId,
+                                        JourneyType.REAUTHENTICATION);
+                authSession = authSession.withPreservedReauthCountsForAuditMap(counts);
+            }
+        } else {
+            if (permissionContext.emailAddress() == null) {
+                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+            }
+            getCodeStorageService()
+                    .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        }
+
+        clearReauthCounts(permissionContext);
+
+        var updatedSession = authSession.withHasVerifiedMfa(true);
         getAuthSessionService().updateSession(updatedSession);
+
         return Result.success(null);
+    }
+
+    private void clearReauthCounts(PermissionContext permissionContext) {
+        var identifiers = new ArrayList<String>();
+        if (permissionContext.internalSubjectIds() != null) {
+            identifiers.addAll(permissionContext.internalSubjectIds());
+        }
+        if (permissionContext.rpPairwiseId() != null) {
+            identifiers.add(permissionContext.rpPairwiseId());
+        }
+
+        for (String identifier : identifiers) {
+            for (CountType countType : CountType.values()) {
+                getAuthenticationAttemptsService()
+                        .deleteCount(identifier, JourneyType.REAUTHENTICATION, countType);
+            }
+        }
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {

@@ -23,6 +23,7 @@ import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolde
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -426,19 +427,218 @@ class UserActionsManagerTest {
 
     @Nested
     class CorrectSmsOtpReceived {
-        @Test
-        void correctSmsOtpReceivedShouldSetHasVerifiedMfaToTrue() {
-            // Arrange
-            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
-            // Act
-            var result = userActionsManager.correctSmsOtpReceived(null, permissionContext);
+        @Nested
+        class SharedValidation {
 
-            // Assert
-            verify(authSessionService).updateSession(captor.capture());
-            AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedMfa());
-            assertTrue(result.isSuccess());
+            @Test
+            void shouldReturnErrorWhenPermissionContextIsNull() {
+                var result = userActionsManager.correctSmsOtpReceived(JourneyType.SIGN_IN, null);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnErrorWhenAuthSessionItemIsNull() {
+                var context = PermissionContext.builder().withEmailAddress(EMAIL).build();
+
+                var result = userActionsManager.correctSmsOtpReceived(JourneyType.SIGN_IN, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+        }
+
+        @Nested
+        class ReauthenticationJourney {
+
+            @Test
+            void shouldReturnErrorWhenInternalSubjectIdIsNull() {
+                var context =
+                        PermissionContext.builder()
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnErrorWhenRpPairwiseIdIsNull() {
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldSetHasVerifiedMfaToTrue() {
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                verify(authSessionService).updateSession(captor.capture());
+                assertTrue(captor.getValue().getHasVerifiedMfa());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldClearAllReauthCountsForBothIdentifiers() {
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                for (CountType countType : CountType.values()) {
+                    verify(authenticationAttemptsService)
+                            .deleteCount("subject-123", JourneyType.REAUTHENTICATION, countType);
+                    verify(authenticationAttemptsService)
+                            .deleteCount(
+                                    "rp-pairwise-456", JourneyType.REAUTHENTICATION, countType);
+                }
+                verify(codeStorageService, never())
+                        .deleteIncorrectMfaCodeAttemptsCount(anyString());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldPreserveReauthCountsForAuditWhenFeatureFlagsEnabled() {
+                when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+                when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                        .thenReturn(true);
+                var counts = Map.of(CountType.ENTER_PASSWORD, 2, CountType.ENTER_SMS_CODE, 1);
+                when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                "subject-123", "rp-pairwise-456", JourneyType.REAUTHENTICATION))
+                        .thenReturn(counts);
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService).updateSession(captor.capture());
+                assertEquals(counts, captor.getValue().getPreservedReauthCountsForAuditMap());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldNotPreserveReauthCountsWhenFeatureFlagsDisabled() {
+                when(configurationService.supportReauthSignoutEnabled()).thenReturn(false);
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                verify(authenticationAttemptsService, never())
+                        .getCountsByJourneyForSubjectIdAndRpPairwiseId(any(), any(), any());
+                assertTrue(result.isSuccess());
+            }
+        }
+
+        @Nested
+        class StandardJourneys {
+
+            @Test
+            void shouldReturnErrorWhenEmailAddressIsNull() {
+                var authSessionWithoutEmail = new AuthSessionItem().withSessionId(SESSION_ID);
+                var context =
+                        PermissionContext.builder()
+                                .withAuthSessionItem(authSessionWithoutEmail)
+                                .build();
+
+                var result = userActionsManager.correctSmsOtpReceived(JourneyType.SIGN_IN, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldSetHasVerifiedMfaToTrue() {
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.SIGN_IN, permissionContext);
+
+                verify(authSessionService).updateSession(captor.capture());
+                assertTrue(captor.getValue().getHasVerifiedMfa());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldClearIncorrectMfaCodeAttemptsCount() {
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.SIGN_IN, permissionContext);
+
+                verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldClearReauthCountsWhenIdentifiersAvailable() {
+                var context =
+                        PermissionContext.builder()
+                                .withEmailAddress(EMAIL)
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result = userActionsManager.correctSmsOtpReceived(JourneyType.SIGN_IN, context);
+
+                assertTrue(result.isSuccess());
+                for (CountType countType : CountType.values()) {
+                    verify(authenticationAttemptsService)
+                            .deleteCount("subject-123", JourneyType.REAUTHENTICATION, countType);
+                    verify(authenticationAttemptsService)
+                            .deleteCount(
+                                    "rp-pairwise-456", JourneyType.REAUTHENTICATION, countType);
+                }
+            }
         }
     }
 
@@ -586,19 +786,153 @@ class UserActionsManagerTest {
 
     @Nested
     class CorrectAuthAppOtpReceived {
-        @Test
-        void correctAuthAppOtpReceivedShouldSetHasVerifiedMfaToTrue() {
-            // Arrange
-            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
-            // Act
-            var result = userActionsManager.correctAuthAppOtpReceived(null, permissionContext);
+        @Nested
+        class SharedValidation {
 
-            // Assert
-            verify(authSessionService).updateSession(captor.capture());
-            AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedMfa());
-            assertTrue(result.isSuccess());
+            @Test
+            void shouldReturnErrorWhenPermissionContextIsNull() {
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(JourneyType.SIGN_IN, null);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnErrorWhenAuthSessionItemIsNull() {
+                var context = PermissionContext.builder().withEmailAddress(EMAIL).build();
+
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(JourneyType.SIGN_IN, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+        }
+
+        @Nested
+        class ReauthenticationJourney {
+
+            @Test
+            void shouldReturnErrorWhenInternalSubjectIdIsNull() {
+                var context =
+                        PermissionContext.builder()
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldReturnErrorWhenRpPairwiseIdIsNull() {
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldSetHasVerifiedMfaToTrue() {
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                verify(authSessionService).updateSession(captor.capture());
+                assertTrue(captor.getValue().getHasVerifiedMfa());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldClearAllReauthCountsForBothIdentifiers() {
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                for (CountType countType : CountType.values()) {
+                    verify(authenticationAttemptsService)
+                            .deleteCount("subject-123", JourneyType.REAUTHENTICATION, countType);
+                    verify(authenticationAttemptsService)
+                            .deleteCount(
+                                    "rp-pairwise-456", JourneyType.REAUTHENTICATION, countType);
+                }
+                verify(codeStorageService, never())
+                        .deleteIncorrectMfaCodeAttemptsCount(anyString());
+                assertTrue(result.isSuccess());
+            }
+        }
+
+        @Nested
+        class StandardJourneys {
+
+            @Test
+            void shouldReturnErrorWhenEmailAddressIsNull() {
+                var authSessionWithoutEmail = new AuthSessionItem().withSessionId(SESSION_ID);
+                var context =
+                        PermissionContext.builder()
+                                .withAuthSessionItem(authSessionWithoutEmail)
+                                .build();
+
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(JourneyType.SIGN_IN, context);
+
+                assertTrue(result.isFailure());
+                assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+            }
+
+            @Test
+            void shouldSetHasVerifiedMfaToTrue() {
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(
+                                JourneyType.SIGN_IN, permissionContext);
+
+                verify(authSessionService).updateSession(captor.capture());
+                assertTrue(captor.getValue().getHasVerifiedMfa());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldClearIncorrectMfaCodeAttemptsCount() {
+                var result =
+                        userActionsManager.correctAuthAppOtpReceived(
+                                JourneyType.SIGN_IN, permissionContext);
+
+                verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+                assertTrue(result.isSuccess());
+            }
         }
     }
 
@@ -1006,7 +1340,6 @@ class UserActionsManagerTest {
                     userActionsManager.correctPasswordReceived(journeyType, context).isSuccess());
             assertTrue(userActionsManager.passwordReset(journeyType, context).isSuccess());
             assertTrue(userActionsManager.sentSmsOtpNotification(journeyType, context).isSuccess());
-            assertTrue(userActionsManager.correctSmsOtpReceived(journeyType, context).isSuccess());
             assertTrue(
                     userActionsManager
                             .incorrectAuthAppOtpReceived(journeyType, context)
