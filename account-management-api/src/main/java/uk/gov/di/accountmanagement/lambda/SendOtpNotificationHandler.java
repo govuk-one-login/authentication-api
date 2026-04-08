@@ -171,7 +171,7 @@ public class SendOtpNotificationHandler
         try {
 
             boolean isTestUserRequest =
-                    testUserHelper.isTestJourney(sendNotificationRequest.getEmail());
+                    testUserHelper.isTestJourney(sendNotificationRequest.email());
 
             return Result.success(isTestUserRequest);
         } catch (Exception e) {
@@ -213,10 +213,10 @@ public class SendOtpNotificationHandler
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 cloudwatchMetricsService,
                 JourneyType.ACCOUNT_MANAGEMENT,
-                sendNotificationRequest.getNotificationType().name(),
+                sendNotificationRequest.notificationType().name(),
                 configurationService.getEnvironment());
 
-        if (sendNotificationRequest.getNotificationType() == null) {
+        if (sendNotificationRequest.notificationType() == null) {
             return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
         }
 
@@ -224,7 +224,7 @@ public class SendOtpNotificationHandler
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(headers, configurationService));
 
-        String email = sendNotificationRequest.getEmail();
+        String email = sendNotificationRequest.email();
 
         Optional<ErrorResponse> emailErrorResponse = ValidationHelper.validateEmailAddress(email);
 
@@ -232,7 +232,7 @@ public class SendOtpNotificationHandler
             return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
         }
 
-        switch (sendNotificationRequest.getNotificationType()) {
+        switch (sendNotificationRequest.notificationType()) {
             case VERIFY_EMAIL -> {
                 LOG.info("NotificationType is VERIFY_EMAIL");
 
@@ -262,7 +262,7 @@ public class SendOtpNotificationHandler
 
                 var response =
                         validatePhoneNumber(
-                                sendNotificationRequest.getPhoneNumber(),
+                                sendNotificationRequest.phoneNumber(),
                                 configurationService.getEnvironment(),
                                 false,
                                 configurationService.isAccountManagementInternationalSmsEnabled());
@@ -274,8 +274,7 @@ public class SendOtpNotificationHandler
                 String newPhoneNumber;
 
                 newPhoneNumber =
-                        PhoneNumberHelper.formatPhoneNumber(
-                                sendNotificationRequest.getPhoneNumber());
+                        PhoneNumberHelper.formatPhoneNumber(sendNotificationRequest.phoneNumber());
 
                 var inUseResult =
                         mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(email, newPhoneNumber);
@@ -291,7 +290,7 @@ public class SendOtpNotificationHandler
 
                 return handleNotificationRequest(
                         isTestUserRequest,
-                        sendNotificationRequest.getPhoneNumber(),
+                        sendNotificationRequest.phoneNumber(),
                         sendNotificationRequest,
                         input,
                         context,
@@ -351,7 +350,7 @@ public class SendOtpNotificationHandler
             SupportedLanguage language)
             throws JsonException {
 
-        var notificationType = sendNotificationRequest.getNotificationType();
+        var notificationType = sendNotificationRequest.notificationType();
         String code =
                 isTestUserRequest
                         ? getOtpCodeForTestClient(notificationType)
@@ -364,17 +363,17 @@ public class SendOtpNotificationHandler
                         code,
                         language,
                         isTestUserRequest,
-                        sendNotificationRequest.getEmail());
+                        sendNotificationRequest.email());
 
         codeStorageService.saveOtpCode(
-                sendNotificationRequest.getEmail(),
+                sendNotificationRequest.email(),
                 code,
                 configurationService.getDefaultOtpCodeExpiry(),
-                sendNotificationRequest.getNotificationType());
+                sendNotificationRequest.notificationType());
 
         LOG.info(
                 "Sending message to SQS queue for notificationType: {}.  Is test user journey: {}",
-                sendNotificationRequest.getNotificationType(),
+                sendNotificationRequest.notificationType(),
                 isTestUserRequest);
 
         try {
@@ -396,9 +395,9 @@ public class SendOtpNotificationHandler
                                 .getAuthorizer()
                                 .getOrDefault("principalId", AuditService.UNKNOWN)
                                 .toString(),
-                        sendNotificationRequest.getEmail(),
+                        sendNotificationRequest.email(),
                         IpAddressHelper.extractIpAddress(input),
-                        sendNotificationRequest.getPhoneNumber(),
+                        sendNotificationRequest.phoneNumber(),
                         extractPersistentIdFromHeaders(input.getHeaders()),
                         AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
                         new ArrayList<>());
@@ -407,15 +406,15 @@ public class SendOtpNotificationHandler
                 AccountManagementAuditableEvent.AUTH_SEND_OTP,
                 auditContext,
                 AUDIT_EVENT_COMPONENT_ID_AUTH,
-                pair("notification-type", sendNotificationRequest.getNotificationType()),
+                pair("notification-type", sendNotificationRequest.notificationType()),
                 pair("test-user", isTestUserRequest));
 
         if (notificationType == NotificationType.VERIFY_PHONE_NUMBER) {
             PriorityIdentifier priorityIdentifier;
-            if (Objects.isNull(sendNotificationRequest.getPriorityIdentifier())) {
+            if (Objects.isNull(sendNotificationRequest.priorityIdentifier())) {
                 priorityIdentifier = PriorityIdentifier.DEFAULT;
             } else {
-                priorityIdentifier = sendNotificationRequest.getPriorityIdentifier();
+                priorityIdentifier = sendNotificationRequest.priorityIdentifier();
             }
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
