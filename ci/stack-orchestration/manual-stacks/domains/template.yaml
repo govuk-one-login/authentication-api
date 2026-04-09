@@ -1,0 +1,302 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Parameters:
+  Environment:
+    Type: String
+    Description: The name of the environment to deploy to
+    AllowedValues:
+      - dev
+      - build
+      - staging
+      - integration
+      - production
+  EndpointSuffix:
+    Description: >
+      (Optional) domain suffix i.e. -orch. Example output FQDN - oidc-orch.build.account.gov.uk
+    Type: String
+    Default: ""
+    AllowedPattern: "[a-z0-9-]*"
+    ConstraintDescription: >
+      must be a valid domain name, consists of lowercase letters, numbers and hyphens OR blank
+  DeployHostedZone:
+    Description: >
+      Deploy the Route53 hosted zone
+    Type: String
+    Default: "Yes"
+    AllowedValues:
+      - "Yes"
+      - "No"
+  DeployCertificate:
+    Description: >
+      Deploy domain certificate
+    Type: String
+    Default: "No"
+    AllowedValues:
+      - "Yes"
+      - "No"
+  DeploySubEnvDomains:
+    Description: >
+      (Optional) Deploy the sub-environment subdomains
+    Type: String
+    Default: "No"
+    AllowedValues:
+      - "Yes"
+      - "No"
+
+Conditions:
+  DeployDevSubDomains:
+    !And [
+      !Equals [!Ref Environment, dev],
+      !Equals [!Ref DeploySubEnvDomains, "Yes"],
+    ]
+  DeployCertificate: !And [!Equals [!Ref DeployCertificate, "Yes"]]
+
+Mappings:
+  EnvironmentConfiguration:
+    dev:
+      domainSuffix: dev.account.gov.uk
+    build:
+      domainSuffix: build.account.gov.uk
+    staging:
+      domainSuffix: staging.account.gov.uk
+    integration:
+      domainSuffix: integration.account.gov.uk
+    production:
+      domainSuffix: account.gov.uk
+
+Resources:
+  OidcHostedZone:
+    Type: AWS::Route53::HostedZone
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub
+        - oidc${EndpointSuffix}.${DomainSuffix}
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+
+  # Manually Create the NS records sets here as we want to adjust the
+  # TTL to 60 seconds from the default created by the public hosted zone
+  # See here: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-migrating.html#:~:text=The%20typical%20TTL,something%20goes%20wrong.
+  OidcNSRecordSet:
+    Type: AWS::Route53::RecordSet
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub
+        - oidc${EndpointSuffix}.${DomainSuffix}
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+      Type: NS
+      HostedZoneId: !Ref OidcHostedZone
+      ResourceRecords: !GetAtt
+        - OidcHostedZone
+        - NameServers
+      TTL: "60"
+
+  OidcHostedZoneRootCertificate:
+    Condition: DeployCertificate
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub
+        - oidc${EndpointSuffix}.${DomainSuffix}
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+      ValidationMethod: "DNS"
+      DomainValidationOptions:
+        - DomainName: !Sub
+            - oidc${EndpointSuffix}.${DomainSuffix}
+            - DomainSuffix:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  domainSuffix,
+                ]
+          HostedZoneId: !Ref OidcHostedZone
+      SubjectAlternativeNames: !If
+        - DeployDevSubDomains
+        - - !Sub
+            - orchdev1.oidc.${DomainSuffix}
+            - DomainSuffix:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  domainSuffix,
+                ]
+          - !Sub
+            - orchdev2.oidc.${DomainSuffix}
+            - DomainSuffix:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  domainSuffix,
+                ]
+          - !Sub
+            - orchdev3.oidc.${DomainSuffix}
+            - DomainSuffix:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  domainSuffix,
+                ]
+        - !Ref AWS::NoValue
+
+  Orchdev1HostedZone:
+    Condition: DeployDevSubDomains
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Sub
+        - orchdev1.oidc.${DomainSuffix}
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+
+  Orchdev1DelegationRecord:
+    Condition: DeployDevSubDomains
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref OidcHostedZone
+      Name: !Ref Orchdev1HostedZone
+      Type: NS
+      TTL: "3600"
+      ResourceRecords: !GetAtt
+        - Orchdev1HostedZone
+        - NameServers
+
+  Orchdev2HostedZone:
+    Condition: DeployDevSubDomains
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Sub
+        - orchdev2.oidc.${DomainSuffix}
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+
+  Orchdev2DelegationRecord:
+    Condition: DeployDevSubDomains
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref OidcHostedZone
+      Name: !Ref Orchdev2HostedZone
+      Type: NS
+      TTL: "3600"
+      ResourceRecords: !GetAtt
+        - Orchdev2HostedZone
+        - NameServers
+
+  Orchdev3HostedZone:
+    Condition: DeployDevSubDomains
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Sub
+        - orchdev3.oidc.${DomainSuffix}
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+
+  Orchdev3DelegationRecord:
+    Condition: DeployDevSubDomains
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref OidcHostedZone
+      Name: !Ref Orchdev3HostedZone
+      Type: NS
+      TTL: "3600"
+      ResourceRecords: !GetAtt
+        - Orchdev3HostedZone
+        - NameServers
+
+Outputs:
+  OidcHostedZoneId:
+    Description: "ID of the Hosted Zone for oidc domain"
+    Value: !Ref OidcHostedZone
+    Export:
+      Name: !Sub "${AWS::StackName}-OidcHostedZoneId"
+
+  OidcHostedZoneNameServers:
+    Description: "Name servers for the OIDC domain"
+    Value: !GetAtt
+      - OidcHostedZone
+      - NameServers
+    Export:
+      Name: !Sub "${AWS::StackName}-OidcHostedZoneNameServers"
+
+  CertificateArn:
+    Description: "The ARN of the ACM certificate"
+    Value: !Ref OidcHostedZoneRootCertificate
+    Export:
+      Name: !Sub "${AWS::StackName}-certificateArn"
+
+  OrchDev1HostedZoneId:
+    Condition: DeployDevSubDomains
+    Description: "ID of the Hosted Zone for orchdev1 domain"
+    Value: !Ref Orchdev1HostedZone
+    Export:
+      Name: !Sub "${AWS::StackName}-orchdev1-HostedZoneId"
+
+  OrchDev2HostedZoneId:
+    Condition: DeployDevSubDomains
+    Description: "ID of the Hosted Zone for orchdev2 domain"
+    Value: !Ref Orchdev2HostedZone
+    Export:
+      Name: !Sub "${AWS::StackName}-orchdev2-HostedZoneId"
+
+  OrchDev3HostedZoneId:
+    Condition: DeployDevSubDomains
+    Description: "ID of the Hosted Zone for orchdev3 domain"
+    Value: !Ref Orchdev3HostedZone
+    Export:
+      Name: !Sub "${AWS::StackName}-orchdev3-HostedZoneId"
+
+  OrchDev1HostedZoneNameServers:
+    Condition: DeployDevSubDomains
+    Description: "Name servers for the orchdev1 domain"
+    Value: !GetAtt
+      - Orchdev1HostedZone
+      - NameServers
+    Export:
+      Name: !Sub "${AWS::StackName}-orchdev1-HostedZoneNameServers"
+
+  OrchDev2HostedZoneNameServers:
+    Condition: DeployDevSubDomains
+    Description: "Name servers for the orchdev2 domain"
+    Value: !GetAtt
+      - Orchdev2HostedZone
+      - NameServers
+    Export:
+      Name: !Sub "${AWS::StackName}-orchdev2-HostedZoneNameServers"
+
+  OrchDev3HostedZoneNameServers:
+    Condition: DeployDevSubDomains
+    Description: "Name servers for the orchdev3 domain"
+    Value: !GetAtt
+      - Orchdev3HostedZone
+      - NameServers
+    Export:
+      Name: !Sub "${AWS::StackName}-orchdev3-HostedZoneNameServers"
