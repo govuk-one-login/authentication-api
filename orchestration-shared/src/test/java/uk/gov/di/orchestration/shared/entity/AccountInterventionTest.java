@@ -6,6 +6,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+// QualityGateUnitTest
 class AccountInterventionTest {
     private static final AccountInterventionState CLEAR_STATE =
             new AccountInterventionState(false, false, false, false);
@@ -20,6 +21,7 @@ class AccountInterventionTest {
     private static final AccountInterventionState SUSPENDED_RESET_PASSWORD_REPROVE_ID_STATE =
             new AccountInterventionState(false, true, true, true);
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("standardTestCases")
     void shouldHaveCorrectStatusAfterInitialisingFromState(
@@ -28,6 +30,7 @@ class AccountInterventionTest {
         assertThat(intervention.getStatus(), equalTo(status));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("ignoreResetPasswordTestCases")
     void shouldHaveCorrectStatusWhenPasswordWasResetAfterInterventionWasApplied(
