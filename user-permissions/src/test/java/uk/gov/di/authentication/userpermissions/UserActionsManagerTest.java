@@ -70,6 +70,7 @@ class UserActionsManagerTest {
                         authSessionService,
                         authenticationAttemptsService);
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
+        when(configurationService.getIncreasedCodeMaxRetries()).thenReturn(999999);
         when(configurationService.getLockoutDuration()).thenReturn(900L);
     }
 
@@ -993,8 +994,24 @@ class UserActionsManagerTest {
 
             @ParameterizedTest
             @MethodSource("reducedIncorrectAuthAppOtpReceivedLockoutJourneyTypes")
+            void shouldAllowSignificantlyHigherAttemptsForRegistrationAndAccountRecovery(
+                    JourneyType journeyType) {
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL))
+                        .thenReturn(999998);
+
+                var result =
+                        userActionsManager.incorrectAuthAppOtpReceived(
+                                journeyType, permissionContext);
+
+                verify(codeStorageService, never()).saveBlockedForEmail(any(), any(), anyLong());
+                assertTrue(result.isSuccess());
+            }
+
+            @ParameterizedTest
+            @MethodSource("reducedIncorrectAuthAppOtpReceivedLockoutJourneyTypes")
             void shouldUseReducedLockoutDurationForReducedLockoutJourneys(JourneyType journeyType) {
-                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(6);
+                when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL))
+                        .thenReturn(999999);
                 when(configurationService.getReducedLockoutDuration()).thenReturn(300L);
 
                 var result =

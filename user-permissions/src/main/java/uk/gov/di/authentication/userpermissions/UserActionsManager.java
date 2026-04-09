@@ -413,7 +413,12 @@ public class UserActionsManager implements UserActions {
                     getCodeStorageService()
                             .increaseIncorrectMfaCodeAttemptsCount(
                                     permissionContext.emailAddress());
-            if (updatedCount >= configurationService.getCodeMaxRetries()) {
+            int maxRetries =
+                    (journeyType == JourneyType.REGISTRATION
+                                    || journeyType == JourneyType.ACCOUNT_RECOVERY)
+                            ? configurationService.getIncreasedCodeMaxRetries()
+                            : configurationService.getCodeMaxRetries();
+            if (updatedCount >= maxRetries) {
                 var codeRequestType =
                         CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, journeyType);
                 LOG.info("Setting block for email as user has exceeded max MFA code retries");

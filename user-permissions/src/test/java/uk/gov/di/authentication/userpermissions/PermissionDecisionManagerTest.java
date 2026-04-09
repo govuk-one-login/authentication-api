@@ -753,7 +753,7 @@ class PermissionDecisionManagerTest {
             void shouldReturnPermittedWhenNotBlocked() {
                 var userContext = createUserContext(0);
                 when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
+                when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
 
                 var result =
                         permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
@@ -764,20 +764,20 @@ class PermissionDecisionManagerTest {
             }
 
             @Test
-        void shouldReturnPermittedWithAttemptCountWhenNotBlocked() {
-            var userContext = createUserContext(0);
-            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+            void shouldReturnPermittedWithAttemptCountWhenNotBlocked() {
+                var userContext = createUserContext(0);
+                when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
+                when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
 
-            var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+                var result =
+                        permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
 
-            assertTrue(result.isSuccess());
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
-            assertEquals(3, decision.attemptCount());
-        }
+                assertTrue(result.isSuccess());
+                var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+                assertEquals(3, decision.attemptCount());
+            }
 
-        @Test
+            @Test
             void shouldReturnLockedOutWhenBlocked() {
                 var userContext = createUserContext(0);
                 long blockTtl = 1234567890L;
