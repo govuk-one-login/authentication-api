@@ -5088,7 +5088,6 @@ Resources:
             - NewSpotRequestQueueWriting
             - true
             - false
-          OLD_SPOT_REQUEST_QUEUE_WRITING: false
           SPOT_QUEUE_URL: !If
             - IpvExists
             - !Sub

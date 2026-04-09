@@ -230,7 +230,6 @@ class IPVCallbackHelperTest {
                         eq(TEST_INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(AUTH_CODE);
         when(configurationService.isNewSpotRequestQueueWritingEnabled()).thenReturn(true);
-        when(configurationService.isOldSpotRequestQueueWritingEnabled()).thenReturn(true);
     }
 
     @Test

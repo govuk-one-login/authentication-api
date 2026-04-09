@@ -398,10 +398,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("NEW_SPOT_REQUEST_QUEUE_WRITING");
     }
 
-    public boolean isOldSpotRequestQueueWritingEnabled() {
-        return getFlagOrTrue("OLD_SPOT_REQUEST_QUEUE_WRITING");
-    }
-
     public String getStorageTokenSigningKeyAlias() {
         return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
