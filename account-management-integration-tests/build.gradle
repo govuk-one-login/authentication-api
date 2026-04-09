@@ -18,7 +18,8 @@ dependencies {
             libs.bundles.awsDynamoDb,
             libs.bundles.awsLambda,
             libs.bundles.lettuce,
-            libs.libphonenumber
+            libs.libphonenumber,
+            libs.wiremock
 
     implementation project(':audit-events')
 
