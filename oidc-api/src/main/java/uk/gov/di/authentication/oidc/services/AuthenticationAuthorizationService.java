@@ -384,7 +384,7 @@ public class AuthenticationAuthorizationService {
                 segmentedFunctionCall(
                         "isTokenSignatureValid",
                         () ->
-                                tokenValidationService.isTokenSignatureValid(
+                                tokenValidationService.isReauthTokenSignatureValid(
                                         authenticationRequest
                                                 .getCustomParameter("id_token_hint")
                                                 .get(0)));
