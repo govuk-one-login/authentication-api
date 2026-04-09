@@ -232,6 +232,14 @@ public class AuthenticationAuthorizationService {
                 SignedJWT reauthIdToken = getReauthIdToken(authenticationRequest);
                 reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
                 reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
+                LOG.info(
+                        "Reauth ID token is past expiry by seconds: {} ",
+                        NowHelper.now().toInstant().getEpochSecond()
+                                - reauthIdToken
+                                        .getJWTClaimsSet()
+                                        .getExpirationTime()
+                                        .toInstant()
+                                        .getEpochSecond());
             } catch (java.text.ParseException e) {
                 LOG.error("Unable to parse id_token_hint SignedJWT into claims");
                 throw new RuntimeException("Invalid id_token_hint");
