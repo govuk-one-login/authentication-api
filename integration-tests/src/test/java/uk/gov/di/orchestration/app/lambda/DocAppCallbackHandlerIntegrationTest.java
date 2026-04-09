@@ -114,7 +114,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     criStub,
                     externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     spotRequestQueue,
                     docAppPrivateKeyJwtSigner);
 
@@ -404,14 +403,12 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 CriStubExtension criStubExtension,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotQueue,
                 SqsQueueExtension spotRequestQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner) {
             super(
                     tokenSigningKey,
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);

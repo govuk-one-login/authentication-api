@@ -62,9 +62,6 @@ public class IntegrationTest {
             new SqsQueueExtension("notification-queue");
 
     @RegisterExtension
-    protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
-
-    @RegisterExtension
     protected static final SqsQueueExtension spotRequestQueue =
             new SqsQueueExtension("spot-request-queue");
 
@@ -119,7 +116,6 @@ public class IntegrationTest {
                     externalTokenSigner,
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
@@ -129,7 +125,6 @@ public class IntegrationTest {
                     externalTokenSigner,
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters) {
@@ -145,7 +140,6 @@ public class IntegrationTest {
                     externalTokenSigner,
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters) {
@@ -229,7 +223,6 @@ public class IntegrationTest {
         private final TokenSigningExtension externalTokenSigningKey;
         private final TokenSigningExtension storageTokenSigningKey;
         private final TokenSigningExtension ipvPrivateKeyJwtSigner;
-        private final SqsQueueExtension spotQueue;
         private final SqsQueueExtension spotRequestQueue;
         private final TokenSigningExtension docAppPrivateKeyJwtSigner;
 
@@ -237,7 +230,6 @@ public class IntegrationTest {
                 TokenSigningExtension externalTokenSigningKey,
                 TokenSigningExtension storageTokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotQueue,
                 SqsQueueExtension spotRequestQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension) {
@@ -245,7 +237,6 @@ public class IntegrationTest {
             this.externalTokenSigningKey = externalTokenSigningKey;
             this.storageTokenSigningKey = storageTokenSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
-            this.spotQueue = spotQueue;
             this.spotRequestQueue = spotRequestQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
         }
@@ -254,7 +245,6 @@ public class IntegrationTest {
                 TokenSigningExtension externalTokenSigningKey,
                 TokenSigningExtension storageTokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotQueue,
                 SqsQueueExtension spotRequestQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension,
@@ -263,7 +253,6 @@ public class IntegrationTest {
             this.externalTokenSigningKey = externalTokenSigningKey;
             this.storageTokenSigningKey = storageTokenSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
-            this.spotQueue = spotQueue;
             this.spotRequestQueue = spotRequestQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
             super.systemService = systemService;
@@ -306,11 +295,6 @@ public class IntegrationTest {
         @Override
         public URI getAuthFrontendBaseURL() {
             return URI.create("http://localhost:3000/");
-        }
-
-        @Override
-        public String getSpotQueueURI() {
-            return spotQueue.getQueueUrl();
         }
 
         @Override

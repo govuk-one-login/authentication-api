@@ -110,7 +110,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     externalTokenSigner,
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters) {
@@ -469,7 +468,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     externalTokenSigner,
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
