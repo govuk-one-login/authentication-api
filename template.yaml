@@ -141,6 +141,8 @@ Conditions:
   ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
   ProvisionNewApiClientRegistryApiKey:
     !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
+  UseStoredOldIdTokenPublicKeys:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3950,6 +3952,16 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
+          STORED_OLD_ID_TOKEN_EC_PUBLIC_KEYS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              oldIdTokenECPublicKeys,
+            ]
+          USE_STORED_OLD_ID_TOKEN_PUBLIC_KEYS: !If
+            - UseStoredOldIdTokenPublicKeys
+            - true
+            - false
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
