@@ -9,6 +9,10 @@ public class AuthenticateRequest {
 
     @Expose @Required private String password;
 
+    @Expose private TargetAction targetAction;
+
+    @Expose private ActionSource actionSource;
+
     public AuthenticateRequest() {}
 
     public AuthenticateRequest(String email, String password) {
@@ -22,5 +26,13 @@ public class AuthenticateRequest {
 
     public String getPassword() {
         return password;
+    }
+
+    public TargetAction getTargetAction() {
+        return targetAction;
+    }
+
+    public ActionSource getActionSource() {
+        return actionSource;
     }
 }
