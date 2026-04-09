@@ -385,6 +385,39 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL));
     }
 
+    @Test
+    void shouldNotSendSmsToInternationalNumberWhenSmsSendingDisabled() {
+        handler =
+                new ResetPasswordHandler(
+                        new ResetPasswordTestConfigurationService() {
+                            @Override
+                            public boolean isInternationalSmsSendingEnabled() {
+                                return false;
+                            }
+                        },
+                        redisConnectionService);
+        var sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+    }
+
     private static class ResetPasswordTestConfigurationService
             extends IntegrationTestConfigurationService {
 
@@ -404,6 +437,11 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public boolean isInternationalSmsSendingEnabled() {
+            return true;
         }
     }
 }

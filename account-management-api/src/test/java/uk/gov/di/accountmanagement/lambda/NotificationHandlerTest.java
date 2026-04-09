@@ -723,7 +723,7 @@ class NotificationHandlerTest {
     }
 
     @Test
-    void shouldNotSendSmsWhenInternationalLimitReached() throws Json.JsonException {
+    void shouldNotSendSmsWhenInternationalSendLimitServiceBlocks() throws Json.JsonException {
         when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(false);
 
         NotifyRequest notifyRequest =
@@ -747,7 +747,7 @@ class NotificationHandlerTest {
                 logging.events(),
                 hasItem(
                         withMessageContaining(
-                                "International SMS send limit reached. NotificationType: VERIFY_PHONE_NUMBER")));
+                                "Skipping international SMS send. NotificationType: VERIFY_PHONE_NUMBER")));
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {

@@ -530,7 +530,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    void shouldRecordSmsSentAfterSuccessfulSmsSend()
+    void shouldRecordSmsSentAfterSuccessfulInternationalSmsSend()
             throws Json.JsonException, NotificationClientException {
         when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(true);
 
@@ -550,7 +550,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    void shouldNotSendSmsWhenInternationalLimitReached() throws Json.JsonException {
+    void shouldNotSendSmsWhenInternationalSendLimitServiceBlocks() throws Json.JsonException {
         when(internationalSmsSendLimitService.canSendSms(anyString())).thenReturn(false);
 
         SQSEvent sqsEvent =
@@ -563,7 +563,7 @@ public class NotificationHandlerTest {
         verify(internationalSmsSendLimitService, never()).recordSmsSent(anyString(), anyString());
         assertThat(
                 logging.events(),
-                hasItem(withMessageContaining("International SMS send limit reached")));
+                hasItem(withMessageContaining("Skipping international SMS send.")));
     }
 
     private String buildContactUsUrl() {
