@@ -57,6 +57,7 @@ import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.Instant;
@@ -222,6 +223,10 @@ class VerifyMfaCodeHandlerTest {
         when(userActionsManager.correctSmsOtpReceived(any(), any()))
                 .thenReturn(Result.success(null));
         when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
+        when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
+        when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
                 .thenReturn(Result.success(null));
         when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
@@ -1037,7 +1042,10 @@ class VerifyMfaCodeHandlerTest {
                             : AUTH_APP_SECRET;
             when(authAppCodeProcessor.validateCode())
                     .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+            // TODO: Change back to 3 once processor lockout logic is removed (divide-by-2
+            // workaround removed)
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(6)));
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
                 when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1226,7 +1234,10 @@ class VerifyMfaCodeHandlerTest {
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
                     .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+            // TODO: Change back to 3 once processor lockout logic is removed (divide-by-2
+            // workaround removed)
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(6)));
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
                 when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1700,7 +1711,7 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Nested
-    class LockoutChecks {
+    class PermissionHandling {
 
         @Test
         void shouldReturn400WithAuthAppErrorWhenTemporarilyLockedOut() throws Json.JsonException {
@@ -1794,6 +1805,134 @@ class VerifyMfaCodeHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
             verifyNoInteractions(mfaCodeProcessorFactory);
+        }
+
+        private boolean hasExpectedPermissionContext(PermissionContext pc) {
+            return EMAIL.equals(pc.emailAddress())
+                    && SUBJECT_ID.equals(pc.internalSubjectId())
+                    && expectedRpPairwiseSubjectId.equals(pc.rpPairwiseId());
+        }
+
+        @Test
+        void shouldCallIncorrectSmsOtpReceivedWhenSmsCodeIsInvalid() throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+            when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CODE,
+                            JourneyType.SIGN_IN,
+                            DEFAULT_SMS_METHOD.getDestination());
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(400));
+            verify(userActionsManager)
+                    .incorrectSmsOtpReceived(
+                            eq(JourneyType.SIGN_IN), argThat(this::hasExpectedPermissionContext));
+        }
+
+        @Test
+        void shouldCallIncorrectSmsOtpReceivedWithSubjectIdForReauth() throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+            when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CODE,
+                            REAUTHENTICATION,
+                            DEFAULT_SMS_METHOD.getDestination());
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(400));
+            verify(userActionsManager)
+                    .incorrectSmsOtpReceived(
+                            eq(REAUTHENTICATION), argThat(this::hasExpectedPermissionContext));
+        }
+
+        @Test
+        void shouldCallIncorrectAuthAppOtpReceivedWhenAuthAppCodeIsInvalid()
+                throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+            when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(400));
+            verify(userActionsManager)
+                    .incorrectAuthAppOtpReceived(
+                            eq(JourneyType.SIGN_IN), argThat(this::hasExpectedPermissionContext));
+        }
+
+        @Test
+        void shouldReturn500WhenIncorrectSmsOtpReceivedFails() throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+            when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                    .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CODE,
+                            JourneyType.SIGN_IN,
+                            DEFAULT_SMS_METHOD.getDestination());
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(500));
+        }
+
+        @Test
+        void shouldReturn500WhenIncorrectAuthAppOtpReceivedFails() throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+            when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
+                    .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(500));
         }
     }
 }
