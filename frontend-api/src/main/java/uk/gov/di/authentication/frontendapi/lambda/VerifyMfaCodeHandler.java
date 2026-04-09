@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -54,6 +55,7 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -227,15 +229,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .withRpPairwiseId(maybeRpPairwiseId.orElse(null))
                         .build();
 
-        var maybeResponseIfNotPermitted =
-                getResponseIfNotPermitted(
+        var permissionCheck =
+                checkPermission(
                         journeyType,
                         codeRequest.getMfaMethodType(),
                         permissionContext,
                         auditContext,
                         maybeRpPairwiseId);
-        if (maybeResponseIfNotPermitted.isPresent()) {
-            return maybeResponseIfNotPermitted.get();
+        if (permissionCheck.errorResponse().isPresent()) {
+            return permissionCheck.errorResponse().get();
         }
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
@@ -246,7 +248,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input, codeRequest, userContext, subjectID, maybeRpPairwiseId, userProfile);
+                    input,
+                    codeRequest,
+                    userContext,
+                    subjectID,
+                    maybeRpPairwiseId,
+                    userProfile,
+                    permissionContext);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
@@ -322,7 +330,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         return false;
     }
 
-    private Optional<APIGatewayProxyResponseEvent> getResponseIfNotPermitted(
+    private record PermissionCheckResult(
+            Optional<APIGatewayProxyResponseEvent> errorResponse, int attemptCount) {}
+
+    private PermissionCheckResult checkPermission(
             JourneyType journeyType,
             MFAMethodType mfaMethodType,
             PermissionContext permissionContext,
@@ -335,8 +346,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             LOG.error(
                     "Failed to check MFA OTP verification permission: {}",
                     canVerifyOtpResult.getFailure());
-            return Optional.of(
-                    generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR));
+            return new PermissionCheckResult(
+                    Optional.of(
+                            generateApiGatewayProxyErrorResponse(
+                                    500, ErrorResponse.INTERNAL_SERVER_ERROR)),
+                    0);
         }
 
         var decision = canVerifyOtpResult.getSuccess();
@@ -361,12 +375,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             FAILURE_REASON.getValue(),
                             reauthFailureReason.getValue()));
 
-            return Optional.of(
-                    generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            return new PermissionCheckResult(
+                    Optional.of(
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS)),
+                    reauthLockedOut.attemptCount());
         }
 
-        if (decision instanceof Decision.TemporarilyLockedOut) {
+        if (decision instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
             LOG.info("User is temporarily locked out from MFA OTP verification");
             auditService.submitAuditEvent(
                     AUTH_CODE_MAX_RETRIES_REACHED,
@@ -382,10 +398,16 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     mfaMethodType == MFAMethodType.AUTH_APP
                             ? ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED
                             : ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED;
-            return Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse));
+            return new PermissionCheckResult(
+                    Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse)),
+                    temporarilyLockedOut.attemptCount());
         }
 
-        return Optional.empty();
+        if (decision instanceof Decision.Permitted permitted) {
+            return new PermissionCheckResult(Optional.empty(), permitted.attemptCount());
+        }
+
+        return new PermissionCheckResult(Optional.empty(), 0);
     }
 
     private APIGatewayProxyResponseEvent verifyCode(
@@ -394,7 +416,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             String subjectId,
             Optional<String> maybeRpPairwiseId,
-            UserProfile userProfile) {
+            UserProfile userProfile,
+            PermissionContext permissionContext) {
 
         var authSession = userContext.getAuthSession();
         var auditContext =
@@ -490,7 +513,44 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         CountType.ENTER_MFA_CODE);
             }
 
-            auditFailure(codeRequest, errorResponse, authSession, auditContext, activeMfaMethod);
+            Result<TrackingError, Void> trackingResult = Result.success(null);
+            if (errorResponse.equals(ErrorResponse.INVALID_PHONE_CODE_ENTERED)) {
+                trackingResult =
+                        userActionsManager.incorrectSmsOtpReceived(
+                                codeRequest.getJourneyType(), permissionContext);
+            }
+            if (errorResponse.equals(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED)) {
+                trackingResult =
+                        userActionsManager.incorrectAuthAppOtpReceived(
+                                codeRequest.getJourneyType(), permissionContext);
+            }
+            if (trackingResult.isFailure()) {
+                LOG.error(
+                        "Failed to record incorrect {} OTP: {}",
+                        codeRequest.getMfaMethodType(),
+                        trackingResult.getFailure());
+                return TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                        trackingResult.getFailure());
+            }
+
+            var permissionCheckAfterIncrement =
+                    checkPermission(
+                            codeRequest.getJourneyType(),
+                            codeRequest.getMfaMethodType(),
+                            permissionContext,
+                            auditContext,
+                            maybeRpPairwiseId);
+            if (permissionCheckAfterIncrement.errorResponse().isPresent()) {
+                return permissionCheckAfterIncrement.errorResponse().get();
+            }
+
+            auditFailure(
+                    codeRequest,
+                    errorResponse,
+                    authSession,
+                    auditContext,
+                    activeMfaMethod,
+                    permissionCheckAfterIncrement.attemptCount());
         } else {
             auditSuccess(codeRequest, authSession, auditContext, activeMfaMethod);
 
@@ -538,11 +598,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuditContext auditContext,
             Optional<MFAMethod> activeMfaMethod) {
         var metadataPairs =
-                metadataPairsForEvent(
-                        AUTH_CODE_VERIFIED,
-                        authSession.getEmailAddress(),
-                        codeRequest,
-                        activeMfaMethod);
+                metadataPairsForEvent(AUTH_CODE_VERIFIED, codeRequest, activeMfaMethod, 0);
         auditService.submitAuditEvent(AUTH_CODE_VERIFIED, auditContext, metadataPairs);
     }
 
@@ -551,14 +607,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             ErrorResponse errorResponse,
             AuthSessionItem authSession,
             AuditContext auditContext,
-            Optional<MFAMethod> activeMfaMethod) {
+            Optional<MFAMethod> activeMfaMethod,
+            int failureCount) {
         var auditableEvent = errorResponseAsFrontendAuditableEvent(errorResponse);
         var metadataPairs =
-                metadataPairsForEvent(
-                        auditableEvent,
-                        authSession.getEmailAddress(),
-                        codeRequest,
-                        activeMfaMethod);
+                metadataPairsForEvent(auditableEvent, codeRequest, activeMfaMethod, failureCount);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
     }
 
@@ -792,9 +845,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private AuditService.MetadataPair[] metadataPairsForEvent(
             FrontendAuditableEvent auditableEvent,
-            String email,
             VerifyMfaCodeRequest codeRequest,
-            Optional<MFAMethod> activeMfaMethod) {
+            Optional<MFAMethod> activeMfaMethod,
+            int failureCount) {
         var methodType = codeRequest.getMfaMethodType();
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("mfa-type", methodType.getValue()));
@@ -821,8 +874,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             }
             case AUTH_INVALID_CODE_SENT, AUTH_CODE_VERIFIED -> {
                 if (auditableEvent.equals(AUTH_INVALID_CODE_SENT)) {
-                    var failureCount = codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
-                    metadataPairs.add(pair("loginFailureCount", failureCount));
+                    // TODO: Remove divide by 2 once lockout logic is removed from processors.
+                    // Currently both the processor (via ValidationHelper) and UserActionsManager
+                    // increment the count, causing double-counting.
+                    metadataPairs.add(pair("loginFailureCount", failureCount / 2));
                 }
 
                 metadataPairs.add(pair("MFACodeEntered", codeRequest.getCode()));
