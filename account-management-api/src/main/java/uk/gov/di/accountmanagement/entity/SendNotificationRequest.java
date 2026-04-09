@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public class SendNotificationRequest {
@@ -14,6 +15,10 @@ public class SendNotificationRequest {
     @Expose
     @SerializedName("phoneNumber")
     private String phoneNumber;
+
+    @Expose
+    @SerializedName("priorityIdentifier")
+    PriorityIdentifier priorityIdentifier;
 
     @Expose @Required private String email;
 
@@ -38,6 +43,10 @@ public class SendNotificationRequest {
         return phoneNumber;
     }
 
+    public PriorityIdentifier getPriorityIdentifier() {
+        return priorityIdentifier;
+    }
+
     @Override
     public String toString() {
         return "SendNotificationRequest{"
@@ -48,6 +57,9 @@ public class SendNotificationRequest {
                 + '\''
                 + ", email='"
                 + email
+                + '\''
+                + ", priorityIdentifier='"
+                + priorityIdentifier
                 + '\''
                 + '}';
     }

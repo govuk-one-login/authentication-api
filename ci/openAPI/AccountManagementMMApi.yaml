@@ -165,6 +165,27 @@ paths:
           Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendOtpNotificationFunction.Arn}:active/invocations"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+      description: "Sends an OTP notification to the user via email or SMS depending on the notification type."
+      summary: Send OTP notification
+      operationId: "send-otp-notification"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpNotificationRequest"
+            examples:
+              send-email-otp:
+                summary: Send OTP to verify a new email address
+                value:
+                  email: "user@example.gov.uk"
+                  notificationType: "VERIFY_EMAIL"
+              send-phone-otp:
+                summary: Send OTP to verify a new phone number
+                value:
+                  email: "user@example.gov.uk"
+                  notificationType: "VERIFY_PHONE_NUMBER"
+                  phoneNumber: "+447700900000"
+        required: true
   /update-phone-number:
     post:
       security:
@@ -1138,6 +1159,33 @@ components:
           example:
             code: 1080
             message: "Default method already exists, new one cannot be created."
+    SendOtpNotificationRequest:
+      required:
+        - email
+        - notificationType
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The user's email address
+          example: "user@example.gov.uk"
+        notificationType:
+          type: string
+          enum:
+            - VERIFY_EMAIL
+            - VERIFY_PHONE_NUMBER
+          description: The type of OTP notification to send
+        phoneNumber:
+          type: string
+          description: Required when notificationType is VERIFY_PHONE_NUMBER
+          example: "+447700900000"
+        priorityIdentifier:
+          type: string
+          enum:
+            - DEFAULT
+            - BACKUP
+          description: Whether the notification is intended for a default or backup mfa method when the notification type is VERIFY_PHONE_NUMBER
     UserAccountBlocked:
       allOf:
         - $ref: "#/components/schemas/SimpleError"

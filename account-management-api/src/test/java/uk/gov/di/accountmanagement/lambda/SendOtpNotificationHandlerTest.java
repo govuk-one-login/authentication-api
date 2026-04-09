@@ -310,8 +310,30 @@ class SendOtpNotificationHandlerTest {
         }
     }
 
-    @Test
-    void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws Json.JsonException {
+    private static Stream<Arguments> validPhoneRequests() {
+        var eventWithoutPriorityIdentifier =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER);
+        var verifyPhoneNumberForDefaultMethod =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"%s\"  }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER, "DEFAULT");
+        var verifyPhoneNumberForBackupMethod =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"%s\"  }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER, "BACKUP");
+        return Stream.of(
+                Arguments.of(eventWithoutPriorityIdentifier, "default"),
+                Arguments.of(verifyPhoneNumberForDefaultMethod, "default"),
+                Arguments.of(verifyPhoneNumberForBackupMethod, "backup"));
+    }
+
+    @MethodSource("validPhoneRequests")
+    @ParameterizedTest
+    void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest(
+            String phoneRequestBody, String expectedPriorityInAuditEvent)
+            throws Json.JsonException {
         when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                         TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                 .thenReturn(Result.success(false));
@@ -328,10 +350,7 @@ class SendOtpNotificationHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         var event = createEmptyEvent();
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+        event.setBody(phoneRequestBody);
 
         var result = handler.handleRequest(event, context);
 
@@ -366,7 +385,7 @@ class SendOtpNotificationHandlerTest {
                         auditContext,
                         AUDIT_EVENT_COMPONENT_ID_HOME,
                         pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT.name()),
-                        pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
+                        pair("mfa-method", expectedPriorityInAuditEvent));
 
         verify(cloudwatchMetricsService, only())
                 .incrementCounter(eq("UserSubmittedCredential"), anyMap());
