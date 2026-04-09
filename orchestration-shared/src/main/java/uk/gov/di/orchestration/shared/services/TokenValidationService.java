@@ -4,6 +4,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
@@ -16,6 +17,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class TokenValidationService {
 
@@ -95,6 +97,27 @@ public class TokenValidationService {
         }
     }
 
+    public boolean isReauthTokenSignatureValid(String tokenValue) {
+        try {
+            var jwt = SignedJWT.parse(tokenValue);
+
+            if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
+                var newV2PublicKey = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
+                if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
+                    return jwt.verify(new ECDSAVerifier(newV2PublicKey.toECKey()));
+                } else {
+                    return validateWithOldECPublicKey(jwt);
+                }
+            } else {
+                return validateWithOldECPublicKey(jwt);
+            }
+
+        } catch (JOSEException | java.text.ParseException e) {
+            LOG.warn("Unable to validate Signature of Token", e);
+            return false;
+        }
+    }
+
     public boolean validateRefreshTokenScopes(
             List<String> clientScopes, List<String> refreshTokenScopes) {
         if (!clientScopes.containsAll(refreshTokenScopes)) {
@@ -106,5 +129,23 @@ public class TokenValidationService {
             return false;
         }
         return true;
+    }
+
+    private boolean validateWithOldECPublicKey(SignedJWT jwt) throws JOSEException {
+        var oldPublicKey = jwksService.getPublicTokenJwkWithOpaqueId();
+        if (configuration.isUseStoredOldIdTokenPublicKeysEnabled()) {
+            var oldStoredPublicKeys = jwksService.getStoredOldPublicTokenJwksWithOpaqueId();
+            Optional<ECKey> optionalPublicKey =
+                    oldStoredPublicKeys.stream()
+                            .filter(
+                                    key ->
+                                            Objects.equals(
+                                                    jwt.getHeader().getKeyID(), key.getKeyID()))
+                            .findFirst();
+            return optionalPublicKey.isPresent()
+                    && jwt.verify(new ECDSAVerifier(optionalPublicKey.get()));
+        } else {
+            return jwt.verify(new ECDSAVerifier(oldPublicKey.toECKey()));
+        }
     }
 }

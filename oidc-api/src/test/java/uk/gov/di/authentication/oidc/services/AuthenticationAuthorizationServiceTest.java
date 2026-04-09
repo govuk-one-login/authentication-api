@@ -257,7 +257,7 @@ class AuthenticationAuthorizationServiceTest {
                             ecSigningKey);
             var authRequest =
                     generateAuthRequestForReauthJourney(reauthToken.serialize(), AUTH_ONLY_VTR);
-            when(tokenValidationService.isTokenSignatureValid(anyString())).thenReturn(true);
+            when(tokenValidationService.isReauthTokenSignatureValid(anyString())).thenReturn(true);
 
             authService.generateAuthRedirectRequest(
                     SESSION_ID,
