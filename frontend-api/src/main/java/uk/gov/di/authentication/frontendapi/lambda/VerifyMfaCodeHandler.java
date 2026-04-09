@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -54,6 +55,7 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -246,7 +248,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input, codeRequest, userContext, subjectID, maybeRpPairwiseId, userProfile);
+                    input,
+                    codeRequest,
+                    userContext,
+                    subjectID,
+                    maybeRpPairwiseId,
+                    userProfile,
+                    permissionContext);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
@@ -394,7 +402,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             String subjectId,
             Optional<String> maybeRpPairwiseId,
-            UserProfile userProfile) {
+            UserProfile userProfile,
+            PermissionContext permissionContext) {
 
         var authSession = userContext.getAuthSession();
         var auditContext =
@@ -491,6 +500,26 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             }
 
             auditFailure(codeRequest, errorResponse, authSession, auditContext, activeMfaMethod);
+
+            Result<TrackingError, Void> trackingResult = Result.success(null);
+            if (errorResponse.equals(ErrorResponse.INVALID_PHONE_CODE_ENTERED)) {
+                trackingResult =
+                        userActionsManager.incorrectSmsOtpReceived(
+                                codeRequest.getJourneyType(), permissionContext);
+            }
+            if (errorResponse.equals(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED)) {
+                trackingResult =
+                        userActionsManager.incorrectAuthAppOtpReceived(
+                                codeRequest.getJourneyType(), permissionContext);
+            }
+            if (trackingResult.isFailure()) {
+                LOG.error(
+                        "Failed to record incorrect {} OTP: {}",
+                        codeRequest.getMfaMethodType(),
+                        trackingResult.getFailure());
+                return TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                        trackingResult.getFailure());
+            }
         } else {
             auditSuccess(codeRequest, authSession, auditContext, activeMfaMethod);
 

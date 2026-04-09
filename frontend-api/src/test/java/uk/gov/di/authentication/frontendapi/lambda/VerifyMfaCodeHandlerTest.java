@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -14,13 +13,11 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetType;
-import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
@@ -28,7 +25,6 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -37,13 +33,11 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -57,16 +51,14 @@ import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -77,11 +69,9 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -99,14 +89,11 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
@@ -114,7 +101,6 @@ import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
@@ -177,8 +163,6 @@ class VerifyMfaCodeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
@@ -211,17 +195,17 @@ class VerifyMfaCodeHandlerTest {
 
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
         when(configurationService.getEnvironment()).thenReturn("test");
-        when(configurationService.getLockoutDuration()).thenReturn(900L);
-        when(configurationService.getReducedLockoutDuration()).thenReturn(300L);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
-        when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
-        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
         when(userActionsManager.correctSmsOtpReceived(any(), any()))
                 .thenReturn(Result.success(null));
         when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
+        when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
+        when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
                 .thenReturn(Result.success(null));
         when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
@@ -234,7 +218,6 @@ class VerifyMfaCodeHandlerTest {
                         auditService,
                         mfaCodeProcessorFactory,
                         cloudwatchMetricsService,
-                        authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
                         userActionsManager,
@@ -274,9 +257,6 @@ class VerifyMfaCodeHandlerTest {
             assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
             verify(authAppCodeProcessor)
                     .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
             assertAuditEventSubmittedWithMetadata(
                     FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -351,9 +331,6 @@ class VerifyMfaCodeHandlerTest {
             assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
             verify(authAppCodeProcessor)
                     .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
             assertAuditEventSubmittedWithMetadata(
                     FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -396,9 +373,6 @@ class VerifyMfaCodeHandlerTest {
             assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
             verify(phoneNumberCodeProcessor)
                     .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
             assertAuditEventSubmittedWithMetadata(
                     FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -440,9 +414,6 @@ class VerifyMfaCodeHandlerTest {
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
             verify(authAppCodeProcessor)
                     .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
             assertAuditEventSubmittedWithMetadata(
                     FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -502,9 +473,6 @@ class VerifyMfaCodeHandlerTest {
             assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
             verify(phoneNumberCodeProcessor)
                     .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
             assertAuditEventSubmittedWithMetadata(
                     FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -570,9 +538,6 @@ class VerifyMfaCodeHandlerTest {
 
             assertThat(result, hasStatus(204));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             assertAuditEventSubmittedWithMetadata(
                     FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                     pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
@@ -906,124 +871,6 @@ class VerifyMfaCodeHandlerTest {
             verifyNoInteractions(cloudwatchMetricsService);
         }
 
-        private static Stream<Arguments> blockedCodeForAuthAppOTPEnteredTooManyTimes() {
-            return Stream.of(
-                    Arguments.of(
-                            JourneyType.ACCOUNT_RECOVERY, CodeRequestType.MFA_ACCOUNT_RECOVERY),
-                    Arguments.of(REGISTRATION, CodeRequestType.MFA_REGISTRATION),
-                    Arguments.of(JourneyType.SIGN_IN, CodeRequestType.MFA_SIGN_IN),
-                    Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.MFA_PW_RESET_MFA),
-                    Arguments.of(REAUTHENTICATION, CodeRequestType.MFA_REAUTHENTICATION));
-        }
-
-        @ParameterizedTest
-        @MethodSource("blockedCodeForAuthAppOTPEnteredTooManyTimes")
-        void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes(
-                JourneyType journeyType, CodeRequestType codeRequestType)
-                throws Json.JsonException {
-            withReauthTurnedOn();
-            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(authAppCodeProcessor));
-            when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
-            when(mfaMethodsService.getMfaMethods(any()))
-                    .thenReturn(
-                            Result.success(
-                                    List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)
-                                            ? List.of()
-                                            : List.of(DEFAULT_AUTH_APP_METHOD)));
-            var authAppSecret =
-                    List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                                    .contains(journeyType)
-                            ? null
-                            : AUTH_APP_SECRET;
-            var codeRequest =
-                    new VerifyMfaCodeRequest(
-                            MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
-            var result = makeCallWithCode(codeRequest);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
-            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
-            if (journeyType.equals(REAUTHENTICATION)) {
-                verify(codeStorageService, never())
-                        .saveBlockedForEmail(
-                                eq(EMAIL),
-                                eq(CODE_BLOCKED_KEY_PREFIX + codeRequestType),
-                                anyLong());
-            } else {
-                long expectedCodeBlockedTime =
-                        (journeyType.equals(REGISTRATION) || journeyType.equals(ACCOUNT_RECOVERY))
-                                ? 300L
-                                : 900L;
-                verify(codeStorageService)
-                        .saveBlockedForEmail(
-                                EMAIL,
-                                CODE_BLOCKED_KEY_PREFIX + codeRequestType,
-                                expectedCodeBlockedTime);
-                verifyNoInteractions(authenticationAttemptsService);
-            }
-            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
-            verifyNoInteractions(cloudwatchMetricsService);
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                    pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                    pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                    pair("journey-type", journeyType),
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                    pair("mfa-method", "default"));
-        }
-
-        @ParameterizedTest
-        @EnumSource(JourneyType.class)
-        void shouldReturn400AndNotBlockCodeWhenUserEnteredInvalidAuthAppCodeAndBlockAlreadyExists(
-                JourneyType journeyType) throws Json.JsonException {
-            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(authAppCodeProcessor));
-            when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
-            when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
-                    .thenReturn(true);
-            when(mfaMethodsService.getMfaMethods(any()))
-                    .thenReturn(
-                            Result.success(
-                                    List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)
-                                            ? List.of()
-                                            : List.of(DEFAULT_AUTH_APP_METHOD)));
-            var authAppSecret =
-                    List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                                    .contains(journeyType)
-                            ? null
-                            : AUTH_APP_SECRET;
-            var codeRequest =
-                    new VerifyMfaCodeRequest(
-                            MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
-
-            if (!CodeRequestType.isValidCodeRequestType(
-                    CodeRequestType.SupportedCodeType.getFromMfaMethodType(
-                            codeRequest.getMfaMethodType()),
-                    codeRequest.getJourneyType())) {
-                return;
-            }
-
-            var result = makeCallWithCode(codeRequest);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
-            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verifyNoInteractions(cloudwatchMetricsService);
-            verifyNoInteractions(authenticationAttemptsService);
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                    pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                    pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                    pair("journey-type", journeyType),
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                    pair("mfa-method", "default"));
-        }
-
         @ParameterizedTest
         @EnumSource(JourneyType.class)
         void shouldReturn400WhenUserEnteredInvalidAuthAppOtpCode(JourneyType journeyType)
@@ -1037,7 +884,8 @@ class VerifyMfaCodeHandlerTest {
                             : AUTH_APP_SECRET;
             when(authAppCodeProcessor.validateCode())
                     .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(3)));
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
                 when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1058,11 +906,7 @@ class VerifyMfaCodeHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             verifyNoInteractions(cloudwatchMetricsService);
-            verifyNoInteractions(authenticationAttemptsService);
 
             ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
                     ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
@@ -1090,124 +934,6 @@ class VerifyMfaCodeHandlerTest {
             assertTrue(actual.containsAll(expected));
         }
 
-        private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
-            return Stream.of(
-                    Arguments.of(
-                            JourneyType.ACCOUNT_RECOVERY, CodeRequestType.MFA_ACCOUNT_RECOVERY),
-                    Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.MFA_PW_RESET_MFA),
-                    Arguments.of(REGISTRATION, CodeRequestType.MFA_REGISTRATION),
-                    Arguments.of(REAUTHENTICATION, CodeRequestType.MFA_REAUTHENTICATION));
-        }
-
-        @ParameterizedTest
-        @MethodSource("blockedCodeForInvalidPhoneNumberTooManyTimes")
-        void shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeTooManyTimes(
-                JourneyType journeyType, CodeRequestType codeRequestType)
-                throws Json.JsonException {
-            withReauthTurnedOn();
-            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
-            when(phoneNumberCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
-            when(mfaMethodsService.getMfaMethods(any()))
-                    .thenReturn(
-                            Result.success(
-                                    List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)
-                                            ? List.of()
-                                            : List.of(DEFAULT_SMS_METHOD)));
-            var codeRequest =
-                    new VerifyMfaCodeRequest(
-                            MFAMethodType.SMS, CODE, journeyType, UK_MOBILE_NUMBER);
-            var result = makeCallWithCode(codeRequest);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
-            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
-            long blockTime = 900L;
-            if (List.of(CodeRequestType.MFA_REGISTRATION, CodeRequestType.MFA_ACCOUNT_RECOVERY)
-                    .contains(codeRequestType)) {
-                blockTime = 300L;
-            }
-            if (journeyType != REAUTHENTICATION) {
-                verify(codeStorageService)
-                        .saveBlockedForEmail(
-                                EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, blockTime);
-            }
-            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
-            verifyNoInteractions(cloudwatchMetricsService);
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                    pair("mfa-type", MFAMethodType.SMS.getValue()),
-                    pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                    pair("journey-type", journeyType),
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                    pair("mfa-method", "default"));
-        }
-
-        @ParameterizedTest
-        @MethodSource("blockedCodeForInvalidPhoneNumberTooManyTimes")
-        void shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredAndBlockAlreadyExists(
-                JourneyType journeyType, CodeRequestType codeRequestType)
-                throws Json.JsonException {
-            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
-            when(phoneNumberCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
-            var codeBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-            when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedPrefix)).thenReturn(true);
-            when(mfaMethodsService.getMfaMethods(any()))
-                    .thenReturn(
-                            Result.success(
-                                    List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)
-                                            ? List.of()
-                                            : List.of(DEFAULT_SMS_METHOD)));
-            var codeRequest =
-                    new VerifyMfaCodeRequest(
-                            MFAMethodType.SMS, CODE, journeyType, UK_MOBILE_NUMBER);
-            var result = makeCallWithCode(codeRequest);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
-            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
-            verify(codeStorageService, never()).saveBlockedForEmail(EMAIL, codeBlockedPrefix, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
-            verifyNoInteractions(cloudwatchMetricsService);
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                    pair("mfa-type", MFAMethodType.SMS.getValue()),
-                    pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                    pair("journey-type", journeyType),
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                    pair("mfa-method", "default"));
-        }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        @Test
-        void
-                shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredAndBlockAlreadyExistsWithDeprecatedPrefix()
-                        throws Json.JsonException {
-            JourneyType journeyType = JourneyType.PASSWORD_RESET_MFA;
-            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
-            when(phoneNumberCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
-            var codeBlockedPrefix =
-                    CODE_BLOCKED_KEY_PREFIX
-                            + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                    MFAMethodType.SMS, journeyType);
-            when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedPrefix)).thenReturn(true);
-            var codeRequest =
-                    new VerifyMfaCodeRequest(
-                            MFAMethodType.SMS, CODE, journeyType, UK_MOBILE_NUMBER);
-            var result = makeCallWithCode(codeRequest);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
-            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
-            verify(codeStorageService, never()).saveBlockedForEmail(EMAIL, codeBlockedPrefix, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
-        }
-
         private static Stream<Arguments> invalidOtpSmsJourneyTypesWithMfaNotificationType() {
             return Stream.of(
                     Arguments.of(JourneyType.SIGN_IN, MFA_SMS.name()),
@@ -1226,7 +952,8 @@ class VerifyMfaCodeHandlerTest {
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
                     .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(3)));
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
                 when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1252,9 +979,6 @@ class VerifyMfaCodeHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             verifyNoInteractions(cloudwatchMetricsService);
 
             ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
@@ -1313,182 +1037,8 @@ class VerifyMfaCodeHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_SECRET));
-            verify(codeStorageService, never())
-                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             verifyNoInteractions(auditService);
             verifyNoInteractions(cloudwatchMetricsService);
-        }
-    }
-
-    @Test
-    void shouldIncrementMFAAuthenticationAttemptsCountIfIncorrectCodeEntered()
-            throws Json.JsonException {
-        long ttl = 3600L;
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
-        when(authAppCodeProcessor.validateCode())
-                .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
-        when(configurationService.getReauthEnterAuthAppCodeCountTTL()).thenReturn(ttl);
-        MockedStatic<NowHelper> mockedNowHelperClass = mockStatic(NowHelper.class);
-        mockedNowHelperClass
-                .when(() -> NowHelper.nowPlus(ttl, ChronoUnit.SECONDS))
-                .thenReturn(Date.from(Instant.parse("2024-01-01T00:00:00.00Z")));
-
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null);
-        makeCallWithCode(codeRequest);
-
-        verify(authenticationAttemptsService, times(1))
-                .createOrIncrementCount(
-                        TEST_SUBJECT_ID, 1704067200L, REAUTHENTICATION, ENTER_MFA_CODE);
-
-        mockedNowHelperClass.close();
-    }
-
-    @Test
-    void
-            shouldDeleteAuthAppAuthenticationAttemptsCountAndStoreCountsInSessionIfCorrectCodeEnteredForReauthJourney()
-                    throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
-        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
-                .thenReturn(existingCounts);
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
-        makeCallWithCode(codeRequest);
-
-        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSubjectId)
-                .forEach(
-                        identifier ->
-                                verify(
-                                                authenticationAttemptsService,
-                                                times(CountType.values().length))
-                                        .deleteCount(
-                                                eq(identifier),
-                                                eq(JourneyType.REAUTHENTICATION),
-                                                any()));
-
-        verify(authSessionService, atLeastOnce())
-                .updateSession(
-                        argThat(
-                                s ->
-                                        s.getPreservedReauthCountsForAuditMap()
-                                                .equals(existingCounts)));
-    }
-
-    @Test
-    void
-            shouldDeleteAuthAppAuthenticationAttemptsCountAndNotStoreCountsInSessionIfCorrectCodeEnteredForSigninJourney()
-                    throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
-        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
-                .thenReturn(existingCounts);
-
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
-        makeCallWithCode(codeRequest);
-
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, ENTER_MFA_CODE);
-
-        verify(authSessionService, never())
-                .updateSession(
-                        argThat(
-                                s ->
-                                        Objects.equals(
-                                                s.getPreservedReauthCountsForAuditMap(),
-                                                existingCounts)));
-    }
-
-    private static Stream<Arguments> reauthCountTypesAndMetadata() {
-        return Stream.of(
-                Arguments.arguments(
-                        ENTER_EMAIL,
-                        MAX_RETRIES,
-                        0,
-                        0,
-                        ReauthFailureReasons.INCORRECT_EMAIL.getValue()),
-                Arguments.arguments(
-                        ENTER_PASSWORD,
-                        0,
-                        MAX_RETRIES,
-                        0,
-                        ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
-                Arguments.arguments(
-                        ENTER_MFA_CODE,
-                        0,
-                        0,
-                        MAX_RETRIES,
-                        ReauthFailureReasons.INCORRECT_OTP.getValue()));
-    }
-
-    @ParameterizedTest
-    @MethodSource("reauthCountTypesAndMetadata")
-    void shouldReturnErrorIfUserHasTooManyReauthAttemptCountsOfAnyType(
-            CountType countType,
-            int expectedEmailAttemptCount,
-            int expectedPasswordAttemptCount,
-            int expectedOtpAttemptCount,
-            String expectedFailureReason)
-            throws Json.JsonException {
-        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
-                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
-            when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            any(), any(), eq(REAUTHENTICATION)))
-                    .thenReturn(Map.of(countType, MAX_RETRIES));
-            when(configurationService.getInternalSectorUri())
-                    .thenReturn("https://test.account.gov.uk");
-            Subject subject = new Subject(TEST_SUBJECT_ID);
-            mockedClientSubjectHelperClass
-                    .when(
-                            () ->
-                                    ClientSubjectHelper.getSubject(
-                                            eq(userProfile),
-                                            any(AuthSessionItem.class),
-                                            any(AuthenticationService.class)))
-                    .thenReturn(subject);
-
-            var codeRequest =
-                    new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null);
-            var result = makeCallWithCode(codeRequest);
-
-            verify(auditService, times(1))
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                            AUDIT_CONTEXT,
-                            pair("rpPairwiseId", subject.getValue()),
-                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
-                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
-                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
-                            pair("failure-reason", expectedFailureReason));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    FAILURE_REASON.getValue(),
-                                    expectedFailureReason));
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
         }
     }
 
@@ -1502,11 +1052,6 @@ class VerifyMfaCodeHandlerTest {
     private void assertAuditEventSubmittedWithMetadata(
             AuditableEvent event, AuditService.MetadataPair... pairs) {
         verify(auditService).submitAuditEvent(event, AUDIT_CONTEXT, pairs);
-    }
-
-    private void withReauthTurnedOn() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
     }
 
     @Test
@@ -1583,9 +1128,6 @@ class VerifyMfaCodeHandlerTest {
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(phoneNumberCodeProcessor)
                 .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
-        verify(codeStorageService, never())
-                .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
         boolean isAccountRecoveryJourney = journeyType.equals(ACCOUNT_RECOVERY);
 
@@ -1700,7 +1242,7 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Nested
-    class LockoutChecks {
+    class PermissionHandling {
 
         @Test
         void shouldReturn400WithAuthAppErrorWhenTemporarilyLockedOut() throws Json.JsonException {
@@ -1794,6 +1336,249 @@ class VerifyMfaCodeHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
             verifyNoInteractions(mfaCodeProcessorFactory);
+        }
+
+        private boolean hasExpectedPermissionContext(PermissionContext pc) {
+            return EMAIL.equals(pc.emailAddress())
+                    && SUBJECT_ID.equals(pc.internalSubjectId())
+                    && expectedRpPairwiseSubjectId.equals(pc.rpPairwiseId());
+        }
+
+        @Test
+        void shouldCallIncorrectSmsOtpReceivedWhenSmsCodeIsInvalid() throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+            when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CODE,
+                            JourneyType.SIGN_IN,
+                            DEFAULT_SMS_METHOD.getDestination());
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(400));
+            verify(userActionsManager)
+                    .incorrectSmsOtpReceived(
+                            eq(JourneyType.SIGN_IN), argThat(this::hasExpectedPermissionContext));
+        }
+
+        @Test
+        void shouldCallIncorrectSmsOtpReceivedWithSubjectIdForReauth() throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+            when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CODE,
+                            REAUTHENTICATION,
+                            DEFAULT_SMS_METHOD.getDestination());
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(400));
+            verify(userActionsManager)
+                    .incorrectSmsOtpReceived(
+                            eq(REAUTHENTICATION), argThat(this::hasExpectedPermissionContext));
+        }
+
+        @Test
+        void shouldCallIncorrectAuthAppOtpReceivedWhenAuthAppCodeIsInvalid()
+                throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+            when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(400));
+            verify(userActionsManager)
+                    .incorrectAuthAppOtpReceived(
+                            eq(JourneyType.SIGN_IN), argThat(this::hasExpectedPermissionContext));
+        }
+
+        @Test
+        void shouldReturn400WithLockoutErrorWhenAuthAppCodeBecomesBlockedByThisRequest()
+                throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+            when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+            // First check passes (not blocked), second check after increment returns blocked
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(5)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            null, MAX_RETRIES, Instant.now(), false)));
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+        }
+
+        @Test
+        void shouldReturn400WithLockoutErrorWhenSmsCodeBecomesBlockedByThisRequest()
+                throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+            when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+            // First check passes (not blocked), second check after increment returns blocked
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(5)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            null, MAX_RETRIES, Instant.now(), false)));
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.SMS,
+                                    CODE,
+                                    JourneyType.SIGN_IN,
+                                    DEFAULT_SMS_METHOD.getDestination()));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+        }
+
+        @Test
+        void shouldReturn400WithReauthLockedOutWhenAuthAppCodeBecomesReauthBlockedByThisRequest()
+                throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+            when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+            var detailedCounts = Map.of(ENTER_MFA_CODE, MAX_RETRIES);
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(5)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                            MAX_RETRIES,
+                                            Instant.now(),
+                                            false,
+                                            detailedCounts,
+                                            List.of(ENTER_MFA_CODE))));
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            verify(userActionsManager).incorrectAuthAppOtpReceived(any(), any());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            eq(CloudwatchMetrics.REAUTH_FAILED.getValue()), any(Map.class));
+        }
+
+        @Test
+        void shouldReturn500WhenIncorrectSmsOtpReceivedFails() throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+            when(userActionsManager.incorrectSmsOtpReceived(any(), any()))
+                    .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CODE,
+                            JourneyType.SIGN_IN,
+                            DEFAULT_SMS_METHOD.getDestination());
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(500));
+        }
+
+        @Test
+        void shouldReturn500WhenIncorrectAuthAppOtpReceivedFails() throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+            when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
+                    .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
+
+            var result = makeCallWithCode(codeRequest);
+
+            assertThat(result, hasStatus(500));
         }
     }
 }
