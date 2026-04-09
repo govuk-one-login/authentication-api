@@ -3,7 +3,7 @@ awsSdk = "2.33.4"
 junit = "5.13.4"
 pact = "4.6.18"
 spotbugs = "4.9.8"
-xray = "2.20.0"
+xray = "2.21.0"
 
 [libraries]
 apacheCommonsCodec = "commons-codec:commons-codec:1.19.0"
