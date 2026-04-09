@@ -846,8 +846,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(key);
     }
 
-    public String getAuthToAMCDownstreamServiceSigningKey() {
-        return System.getenv().getOrDefault("AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY", "");
+    public String getAuthToAccountManagementSigningKey() {
+        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_SIGNING_KEY", "");
     }
 
     public String getAuthToAMCTransportJWTSigningKey() {
@@ -874,6 +874,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("AMC_CLIENT_ID", "");
     }
 
+    public String getAuthToAccountDataSigningKey() {
+        return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", "");
+    }
+
     public URI getAMCAuthorizeURI() {
         return URI.create(System.getenv().getOrDefault("AMC_AUTHORIZE_URI", ""));
     }
@@ -897,6 +901,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getAMCJWKSBucketName() {
         return System.getenv().getOrDefault("AMC_JWKS_BUCKET_NAME", "");
+    }
+
+    public String getADJWKSBucketName() {
+        return System.getenv().getOrDefault("AD_JWKS_BUCKET_NAME", "");
     }
 
     public boolean isEnhancedAuthCodeProtectionEnabled() {

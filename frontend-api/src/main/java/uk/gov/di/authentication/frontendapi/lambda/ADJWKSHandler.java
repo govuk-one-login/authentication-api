@@ -19,26 +19,25 @@ import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.net.URI;
-import java.util.List;
 
-public class AMCJWKSHandler implements RequestHandler<Object, Void> {
+public class ADJWKSHandler implements RequestHandler<Object, Void> {
     private final ConfigurationService configurationService;
     private final JwksService jwksService;
     private final S3Client s3Client;
-    private static final Logger LOG = LogManager.getLogger(AMCJWKSHandler.class);
+    private static final Logger LOG = LogManager.getLogger(ADJWKSHandler.class);
 
-    public AMCJWKSHandler() {
+    public ADJWKSHandler() {
         this(ConfigurationService.getInstance());
     }
 
-    public AMCJWKSHandler(
+    public ADJWKSHandler(
             JwksService jwksService, ConfigurationService configurationService, S3Client s3Client) {
         this.configurationService = configurationService;
         this.jwksService = jwksService;
         this.s3Client = s3Client;
     }
 
-    public AMCJWKSHandler(ConfigurationService configurationService) {
+    public ADJWKSHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.jwksService = new JwksService(configurationService, kmsConnectionService);
@@ -78,24 +77,20 @@ public class AMCJWKSHandler implements RequestHandler<Object, Void> {
 
     @Override
     public Void handleRequest(Object event, Context context) {
-        LOG.info("AMC JWKS lambda invoked");
-        JWK authToAMCSigningJwk = jwksService.getPublicAuthToAMCSigningJwkWithOpaqueId();
-        JWK authToAccountManagementSigningJwk =
-                jwksService.getPublicAuthToAccountManagementSigningJwkWithOpaqueId();
+        LOG.info("AD JWKS lambda invoked");
+        JWK authToADSigningJwk = jwksService.getPublicAuthToAccountDataSigningJwkWithOpaqueId();
 
-        var jwks =
-                new JWKSet(List.of(authToAMCSigningJwk, authToAccountManagementSigningJwk))
-                        .toString(true);
+        var jwks = new JWKSet(authToADSigningJwk).toString(true);
 
         s3Client.putObject(
                 PutObjectRequest.builder()
-                        .bucket(configurationService.getAMCJWKSBucketName())
-                        .key(".well-known/amc-jwks.json")
+                        .bucket(configurationService.getADJWKSBucketName())
+                        .key(".well-known/ad-jwks.json")
                         .contentType("application/json")
                         .build(),
                 RequestBody.fromString(jwks));
 
-        LOG.info("AMC JWKS has been put to S3");
+        LOG.info("AD JWKS has been put to S3");
         return null;
     }
 }

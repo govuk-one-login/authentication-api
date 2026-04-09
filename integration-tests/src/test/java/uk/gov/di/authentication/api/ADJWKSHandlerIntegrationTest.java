@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
-import uk.gov.di.authentication.frontendapi.lambda.AMCJWKSHandler;
+import uk.gov.di.authentication.frontendapi.lambda.ADJWKSHandler;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.S3BucketExtension;
@@ -25,54 +25,43 @@ import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 @ExtendWith(SystemStubsExtension.class)
-class AMCJWKSHandlerIntegrationTest extends HandlerIntegrationTest<Object, String> {
-    private static AMCJWKSHandler handler;
+class ADJWKSHandlerIntegrationTest extends HandlerIntegrationTest<Object, String> {
+    private static ADJWKSHandler handler;
 
     @SystemStub static EnvironmentVariables environmentVariables;
 
     @RegisterExtension
-    protected static final KmsKeyExtension authToAMCSigningKey =
-            new KmsKeyExtension("auth-to-amc-signing-key", KeyUsageType.SIGN_VERIFY);
+    private static final KmsKeyExtension authToAccountDataSigningKey =
+            new KmsKeyExtension("auth-to-account-data-signing-key", KeyUsageType.SIGN_VERIFY);
+
+    private static final String AD_JWKS_BUCKET = "ad-jwks-bucket";
+    private static final String AD_JWKS_FILE_KEY = ".well-known/ad-jwks.json";
 
     @RegisterExtension
-    private static final KmsKeyExtension authToAccountManagementSigningKey =
-            new KmsKeyExtension("auth-to-account-management-signing-key", KeyUsageType.SIGN_VERIFY);
-
-    private static final String AMC_JWKS_BUCKET = "amc-jwks-bucket";
-    private static final String AMC_JWKS_FILE_KEY = ".well-known/amc-jwks.json";
-
-    @RegisterExtension
-    protected static final S3BucketExtension amcJwksS3 = new S3BucketExtension(AMC_JWKS_BUCKET);
+    protected static final S3BucketExtension adJwksS3 = new S3BucketExtension(AD_JWKS_BUCKET);
 
     @BeforeAll
     static void beforeAll() {
-        environmentVariables.set("AMC_JWKS_BUCKET_NAME", AMC_JWKS_BUCKET);
+        environmentVariables.set("AD_JWKS_BUCKET_NAME", AD_JWKS_BUCKET);
         environmentVariables.set(
-                "AUTH_TO_ACCOUNT_MANAGEMENT_SIGNING_KEY",
-                authToAccountManagementSigningKey.getKeyAlias());
-        environmentVariables.set(
-                "AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY", authToAMCSigningKey.getKeyAlias());
+                "AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", authToAccountDataSigningKey.getKeyAlias());
 
-        handler = new AMCJWKSHandler();
+        handler = new ADJWKSHandler();
     }
 
     @Test
     void shouldRetrieveKeysAndPutJWKSToS3() throws Exception {
         handler.handleRequest(null, mock(Context.class));
 
-        JWKSet jwks = JWKSet.parse(amcJwksS3.getObject(AMC_JWKS_FILE_KEY));
+        JWKSet jwks = JWKSet.parse(adJwksS3.getObject(AD_JWKS_FILE_KEY));
 
-        String authToAMCKid =
-                hashSha256String(
-                        "arn:aws:kms:eu-west-2:000000000000:key/" + authToAMCSigningKey.getKeyId());
-        String authToAccountManagementKid =
+        String authToAccountDataKid =
                 hashSha256String(
                         "arn:aws:kms:eu-west-2:000000000000:key/"
-                                + authToAccountManagementSigningKey.getKeyId());
+                                + authToAccountDataSigningKey.getKeyId());
 
-        assertEquals(2, jwks.getKeys().size());
-        assertNotNull(jwks.getKeyByKeyId(authToAMCKid));
-        assertNotNull(jwks.getKeyByKeyId(authToAccountManagementKid));
+        assertEquals(1, jwks.getKeys().size());
+        assertNotNull(jwks.getKeyByKeyId(authToAccountDataKid));
 
         for (JWK key : jwks.getKeys()) {
             assertEquals(ECKey.class, key.getClass());

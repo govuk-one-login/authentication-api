@@ -49,7 +49,7 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               frontendBaseUrl,
             ]
-          AUTH_TO_AMC_DOWNSTREAM_SERVICE_SIGNING_KEY: !Sub
+          AUTH_TO_ACCOUNT_MANAGEMENT_SIGNING_KEY: !Sub
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-management-signing-key
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]

@@ -1,34 +1,30 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Conditions:
-  DeployAMCJWKSWithSplunk: !Condition IsSplunkEnabled
+  DeployADJWKSWithSplunk: !Condition IsSplunkEnabled
 
 Resources:
-  AMCJWKSFunction:
+  ADJWKSFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-amc-jwks-lambda
+        - ${Env}-ad-jwks-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Environment:
         Variables:
-          AMC_JWKS_BUCKET_NAME: !Ref AMCJWKSBucket
-          AUTH_TO_ACCOUNT_MANAGEMENT_SIGNING_KEY: !Sub
-            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-management-signing-key
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          AUTH_TO_AMC_TRANSPORT_JWT_SIGNING_KEY: !Sub
-            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-amc-signing-key
+          AD_JWKS_BUCKET_NAME: !Ref ADJWKSBucket
+          AUTH_TO_ACCOUNT_DATA_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-data-signing-key
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
-      Handler: uk.gov.di.authentication.frontendapi.lambda.AMCJWKSHandler::handleRequest
+      Handler: uk.gov.di.authentication.frontendapi.lambda.ADJWKSHandler::handleRequest
       LoggingConfig:
-        LogGroup: !Ref AMCJWKSFunctionLogGroup
+        LogGroup: !Ref ADJWKSFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref AMCJWKSFunctionPolicy
+        - !Ref ADJWKSFunctionPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
@@ -41,10 +37,10 @@ Resources:
       Tags:
         EnforceLambdaDeploymentOrder: ""
 
-  AMCJWKSFunctionPolicy:
+  ADJWKSFunctionPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for AMC JWKS lambda to write to S3 and use KMS"
+      Description: "IAM policy for AD JWKS lambda to write to S3 and use KMS"
       Path: !Sub
         - /${Env}/frontend-api/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -55,20 +51,19 @@ Resources:
             Effect: Allow
             Action:
               - s3:PutObject
-            Resource: !Sub "${AMCJWKSBucket.Arn}/.well-known/amc-jwks.json"
+            Resource: !Sub "${ADJWKSBucket.Arn}/.well-known/ad-jwks.json"
           - Sid: AllowFetchingPublicKeys
             Effect: Allow
             Action:
               - kms:GetPublicKey
             Resource:
-              - !GetAtt AuthToAccountManagementSigningKey.Arn
-              - !GetAtt AuthToAMCSigningKey.Arn
+              - !GetAtt AuthToAccountDataSigningKey.Arn
 
-  AMCJWKSFunctionLogGroup:
+  ADJWKSFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
-        - /aws/lambda/${Env}-amc-jwks-lambda
+        - /aws/lambda/${Env}-ad-jwks-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays:
@@ -79,25 +74,25 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-AMCJWKSFunctionLogGroup"
+          Value: !Sub "${AWS::StackName}-ADJWKSFunctionLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/amc-jwks.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/ad-jwks.yaml
 
-  AMCJWKSFunctionSubscriptionFilter:
-    Condition: "DeployAMCJWKSWithSplunk"
+  ADJWKSFunctionSubscriptionFilter:
+    Condition: "DeployADJWKSWithSplunk"
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Ref AMCJWKSFunctionLogGroup
+      LogGroupName: !Ref ADJWKSFunctionLogGroup
 
-  AMCJWKSBucket:
+  ADJWKSBucket:
     Type: "AWS::S3::Bucket"
     Properties:
       BucketName: !Sub
-        - ${Env}-amc-jwks
+        - ${Env}-ad-jwks
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true

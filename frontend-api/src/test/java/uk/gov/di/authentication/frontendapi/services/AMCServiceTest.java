@@ -98,10 +98,7 @@ class AMCServiceTest {
     private static final String AUTH_TO_AMC_PRIVATE_AUDIENCE = "https://amc.account.gov.uk";
     private static final String RESPONSE_TYPE = "code";
     private static final String REDIRECT_URI = "https://example.com/callback";
-    private static final String ACCESS_TOKEN_REDIRECT_URI = "https://example.com/redirect-uri";
     private static final String ACCESS_TOKEN_AUDIENCE = "access-token-audience";
-    private static final String SECOND_ACCESS_TOKEN_REDIRECT_URI =
-            "https://example.com/second-redirect-uri";
     private static final String SECOND_ACCESS_TOKEN_AUDIENCE = "second-access-token-audience";
     private static final String AMC_CLIENT_ID = "amc-client-id";
     private static final String AMC_AUTHORIZE_URI = "https://amc.account.gov.uk/authorize";
@@ -109,6 +106,7 @@ class AMCServiceTest {
     private static final URI TOKEN_ENDPOINT_URI = URI.create("https://amc.account.gov.uk/token");
     private static final String PUBLIC_SUBJECT = "test-public-subject";
     private static final String ACCESS_TOKEN_KEY_ALIAS = "test-key-alias";
+    private static final String OTHER_ACCESS_TOKEN_KEY_ALIAS = "other-test-key-alias";
     private static final String COMPOSITE_JWT_KEY_ALIAS = "auth-to-amc-test-key-alias";
     private static final KeyPair TEST_ENCRYPTION_KEY_PAIR = GENERATE_RSA_KEY_PAIR();
     private static final RSAPublicKey TEST_PUBLIC_ENCRYPTION_KEY =
@@ -123,8 +121,8 @@ class AMCServiceTest {
                     new AccessTokenConfig(
                             "account_management_api_access_token",
                             AccountManagementScope.ACCOUNT_DELETE,
-                            ACCESS_TOKEN_REDIRECT_URI,
-                            ACCESS_TOKEN_AUDIENCE));
+                            ACCESS_TOKEN_AUDIENCE,
+                            ACCESS_TOKEN_KEY_ALIAS));
     private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
 
     // Ensure 0 milliseconds for JWT compatibility
@@ -140,6 +138,7 @@ class AMCServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final JwtService jwtService = mock(JwtService.class);
     private ECKey accessTokenKey;
+    private ECKey otherAccessTokenKey;
     private ECKey compositeJWTKey;
 
     @BeforeEach
@@ -147,10 +146,13 @@ class AMCServiceTest {
         amcService = new AMCService(configurationService, NOW_CLOCK, jwtService);
         accessTokenKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         compositeJWTKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        otherAccessTokenKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         mockJwtSigning(
                 Map.of(
                         ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
-                        COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
+                        COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey,
+                        OTHER_ACCESS_TOKEN_KEY_ALIAS, otherAccessTokenKey));
         mockJwtEncryption();
         authSessionItem =
                 new AuthSessionItem()
@@ -165,7 +167,7 @@ class AMCServiceTest {
         when(configurationService.getAuthToAMApiAudience()).thenReturn(AUTH_TO_AUTH_AUDIENCE);
         when(configurationService.getAuthToAMCPublicAudience())
                 .thenReturn(AUTH_TO_AMC_PUBLIC_AUDIENCE);
-        when(configurationService.getAuthToAMCDownstreamServiceSigningKey())
+        when(configurationService.getAuthToAccountManagementSigningKey())
                 .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
         when(configurationService.getAuthToAMCTransportJWTSigningKey())
                 .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
@@ -185,20 +187,20 @@ class AMCServiceTest {
                                     new AccessTokenConfig(
                                             "account_management_api_access_token",
                                             AccountManagementScope.ACCOUNT_DELETE,
-                                            ACCESS_TOKEN_REDIRECT_URI,
-                                            ACCESS_TOKEN_AUDIENCE))),
+                                            ACCESS_TOKEN_AUDIENCE,
+                                            ACCESS_TOKEN_KEY_ALIAS))),
                     Arguments.of(
                             List.of(
                                     new AccessTokenConfig(
                                             "account_management_api_access_token",
                                             AccountManagementScope.ACCOUNT_DELETE,
-                                            ACCESS_TOKEN_REDIRECT_URI,
-                                            ACCESS_TOKEN_AUDIENCE),
+                                            ACCESS_TOKEN_AUDIENCE,
+                                            OTHER_ACCESS_TOKEN_KEY_ALIAS),
                                     new AccessTokenConfig(
                                             "account_data_api_access_token",
                                             AccountDataScope.PASSKEY_CREATE,
-                                            SECOND_ACCESS_TOKEN_REDIRECT_URI,
-                                            SECOND_ACCESS_TOKEN_AUDIENCE))));
+                                            SECOND_ACCESS_TOKEN_AUDIENCE,
+                                            ACCESS_TOKEN_KEY_ALIAS))));
         }
 
         @ParameterizedTest
@@ -236,8 +238,15 @@ class AMCServiceTest {
                 var accessTokenValue = compositeClaims.getClaim(accessTokenName).toString();
 
                 SignedJWT accessTokenJWT = SignedJWT.parse(accessTokenValue);
-                assertTrue(
-                        accessTokenJWT.verify(new ECDSAVerifier(accessTokenKey.toECPublicKey())));
+                if (accessTokenConfig.signingKey().equals(ACCESS_TOKEN_KEY_ALIAS)) {
+                    assertTrue(
+                            accessTokenJWT.verify(
+                                    new ECDSAVerifier(accessTokenKey.toECPublicKey())));
+                } else {
+                    assertTrue(
+                            accessTokenJWT.verify(
+                                    new ECDSAVerifier(otherAccessTokenKey.toECPublicKey())));
+                }
 
                 JWTClaimsSet accessTokenClaims = accessTokenJWT.getJWTClaimsSet();
                 assertAccessTokenClaims(

@@ -14,14 +14,14 @@ public enum AMCJourneyType {
                     new AccessTokenConfig(
                             "account_management_api_access_token",
                             AccountManagementScope.ACCOUNT_DELETE,
-                            config.getAMCSfadRedirectURI(),
-                            config.getAuthToAMApiAudience()));
+                            config.getAuthToAMApiAudience(),
+                            config.getAuthToAccountManagementSigningKey()));
             case PASSKEY_CREATE -> List.of(
                     new AccessTokenConfig(
                             "account_data_api_access_token",
                             AccountDataScope.PASSKEY_CREATE,
-                            config.getAMCCreatePasskeyRedirectURI(),
-                            config.getAuthToAccountDataApiAudience()));
+                            config.getAuthToAccountDataApiAudience(),
+                            config.getAuthToAccountDataSigningKey()));
         };
     }
 
