@@ -52,7 +52,11 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.Instant;
@@ -178,6 +182,8 @@ class VerifyMfaCodeHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
 
     @RegisterExtension
@@ -217,6 +223,8 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Result.success(null));
         when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
                 .thenReturn(Result.success(null));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -230,6 +238,7 @@ class VerifyMfaCodeHandlerTest {
                         authSessionService,
                         mfaMethodsService,
                         userActionsManager,
+                        permissionDecisionManager,
                         testUserHelper);
     }
 
@@ -1688,5 +1697,103 @@ class VerifyMfaCodeHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(500));
+    }
+
+    @Nested
+    class LockoutChecks {
+
+        @Test
+        void shouldReturn400WithAuthAppErrorWhenTemporarilyLockedOut() throws Json.JsonException {
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            null, MAX_RETRIES, Instant.now(), false)));
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+            verifyNoInteractions(mfaCodeProcessorFactory);
+        }
+
+        @Test
+        void shouldReturn400WithSmsErrorWhenTemporarilyLockedOut() throws Json.JsonException {
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            null, MAX_RETRIES, Instant.now(), false)));
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.SMS, CODE, JourneyType.SIGN_IN, null));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+            verifyNoInteractions(mfaCodeProcessorFactory);
+        }
+
+        @Test
+        void shouldReturn400WhenReauthLockedOut() throws Json.JsonException {
+            var detailedCounts = Map.of(ENTER_MFA_CODE, MAX_RETRIES);
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                            MAX_RETRIES,
+                                            Instant.now(),
+                                            false,
+                                            detailedCounts,
+                                            List.of(ENTER_MFA_CODE))));
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            eq(CloudwatchMetrics.REAUTH_FAILED.getValue()), any(Map.class));
+            verifyNoInteractions(mfaCodeProcessorFactory);
+        }
+
+        @Test
+        void shouldReturn500WhenPermissionDecisionManagerFails() throws Json.JsonException {
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null));
+
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
+            verifyNoInteractions(mfaCodeProcessorFactory);
+        }
     }
 }
