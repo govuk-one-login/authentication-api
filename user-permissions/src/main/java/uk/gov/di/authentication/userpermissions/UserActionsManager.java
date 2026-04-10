@@ -466,6 +466,17 @@ public class UserActionsManager implements UserActions {
                 return Result.failure(TrackingError.INVALID_USER_CONTEXT);
             }
 
+            if (configurationService.supportReauthSignoutEnabled()
+                    && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                var counts =
+                        getAuthenticationAttemptsService()
+                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                        internalSubjectId,
+                                        rpPairwiseId,
+                                        JourneyType.REAUTHENTICATION);
+                authSession = authSession.withPreservedReauthCountsForAuditMap(counts);
+            }
+
             for (String identifier : List.of(internalSubjectId, rpPairwiseId)) {
                 for (CountType countType : CountType.values()) {
                     getAuthenticationAttemptsService()

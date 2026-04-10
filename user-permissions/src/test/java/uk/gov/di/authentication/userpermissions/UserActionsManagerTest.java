@@ -23,6 +23,7 @@ import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolde
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -514,6 +515,52 @@ class UserActionsManagerTest {
                 }
                 verify(codeStorageService, never())
                         .deleteIncorrectMfaCodeAttemptsCount(anyString());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldPreserveReauthCountsForAuditWhenFeatureFlagsEnabled() {
+                when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+                when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                        .thenReturn(true);
+                var counts = Map.of(CountType.ENTER_PASSWORD, 2, CountType.ENTER_SMS_CODE, 1);
+                when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                "subject-123", "rp-pairwise-456", JourneyType.REAUTHENTICATION))
+                        .thenReturn(counts);
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                ArgumentCaptor<AuthSessionItem> captor =
+                        ArgumentCaptor.forClass(AuthSessionItem.class);
+                verify(authSessionService).updateSession(captor.capture());
+                assertEquals(counts, captor.getValue().getPreservedReauthCountsForAuditMap());
+                assertTrue(result.isSuccess());
+            }
+
+            @Test
+            void shouldNotPreserveReauthCountsWhenFeatureFlagsDisabled() {
+                when(configurationService.supportReauthSignoutEnabled()).thenReturn(false);
+                var context =
+                        PermissionContext.builder()
+                                .withInternalSubjectId("subject-123")
+                                .withRpPairwiseId("rp-pairwise-456")
+                                .withAuthSessionItem(authSession)
+                                .build();
+
+                var result =
+                        userActionsManager.correctSmsOtpReceived(
+                                JourneyType.REAUTHENTICATION, context);
+
+                verify(authenticationAttemptsService, never())
+                        .getCountsByJourneyForSubjectIdAndRpPairwiseId(any(), any(), any());
                 assertTrue(result.isSuccess());
             }
         }
