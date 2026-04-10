@@ -20,7 +20,7 @@ jobs:
         uses: gradle/actions/dependency-submission@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
 
       - name: Perform dependency review
-        uses: actions/dependency-review-action@05fe4576374b728f0c523d6a13d64c25081e0803 # v4.8.3
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
         with:
           # These exceptions should be rare and well justified
           # - GHSA-qh8g-58pp-2wxh see https://github.com/govuk-one-login/authentication-api/pull/7105
