@@ -25,7 +25,6 @@ jobs:
       matrix:
         module:
           - account-management
-          - delivery-receipts
           - oidc
           - shared
           - test-services

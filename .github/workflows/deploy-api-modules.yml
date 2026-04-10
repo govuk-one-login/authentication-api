@@ -107,7 +107,6 @@ jobs:
         module:
           - account-management-api
           - client-registry-api
-          - delivery-receipts-api
           - doc-checking-app-api
           - frontend-api
           - ipv-api
@@ -147,8 +146,6 @@ jobs:
         include:
           - module_name: account-management-api
             terraform_directory_name: account-management
-          - module_name: delivery-receipts-api
-            terraform_directory_name: delivery-receipts
           - module_name: test-services-api
             terraform_directory_name: test-services
           - module_name: utils
