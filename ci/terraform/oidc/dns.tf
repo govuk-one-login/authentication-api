@@ -1,11 +1,10 @@
 locals {
   prod           = var.environment == "production" ? "account.gov.uk" : ""
-  sandpitdevs    = var.environment == "authdev1" || var.environment == "authdev2" ? "${var.environment}.sandpit.account.gov.uk" : ""
-  newdevs        = var.environment == "authdev3" ? "${var.environment}.dev.account.gov.uk" : ""
+  newdevs        = var.environment == "authdev3" || var.environment == "authdev1" || var.environment == "authdev2" ? "${var.environment}.dev.account.gov.uk" : ""
   otherenv       = var.environment != "production" && var.environment != "authdev1" && var.environment != "authdev2" && var.environment != "authdev3" ? "${var.environment}.account.gov.uk" : ""
-  service_domain = coalesce(local.prod, local.sandpitdevs, local.otherenv, local.newdevs)
+  service_domain = coalesce(local.prod, local.otherenv, local.newdevs)
 
-  oidc_cloudfront_id_export_name = var.environment == "sandpit" || var.environment == "authdev3" ? "dev-oidc-cloudfront-DistributionId" : "${var.environment}-oidc-cloudfront-DistributionId"
+  oidc_cloudfront_id_export_name = var.environment == "authdev3" ? "dev-oidc-cloudfront-DistributionId" : "${var.environment}-oidc-cloudfront-DistributionId"
 
   account_management_fqdn = local.service_domain
   frontend_fqdn           = "signin.${local.service_domain}"
