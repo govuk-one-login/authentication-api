@@ -187,7 +187,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             throw new IllegalArgumentException("Secret cannot be null.");
         }
 
-        if (codeToCheck <= 0 || codeToCheck >= (int) Math.pow(10, 6)) {
+        if (codeToCheck < 0 || codeToCheck >= 1_000_000) {
             return false;
         }
 
