@@ -2346,17 +2346,8 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: TokenFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig:
-        !If [
-          EnableProvisionedConcurrency,
-          ProvisionedConcurrentExecutions:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              defaultProvisionedConcurrency,
-            ],
-          !Ref AWS::NoValue,
-        ]
+      SnapStart:
+        ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
