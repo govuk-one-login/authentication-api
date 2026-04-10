@@ -16,7 +16,7 @@ bulk_user_email_audience_load_pause_duration      = 300000
 bulk_user_email_send_schedule_enabled    = true
 bulk_user_email_send_schedule_expression = "cron(* 8-14 ? 3-4 2-6 2026)"
 bulk_user_email_email_sending_enabled    = true
-bulk_user_email_batch_size               = 48
+bulk_user_email_batch_size               = 96
 bulk_user_email_send_mode                = "PENDING"
 bulk_user_email_sender_type              = "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET"
 
