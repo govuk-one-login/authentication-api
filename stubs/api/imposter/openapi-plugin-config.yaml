@@ -1,0 +1,2 @@
+plugin: openapi
+specFile: ../../../ci/openAPI/AuthInternalApi.yaml

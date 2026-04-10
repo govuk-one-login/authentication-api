@@ -1,0 +1,11 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "kid": "stub-key-1",
+      "use": "sig",
+      "n": "stub-modulus",
+      "e": "AQAB"
+    }
+  ]
+}

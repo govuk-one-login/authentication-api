@@ -1,0 +1,45 @@
+name: di-authentication-stub
+
+services:
+  orchestration-stub:
+    image: orch-stub-local:latest
+    container_name: orch-stub-local
+    build:
+      context: ../../../../authentication-stubs/orchestration-stub
+      dockerfile: Dockerfile
+    env_file: ../../../../authentication-stubs/orchestration-stub/.env.local
+    environment:
+      AUTHENTICATION_BACKEND_URL: http://host.docker.internal:4402/
+    ports:
+      - "4400:4400"
+    networks:
+      - di-stub-net
+
+  authentication-frontend:
+    image: authentication-frontend-local:latest
+    container_name: authentication-frontend-local
+    build:
+      context: ../../../../authentication-frontend
+      dockerfile: dev.Dockerfile
+    env_file: ../../../../authentication-frontend/.env.local
+    environment:
+      FRONTEND_API_BASE_URL: http://host.docker.internal:4402/
+      API_BASE_URL: http://host.docker.internal:4402/
+    command: "node --enable-source-maps dist/server.js"
+    ports:
+      - "4401:4401"
+    networks:
+      - di-stub-net
+
+  api-stub:
+    image: outofcoffee/imposter:3.28.3
+    container_name: api-stub-local
+    ports:
+      - "4402:8080"
+    volumes:
+      - .:/opt/imposter/config
+    networks:
+      - di-stub-net
+
+networks:
+  di-stub-net:

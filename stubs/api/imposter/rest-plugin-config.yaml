@@ -1,0 +1,215 @@
+plugin: rest
+resources:
+  # /.well-known endpoints
+  - path: "/.well-known/mfa-reset-jwk.json"
+    method: GET
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/jwks-200.json
+
+  - path: "/.well-known/reverification-jwk.json"
+    method: GET
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/jwks-200.json
+
+  - path: "/.well-known/amc-jwks.json"
+    method: GET
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/jwks-200.json
+
+  - path: "/.well-known/ad-jwks.json"
+    method: GET
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/jwks-200.json
+
+  - path: "/.well-known/auth-jwks.json"
+    method: GET
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/jwks-200.json
+
+  # POST endpoints
+  - path: "/start"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/start-200.json
+
+  - path: "/user-exists"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/user-exists-200.json
+
+  - path: "/login"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/login-200.json
+
+  - path: "/signup"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/signup-200.json
+
+  - path: "/mfa"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 204
+
+  - path: "/verify-code"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 204
+
+  - path: "/verify-mfa-code"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 204
+
+  - path: "/send-notification"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 204
+
+  - path: "/update-profile"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 204
+
+  - path: "/reset-password"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 204
+
+  - path: "/reset-password-request"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/reset-password-request-200.json
+
+  - path: "/orch-auth-code"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/orch-auth-code-200.json
+      template: true
+
+  - path: "/account-interventions"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/account-interventions-200.json
+
+  - path: "/account-recovery"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/account-recovery-200.json
+
+  - path: "/check-email-fraud-block"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/check-email-fraud-block-200.json
+
+  - path: "/check-reauth-user"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+
+  - path: "/id-reverification-state"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/id-reverification-state-200.json
+
+  - path: "/amc-authorize"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/amc-authorize-200.json
+
+  - path: "/amc-callback"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/amc-callback-200.json
+
+  - path: "/mfa-reset-authorize"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/mfa-reset-authorize-200.json
+
+  - path: "/reverification-result"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/reverification-result-200.json
+
+  - path: "/processing-identity"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/processing-identity-200.json
+
+  - path: "/start-passkey-assertion"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/start-passkey-assertion-200.json
+
+  - path: "/finish-passkey-assertion"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/finish-passkey-assertion-200.json
+
+  # External API endpoints
+  - path: "/token"
+    method: POST
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/token-200.json
+
+  - path: "/userinfo"
+    method: GET
+    contentType: "application/json"
+    response:
+      statusCode: 200
+      file: responses/userinfo-200.json

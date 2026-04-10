@@ -1,0 +1,11 @@
+{
+  "sessionId": "session-123",
+  "user": {
+    "upliftRequired": false,
+    "identityRequired": false,
+    "authenticated": false,
+    "mfaMethodType": "SMS",
+    "isBlockedForReauth": false
+  },
+  "featureFlags": {}
+}
