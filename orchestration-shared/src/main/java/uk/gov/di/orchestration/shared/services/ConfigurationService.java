@@ -377,6 +377,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2");
     }
 
+    public String getStoredOldTokenECPublicKeys() {
+        return System.getenv("STORED_OLD_ID_TOKEN_EC_PUBLIC_KEYS");
+    }
+
     public boolean isPublishNextExternalTokenSigningKeysEnabledV2() {
         return getFlagOrFalse("PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2");
     }
@@ -388,6 +392,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isUseNewV2TokenSigningKeysEnabled() {
         return getFlagOrFalse("USE_NEW_V2_TOKEN_SIGNING_KEYS");
+    }
+
+    public boolean isUseStoredOldIdTokenPublicKeysEnabled() {
+        return getFlagOrFalse("USE_STORED_OLD_ID_TOKEN_PUBLIC_KEYS");
     }
 
     public boolean isSingleFactorAccountDeletionEnabled() {
