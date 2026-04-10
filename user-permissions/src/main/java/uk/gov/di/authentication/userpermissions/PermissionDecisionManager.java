@@ -335,7 +335,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 false));
             }
 
-            return Result.success(new Decision.Permitted(0));
+            int attemptCount =
+                    getCodeStorageService()
+                            .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+            return Result.success(new Decision.Permitted(attemptCount));
         } catch (RuntimeException e) {
             LOG.error("Could not retrieve MFA code block details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
