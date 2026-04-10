@@ -8,17 +8,10 @@
 For example:
 
 1. Code Review
-<<<<<<< HEAD
 1. Deploy to a dev environment using the most appropriate [GitHub dev deployment workflow](https://github.com/govuk-one-login/authentication-api/actions), or using the deployment scripts in this repo for the old account (e.g., `./deploy-authdevs.sh -c -b --all`).
 1. Ensure that resources `x`, `y` and `z` were not changed
 1. Visit [some url](https://some.dev.url/to/visit)
 1. Sign in
-=======
-1. Deploy to authdevs with `./deploy-authdevs.sh -a`
-1. Ensure that resources `x`, `y` and `z` were not changed
-1. Visit [some url](https://some.authdev1.url/to/visit)
-1. Log in
->>>>>>> d69dd01df (AUT-4727: Remove Sandpit deployment Terraform and scripts)
 1. Ensure `x` message appears in a modal
 -->
 
