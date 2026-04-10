@@ -288,6 +288,7 @@ class PermissionDecisionManagerTest {
             var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(EMAIL, codeAttemptsBlockedKeyPrefix))
                     .thenReturn(false);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(5);
 
             var result =
                     permissionDecisionManager.canVerifyEmailOtp(
@@ -299,7 +300,7 @@ class PermissionDecisionManagerTest {
                             Decision.Permitted.class,
                             result.getSuccess(),
                             "Expected Permitted decision");
-            assertEquals(0, decision.attemptCount());
+            assertEquals(5, decision.attemptCount());
         }
 
         @Test
@@ -311,6 +312,7 @@ class PermissionDecisionManagerTest {
             var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(EMAIL, codeAttemptsBlockedKeyPrefix))
                     .thenReturn(true);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(5);
 
             var result =
                     permissionDecisionManager.canVerifyEmailOtp(
@@ -325,6 +327,7 @@ class PermissionDecisionManagerTest {
             assertEquals(
                     ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
                     lockedOut.forbiddenReason());
+            assertEquals(5, lockedOut.attemptCount());
         }
 
         @Test
@@ -728,6 +731,7 @@ class PermissionDecisionManagerTest {
         void shouldReturnPermittedWhenNotBlocked() {
             var userContext = createUserContext(0);
             when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
 
             var result =
                     permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
@@ -735,6 +739,20 @@ class PermissionDecisionManagerTest {
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
             assertEquals(0, decision.attemptCount());
+        }
+
+        @Test
+        void shouldReturnPermittedWithAttemptCountWhenNotBlocked() {
+            var userContext = createUserContext(0);
+            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+
+            var result =
+                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isSuccess());
+            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            assertEquals(3, decision.attemptCount());
         }
 
         @Test

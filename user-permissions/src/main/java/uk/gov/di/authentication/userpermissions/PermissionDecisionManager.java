@@ -160,14 +160,20 @@ public class PermissionDecisionManager implements PermissionDecisions {
         if (getCodeStorageService()
                 .isBlockedForEmail(
                         permissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
+            int attemptCount =
+                    getCodeStorageService()
+                            .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
             return Result.success(
                     createTemporarilyLockedOut(
                             ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
-                            0,
+                            attemptCount,
                             false));
         }
 
-        return Result.success(new Decision.Permitted(0));
+        int attemptCount =
+                getCodeStorageService()
+                        .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        return Result.success(new Decision.Permitted(attemptCount));
     }
 
     @Override
@@ -335,7 +341,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 false));
             }
 
-            return Result.success(new Decision.Permitted(0));
+            int attemptCount =
+                    getCodeStorageService()
+                            .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+            return Result.success(new Decision.Permitted(attemptCount));
         } catch (RuntimeException e) {
             LOG.error("Could not retrieve MFA code block details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
