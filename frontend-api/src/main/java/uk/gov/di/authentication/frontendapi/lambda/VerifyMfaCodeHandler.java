@@ -874,10 +874,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             }
             case AUTH_INVALID_CODE_SENT, AUTH_CODE_VERIFIED -> {
                 if (auditableEvent.equals(AUTH_INVALID_CODE_SENT)) {
-                    // TODO: Remove divide by 2 once lockout logic is removed from processors.
-                    // Currently both the processor (via ValidationHelper) and UserActionsManager
-                    // increment the count, causing double-counting.
-                    metadataPairs.add(pair("loginFailureCount", failureCount / 2));
+                    metadataPairs.add(pair("loginFailureCount", failureCount));
                 }
 
                 metadataPairs.add(pair("MFACodeEntered", codeRequest.getCode()));

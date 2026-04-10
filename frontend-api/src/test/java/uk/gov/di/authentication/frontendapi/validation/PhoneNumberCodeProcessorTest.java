@@ -63,7 +63,6 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
@@ -111,7 +110,6 @@ class PhoneNumberCodeProcessorTest {
 
     @BeforeEach
     void setup() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(3);
         when(userContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
 
         var userCredentials =
@@ -218,97 +216,6 @@ class PhoneNumberCodeProcessorTest {
                 .deleteOtpCode(
                         CommonTestVariables.EMAIL.concat(CommonTestVariables.UK_MOBILE_NUMBER),
                         notificationType);
-    }
-
-    @Test
-    void shouldReturnErrorWhenInvalidRegistrationPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        REGISTRATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
-    }
-
-    @Test
-    void shouldReturnErrorWhenInvalidMfaPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        JourneyType.PASSWORD_RESET_MFA,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED)));
-    }
-
-    @Test
-    void shouldReturnErrorWhenInvalidReauthenticateMfaPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        JourneyType.REAUTHENTICATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED)));
-    }
-
-    @ParameterizedTest
-    @MethodSource("codeRequestTypes")
-    void shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodes(
-            CodeRequestType codeRequestType, JourneyType journeyType) {
-        setUpBlockedPhoneNumberCode(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @Test
-    void
-            shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodesWithDeprecatedPrefix() {
-        var codeRequestType = CodeRequestType.MFA_PW_RESET_MFA;
-        var journeyType = JourneyType.PASSWORD_RESET_MFA;
-        var mfaMethodType = MFAMethodType.SMS;
-
-        setUpBlockedPhoneNumberCode(
-                new VerifyMfaCodeRequest(
-                        mfaMethodType,
-                        INVALID_CODE,
-                        journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
-
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(false);
-
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
-                        CODE_BLOCKED_KEY_PREFIX
-                                + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                        mfaMethodType, journeyType)))
-                .thenReturn(true);
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
     }
 
     @Test
@@ -606,60 +513,6 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
                         NotificationType.MFA_SMS))
                 .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(false);
-        phoneNumberCodeProcessor =
-                new PhoneNumberCodeProcessor(
-                        codeStorageService,
-                        userContext,
-                        configurationService,
-                        codeRequest,
-                        authenticationService,
-                        auditService,
-                        accountModifiersService,
-                        sqsClient,
-                        mfaMethodsService,
-                        testUserHelper);
-    }
-
-    public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
-                .thenReturn(6);
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(configurationService.isTestClientsEnabled()).thenReturn(false);
-        when(codeStorageService.getOtpCode(
-                        CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
-                        NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX))
-                .thenReturn(false);
-        phoneNumberCodeProcessor =
-                new PhoneNumberCodeProcessor(
-                        codeStorageService,
-                        userContext,
-                        configurationService,
-                        codeRequest,
-                        authenticationService,
-                        auditService,
-                        accountModifiersService,
-                        sqsClient,
-                        mfaMethodsService,
-                        testUserHelper);
-    }
-
-    public void setUpBlockedPhoneNumberCode(
-            CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(configurationService.isTestClientsEnabled()).thenReturn(false);
-        when(codeStorageService.getOtpCode(
-                        CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
-                        NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(true);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(
                         codeStorageService,

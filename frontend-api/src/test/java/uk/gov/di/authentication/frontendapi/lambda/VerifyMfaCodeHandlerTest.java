@@ -1042,10 +1042,8 @@ class VerifyMfaCodeHandlerTest {
                             : AUTH_APP_SECRET;
             when(authAppCodeProcessor.validateCode())
                     .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
-            // TODO: Change back to 3 once processor lockout logic is removed (divide-by-2
-            // workaround removed)
             when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(6)));
+                    .thenReturn(Result.success(new Decision.Permitted(3)));
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
                 when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1234,10 +1232,8 @@ class VerifyMfaCodeHandlerTest {
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
                     .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
-            // TODO: Change back to 3 once processor lockout logic is removed (divide-by-2
-            // workaround removed)
             when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(6)));
+                    .thenReturn(Result.success(new Decision.Permitted(3)));
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
                 when(mfaMethodsService.getMfaMethods(EMAIL))
