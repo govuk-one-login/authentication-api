@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -24,6 +26,7 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.List;
 import java.util.Map;
@@ -39,18 +42,33 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_RESET_REQUESTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_FAILED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_LOGIN_FAILURE_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MAX_SMS_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_CODE_ENTERED;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_RESET_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.FAILURE_REASON;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_EMAIL_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_OTP_CODE_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_PASSWORD_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.RP_PAIRWISE_ID;
 
 public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -103,7 +121,24 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
         assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
+
+        var expectedJourneyType =
+                emailNotificationType == VERIFY_CHANGE_HOW_GET_SECURITY_CODES
+                        ? JourneyType.ACCOUNT_RECOVERY
+                        : JourneyType.REGISTRATION;
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_VERIFIED)
+                                .withAttribute(
+                                        EXTENSIONS_NOTIFICATION_TYPE, emailNotificationType.name())
+                                .withAttribute(
+                                        EXTENSIONS_ACCOUNT_RECOVERY,
+                                        String.valueOf(
+                                                expectedJourneyType
+                                                        == JourneyType.ACCOUNT_RECOVERY))
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE, expectedJourneyType.name())));
     }
 
     @ParameterizedTest
@@ -129,7 +164,24 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
+
+        var expectedJourneyType =
+                emailNotificationType == VERIFY_CHANGE_HOW_GET_SECURITY_CODES
+                        ? JourneyType.ACCOUNT_RECOVERY
+                        : JourneyType.REGISTRATION;
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_VERIFIED)
+                                .withAttribute(
+                                        EXTENSIONS_NOTIFICATION_TYPE, emailNotificationType.name())
+                                .withAttribute(
+                                        EXTENSIONS_ACCOUNT_RECOVERY,
+                                        String.valueOf(
+                                                expectedJourneyType
+                                                        == JourneyType.ACCOUNT_RECOVERY))
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE, expectedJourneyType.name())));
     }
 
     @ParameterizedTest
@@ -153,7 +205,23 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.INVALID_EMAIL_CODE_ENTERED));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
+        var expectedJourneyType =
+                emailNotificationType == VERIFY_CHANGE_HOW_GET_SECURITY_CODES
+                        ? JourneyType.ACCOUNT_RECOVERY
+                        : JourneyType.REGISTRATION;
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_INVALID_CODE_SENT)
+                                .withAttribute(
+                                        EXTENSIONS_NOTIFICATION_TYPE, emailNotificationType.name())
+                                .withAttribute(
+                                        EXTENSIONS_ACCOUNT_RECOVERY,
+                                        String.valueOf(
+                                                expectedJourneyType
+                                                        == JourneyType.ACCOUNT_RECOVERY))
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE, expectedJourneyType.name())));
     }
 
     @ParameterizedTest
@@ -182,8 +250,32 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response2, hasStatus(400));
         assertThat(response2, hasJsonBody(ErrorResponse.INVALID_EMAIL_CODE_ENTERED));
 
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_INVALID_CODE_SENT));
+        var expectedJourneyType =
+                emailNotificationType == VERIFY_CHANGE_HOW_GET_SECURITY_CODES
+                        ? JourneyType.ACCOUNT_RECOVERY
+                        : JourneyType.REGISTRATION;
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_VERIFIED)
+                                .withAttribute(
+                                        EXTENSIONS_NOTIFICATION_TYPE, emailNotificationType.name())
+                                .withAttribute(
+                                        EXTENSIONS_ACCOUNT_RECOVERY,
+                                        String.valueOf(
+                                                expectedJourneyType
+                                                        == JourneyType.ACCOUNT_RECOVERY))
+                                .withAttribute(EXTENSIONS_JOURNEY_TYPE, expectedJourneyType.name()),
+                        new AuditEventExpectation(AUTH_INVALID_CODE_SENT)
+                                .withAttribute(
+                                        EXTENSIONS_NOTIFICATION_TYPE, emailNotificationType.name())
+                                .withAttribute(
+                                        EXTENSIONS_ACCOUNT_RECOVERY,
+                                        String.valueOf(
+                                                expectedJourneyType
+                                                        == JourneyType.ACCOUNT_RECOVERY))
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE, expectedJourneyType.name())));
     }
 
     @Test
@@ -210,7 +302,14 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(false));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_MAX_RETRIES_REACHED)
+                                .withAttribute(EXTENSIONS_NOTIFICATION_TYPE, VERIFY_EMAIL.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.name())));
     }
 
     @Test
@@ -263,7 +362,17 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_MAX_RETRIES_REACHED)
+                                .withAttribute(
+                                        EXTENSIONS_NOTIFICATION_TYPE,
+                                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "true")
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE,
+                                        JourneyType.ACCOUNT_RECOVERY.name())));
     }
 
     @Test
@@ -289,7 +398,17 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_MAX_RETRIES_REACHED)
+                                .withAttribute(
+                                        EXTENSIONS_NOTIFICATION_TYPE,
+                                        RESET_PASSWORD_WITH_CODE.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE,
+                                        JourneyType.PASSWORD_RESET.name())));
     }
 
     private static Stream<JourneyType> journeyTypes() {
@@ -324,7 +443,22 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_MAX_RETRIES_REACHED)
+                                .withAttribute(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                .withAttribute(EXTENSIONS_JOURNEY_TYPE, journeyType.name())
+                                .withAttribute(EXTENSIONS_MFA_TYPE, "SMS")
+                                .withAttribute(EXTENSIONS_LOGIN_FAILURE_COUNT, "0")
+                                .withAttribute(EXTENSIONS_MFA_CODE_ENTERED, "123456")
+                                .withAttribute(
+                                        EXTENSIONS_MAX_SMS_COUNT,
+                                        String.valueOf(
+                                                ConfigurationService.getInstance()
+                                                        .getCodeMaxRetries()))
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")));
     }
 
     @Test
@@ -348,6 +482,62 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
                 equalTo(null));
+    }
+
+    @Test
+    void shouldEmitAuthReauthFailedWhenMfaSmsAttemptsExceededDuringReauthentication() {
+        setUpTestWithSignUp(sessionId);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
+        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+
+        var userProfile = userStore.getUserProfileFromEmail(EMAIL_ADDRESS).orElseThrow();
+        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
+        String rpPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        userProfile.getSubjectID(), RP_SECTOR_HOST, salt);
+
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        userProfile.getSubjectID(),
+                        INTERNAl_SECTOR_HOST,
+                        SaltHelper.generateNewSalt());
+        authSessionExtension.addInternalCommonSubjectIdToSession(
+                this.sessionId, internalCommonSubjectId);
+        authSessionExtension.addRpSectorIdentifierHostToSession(this.sessionId, RP_SECTOR_HOST);
+
+        var maxRetries = ConfigurationService.getInstance().getCodeMaxRetries();
+        var ttl = NowHelper.now().toInstant().plusSeconds(600).getEpochSecond();
+        for (int i = 0; i < maxRetries; i++) {
+            authCodeExtension.createOrIncrementCount(
+                    userProfile.getSubjectID(),
+                    ttl,
+                    JourneyType.REAUTHENTICATION,
+                    CountType.ENTER_MFA_CODE);
+        }
+
+        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
+        var codeRequest = new VerifyCodeRequest(MFA_SMS, code, JourneyType.REAUTHENTICATION, null);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_REAUTH_FAILED)
+                                .withAttribute(INCORRECT_EMAIL_ATTEMPT_COUNT, "0")
+                                .withAttribute(INCORRECT_PASSWORD_ATTEMPT_COUNT, "0")
+                                .withAttribute(
+                                        INCORRECT_OTP_CODE_ATTEMPT_COUNT,
+                                        String.valueOf(maxRetries))
+                                .withAttribute(FAILURE_REASON, "incorrect_otp")
+                                .withAttribute(RP_PAIRWISE_ID, rpPairwiseId)));
     }
 
     @ParameterizedTest
@@ -376,7 +566,21 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(204));
 
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_VERIFIED)
+                                .withAttribute(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE,
+                                        journeyType != null
+                                                ? journeyType.name()
+                                                : JourneyType.SIGN_IN.name())
+                                .withAttribute(EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue())
+                                .withAttribute(EXTENSIONS_LOGIN_FAILURE_COUNT, 0)
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                .withAttribute(EXTENSIONS_MFA_CODE_ENTERED, code)));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
                 equalTo(MFAMethodType.SMS));
@@ -448,8 +652,24 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(204));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_VERIFIED)
+                                .withAttribute(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE,
+                                        journeyType != null
+                                                ? journeyType.name()
+                                                : JourneyType.SIGN_IN.name())
+                                .withAttribute(EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue())
+                                .withAttribute(EXTENSIONS_LOGIN_FAILURE_COUNT, 0)
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                .withAttribute(EXTENSIONS_MFA_CODE_ENTERED, code),
+                        new AuditEventExpectation(AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED)
+                                .withAttribute(EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue())
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
                 equalTo(MFAMethodType.SMS));
@@ -476,7 +696,19 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(204));
         var authSession = authSessionExtension.getSession(sessionId).orElseThrow();
         assertThat(authSession.getInternalCommonSubjectId(), notNullValue());
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_VERIFIED)
+                                .withAttribute(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE,
+                                        JourneyType.PASSWORD_RESET_MFA.name())
+                                .withAttribute(EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue())
+                                .withAttribute(EXTENSIONS_LOGIN_FAILURE_COUNT, 0)
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                .withAttribute(EXTENSIONS_MFA_CODE_ENTERED, code)));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
                 equalTo(MFAMethodType.SMS));
@@ -509,7 +741,18 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
         if (journeyType != JourneyType.REAUTHENTICATION) {
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_INVALID_CODE_SENT)
+                                    .withAttribute(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                                    .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                    .withAttribute(EXTENSIONS_JOURNEY_TYPE, journeyType.name())
+                                    .withAttribute(
+                                            EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue())
+                                    .withAttribute(EXTENSIONS_LOGIN_FAILURE_COUNT, 1)
+                                    .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                    .withAttribute(EXTENSIONS_MFA_CODE_ENTERED, "123456")));
         }
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
@@ -554,8 +797,24 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsSubmittedWithMatchingNames(
-                txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_MFA_RESET_REQUESTED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_MFA_RESET_REQUESTED)
+                                .withAttribute(
+                                        EXTENSIONS_JOURNEY_TYPE,
+                                        JourneyType.ACCOUNT_RECOVERY.name())
+                                .withAttribute(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "7")
+                                .withAttribute(
+                                        EXTENSIONS_MFA_RESET_TYPE, "FORCED_INTERNATIONAL_NUMBERS"),
+                        new AuditEventExpectation(AUTH_CODE_VERIFIED)
+                                .withAttribute(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                .withAttribute(EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN.name())
+                                .withAttribute(EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue())
+                                .withAttribute(EXTENSIONS_LOGIN_FAILURE_COUNT, 0)
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                .withAttribute(EXTENSIONS_MFA_CODE_ENTERED, code)));
     }
 
     @Test
@@ -585,7 +844,17 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
+        assertAuditEventExpectations(
+                txmaAuditQueue,
+                List.of(
+                        new AuditEventExpectation(AUTH_CODE_VERIFIED)
+                                .withAttribute(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                                .withAttribute(EXTENSIONS_ACCOUNT_RECOVERY, "false")
+                                .withAttribute(EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN.name())
+                                .withAttribute(EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue())
+                                .withAttribute(EXTENSIONS_LOGIN_FAILURE_COUNT, 0)
+                                .withAttribute(EXTENSIONS_MFA_METHOD, "default")
+                                .withAttribute(EXTENSIONS_MFA_CODE_ENTERED, code)));
     }
 
     private ConfigurationService forcedMfaResetEnabledConfigurationService() {
