@@ -210,10 +210,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
 
-    public String getSpotQueueURI() {
-        return System.getenv("SPOT_QUEUE_URL");
-    }
-
     public String getSpotRequestQueueURI() {
         return System.getenv("SPOT_REQUEST_QUEUE_URL");
     }
@@ -396,10 +392,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isNewSpotRequestQueueWritingEnabled() {
         return getFlagOrFalse("NEW_SPOT_REQUEST_QUEUE_WRITING");
-    }
-
-    public boolean isOldSpotRequestQueueWritingEnabled() {
-        return getFlagOrTrue("OLD_SPOT_REQUEST_QUEUE_WRITING");
     }
 
     public String getStorageTokenSigningKeyAlias() {

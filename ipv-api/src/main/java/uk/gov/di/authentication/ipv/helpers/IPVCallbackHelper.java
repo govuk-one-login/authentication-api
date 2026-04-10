@@ -59,7 +59,6 @@ public class IPVCallbackHelper {
     private final Metrics metrics;
     private final ConfigurationService configurationService;
     private final DynamoIdentityService dynamoIdentityService;
-    private final AwsSqsClient sqsClient;
     private final AwsSqsClient spotSqsClient;
     private final OidcAPI oidcAPI;
     private final OrchSessionService orchSessionService;
@@ -71,11 +70,6 @@ public class IPVCallbackHelper {
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.objectMapper = SerializationService.getInstance();
-        this.sqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getSpotQueueURI(),
-                        configurationService.getSqsEndpointURI());
         this.spotSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -105,7 +99,6 @@ public class IPVCallbackHelper {
         this.configurationService = configurationService;
         this.dynamoIdentityService = dynamoIdentityService;
         this.objectMapper = objectMapper;
-        this.sqsClient = sqsClient;
         this.spotSqsClient = spotSqsClient;
         this.oidcAPI = oidcApi;
         this.orchSessionService = orchSessionService;
@@ -321,9 +314,6 @@ public class IPVCallbackHelper {
                         logIds,
                         clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);
-        if (configurationService.isOldSpotRequestQueueWritingEnabled()) {
-            sqsClient.send(spotRequestString);
-        }
         if (configurationService.isNewSpotRequestQueueWritingEnabled()) {
             spotSqsClient.send(spotRequestString);
         }
