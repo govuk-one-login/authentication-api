@@ -161,14 +161,20 @@ public class PermissionDecisionManager implements PermissionDecisions {
         if (getCodeStorageService()
                 .isBlockedForEmail(
                         permissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
+            int attemptCount =
+                    getCodeStorageService()
+                            .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
             return Result.success(
                     createTemporarilyLockedOut(
                             ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
-                            0,
+                            attemptCount,
                             false));
         }
 
-        return Result.success(new Decision.Permitted(0));
+        int attemptCount =
+                getCodeStorageService()
+                        .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        return Result.success(new Decision.Permitted(attemptCount));
     }
 
     @Override

@@ -288,6 +288,7 @@ class PermissionDecisionManagerTest {
             var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(EMAIL, codeAttemptsBlockedKeyPrefix))
                     .thenReturn(false);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(5);
 
             var result =
                     permissionDecisionManager.canVerifyEmailOtp(
@@ -299,7 +300,7 @@ class PermissionDecisionManagerTest {
                             Decision.Permitted.class,
                             result.getSuccess(),
                             "Expected Permitted decision");
-            assertEquals(0, decision.attemptCount());
+            assertEquals(5, decision.attemptCount());
         }
 
         @Test
@@ -311,6 +312,7 @@ class PermissionDecisionManagerTest {
             var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(EMAIL, codeAttemptsBlockedKeyPrefix))
                     .thenReturn(true);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(5);
 
             var result =
                     permissionDecisionManager.canVerifyEmailOtp(
@@ -325,6 +327,7 @@ class PermissionDecisionManagerTest {
             assertEquals(
                     ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
                     lockedOut.forbiddenReason());
+            assertEquals(5, lockedOut.attemptCount());
         }
 
         @Test
