@@ -53,6 +53,10 @@ Resources:
             - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-management-signing-key
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_TO_ACCOUNT_DATA_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-data-signing-key
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           AUTH_TO_AMC_PUBLIC_AUDIENCE:
             !FindInMap [
               EnvironmentConfiguration,
