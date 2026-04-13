@@ -229,7 +229,6 @@ class IPVCallbackHelperTest {
                         eq(TEST_INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(AUTH_CODE);
         when(configurationService.isNewSpotRequestQueueWritingEnabled()).thenReturn(true);
-        when(configurationService.isOldSpotRequestQueueWritingEnabled()).thenReturn(true);
     }
 
     @Test
@@ -346,7 +345,6 @@ class IPVCallbackHelperTest {
                         + ",\"in_rp_sector_id\":\"sector-identifier\",\"out_sub\":\"subject-id\",\"log_ids\":{\"session_id\":null,\"persistent_session_id\":null,\"request_id\":null,\"client_id\":null,\"client_session_id\":null},\"out_audience\":\""
                         + CLIENT_ID.getValue()
                         + "\"}";
-        verify(sqsClient).send(spotRequestString);
         verify(spotSqsClient).send(spotRequestString);
         assertThat(
                 logging.events(), hasItem(withMessageContaining("SPOT request placed on queue")));

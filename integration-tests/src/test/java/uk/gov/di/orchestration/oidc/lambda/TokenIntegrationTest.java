@@ -116,7 +116,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     externalTokenSigner,
                     storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     spotRequestQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters) {

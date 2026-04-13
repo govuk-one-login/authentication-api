@@ -23,7 +23,6 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         externalTokenSigner,
                         storageTokenSigner,
                         ipvPrivateKeyJwtSigner,
-                        spotQueue,
                         spotRequestQueue,
                         docAppPrivateKeyJwtSigner,
                         configurationParameters);
