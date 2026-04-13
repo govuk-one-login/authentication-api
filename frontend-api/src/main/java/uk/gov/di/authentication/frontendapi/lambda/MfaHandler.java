@@ -350,42 +350,51 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         var canSendSmsResult =
                 permissionDecisionManager.canSendSmsOtpNotification(
                         journeyType, permissionContext, lockoutStateHolder);
+
         if (canSendSmsResult.isFailure()) {
             return Optional.of(
                     DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
                             canSendSmsResult.getFailure()));
         }
+
         if (canSendSmsResult.getSuccess() instanceof Decision.IndefinitelyLockedOut) {
             return Optional.of(
                     generateApiGatewayProxyErrorResponse(
                             400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
         }
-        if (canSendSmsResult.getSuccess() instanceof Decision.ReauthLockedOut
-                || canSendSmsResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+
+        if (canSendSmsResult.getSuccess() instanceof Decision.ReauthLockedOut reauthLockedOut) {
+            if (reauthLockedOut.forbiddenReason().hasExceededOtpSubmissionLimit()) {
+                LOG.warn(
+                        "Unexpected ReauthLockedOut for verification from canSendSmsOtpNotification");
+                return Optional.of(
+                        generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.INTERNAL_SERVER_ERROR));
+            }
             auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
             var errorResponse =
                     afterActionRecorded ? TOO_MANY_MFA_OTPS_SENT : BLOCKED_FOR_SENDING_MFA_OTPS;
             return Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse));
         }
 
-        var canVerifyResult =
-                permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext);
-        if (canVerifyResult.isFailure()) {
-            return Optional.of(
-                    DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
-                            canVerifyResult.getFailure()));
-        }
-        if (canVerifyResult.getSuccess() instanceof Decision.ReauthLockedOut) {
-            LOG.warn(
-                    "Unexpected ReauthLockedOut from canVerifyMfaOtp - "
-                            + "should have been checked in an earlier handler in the journey");
-            return Optional.of(
-                    generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR));
-        }
-        if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+        if (canSendSmsResult.getSuccess()
+                instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
             auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+
+            ErrorResponse errorResponse;
+            if (temporarilyLockedOut.forbiddenReason().hasExceededOtpSubmissionLimit()) {
+                errorResponse = TOO_MANY_INVALID_MFA_OTPS_ENTERED;
+            } else {
+                errorResponse =
+                        afterActionRecorded ? TOO_MANY_MFA_OTPS_SENT : BLOCKED_FOR_SENDING_MFA_OTPS;
+            }
+            return Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse));
+        }
+
+        if (!(canSendSmsResult.getSuccess() instanceof Decision.Permitted)) {
             return Optional.of(
-                    generateApiGatewayProxyErrorResponse(400, TOO_MANY_INVALID_MFA_OTPS_ENTERED));
+                    generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION));
         }
 
         return Optional.empty();
