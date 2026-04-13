@@ -109,6 +109,7 @@ Resources:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref AuthToAMCSigningKeyPolicy
         - !Ref AuthToAccountManagementSigningKeyPolicy
+        - !Ref AuthToAccountDataSigningKeyPolicy
         - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
