@@ -11,7 +11,7 @@ public class CodeGeneratorService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     public String sixDigitCode() {
-        return format("%06d", RANDOM.nextInt(999999));
+        return format("%06d", RANDOM.nextInt(1_000_000));
     }
 
     public String twentyByteEncodedRandomCode() {
