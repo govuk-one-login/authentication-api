@@ -485,38 +485,21 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             400, INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS));
         }
 
-        boolean isTemporarilyLockedOutOfSendingNotification =
-                canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
-        if (isTemporarilyLockedOutOfSendingNotification) {
+        if (canSendResult.getSuccess()
+                instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
             auditService.submitAuditEvent(
                     getInvalidCodeAuditEventFromNotificationType(notificationType), auditContext);
-            var errorResponse =
-                    afterActionRecorded
-                            ? getErrorResponseForCodeRequestLimitReached(notificationType)
-                            : getErrorResponseForMaxCodeRequests(notificationType);
+
+            ErrorResponse errorResponse;
+            if (temporarilyLockedOut.forbiddenReason().hasExceededOtpSubmissionLimit()) {
+                errorResponse = getErrorResponseForMaxCodeAttempts(notificationType);
+            } else {
+                errorResponse =
+                        afterActionRecorded
+                                ? getErrorResponseForCodeRequestLimitReached(notificationType)
+                                : getErrorResponseForMaxCodeRequests(notificationType);
+            }
             return Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse));
-        }
-
-        Result<DecisionError, Decision> canVerifyResult =
-                notificationType.isForPhoneNumber()
-                        ? permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext)
-                        : permissionDecisionManager.canVerifyEmailOtp(
-                                journeyType, permissionContext);
-
-        if (canVerifyResult.isFailure()) {
-            return Optional.of(
-                    DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
-                            canVerifyResult.getFailure()));
-        }
-
-        boolean isTemporarilyLockedOutOfVerifyingOtp =
-                canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
-        if (isTemporarilyLockedOutOfVerifyingOtp) {
-            auditService.submitAuditEvent(
-                    getInvalidCodeAuditEventFromNotificationType(notificationType), auditContext);
-            return Optional.of(
-                    generateApiGatewayProxyErrorResponse(
-                            400, getErrorResponseForMaxCodeAttempts(notificationType)));
         }
 
         return Optional.empty();
