@@ -165,8 +165,6 @@ class ResetPasswordRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
         when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
         when(userActionsManager.sentEmailOtpNotification(any(), any()))
                 .thenReturn(Result.success(null));
     }
@@ -469,7 +467,7 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
             usingSessionWithPasswordResetCount(0);
-            when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
+            when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
                     .thenReturn(
                             Result.success(
                                     new Decision.TemporarilyLockedOut(
@@ -501,8 +499,6 @@ class ResetPasswordRequestHandlerTest {
                                             6,
                                             Instant.now(),
                                             true)));
-            when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(0)));
 
             var result = handler.handleRequest(validEvent, context);
 

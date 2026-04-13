@@ -389,17 +389,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return lockedOut.isFirstTimeLimit()
                         ? Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS)
                         : Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+            } else if (lockedOut.forbiddenReason()
+                    == ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT) {
+                LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
+                return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
             }
-        }
-
-        var canVerifyResult =
-                permissionDecisionManager.canVerifyEmailOtp(
-                        JourneyType.PASSWORD_RESET, permissionContext);
-
-        if (canVerifyResult.isSuccess()
-                && canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-            LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
         }
 
         return Optional.empty();
