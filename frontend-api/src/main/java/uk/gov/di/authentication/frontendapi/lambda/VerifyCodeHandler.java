@@ -251,13 +251,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         var errorResponse =
                 ValidationHelper.validateVerificationCode(
-                        notificationType,
-                        journeyType,
-                        code,
-                        codeRequest.code(),
-                        codeStorageService,
-                        authSession.getEmailAddress(),
-                        configurationService);
+                        notificationType, code, codeRequest.code());
 
         if (errorResponse.stream().anyMatch(ErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
             return generateApiGatewayProxyErrorResponse(400, errorResponse.get());

@@ -122,14 +122,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
         var errorResponse =
                 ValidationHelper.validateVerificationCode(
-                        notificationType,
-                        journeyType,
-                        storedCode,
-                        codeRequest.getCode(),
-                        codeStorageService,
-                        emailAddress,
-                        configurationService,
-                        false);
+                        notificationType, storedCode, codeRequest.getCode());
 
         if (errorResponse.isEmpty()) {
             codeStorageService.deleteOtpCode(codeIdentifier, notificationType);
