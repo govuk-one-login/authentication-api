@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -329,6 +330,57 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            try {
+                getAuthenticationAttemptsService()
+                        .createOrIncrementCount(
+                                permissionContext.internalSubjectId(),
+                                NowHelper.nowPlus(
+                                                configurationService
+                                                        .getReauthEnterAuthAppCodeCountTTL(),
+                                                ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond(),
+                                journeyType,
+                                CountType.ENTER_MFA_CODE);
+            } catch (RuntimeException e) {
+                LOG.error(
+                        "Failed to store incorrect Auth App OTP count in AuthenticationAttemptsService",
+                        e);
+                return Result.failure(TrackingError.STORAGE_SERVICE_ERROR);
+            }
+        } else {
+            var updatedCount =
+                    getCodeStorageService()
+                            .increaseIncorrectMfaCodeAttemptsCount(
+                                    permissionContext.emailAddress());
+            int maxRetries =
+                    (journeyType == JourneyType.REGISTRATION
+                                    || journeyType == JourneyType.ACCOUNT_RECOVERY)
+                            ? configurationService.getIncreasedCodeMaxRetries()
+                            : configurationService.getCodeMaxRetries();
+            if (updatedCount >= maxRetries) {
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, journeyType);
+                LOG.info("Setting block for email as user has exceeded max MFA code retries");
+
+                boolean reducedLockout =
+                        journeyType == JourneyType.REGISTRATION
+                                || journeyType == JourneyType.ACCOUNT_RECOVERY;
+                long blockDuration =
+                        reducedLockout
+                                ? configurationService.getReducedLockoutDuration()
+                                : configurationService.getLockoutDuration();
+
+                getCodeStorageService()
+                        .saveBlockedForEmail(
+                                permissionContext.emailAddress(),
+                                CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType,
+                                blockDuration);
+                getCodeStorageService()
+                        .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+            }
+        }
         return Result.success(null);
     }
 
