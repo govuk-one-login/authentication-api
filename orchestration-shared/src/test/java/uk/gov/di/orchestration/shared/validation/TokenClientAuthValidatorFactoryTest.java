@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.mock;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 
+// QualityGateUnitTest
 class TokenClientAuthValidatorFactoryTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -29,6 +30,7 @@ class TokenClientAuthValidatorFactoryTest {
             new TokenClientAuthValidatorFactory(
                     dynamoClientService, clientSignatureValidationService);
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnPrivateKeyJwtClientAuthValidator() throws JOSEException {
         var claimsSet =
@@ -50,6 +52,7 @@ class TokenClientAuthValidatorFactoryTest {
                 PrivateKeyJwtClientAuthValidator.class, tokenAuthenticationValidator.get());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnClientSecretPostClientAuthValidator() {
         var clientSecretPost = new ClientSecretPost(CLIENT_ID, CLIENT_SECRET);

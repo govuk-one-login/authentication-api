@@ -66,6 +66,7 @@ import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String
 import static uk.gov.di.orchestration.shared.services.DocAppAuthorisationService.STATE_STORAGE_PREFIX;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
+// QualityGateUnitTest
 class DocAppAuthorisationServiceTest {
 
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -126,6 +127,7 @@ class DocAppAuthorisationServiceTest {
                         .build();
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnOptionalEmptyWhenNoErrorIsPresent() {
         Map<String, String> responseHeaders = new HashMap<>();
@@ -137,6 +139,7 @@ class DocAppAuthorisationServiceTest {
                 equalTo(Optional.empty()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorObjectWhenResponseContainsError() {
         ErrorObject errorObject =
@@ -152,6 +155,7 @@ class DocAppAuthorisationServiceTest {
                 equalTo(Optional.of(new ErrorObject(errorObject.getCode()))));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorObjectWhenResponseContainsNoQueryParams() {
         assertThat(
@@ -163,6 +167,7 @@ class DocAppAuthorisationServiceTest {
                                         "No query parameters present"))));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorObjectWhenResponseContainsNoStateParam() {
         Map<String, String> responseHeaders = new HashMap<>();
@@ -177,6 +182,7 @@ class DocAppAuthorisationServiceTest {
                                         "No state param present in Authorisation response"))));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorObjectWhenResponseContainsNoCodeParam() {
         Map<String, String> responseHeaders = new HashMap<>();
@@ -191,6 +197,7 @@ class DocAppAuthorisationServiceTest {
                                         "No code param present in Authorisation response"))));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorObjectWhenNoStateFoundInDynamo() {
         when(stateStorageService.getState(STATE_STORAGE_PREFIX + SESSION_ID))
@@ -207,6 +214,7 @@ class DocAppAuthorisationServiceTest {
                                         "Invalid state param present in Authorisation response"))));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState() {
         State differentState = new State();
@@ -223,6 +231,7 @@ class DocAppAuthorisationServiceTest {
                                         "Invalid state param present in Authorisation response"))));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSaveStateToDynamo() {
         var sessionId = "session-id";
@@ -232,6 +241,7 @@ class DocAppAuthorisationServiceTest {
         verify(stateStorageService).storeState(prefixedSessionId, STATE.getValue());
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void shouldConstructASignedRequestJWT(boolean isTestClient)
@@ -288,6 +298,7 @@ class DocAppAuthorisationServiceTest {
 
     @Nested
     class Approvals {
+        // QualityGateRegressionTest
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
         void shouldCreateRequestJWTWithExpectedClaims(boolean isTestClient)
@@ -319,6 +330,7 @@ class DocAppAuthorisationServiceTest {
         }
     }
 
+    // QualityGateRegressionTest
     @Test
     void usesNewDocAppAudClaim() throws JOSEException, ParseException {
         when(configurationService.isDocAppNewAudClaimEnabled()).thenReturn(true);

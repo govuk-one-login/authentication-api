@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// QualityGateUnitTest
 class ClientSubjectHelperTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -34,6 +35,7 @@ class ClientSubjectHelperTest {
         keyPair = KeyPairUtils.generateRsaKeyPair();
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetHostAsSectorIdentifierWhenDefinedByClient() {
         var clientRegistry =
@@ -47,6 +49,7 @@ class ClientSubjectHelperTest {
         assertThat(sectorId, equalTo("test.com"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetHostOfInternalSectorUriWhenClientIsOneLoginService() {
         var clientRegistry =
@@ -60,6 +63,7 @@ class ClientSubjectHelperTest {
         assertThat(sectorId, equalTo("test.account.gov.uk"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldUseHostOfInternalSectorUriWhenOneLoginServiceAndClientHasRegisteredSector() {
         var clientRegistry =
@@ -73,6 +77,7 @@ class ClientSubjectHelperTest {
         assertThat(sectorId, equalTo("test.account.gov.uk"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldCalculateHostFromRedirectUriWhenSectorUriIsNotDefinedByClient() {
         var clientRegistry =
@@ -86,6 +91,7 @@ class ClientSubjectHelperTest {
         assertThat(sectorId, equalTo("localhost"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowExceptionWhenClientConfigSectorIdInvalid() {
         var clientRegistry =
@@ -105,11 +111,13 @@ class ClientSubjectHelperTest {
                 "Expected to throw exception");
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnHostForValidSectorUri() {
         assertThat(ClientSubjectHelper.returnHost("https://test.com/hello"), equalTo("test.com"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnHostForInternalSectorUri() {
         assertThat(
@@ -117,12 +125,14 @@ class ClientSubjectHelperTest {
                 equalTo("test.account.gov.uk"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnHostForValidSectorUriStartingWWW() {
         assertThat(
                 ClientSubjectHelper.returnHost("https://www.test.com/hello"), equalTo("test.com"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowExceptionWhenReturnHostIsNotAValidUri() {
         var expectedException =
@@ -133,6 +143,7 @@ class ClientSubjectHelperTest {
         assertEquals(NullPointerException.class, expectedException.getCause().getClass());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowExceptionWhenReturnHostIsNotAWellFormedUri() {
         var expectedException =
@@ -143,6 +154,7 @@ class ClientSubjectHelperTest {
         assertEquals(NullPointerException.class, expectedException.getCause().getClass());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowExceptionWhenReturnHostIsNotAWellFormedUriWithoutHttps() {
         var expectedException =
@@ -153,6 +165,7 @@ class ClientSubjectHelperTest {
         assertEquals(NullPointerException.class, expectedException.getCause().getClass());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBeValidClientWithoutSectorId() {
         var clientRegistry =
@@ -162,6 +175,7 @@ class ClientSubjectHelperTest {
         assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBeValidClientWithSectorId() {
         var clientRegistry =
@@ -171,6 +185,7 @@ class ClientSubjectHelperTest {
         assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBeValidClientWithSectorIdAndTwoRedirectHosts() {
         var clientRegistry =
@@ -185,6 +200,7 @@ class ClientSubjectHelperTest {
         assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBeInvalidClientWithoutSectorIdAndTwoRedirectHosts() {
         var clientRegistry =
@@ -199,6 +215,7 @@ class ClientSubjectHelperTest {
         assertFalse(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBeValidClientWithoutSectorIdAndOneRedirectHostsWithTwoRedirectUris() {
         var clientRegistry =

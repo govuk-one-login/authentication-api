@@ -33,6 +33,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class CrossBrowserOrchestrationServiceTest {
 
     private final OrchClientSessionService orchClientSessionService =
@@ -58,6 +59,7 @@ class CrossBrowserOrchestrationServiceTest {
                         orchClientSessionService, crossBrowserStorageService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyReturnNoSessionOrchestrationEntity()
             throws NoSessionException, ParseException {
@@ -89,6 +91,7 @@ class CrossBrowserOrchestrationServiceTest {
         assertThat(authenticationRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfErrorIsPresentButIsNotAccessDenied() {
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
@@ -111,6 +114,7 @@ class CrossBrowserOrchestrationServiceTest {
                         "Session Cookie not present and access_denied or state param missing from error response"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfErrorIsNotPresent() {
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
@@ -130,6 +134,7 @@ class CrossBrowserOrchestrationServiceTest {
                         "Session Cookie not present and access_denied or state param missing from error response"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfStateIsNotPresent() {
         Map<String, String> queryParams = new HashMap<>();
@@ -149,6 +154,7 @@ class CrossBrowserOrchestrationServiceTest {
                         "Session Cookie not present and access_denied or state param missing from error response"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfStateIsPresentButEmpty() {
         Map<String, String> queryParams = new HashMap<>();
@@ -169,6 +175,7 @@ class CrossBrowserOrchestrationServiceTest {
                         "Session Cookie not present and access_denied or state param missing from error response"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfNoClientSessionIdIsFoundWithState() {
         Map<String, String> queryParams = new HashMap<>();
@@ -188,6 +195,7 @@ class CrossBrowserOrchestrationServiceTest {
                 equalTo("ClientSessionId could not be found using state param"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfNoClientSessionIsFoundWithClientSessionId() {
         when(crossBrowserStorageService.getClientSessionId(STATE))
@@ -212,6 +220,7 @@ class CrossBrowserOrchestrationServiceTest {
                 equalTo("No client session found with given client sessionId"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSaveClientSessionIdAgainstState() {
         when(configurationService.getSessionExpiry()).thenReturn(7200L);
@@ -225,6 +234,7 @@ class CrossBrowserOrchestrationServiceTest {
     @Nested
     class MismatchInClientSessionIdHandling {
 
+        // QualityGateRegressionTest
         @Test
         void itShouldThrowNoSessionExceptionIfAccessDeniedErrorWithNoState() {
             when(crossBrowserStorageService.getClientSessionId(STATE))
@@ -244,6 +254,7 @@ class CrossBrowserOrchestrationServiceTest {
                                             queryParams, CLIENT_SESSION_ID, ORCH_SESSION_ITEM));
         }
 
+        // QualityGateRegressionTest
         @Test
         void itShouldReturnANoSessionEntityIfThereIsMismatchInCSIDFromSuccessfulIPVCallback()
                 throws NoSessionException, ParseException {
@@ -277,6 +288,7 @@ class CrossBrowserOrchestrationServiceTest {
             assertThat(authenticationRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
         }
 
+        // QualityGateRegressionTest
         @Test
         void itShouldGenerateANoSessionEntityWhenCSIDCookieDoesNotMatchStateValue()
                 throws NoSessionException, ParseException {
@@ -311,6 +323,7 @@ class CrossBrowserOrchestrationServiceTest {
             assertThat(authenticationRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
         }
 
+        // QualityGateRegressionTest
         @Test
         void itShouldReturnEmptyIfClientSessionIdInCookieMatchesStateValue()
                 throws NoSessionException {
@@ -330,6 +343,7 @@ class CrossBrowserOrchestrationServiceTest {
             assertTrue(noSessionEntity.isEmpty());
         }
 
+        // QualityGateRegressionTest
         @Test
         void itShouldThrowIfThereIsNoClientSessionIdAssociatedWithStateValue() {
             when(crossBrowserStorageService.getClientSessionId(STATE)).thenReturn(Optional.empty());
@@ -349,6 +363,7 @@ class CrossBrowserOrchestrationServiceTest {
                                             queryParams, CLIENT_SESSION_ID, ORCH_SESSION_ITEM));
         }
 
+        // QualityGateRegressionTest
         @Test
         void
                 itShouldThrowIfThereIsAMismatchBetweenCookieAndStateAndClientSessionCannotBeRetrievedFromStateValue() {
