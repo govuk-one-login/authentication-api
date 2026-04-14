@@ -5,62 +5,8 @@ import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.validation.Required;
 
-public class SendNotificationRequest {
-
-    @Expose
-    @SerializedName("notificationType")
-    @Required
-    private NotificationType notificationType;
-
-    @Expose
-    @SerializedName("phoneNumber")
-    private String phoneNumber;
-
-    @Expose
-    @SerializedName("priorityIdentifier")
-    PriorityIdentifier priorityIdentifier;
-
-    @Expose @Required private String email;
-
-    public SendNotificationRequest() {}
-
-    public SendNotificationRequest(
-            String email, NotificationType notificationType, String phoneNumber) {
-        this.email = email;
-        this.notificationType = notificationType;
-        this.phoneNumber = phoneNumber;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public NotificationType getNotificationType() {
-        return notificationType;
-    }
-
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public PriorityIdentifier getPriorityIdentifier() {
-        return priorityIdentifier;
-    }
-
-    @Override
-    public String toString() {
-        return "SendNotificationRequest{"
-                + "notificationType="
-                + notificationType
-                + ", phoneNumber='"
-                + phoneNumber
-                + '\''
-                + ", email='"
-                + email
-                + '\''
-                + ", priorityIdentifier='"
-                + priorityIdentifier
-                + '\''
-                + '}';
-    }
-}
+public record SendNotificationRequest(
+        @Expose @SerializedName("notificationType") @Required NotificationType notificationType,
+        @Expose @SerializedName("phoneNumber") String phoneNumber,
+        @Expose @SerializedName("priorityIdentifier") PriorityIdentifier priorityIdentifier,
+        @Expose @Required String email) {}
