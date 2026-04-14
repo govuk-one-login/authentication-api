@@ -14,11 +14,14 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -40,6 +43,7 @@ class TokenValidationServiceTest {
     private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
     private static final String NEW_V2_KEY_ID = "14342334554354";
+    private static final String OLD_STORED_KEY_ID = "14442634554354";
     private static final String FAILED_KEY_ID = "14342354354355";
     private JWSSigner signer;
     private ECKey ecJWK;
@@ -85,6 +89,20 @@ class TokenValidationServiceTest {
                 .thenReturn(true);
 
         SignedJWT signedAccessToken = createCustomSignedAccessToken(ecSigner, NEW_V2_KEY_ID);
+        assertTrue(
+                tokenValidationService.isTokenSignatureValid(
+                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
+    }
+
+    @Test
+    void shouldSuccessfullyValidateAccessTokenWithOldKeyWhenKeyIdMatches() {
+        var newECKey = generateCustomECKeyPair(NEW_V2_KEY_ID);
+
+        when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newECKey);
+        when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
+                .thenReturn(true);
+
+        SignedJWT signedAccessToken = createSignedAccessToken(signer);
         assertTrue(
                 tokenValidationService.isTokenSignatureValid(
                         new BearerAccessToken(signedAccessToken.serialize()).getValue()));
@@ -139,11 +157,30 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldFailToValidateRsaKeyAccessTokenIfKeyIdInvalid() throws JOSEException {
-        var wrongRSAKey = new RSAKeyGenerator(2048).generate();
-        var rsaSigner = new RSASSASigner(wrongRSAKey);
+    void shouldSuccessfullyValidateRsaSignedAccessTokenWithOldKeyWhenKeyIdMatches()
+            throws JOSEException {
         var rsaKey = generateCustomRsaKeyPair(KEY_ID);
         var newRSAKey = generateCustomRsaKeyPair(NEW_V2_KEY_ID);
+        var rsaSigner = new RSASSASigner(rsaKey);
+
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+        when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
+                .thenReturn(true);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+        when(jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2()).thenReturn(newRSAKey);
+
+        SignedJWT signedAccessToken = createCustomSignedAccessToken(rsaSigner, KEY_ID);
+        assertTrue(
+                tokenValidationService.isTokenSignatureValid(
+                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
+    }
+
+    @Test
+    void shouldFailToValidateRsaKeyAccessTokenIfKeyIdInvalid() throws JOSEException {
+        var wrongRSAKey = generateCustomRsaKeyPair(FAILED_KEY_ID);
+        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
+        var newRSAKey = generateCustomRsaKeyPair(NEW_V2_KEY_ID);
+        var rsaSigner = new RSASSASigner(wrongRSAKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
         when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
@@ -155,6 +192,114 @@ class TokenValidationServiceTest {
         assertFalse(
                 tokenValidationService.isTokenSignatureValid(
                         new BearerAccessToken(signedAccessToken.serialize()).getValue()));
+    }
+
+    @Nested
+    class ReauthJourneys {
+        @Test
+        void shouldSuccessfullyValidateReauthIDToken() {
+            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+            SignedJWT signedIdToken = createSignedIdToken(expiryDate);
+            assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
+        }
+
+        @Test
+        void shouldNotFailSignatureValidationIfReauthIDTokenHasExpired() {
+            Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
+            SignedJWT signedIdToken = createSignedIdToken(expiryDate);
+            assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
+        }
+
+        @Test
+        void shouldSuccessfullyValidateNewECKeyV2ReauthIDToken() throws JOSEException {
+            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+            var newECKey = generateCustomECKeyPair(NEW_V2_KEY_ID);
+
+            when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newECKey);
+            when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
+                    .thenReturn(true);
+
+            SignedJWT signedIdToken = createCustomSignedIdToken(expiryDate, newECKey);
+            assertTrue(
+                    tokenValidationService.isTokenSignatureValid(
+                            new BearerAccessToken(signedIdToken.serialize()).getValue()));
+        }
+
+        @Test
+        void shouldSuccessfullyValidateReauthIDTokenWithOldKeyWhenKeyIdMatches() {
+            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+            var newECKey = generateCustomECKeyPair(NEW_V2_KEY_ID);
+
+            when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newECKey);
+            when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
+                    .thenReturn(true);
+
+            SignedJWT signedIdToken = createSignedIdToken(expiryDate);
+            assertTrue(
+                    tokenValidationService.isTokenSignatureValid(
+                            new BearerAccessToken(signedIdToken.serialize()).getValue()));
+        }
+
+        @Test
+        void shouldFailToValidateECKeyReauthIDTokenIfKeyIdInvalid() throws JOSEException {
+            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+            var newECKey = generateCustomECKeyPair(NEW_V2_KEY_ID);
+            var failedECKey = generateCustomECKeyPair(FAILED_KEY_ID);
+
+            when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newECKey);
+            when(configurationService.isPublishNextExternalTokenSigningKeysEnabledV2())
+                    .thenReturn(true);
+
+            SignedJWT signedIdToken = createCustomSignedIdToken(expiryDate, failedECKey);
+            assertFalse(
+                    tokenValidationService.isTokenSignatureValid(
+                            new BearerAccessToken(signedIdToken.serialize()).getValue()));
+        }
+
+        @Test
+        void shouldSuccessfullyValidateOldStoredECKeyReauthIDToken() throws JOSEException {
+            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+            var oldStoredECKey = generateCustomECKeyPair(OLD_STORED_KEY_ID);
+
+            when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
+                    .thenReturn(new ArrayList<ECKey>(Arrays.asList(oldStoredECKey.toECKey())));
+            when(configurationService.isUseStoredOldIdTokenPublicKeysEnabled()).thenReturn(true);
+
+            SignedJWT signedIdToken = createCustomSignedIdToken(expiryDate, oldStoredECKey);
+            assertTrue(
+                    tokenValidationService.isReauthTokenSignatureValid(
+                            new BearerAccessToken(signedIdToken.serialize()).getValue()));
+        }
+
+        @Test
+        void shouldFailToValidateECKeyReauthIDTokenIfOldStoredPublicKeyIdInvalid()
+                throws JOSEException {
+            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+            var oldStoredECKey = generateCustomECKeyPair(OLD_STORED_KEY_ID);
+            var failedECKey = generateCustomECKeyPair(FAILED_KEY_ID);
+
+            when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
+                    .thenReturn(new ArrayList<ECKey>(Arrays.asList(oldStoredECKey.toECKey())));
+            when(configurationService.isUseStoredOldIdTokenPublicKeysEnabled()).thenReturn(true);
+
+            SignedJWT signedIdToken = createCustomSignedIdToken(expiryDate, failedECKey);
+            assertFalse(
+                    tokenValidationService.isReauthTokenSignatureValid(
+                            new BearerAccessToken(signedIdToken.serialize()).getValue()));
+        }
+
+        @Test
+        void shouldFailToValidateECKeyReauthIDTokenIfNoOldStoredPublicKey() {
+            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+            when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
+                    .thenReturn(new ArrayList<>());
+            when(configurationService.isUseStoredOldIdTokenPublicKeysEnabled()).thenReturn(true);
+
+            SignedJWT signedIdToken = createSignedIdToken(expiryDate);
+            assertFalse(
+                    tokenValidationService.isReauthTokenSignatureValid(
+                            new BearerAccessToken(signedIdToken.serialize()).getValue()));
+        }
     }
 
     @Test
@@ -222,14 +367,17 @@ class TokenValidationServiceTest {
                 CLIENT_ID, SUBJECT, BASE_URL, ecJWK, expiryDate);
     }
 
-    private SignedJWT createCustomSignedAccessToken(JWSSigner signer, String keyId) {
+    private SignedJWT createCustomSignedIdToken(Date expiryDate, ECKey ecKey) {
+        return TokenGeneratorHelper.generateIDToken(
+                CLIENT_ID, SUBJECT, BASE_URL, ecKey, expiryDate);
+    }
 
+    private SignedJWT createCustomSignedAccessToken(JWSSigner signer, String keyId) {
         return TokenGeneratorHelper.generateSignedToken(
                 CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, keyId);
     }
 
     private SignedJWT createSignedAccessToken(JWSSigner signer) {
-
         return createCustomSignedAccessToken(signer, KEY_ID);
     }
 
