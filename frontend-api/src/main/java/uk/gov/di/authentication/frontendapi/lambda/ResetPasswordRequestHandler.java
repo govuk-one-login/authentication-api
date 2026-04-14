@@ -10,6 +10,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
+import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -40,7 +41,6 @@ import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED;
@@ -327,76 +327,38 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 permissionDecisionManager.canSendEmailOtpNotification(
                         JourneyType.PASSWORD_RESET, permissionContext);
 
-        if (canSendResult.isSuccess()) {
-            var decision = canSendResult.getSuccess();
-            if (decision instanceof Decision.TemporarilyLockedOut lockedOut) {
-                var result = handleTemporarilyLockedOut(lockedOut, permissionContext);
-                if (result.isFailure()) {
-                    return result;
-                }
-            }
-        }
-
-        var userIsAlreadyLockedOutOfPasswordReset =
-                hasUserExceededMaxAllowedRequests(email, userContext);
-        if (userIsAlreadyLockedOutOfPasswordReset.isPresent()) {
+        if (canSendResult.isFailure()) {
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(
-                            400, userIsAlreadyLockedOutOfPasswordReset.get()));
+                    DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                            canSendResult.getFailure()));
         }
 
-        return Result.success(null);
-    }
-
-    private Result<APIGatewayProxyResponseEvent, Void> handleTemporarilyLockedOut(
-            Decision.TemporarilyLockedOut lockedOut, PermissionContext permissionContext) {
-        if (lockedOut.forbiddenReason()
-                == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
-            userActionsManager.sentEmailOtpNotification(
-                    JourneyType.PASSWORD_RESET, permissionContext);
-            var errorResponse =
-                    lockedOut.isFirstTimeLimit()
-                            ? ErrorResponse.TOO_MANY_PW_RESET_REQUESTS
-                            : ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
-            return Result.failure(generateApiGatewayProxyErrorResponse(400, errorResponse));
-        }
-        return Result.success(null);
-    }
-
-    private Optional<ErrorResponse> hasUserExceededMaxAllowedRequests(
-            String email, UserContext userContext) {
-        LOG.info("Validating Password Reset Count");
-        var permissionContext =
-                PermissionContext.builder()
-                        .withInternalSubjectId(
-                                userContext.getAuthSession().getInternalCommonSubjectId())
-                        .withEmailAddress(email)
-                        .withAuthSessionItem(userContext.getAuthSession())
-                        .build();
-
-        var canSendResult =
-                permissionDecisionManager.canSendEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, permissionContext);
-
-        if (canSendResult.isSuccess()
-                && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
-
-            if (lockedOut.forbiddenReason() == ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST) {
-                LOG.info("Code is blocked for email as user has requested too many OTPs");
-                return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
-            } else if (lockedOut.forbiddenReason()
+        if (canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
+            if (lockedOut.forbiddenReason()
                     == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
-                return lockedOut.isFirstTimeLimit()
-                        ? Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS)
-                        : Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+                userActionsManager.sentEmailOtpNotification(
+                        JourneyType.PASSWORD_RESET, permissionContext);
+                var errorResponse =
+                        lockedOut.isFirstTimeLimit()
+                                ? ErrorResponse.TOO_MANY_PW_RESET_REQUESTS
+                                : ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
+                return Result.failure(generateApiGatewayProxyErrorResponse(400, errorResponse));
+            } else if (lockedOut.forbiddenReason()
+                    == ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST) {
+                LOG.info("Code is blocked for email as user has requested too many OTPs");
+                return Result.failure(
+                        generateApiGatewayProxyErrorResponse(
+                                400, ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
             } else if (lockedOut.forbiddenReason()
                     == ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT) {
                 LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
-                return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
+                return Result.failure(
+                        generateApiGatewayProxyErrorResponse(
+                                400, ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
             }
         }
 
-        return Optional.empty();
+        return Result.success(null);
     }
 
     private String serialiseNotifyRequest(Object request) {
