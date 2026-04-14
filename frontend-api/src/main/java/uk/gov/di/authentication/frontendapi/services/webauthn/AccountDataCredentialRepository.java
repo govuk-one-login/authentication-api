@@ -5,6 +5,7 @@ import com.yubico.webauthn.RegisteredCredential;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.Optional;
 import java.util.Set;
@@ -12,9 +13,12 @@ import java.util.Set;
 public class AccountDataCredentialRepository implements CredentialRepository {
 
     private final PasskeysService passkeysService;
+    private final AuthenticationService authenticationService;
 
-    public AccountDataCredentialRepository(PasskeysService passkeysService) {
+    public AccountDataCredentialRepository(
+            PasskeysService passkeysService, AuthenticationService authenticationService) {
         this.passkeysService = passkeysService;
+        this.authenticationService = authenticationService;
     }
 
     @Override
