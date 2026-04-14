@@ -1495,6 +1495,50 @@ class VerifyMfaCodeHandlerTest {
         }
 
         @Test
+        void shouldReturn400WithReauthLockedOutWhenAuthAppCodeBecomesReauthBlockedByThisRequest()
+                throws Json.JsonException {
+            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode())
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+            when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
+                    .thenReturn(Result.success(null));
+            var detailedCounts = Map.of(ENTER_MFA_CODE, MAX_RETRIES);
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(5)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                            MAX_RETRIES,
+                                            Instant.now(),
+                                            false,
+                                            detailedCounts,
+                                            List.of(ENTER_MFA_CODE))));
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+            verify(userActionsManager).incorrectAuthAppOtpReceived(any(), any());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            eq(CloudwatchMetrics.REAUTH_FAILED.getValue()), any(Map.class));
+        }
+
+        @Test
         void shouldReturn500WhenIncorrectSmsOtpReceivedFails() throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
