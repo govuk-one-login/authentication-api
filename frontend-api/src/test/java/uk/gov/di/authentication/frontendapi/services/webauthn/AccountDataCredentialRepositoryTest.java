@@ -20,6 +20,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
@@ -92,6 +93,68 @@ class AccountDataCredentialRepositoryTest {
             var result = repository.getCredentialIdsForUsername(EMAIL);
 
             assertThat(result, hasSize(0));
+        }
+    }
+
+    @Nested
+    class GetUserHandleForUsername {
+        @Test
+        void returnsUserHandleWhenUserExists() {
+            setupUserProfile();
+
+            var result = repository.getUserHandleForUsername(EMAIL);
+
+            assertThat(result.isPresent(), is(true));
+            assertThat(
+                    result.get(),
+                    equalTo(
+                            new ByteArray(
+                                    PUBLIC_SUBJECT_ID.getBytes(
+                                            java.nio.charset.StandardCharsets.UTF_8))));
+        }
+
+        @Test
+        void returnsEmptyWhenUserNotFound() {
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.empty());
+
+            var result = repository.getUserHandleForUsername(EMAIL);
+
+            assertThat(result.isPresent(), is(false));
+        }
+    }
+
+    @Nested
+    class GetUsernameForUserHandle {
+        @Test
+        void returnsEmailWhenUserExists() {
+            var userHandle =
+                    new ByteArray(
+                            PUBLIC_SUBJECT_ID.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new UserProfile()
+                                            .withEmail(EMAIL)
+                                            .withPublicSubjectID(PUBLIC_SUBJECT_ID)));
+
+            var result = repository.getUsernameForUserHandle(userHandle);
+
+            assertThat(result.isPresent(), is(true));
+            assertThat(result.get(), equalTo(EMAIL));
+        }
+
+        @Test
+        void returnsEmptyWhenUserNotFound() {
+            var userHandle =
+                    new ByteArray(
+                            PUBLIC_SUBJECT_ID.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.empty());
+
+            var result = repository.getUsernameForUserHandle(userHandle);
+
+            assertThat(result.isPresent(), is(false));
         }
     }
 

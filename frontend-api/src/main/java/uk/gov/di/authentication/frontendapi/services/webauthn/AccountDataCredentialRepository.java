@@ -13,6 +13,7 @@ import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -81,12 +82,16 @@ public class AccountDataCredentialRepository implements CredentialRepository {
 
     @Override
     public Optional<ByteArray> getUserHandleForUsername(String username) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        return resolvePublicSubjectId(username)
+                .map(id -> new ByteArray(id.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
     public Optional<String> getUsernameForUserHandle(ByteArray userHandle) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        var publicSubjectId = new String(userHandle.getBytes(), StandardCharsets.UTF_8);
+        return authenticationService
+                .getOptionalUserProfileFromPublicSubject(publicSubjectId)
+                .map(UserProfile::getEmail);
     }
 
     @Override
