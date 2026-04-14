@@ -40,6 +40,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
@@ -488,9 +489,7 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn400IfUserIsNewlyBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
             when(configurationService.getCodeMaxRetries()).thenReturn(6);
             usingSessionWithPasswordResetCount(5);
-            // First call returns permitted, second call (after increment) returns locked out
             when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(5)))
                     .thenReturn(
                             Result.success(
                                     new Decision.TemporarilyLockedOut(
@@ -504,6 +503,18 @@ class ResetPasswordRequestHandlerTest {
 
             assertEquals(400, result.getStatusCode());
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS));
+            verifyNoInteractions(awsSqsClient);
+        }
+
+        @Test
+        void shouldReturn500IfPermissionCheckFails() {
+            usingSessionWithPasswordResetCount(0);
+            when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
+                    .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(500, result.getStatusCode());
             verifyNoInteractions(awsSqsClient);
         }
 
