@@ -999,7 +999,7 @@ Resources:
           - !Ref AWS::NoValue
 
   ClientRegistryReadOnlyIamPolicy:
-    Condition: IsStagingIntOrProd
+    Condition: IsNotDevEnvironment
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Path: /control-tower/shared/
