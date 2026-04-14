@@ -72,12 +72,8 @@ public class AccountDataCredentialRepository implements CredentialRepository {
             LOG.warn("No user profile found for username");
             return Optional.empty();
         }
-        var result = passkeysService.retrievePasskeys(publicSubjectId.get());
-        if (result.isFailure()) {
-            LOG.warn("Failed to retrieve passkeys: {}", result.getFailure());
-            return Optional.empty();
-        }
-        return Optional.of(result.getSuccess().passkeys());
+
+        return retrievePasskeysForPublicSubjectId(publicSubjectId.get());
     }
 
     @Override
@@ -96,11 +92,59 @@ public class AccountDataCredentialRepository implements CredentialRepository {
 
     @Override
     public Optional<RegisteredCredential> lookup(ByteArray credentialId, ByteArray userHandle) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        var publicSubjectId = new String(userHandle.getBytes(), StandardCharsets.UTF_8);
+        return retrievePasskeysForPublicSubjectId(publicSubjectId)
+                .flatMap(
+                        passkeys ->
+                                passkeys.stream()
+                                        .filter(p -> credentialIdMatches(p, credentialId))
+                                        .findFirst()
+                                        .flatMap(p -> toRegisteredCredential(p, userHandle)));
     }
 
     @Override
     public Set<RegisteredCredential> lookupAll(ByteArray credentialId) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        LOG.warn(
+                "lookupAll called unexpectedly for credentialId: {}. Registration should be handled by account-components.",
+                credentialId);
+        return Collections.emptySet();
+    }
+
+    private boolean credentialIdMatches(
+            PasskeysRetrieveResponse.PasskeyResponse passkey, ByteArray credentialId) {
+        try {
+            return ByteArray.fromBase64Url(passkey.passkeyId()).equals(credentialId);
+        } catch (Base64UrlException e) {
+            LOG.warn("Invalid Base64Url credential ID when matching passkey", e);
+            return false;
+        }
+    }
+
+    private Optional<RegisteredCredential> toRegisteredCredential(
+            PasskeysRetrieveResponse.PasskeyResponse passkey, ByteArray userHandle) {
+        try {
+            return Optional.of(
+                    RegisteredCredential.builder()
+                            .credentialId(ByteArray.fromBase64Url(passkey.passkeyId()))
+                            .userHandle(userHandle)
+                            .publicKeyCose(ByteArray.fromBase64Url(passkey.credential()))
+                            .signatureCount(passkey.signCount())
+                            .build());
+        } catch (Base64UrlException e) {
+            LOG.warn("Invalid Base64Url data when building RegisteredCredential", e);
+            return Optional.empty();
+        }
+    }
+
+    private Optional<List<PasskeysRetrieveResponse.PasskeyResponse>>
+            retrievePasskeysForPublicSubjectId(String publicSubjectId) {
+        return passkeysService
+                .retrievePasskeys(publicSubjectId)
+                .fold(
+                        failure -> {
+                            LOG.warn("Failed to retrieve passkeys: {}", failure);
+                            return Optional.empty();
+                        },
+                        success -> Optional.of(success.passkeys()));
     }
 }

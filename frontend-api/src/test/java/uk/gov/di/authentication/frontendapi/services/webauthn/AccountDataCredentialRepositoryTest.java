@@ -158,6 +158,66 @@ class AccountDataCredentialRepositoryTest {
         }
     }
 
+    @Nested
+    class Lookup {
+        private static final ByteArray USER_HANDLE =
+                new ByteArray(PUBLIC_SUBJECT_ID.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        @Test
+        void returnsRegisteredCredentialWhenFound() {
+            when(passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID))
+                    .thenReturn(
+                            Result.success(
+                                    new PasskeysRetrieveResponse(
+                                            List.of(aPasskeyResponse(PASSKEY_ID_BASE64URL)))));
+            var credentialId = new ByteArray(Base64.getUrlDecoder().decode(PASSKEY_ID_BASE64URL));
+
+            var result = repository.lookup(credentialId, USER_HANDLE);
+
+            assertThat(result.isPresent(), is(true));
+            var credential = result.get();
+            assertThat(credential.getCredentialId(), equalTo(credentialId));
+            assertThat(credential.getUserHandle(), equalTo(USER_HANDLE));
+            assertThat(credential.getSignatureCount(), equalTo(5L));
+        }
+
+        @Test
+        void returnsEmptyWhenCredentialNotFound() {
+            when(passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Result.success(new PasskeysRetrieveResponse(List.of())));
+            var credentialId = new ByteArray(Base64.getUrlDecoder().decode(PASSKEY_ID_BASE64URL));
+
+            var result = repository.lookup(credentialId, USER_HANDLE);
+
+            assertThat(result.isPresent(), is(false));
+        }
+
+        @Test
+        void returnsEmptyWhenApiCallFails() {
+            when(passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID))
+                    .thenReturn(
+                            Result.failure(
+                                    PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));
+            var credentialId = new ByteArray(Base64.getUrlDecoder().decode(PASSKEY_ID_BASE64URL));
+
+            var result = repository.lookup(credentialId, USER_HANDLE);
+
+            assertThat(result.isPresent(), is(false));
+        }
+    }
+
+    @Nested
+    class LookupAll {
+        @Test
+        void returnsEmptySet() {
+            var credentialId = new ByteArray(Base64.getUrlDecoder().decode(PASSKEY_ID_BASE64URL));
+
+            var result = repository.lookupAll(credentialId);
+
+            assertThat(result, hasSize(0));
+        }
+    }
+
     private void setupUserProfile() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(
