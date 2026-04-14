@@ -266,6 +266,18 @@ class UserActionsManagerTest {
                                 .getCodeRequestCount(notificationType, journeyType));
                 assertTrue(result.isSuccess());
             }
+
+            @Test
+            void shouldClearIncorrectEmailOtpBlockWhenNewCodeRequestedForRegistration() {
+                userActionsManager.sentEmailOtpNotification(
+                        JourneyType.REGISTRATION, permissionContext);
+
+                verify(codeStorageService)
+                        .deleteBlockForEmail(
+                                EMAIL,
+                                CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                                        + CodeRequestType.EMAIL_REGISTRATION);
+            }
         }
 
         @Nested

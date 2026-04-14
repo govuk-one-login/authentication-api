@@ -120,6 +120,15 @@ public class UserActionsManager implements UserActions {
             return Result.success(null);
         }
 
+        if (journeyType == JourneyType.REGISTRATION) {
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(SupportedCodeType.EMAIL, journeyType);
+            getCodeStorageService()
+                    .deleteBlockForEmail(
+                            permissionContext.emailAddress(),
+                            CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType);
+        }
+
         var updatedSession =
                 permissionContext
                         .authSessionItem()
