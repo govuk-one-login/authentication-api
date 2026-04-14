@@ -47,7 +47,10 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class StartPasskeyAssertionHandlerTest {
 
     private static final UserProfile USER_PROFILE =
-            new UserProfile().withEmail(EMAIL).withSubjectID("subject-id");
+            new UserProfile()
+                    .withEmail(EMAIL)
+                    .withSubjectID("subject-id")
+                    .withPublicSubjectID("public-subject-id");
 
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
