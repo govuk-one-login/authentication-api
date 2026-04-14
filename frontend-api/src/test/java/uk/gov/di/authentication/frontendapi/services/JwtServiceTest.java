@@ -23,7 +23,7 @@ import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -34,8 +34,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -82,7 +81,7 @@ class JwtServiceTest {
     }
 
     @Test
-    void CallsKmsToGenerateSignatureAndReturnsJWS() throws ParseException {
+    void shouldCallKmsToGenerateSignatureAndReturnsJWS() throws ParseException {
         Base64URL encodedClaims = TEST_CLAIMS.toPayload().toBase64URL();
         SdkBytes expectedMessage =
                 SdkBytes.fromByteArray(
@@ -96,7 +95,7 @@ class JwtServiceTest {
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .build();
 
-        SignedJWT signedJWT = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
+        var signedJWT = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID).getSuccess();
 
         verify(kmsConnectionService)
                 .getPublicKey(GetPublicKeyRequest.builder().keyId(TEST_KEY_ID).build());
@@ -124,52 +123,41 @@ class JwtServiceTest {
     }
 
     @Test
-    void shouldThrowJwtServiceExceptionWithSdkExceptionCauseWhenKmsSigningFails() {
+    void shouldReturnSigningErrorFailureReasonWhenKmsSigningFails() {
         when(kmsConnectionService.sign(any()))
                 .thenThrow(
                         software.amazon.awssdk.core.exception.SdkException.builder()
                                 .message("KMS unavailable")
                                 .build());
 
-        var exception =
-                org.junit.jupiter.api.Assertions.assertThrows(
-                        uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException.class,
-                        () -> jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID));
+        var result = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
 
-        assertEquals("AWS SDK error when signing JWT", exception.getMessage());
-        org.junit.jupiter.api.Assertions.assertInstanceOf(
-                software.amazon.awssdk.core.exception.SdkException.class, exception.getCause());
+        assertTrue(result.isFailure());
+        assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
     }
 
     @Test
-    void shouldThrowJwtServiceExceptionWithSdkExceptionCauseWhenResolvingKeyIdFails() {
+    void shouldReturnKeyRetrievalErrorFailureReasonWhenResolvingKeyIdFails() {
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenThrow(SdkException.builder().message("KMS unavailable").build());
 
-        var exception =
-                assertThrows(
-                        JwtServiceException.class,
-                        () -> jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID));
+        var result = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
 
-        assertEquals("AWS SDK error when resolving key ID", exception.getMessage());
-        assertInstanceOf(SdkException.class, exception.getCause());
+        assertTrue(result.isFailure());
+        assertEquals(JwtFailureReason.KEY_RETRIEVAL_ERROR, result.getFailure());
     }
 
     @Test
-    void shouldThrowJwtServiceExceptionWithJOSEExceptionCauseWhenTranscodingFails() {
+    void shouldReturnTranscodingErrorFailureReasonWhenTranscodingFails() {
         when(kmsConnectionService.sign(any()))
                 .thenReturn(
                         SignResponse.builder()
                                 .signature(SdkBytes.fromByteArray(new byte[] {0x00, 0x01}))
                                 .build());
 
-        var exception =
-                org.junit.jupiter.api.Assertions.assertThrows(
-                        uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException.class,
-                        () -> jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID));
+        var result = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
 
-        assertEquals("Failed to transcode signature", exception.getMessage());
-        org.junit.jupiter.api.Assertions.assertInstanceOf(
-                com.nimbusds.jose.JOSEException.class, exception.getCause());
+        assertTrue(result.isFailure());
+        assertEquals(JwtFailureReason.TRANSCODING_ERROR, result.getFailure());
     }
 }

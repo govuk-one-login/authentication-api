@@ -39,15 +39,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.services.kms.model.KmsException;
-import uk.gov.di.authentication.frontendapi.entity.amc.AMCDownstreamScope;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccountDataScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccountManagementScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.ExternalApiScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
-import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -257,10 +256,7 @@ class AMCServiceTest {
         @Test
         void shouldReturnFailureWhenKmsSigningFails() {
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
-                    .thenThrow(
-                            new JwtServiceException(
-                                    "AWS SDK error when signing JWT",
-                                    SdkException.builder().message("KMS Unreachable").build()));
+                    .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
 
             var result =
                     amcService.buildAuthorizationResult(
@@ -274,16 +270,14 @@ class AMCServiceTest {
                             STATE);
 
             assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
+            assertEquals(AMCAuthorizeFailureReason.SIGNING_ERROR, result.getFailure());
         }
 
         @Test
         void shouldReturnFailureWhenSignatureTranscodingFails() {
 
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
-                    .thenThrow(
-                            new JwtServiceException(
-                                    "Failed to transcode signature", new JOSEException("Invalid")));
+                    .thenReturn(Result.failure(JwtFailureReason.TRANSCODING_ERROR));
 
             var result =
                     amcService.buildAuthorizationResult(
@@ -297,7 +291,7 @@ class AMCServiceTest {
                             STATE);
 
             assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.TRANSCODING_ERROR, result.getFailure());
+            assertEquals(AMCAuthorizeFailureReason.TRANSCODING_ERROR, result.getFailure());
         }
 
         private static Stream<Arguments> jwtServiceErrorsToJwtFailureReason() {
@@ -306,20 +300,20 @@ class AMCServiceTest {
                             new JwtServiceException(
                                     "Encryption failed",
                                     new com.nimbusds.jose.JOSEException("Encryption error")),
-                            JwtFailureReason.ENCRYPTION_ERROR),
+                            AMCAuthorizeFailureReason.ENCRYPTION_ERROR),
                     Arguments.of(
                             new JwtServiceException("Unknown encryption error"),
-                            JwtFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR),
+                            AMCAuthorizeFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR),
                     Arguments.of(
                             new JwtServiceException(
                                     "Parse error", new java.text.ParseException("Invalid", 0)),
-                            JwtFailureReason.JWT_ENCODING_ERROR));
+                            AMCAuthorizeFailureReason.JWT_ENCODING_ERROR));
         }
 
         @ParameterizedTest
         @MethodSource("jwtServiceErrorsToJwtFailureReason")
         void shouldMapJwtServiceExceptionsToJwtFailureReason(
-                Exception encryptionException, JwtFailureReason expectedFailureReason) {
+                Exception encryptionException, AMCAuthorizeFailureReason expectedFailureReason) {
             when(jwtService.encryptJWT(any(), any())).thenThrow(encryptionException);
 
             AMCService serviceWithMockJwt =
@@ -340,22 +334,22 @@ class AMCServiceTest {
             assertEquals(expectedFailureReason, result.getFailure());
         }
 
-        private static Stream<Arguments> signingErrorsToJwtFailureReasons() {
+        private static Stream<Arguments> signingFailureReasonsToJwtFailureReasons() {
             return Stream.of(
                     Arguments.of(
-                            new JwtServiceException("Unknown error"),
-                            JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR),
+                            JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR,
+                            AMCAuthorizeFailureReason.UNKNOWN_JWT_SIGNING_ERROR),
                     Arguments.of(
-                            new JwtServiceException(
-                                    "Parse error", new java.text.ParseException("Invalid", 0)),
-                            JwtFailureReason.JWT_ENCODING_ERROR));
+                            JwtFailureReason.JWT_ENCODING_ERROR,
+                            AMCAuthorizeFailureReason.JWT_ENCODING_ERROR));
         }
 
         @ParameterizedTest
-        @MethodSource("signingErrorsToJwtFailureReasons")
-        void shouldMapJwtSigningErrorsToJwtFailureReason(
-                Exception signingException, JwtFailureReason expectedFailureReason) {
-            when(jwtService.signJWT(any(), any())).thenThrow(signingException);
+        @MethodSource("signingFailureReasonsToJwtFailureReasons")
+        void shouldMapJwtSigningFailureReasonsToJwtFailureReason(
+                JwtFailureReason signingFailureReason,
+                AMCAuthorizeFailureReason expectedFailureReason) {
+            when(jwtService.signJWT(any(), any())).thenReturn(Result.failure(signingFailureReason));
 
             AMCService serviceWithMockJwt =
                     new AMCService(configurationService, NOW_CLOCK, jwtService);
@@ -407,7 +401,7 @@ class AMCServiceTest {
         }
 
         private void assertAccessTokenClaims(
-                AMCDownstreamScope expectedScope,
+                ExternalApiScope expectedScope,
                 String expectedAudience,
                 JWTClaimsSet accessTokenClaims) {
             assertAll(
@@ -468,8 +462,7 @@ class AMCServiceTest {
 
             mockJwtSigning(Map.of(signingKeyPair.getKeyID(), signingKeyPair));
 
-            TokenRequest result =
-                    amcService.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL).getSuccess();
+            var result = amcService.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL).getSuccess();
 
             var authGrant = (AuthorizationCodeGrant) result.getAuthorizationGrant();
             assertEquals(AUTH_CODE, authGrant.getAuthorizationCode().toString());
@@ -501,16 +494,13 @@ class AMCServiceTest {
                     .thenReturn(invalidKeyAlias);
 
             when(jwtService.signJWT(any(JWTClaimsSet.class), eq(invalidKeyAlias)))
-                    .thenThrow(
-                            new JwtServiceException(
-                                    "AWS SDK error when signing JWT",
-                                    KmsException.create("Unable to sign", new RuntimeException())));
+                    .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
 
-            Result<JwtFailureReason, TokenRequest> result =
+            Result<AMCAuthorizeFailureReason, TokenRequest> result =
                     amcService.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL);
 
             assertTrue(result.isFailure());
-            assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
+            assertEquals(AMCAuthorizeFailureReason.SIGNING_ERROR, result.getFailure());
         }
     }
 
@@ -581,7 +571,7 @@ class AMCServiceTest {
                                                         .build(),
                                                 claims);
                                 signedJWT.sign(new ECDSASigner(key));
-                                return signedJWT;
+                                return Result.success(signedJWT);
                             } catch (JOSEException e) {
                                 throw new RuntimeException(e);
                             }

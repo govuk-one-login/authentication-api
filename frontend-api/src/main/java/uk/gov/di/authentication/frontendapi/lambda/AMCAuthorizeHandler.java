@@ -16,10 +16,10 @@ import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
-import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.TransportJWTConfig;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
@@ -126,7 +126,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         var state = new State();
         dynamoAmcStateService.store(state.getValue(), userContext.getClientSessionId());
 
-        Result<JwtFailureReason, AMCAuthorizationUrlAndCookie> result =
+        Result<AMCAuthorizeFailureReason, AMCAuthorizationUrlAndCookie> result =
                 getAMCPublicEncryptionKey()
                         .flatMap(
                                 publicEncryptionKey ->
@@ -153,7 +153,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                 });
     }
 
-    private Result<JwtFailureReason, RSAPublicKey> getAMCPublicEncryptionKey() {
+    private Result<AMCAuthorizeFailureReason, RSAPublicKey> getAMCPublicEncryptionKey() {
         LOG.info("Retrieving RSA encryption JWK from AMC JWKS endpoint for auth -> AMC encryption");
         try {
             return Result.success(
@@ -172,10 +172,10 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                             .toRSAPublicKey());
         } catch (KeySourceException e) {
             LOG.error("Could not retrieve JWKS", e);
-            return Result.failure(JwtFailureReason.JWKS_RETRIEVAL_ERROR);
+            return Result.failure(AMCAuthorizeFailureReason.JWKS_RETRIEVAL_ERROR);
         } catch (JOSEException e) {
             LOG.error("Could not parse JWK", e);
-            return Result.failure(JwtFailureReason.JWKS_RETRIEVAL_ERROR);
+            return Result.failure(AMCAuthorizeFailureReason.JWKS_RETRIEVAL_ERROR);
         }
     }
 }

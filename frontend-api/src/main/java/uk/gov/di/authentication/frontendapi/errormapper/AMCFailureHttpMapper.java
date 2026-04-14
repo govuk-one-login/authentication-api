@@ -1,8 +1,8 @@
 package uk.gov.di.authentication.frontendapi.errormapper;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
-import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 
@@ -12,7 +12,7 @@ public class AMCFailureHttpMapper {
 
     private AMCFailureHttpMapper() {}
 
-    public static ErrorResponseWithStatus toHttpResponse(JwtFailureReason failureReason) {
+    public static ErrorResponseWithStatus toHttpResponse(AMCAuthorizeFailureReason failureReason) {
         return switch (failureReason) {
             case JWT_ENCODING_ERROR -> new ErrorResponseWithStatus(
                     400, ErrorResponse.AMC_JWT_ENCODING_ERROR);
@@ -56,7 +56,7 @@ public class AMCFailureHttpMapper {
     }
 
     public static APIGatewayProxyResponseEvent toApiGatewayProxyErrorResponse(
-            JwtFailureReason failureReason) {
+            AMCAuthorizeFailureReason failureReason) {
         var httpResponse = toHttpResponse(failureReason);
         return generateApiGatewayProxyErrorResponse(
                 httpResponse.statusCode(), httpResponse.errorResponse());
