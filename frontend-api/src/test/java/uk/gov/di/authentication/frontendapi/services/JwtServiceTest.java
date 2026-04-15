@@ -14,6 +14,7 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -23,21 +24,22 @@ import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
@@ -81,95 +83,123 @@ class JwtServiceTest {
                         TEST_SIGNATURE);
     }
 
-    @Test
-    void CallsKmsToGenerateSignatureAndReturnsJWS() throws ParseException {
-        Base64URL encodedClaims = TEST_CLAIMS.toPayload().toBase64URL();
-        SdkBytes expectedMessage =
-                SdkBytes.fromByteArray(
-                        (TEST_EXPECTED_HEADER + "." + encodedClaims)
-                                .getBytes(StandardCharsets.UTF_8));
-        SignRequest expectedSignRequest =
-                SignRequest.builder()
-                        .message(expectedMessage)
-                        .keyId(TEST_KEY_ID)
-                        .messageType(MessageType.RAW)
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .build();
+    @Nested
+    class SignJwt {
 
-        SignedJWT signedJWT = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
+        @Test
+        void shouldCallKmsToGenerateSignatureAndReturnsJWS() throws ParseException {
+            Base64URL encodedClaims = TEST_CLAIMS.toPayload().toBase64URL();
+            SdkBytes expectedMessage =
+                    SdkBytes.fromByteArray(
+                            (TEST_EXPECTED_HEADER + "." + encodedClaims)
+                                    .getBytes(StandardCharsets.UTF_8));
+            SignRequest expectedSignRequest =
+                    SignRequest.builder()
+                            .message(expectedMessage)
+                            .keyId(TEST_KEY_ID)
+                            .messageType(MessageType.RAW)
+                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                            .build();
 
-        verify(kmsConnectionService)
-                .getPublicKey(GetPublicKeyRequest.builder().keyId(TEST_KEY_ID).build());
-        verify(kmsConnectionService).sign(expectedSignRequest);
+            var signedJWT = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID).getSuccess();
 
-        assertEquals(TEST_EXPECTED_HEADER, signedJWT.getHeader().toBase64URL());
-        assertEquals(TEST_SIGNATURE.toString(), signedJWT.getSignature().toString());
-        assertEquals(TEST_CLAIM_VALUE, signedJWT.getJWTClaimsSet().getClaim(TEST_CLAIM_NAME));
-        assertEquals(encodedClaims, signedJWT.getPayload().toBase64URL());
+            verify(kmsConnectionService)
+                    .getPublicKey(GetPublicKeyRequest.builder().keyId(TEST_KEY_ID).build());
+            verify(kmsConnectionService).sign(expectedSignRequest);
+
+            assertEquals(TEST_EXPECTED_HEADER, signedJWT.getHeader().toBase64URL());
+            assertEquals(TEST_SIGNATURE.toString(), signedJWT.getSignature().toString());
+            assertEquals(TEST_CLAIM_VALUE, signedJWT.getJWTClaimsSet().getClaim(TEST_CLAIM_NAME));
+            assertEquals(encodedClaims, signedJWT.getPayload().toBase64URL());
+        }
+
+        @Test
+        void shouldReturnSigningErrorFailureReasonWhenKmsSigningFails() {
+            when(kmsConnectionService.sign(any()))
+                    .thenThrow(
+                            software.amazon.awssdk.core.exception.SdkException.builder()
+                                    .message("KMS unavailable")
+                                    .build());
+
+            var result = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
+
+            assertTrue(result.isFailure());
+            assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
+        }
+
+        @Test
+        void shouldReturnKeyRetrievalErrorFailureReasonWhenResolvingKeyIdFails() {
+            when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                    .thenThrow(SdkException.builder().message("KMS unavailable").build());
+
+            var result = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
+
+            assertTrue(result.isFailure());
+            assertEquals(JwtFailureReason.KEY_RETRIEVAL_ERROR, result.getFailure());
+        }
+
+        @Test
+        void shouldReturnTranscodingErrorFailureReasonWhenTranscodingFails() {
+            when(kmsConnectionService.sign(any()))
+                    .thenReturn(
+                            SignResponse.builder()
+                                    .signature(SdkBytes.fromByteArray(new byte[] {0x00, 0x01}))
+                                    .build());
+
+            var result = jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID);
+
+            assertTrue(result.isFailure());
+            assertEquals(JwtFailureReason.TRANSCODING_ERROR, result.getFailure());
+        }
     }
 
-    @Test
-    void shouldEncryptJWTWithProvidedRsaKeyAndReturnJWE() throws JOSEException {
-        var publicKey = (RSAPublicKey) TEST_KEY_PAIR.getPublic();
-        var privateKey = (RSAPrivateKey) TEST_KEY_PAIR.getPrivate();
-        EncryptedJWT encryptedJWT = jwtService.encryptJWT(testSignedJwt, publicKey);
-        encryptedJWT.decrypt(new RSADecrypter(privateKey));
-        assertEquals(
-                encryptedJWT.getHeader().toString(),
-                new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
-                        .contentType("JWT")
-                        .build()
-                        .toString());
-        assertEquals(testSignedJwt.serialize(), encryptedJWT.getPayload().toString());
-    }
+    @Nested
+    class EncryptJwt {
 
-    @Test
-    void shouldThrowJwtServiceExceptionWithSdkExceptionCauseWhenKmsSigningFails() {
-        when(kmsConnectionService.sign(any()))
-                .thenThrow(
-                        software.amazon.awssdk.core.exception.SdkException.builder()
-                                .message("KMS unavailable")
-                                .build());
+        @Test
+        void shouldEncryptJWTWithProvidedRsaKeyAndReturnJWE() throws JOSEException {
+            var publicKey = (RSAPublicKey) TEST_KEY_PAIR.getPublic();
+            var privateKey = (RSAPrivateKey) TEST_KEY_PAIR.getPrivate();
 
-        var exception =
-                org.junit.jupiter.api.Assertions.assertThrows(
-                        uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException.class,
-                        () -> jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID));
+            var result = jwtService.encryptJWT(testSignedJwt, publicKey);
+            var encryptedJWT = result.getSuccess();
+            encryptedJWT.decrypt(new RSADecrypter(privateKey));
 
-        assertEquals("AWS SDK error when signing JWT", exception.getMessage());
-        org.junit.jupiter.api.Assertions.assertInstanceOf(
-                software.amazon.awssdk.core.exception.SdkException.class, exception.getCause());
-    }
+            assertEquals(
+                    encryptedJWT.getHeader().toString(),
+                    new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                            .contentType("JWT")
+                            .build()
+                            .toString());
+            assertEquals(testSignedJwt.serialize(), encryptedJWT.getPayload().toString());
+        }
 
-    @Test
-    void shouldThrowJwtServiceExceptionWithSdkExceptionCauseWhenResolvingKeyIdFails() {
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenThrow(SdkException.builder().message("KMS unavailable").build());
+        // 512-bit key too short for RSA_OAEP_256 encryption so a JOSEException will be thrown
+        @Test
+        void shouldReturnEncryptionErrorFailureReasonWhenEncryptionFails() throws Exception {
+            var tinyKeyPair = KeyPairGenerator.getInstance("RSA");
+            tinyKeyPair.initialize(512);
+            var weakKey = (RSAPublicKey) tinyKeyPair.generateKeyPair().getPublic();
 
-        var exception =
-                assertThrows(
-                        JwtServiceException.class,
-                        () -> jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID));
+            var result = jwtService.encryptJWT(testSignedJwt, weakKey);
 
-        assertEquals("AWS SDK error when resolving key ID", exception.getMessage());
-        assertInstanceOf(SdkException.class, exception.getCause());
-    }
+            assertTrue(result.isFailure());
+            assertEquals(JwtFailureReason.ENCRYPTION_ERROR, result.getFailure());
+        }
 
-    @Test
-    void shouldThrowJwtServiceExceptionWithJOSEExceptionCauseWhenTranscodingFails() {
-        when(kmsConnectionService.sign(any()))
-                .thenReturn(
-                        SignResponse.builder()
-                                .signature(SdkBytes.fromByteArray(new byte[] {0x00, 0x01}))
-                                .build());
+        @Test
+        void shouldReturnJwtEncodingErrorFailureReasonWhenParsingEncryptedJwtFails() {
+            try (var mockedEncryptedJWT = mockStatic(EncryptedJWT.class)) {
+                mockedEncryptedJWT
+                        .when(() -> EncryptedJWT.parse(any(String.class)))
+                        .thenThrow(new ParseException("bad parse", 0));
 
-        var exception =
-                org.junit.jupiter.api.Assertions.assertThrows(
-                        uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException.class,
-                        () -> jwtService.signJWT(TEST_CLAIMS, TEST_KEY_ID));
+                var publicKey = (RSAPublicKey) TEST_KEY_PAIR.getPublic();
+                var result = jwtService.encryptJWT(testSignedJwt, publicKey);
 
-        assertEquals("Failed to transcode signature", exception.getMessage());
-        org.junit.jupiter.api.Assertions.assertInstanceOf(
-                com.nimbusds.jose.JOSEException.class, exception.getCause());
+                assertTrue(result.isFailure());
+                assertEquals(JwtFailureReason.JWT_ENCODING_ERROR, result.getFailure());
+            }
+        }
     }
 }

@@ -24,7 +24,9 @@ import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.charset.StandardCharsets;
@@ -42,7 +44,7 @@ public class JwtService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public SignedJWT signJWT(JWTClaimsSet jwtClaims, String keyId) throws JwtServiceException {
+    public Result<JwtFailureReason, SignedJWT> signJWT(JWTClaimsSet jwtClaims, String keyId) {
         String nonAliasKeyId;
         try {
             GetPublicKeyRequest getPublicKeyRequest =
@@ -50,7 +52,7 @@ public class JwtService {
             nonAliasKeyId = kmsConnectionService.getPublicKey(getPublicKeyRequest).keyId();
         } catch (SdkException e) {
             LOG.error("AWS SDK error when resolving key ID", e);
-            throw new JwtServiceException("AWS SDK error when resolving key ID", e);
+            return Result.failure(JwtFailureReason.KEY_RETRIEVAL_ERROR);
         }
 
         JWSHeader header =
@@ -78,7 +80,7 @@ public class JwtService {
             signResponse = kmsConnectionService.sign(signRequest);
         } catch (SdkException e) {
             LOG.error("AWS SDK error when signing JWT", e);
-            throw new JwtServiceException("AWS SDK error when signing JWT", e);
+            return Result.failure(JwtFailureReason.SIGNING_ERROR);
         }
 
         Base64URL signature;
@@ -89,19 +91,19 @@ public class JwtService {
             signature = Base64URL.encode(joseSignature);
         } catch (JOSEException e) {
             LOG.error("Failed to transcode KMS signature from DER to JOSE format", e);
-            throw new JwtServiceException("Failed to transcode signature", e);
+            return Result.failure(JwtFailureReason.TRANSCODING_ERROR);
         }
 
         try {
-            return new SignedJWT(encodedHeader, encodedClaims, signature);
+            return Result.success(new SignedJWT(encodedHeader, encodedClaims, signature));
         } catch (ParseException e) {
             LOG.error("Failed to construct final SignedJWT object", e);
-            throw new JwtServiceException("Failed to construct JWT", e);
+            return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
         }
     }
 
-    public EncryptedJWT encryptJWT(SignedJWT signedJWT, RSAPublicKey publicEncryptionKey)
-            throws JwtServiceException {
+    public Result<JwtFailureReason, EncryptedJWT> encryptJWT(
+            SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) throws JwtServiceException {
         try {
             LOG.info("Encrypting SignedJWT");
             JWEObject jweObject =
@@ -113,15 +115,13 @@ public class JwtService {
                             new Payload(signedJWT));
             jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
             LOG.info("SignedJWT has been successfully encrypted");
-            return EncryptedJWT.parse(jweObject.serialize());
+            return Result.success(EncryptedJWT.parse(jweObject.serialize()));
         } catch (JOSEException e) {
             LOG.error("Error when encrypting SignedJWT", e);
-            throw new JwtServiceException(
-                    String.format("JOSEException when encrypting JWT: \"%s\" ", e.getMessage()));
+            return Result.failure(JwtFailureReason.ENCRYPTION_ERROR);
         } catch (ParseException e) {
             LOG.error("Error when parsing JWE object to EncryptedJWT", e);
-            throw new JwtServiceException(
-                    String.format("ParseException when encrypting JWT: \"%s\" ", e.getMessage()));
+            return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
         }
     }
 }
