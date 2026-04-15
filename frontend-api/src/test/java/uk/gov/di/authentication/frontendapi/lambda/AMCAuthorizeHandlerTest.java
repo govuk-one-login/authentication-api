@@ -17,9 +17,9 @@ import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
-import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
@@ -199,7 +199,7 @@ class AMCAuthorizeHandlerTest {
                         event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
         var httpResponse =
-                AMCFailureHttpMapper.toHttpResponse(JwtFailureReason.JWKS_RETRIEVAL_ERROR);
+                AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
         assertEquals(httpResponse.statusCode(), result.getStatusCode());
         assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
     }
@@ -220,14 +220,14 @@ class AMCAuthorizeHandlerTest {
                         event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
 
         var httpResponse =
-                AMCFailureHttpMapper.toHttpResponse(JwtFailureReason.JWKS_RETRIEVAL_ERROR);
+                AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
         assertEquals(httpResponse.statusCode(), result.getStatusCode());
         assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
     }
 
     @ParameterizedTest
-    @EnumSource(JwtFailureReason.class)
-    void shouldHandleAllFailureReasons(JwtFailureReason failureReason) {
+    @EnumSource(AMCFailureReason.class)
+    void shouldHandleAllFailureReasons(AMCFailureReason failureReason) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(amcService.buildAuthorizationResult(

@@ -11,8 +11,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
-import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.AMCState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -246,7 +246,7 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldReturn400WhenTokenResponseUnsuccessful() {
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
-                .thenReturn(Result.failure(JwtFailureReason.JWT_ENCODING_ERROR));
+                .thenReturn(Result.failure(AMCFailureReason.JWT_ENCODING_ERROR));
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
