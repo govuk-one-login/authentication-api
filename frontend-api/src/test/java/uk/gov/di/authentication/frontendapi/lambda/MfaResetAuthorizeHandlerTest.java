@@ -8,12 +8,14 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.IPVReverificationFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -187,10 +189,10 @@ class MfaResetAuthorizeHandlerTest {
     }
 
     @Test
-    void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
+    void returns500WithErrorMessageWhenIpvReverificationServiceExceptionIsThrown() {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
                         eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
-                .thenThrow(new JwtServiceException("SomeError"));
+                .thenThrow(new IPVReverificationServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
@@ -198,11 +200,13 @@ class MfaResetAuthorizeHandlerTest {
         assertThat(response, hasBody(MFA_RESET_JAR_GENERATION_ERROR.getMessage()));
     }
 
-    @Test
-    void returns500WithErrorMessageWhenIpvReverificationServiceExceptionIsThrown() {
+    @ParameterizedTest
+    @EnumSource(IPVReverificationFailureReason.class)
+    void returnsA500WithErrorMessageWhenIpvReverificationServiceReturnsFailureResult(
+            IPVReverificationFailureReason ipvReverificationFailureReason) {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
                         eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
-                .thenThrow(new IPVReverificationServiceException("SomeError"));
+                .thenReturn(Result.failure(ipvReverificationFailureReason));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 

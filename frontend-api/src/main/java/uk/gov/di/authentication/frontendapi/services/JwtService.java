@@ -25,7 +25,6 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
@@ -103,7 +102,7 @@ public class JwtService {
     }
 
     public Result<JwtFailureReason, EncryptedJWT> encryptJWT(
-            SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) throws JwtServiceException {
+            SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) {
         try {
             LOG.info("Encrypting SignedJWT");
             JWEObject jweObject =

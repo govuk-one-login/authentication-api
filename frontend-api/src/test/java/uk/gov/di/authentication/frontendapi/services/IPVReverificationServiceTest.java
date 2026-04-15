@@ -32,12 +32,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import uk.gov.di.authentication.frontendapi.IPVReverificationFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -67,6 +69,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -265,19 +268,18 @@ class IPVReverificationServiceTest {
                 exception.getMessage());
     }
 
-    @Test
-    void shouldThrowEncryptJwtExceptionWhenEncryptJwtThrowsException() {
-        when(jwtService.encryptJWT(any(), any()))
-                .thenThrow(new JwtServiceException("JWT Service Exception"));
+    @ParameterizedTest
+    @EnumSource(JwtFailureReason.class)
+    void shouldReturnJWTCreationErrorFailureWhenEncryptJwtReturnsAnyFailure(
+            JwtFailureReason jwtFailureReason) {
+        when(jwtService.encryptJWT(any(), any())).thenReturn(Result.failure(jwtFailureReason));
 
-        var exception =
-                assertThrows(
-                        JwtServiceException.class,
-                        () ->
-                                ipvReverificationService.buildIpvReverificationRedirectUri(
-                                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, STATE));
+        var result =
+                ipvReverificationService.buildIpvReverificationRedirectUri(
+                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, STATE);
 
-        assertEquals("JWT Service Exception", exception.getMessage());
+        assertTrue(result.isFailure());
+        assertEquals(IPVReverificationFailureReason.JWT_CREATION_ERROR, result.getFailure());
     }
 
     private JWTClaimsSet constructTestClaimSet() {

@@ -23,7 +23,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.IPVReverificationFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -122,7 +121,7 @@ public class IPVReverificationService {
     }
 
     public Result<IPVReverificationFailureReason, String> buildIpvReverificationRedirectUri(
-            Subject subject, String clientSessionId, State state) throws JwtServiceException {
+            Subject subject, String clientSessionId, State state) {
         ClaimsSetRequest claims = buildMfaResetClaimsRequest(subject);
 
         return constructMfaResetAuthorizationJWT(state, subject, claims, clientSessionId)
