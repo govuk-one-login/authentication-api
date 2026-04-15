@@ -6,19 +6,16 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
-import java.net.URI;
+import static uk.gov.di.authentication.frontendapi.helpers.S3ClientHelper.createLocalstackS3Client;
 
 public class ADJWKSHandler implements RequestHandler<Object, Void> {
     private final ConfigurationService configurationService;
@@ -44,24 +41,7 @@ public class ADJWKSHandler implements RequestHandler<Object, Void> {
         this.s3Client =
                 configurationService
                         .getLocalstackEndpointUri()
-                        .map(
-                                endpoint ->
-                                        S3Client.builder()
-                                                .endpointOverride(URI.create(endpoint))
-                                                .region(
-                                                        Region.of(
-                                                                configurationService
-                                                                        .getAwsRegion()))
-                                                .credentialsProvider(
-                                                        StaticCredentialsProvider.create(
-                                                                AwsBasicCredentials.create(
-                                                                        "FAKEACCESSKEY",
-                                                                        "FAKESECRETKEY")))
-                                                .serviceConfiguration(
-                                                        S3Configuration.builder()
-                                                                .pathStyleAccessEnabled(true)
-                                                                .build())
-                                                .build())
+                        .map(endpoint -> createLocalstackS3Client(configurationService, endpoint))
                         .orElseGet(
                                 () ->
                                         S3Client.builder()
