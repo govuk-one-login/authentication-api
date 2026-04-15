@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -23,6 +24,13 @@ public class S3ClientHelper {
                 .region(Region.of(configurationService.getAwsRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(fakeCredentials))
                 .serviceConfiguration(s3Configuration)
+                .build();
+    }
+
+    public static S3Client createDefaultS3Client(ConfigurationService configurationService) {
+        return S3Client.builder()
+                .credentialsProvider(DefaultCredentialsProvider.builder().build())
+                .region(Region.of(configurationService.getAwsRegion()))
                 .build();
     }
 }

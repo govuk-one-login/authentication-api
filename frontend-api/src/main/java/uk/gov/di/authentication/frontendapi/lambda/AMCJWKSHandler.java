@@ -6,9 +6,7 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -17,6 +15,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.util.List;
 
+import static uk.gov.di.authentication.frontendapi.helpers.S3ClientHelper.createDefaultS3Client;
 import static uk.gov.di.authentication.frontendapi.helpers.S3ClientHelper.createLocalstackS3Client;
 
 public class AMCJWKSHandler implements RequestHandler<Object, Void> {
@@ -44,17 +43,7 @@ public class AMCJWKSHandler implements RequestHandler<Object, Void> {
                 configurationService
                         .getLocalstackEndpointUri()
                         .map(endpoint -> createLocalstackS3Client(configurationService, endpoint))
-                        .orElseGet(
-                                () ->
-                                        S3Client.builder()
-                                                .credentialsProvider(
-                                                        DefaultCredentialsProvider.builder()
-                                                                .build())
-                                                .region(
-                                                        Region.of(
-                                                                configurationService
-                                                                        .getAwsRegion()))
-                                                .build());
+                        .orElseGet(() -> createDefaultS3Client(configurationService));
     }
 
     @Override
