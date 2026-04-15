@@ -24,6 +24,8 @@ public class TokenClientAuthValidatorFactory {
     public Optional<TokenClientAuthValidator> getTokenAuthenticationValidator(
             Map<String, String> requestBody) {
         LOG.info("Getting ClientAuthenticationMethod from request");
+        LOG.info("Client_assertion: {}", requestBody.get("client_assertion"));
+        LOG.info("Client_assertion_type: {}", requestBody.get("client_assertion_type"));
 
         if (requestBody.containsKey("client_assertion")
                 && requestBody.containsKey("client_assertion_type")) {
