@@ -440,11 +440,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
         }
 
         @Override
-        public String getDocAppTokenSigningKeyAlias() {
-            return docAppPrivateKeyJwtSigner.getKeyAlias();
-        }
-
-        @Override
         public String getFrontendBaseUrl() {
             return "http://localhost:3000/reset-password?code=";
         }

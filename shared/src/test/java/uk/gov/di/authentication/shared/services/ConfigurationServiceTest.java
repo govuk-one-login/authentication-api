@@ -233,11 +233,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getDocAppTokenSigningKeyAliasShouldNotDefault() {
-        assertNull(configurationService.getDocAppTokenSigningKeyAlias());
-    }
-
-    @Test
     void getDynamoArnPrefixShouldDefault() {
         assertFalse(configurationService.getDynamoArnPrefix().isPresent());
     }

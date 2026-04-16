@@ -50,11 +50,6 @@ public class JwksService {
         return getPublicJWKWithKeyId(testTokenSigningKeyAlias);
     }
 
-    public JWK getPublicDocAppSigningJwkWithOpaqueId() {
-        LOG.info("Retrieving Doc App public key");
-        return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
-    }
-
     public JWK getPublicMfaResetStorageTokenJwkWithOpaqueId() {
         LOG.info("Retrieving storage token public key");
         return getPublicJWKWithKeyId(configurationService.getMfaResetStorageTokenSigningKeyAlias());

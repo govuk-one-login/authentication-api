@@ -276,10 +276,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("EMAIL_MAX_RE_AUTH_RETRIES", "6"));
     }
 
-    public String getDocAppTokenSigningKeyAlias() {
-        return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
     public Optional<String> getDynamoArnPrefix() {
         return Optional.ofNullable(System.getenv("DYNAMO_ARN_PREFIX"));
     }
