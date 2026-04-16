@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.frontendapi.entity.amc;
 
-public enum AccountManagementScope implements AMCDownstreamScope {
+public enum AccountManagementScope implements AccessTokenScope {
     ACCOUNT_DELETE("account-delete");
 
     private final String value;
