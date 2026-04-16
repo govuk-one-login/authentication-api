@@ -117,7 +117,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean supportReauthSignoutEnabled() {
         return System.getenv()
                 .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", String.valueOf(false))
-                .equals("true");
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean supportPasskeys() {
@@ -129,7 +129,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean isAuthenticationAttemptsServiceEnabled() {
         return System.getenv()
                 .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", String.valueOf(false))
-                .equals("true");
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public long getLockoutDuration() {
@@ -729,7 +729,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean isInternationalSmsSendingEnabled() {
         return System.getenv()
                 .getOrDefault("INTERNATIONAL_SMS_SENDING_ENABLED", "true")
-                .equals("true");
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public double getInternationalSmsQuotaThreshold() {
@@ -740,13 +740,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean isAccountManagementInternationalSmsEnabled() {
         return System.getenv()
                 .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", "true")
-                .equals("true");
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isInternalApiNewInternationalSmsEnabled() {
         return System.getenv()
                 .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", "true")
-                .equals("true");
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isForcedMFAResetAfterMFACheckEnabled() {
@@ -863,7 +863,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean isEnhancedAuthCodeProtectionEnabled() {
         return System.getenv()
                 .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
-                .equals("true");
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public String getAccountDataURI() {
