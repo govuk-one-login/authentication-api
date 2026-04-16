@@ -233,31 +233,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void isCustomDocAppClaimEnabledShouldDefault() {
-        assertFalse(configurationService.isCustomDocAppClaimEnabled());
-    }
-
-    @Test
-    void getDocAppAuthorisationURIShouldDefault() {
-        assertEquals(URI.create(""), configurationService.getDocAppAuthorisationURI());
-    }
-
-    @Test
-    void getDocAppAuthorisationCallbackURIShouldDefault() {
-        assertEquals(URI.create(""), configurationService.getDocAppAuthorisationCallbackURI());
-    }
-
-    @Test
-    void getDocAppAuthorisationClientIdShouldDefault() {
-        assertEquals("", configurationService.getDocAppAuthorisationClientId());
-    }
-
-    @Test
-    void getDocAppJwksUriShouldDefault() {
-        assertEquals(URI.create(""), configurationService.getDocAppJwksUri());
-    }
-
-    @Test
     void getDocAppTokenSigningKeyAliasShouldNotDefault() {
         assertNull(configurationService.getDocAppTokenSigningKeyAlias());
     }
@@ -437,11 +412,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void sessionCookieMaxAgeShouldEqualDefaultWhenEnvVarUnset() {
-        assertEquals(3600, configurationService.getSessionCookieMaxAge());
-    }
-
-    @Test
     void getSessionExpiryShouldDefault() {
         assertEquals(3600, configurationService.getSessionExpiry());
     }
@@ -567,13 +537,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getCredentialStoreURIShouldDefault() {
-        assertEquals(
-                URI.create("https://credential-store.account.gov.uk"),
-                configurationService.getCredentialStoreURI());
-    }
-
-    @Test
     void getLegacyAccountDeletionTopicArnShouldNotDefault() {
         assertNull(configurationService.getLegacyAccountDeletionTopicArn());
     }
@@ -613,11 +576,6 @@ class ConfigurationServiceTest {
     @Test
     void getIPVAuthorisationClientIdShouldDefault() {
         assertEquals("", configurationService.getIPVAuthorisationClientId());
-    }
-
-    @Test
-    void getSessionCookieAttributesShouldEqualDefaultWhenEnvVarUnset() {
-        assertEquals("Secure; HttpOnly;", configurationService.getSessionCookieAttributes());
     }
 
     @Test

@@ -276,34 +276,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("EMAIL_MAX_RE_AUTH_RETRIES", "6"));
     }
 
-    public boolean isCustomDocAppClaimEnabled() {
-        return System.getenv()
-                .getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public URI getDocAppAuthorisationURI() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
-    }
-
-    public URI getDocAppAuthorisationCallbackURI() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CALLBACK_URI", ""));
-    }
-
-    public String getDocAppAuthorisationClientId() {
-        return System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CLIENT_ID", "");
-    }
-
-    public URI getDocAppJwksUri() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_JWKS_URL", ""));
-    }
-
     public String getDocAppTokenSigningKeyAlias() {
         return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public URI getDocAppDomain() {
-        return URI.create(System.getenv("DOC_APP_DOMAIN"));
     }
 
     public Optional<String> getDynamoArnPrefix() {
@@ -463,15 +437,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Boolean.parseBoolean(
                 getSsmRedisParameters()
                         .get(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey())));
-    }
-
-    public String getSessionCookieAttributes() {
-        return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
-                .orElse("Secure; HttpOnly;");
-    }
-
-    public int getSessionCookieMaxAge() {
-        return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "3600"));
     }
 
     public long getSessionExpiry() {
@@ -670,10 +635,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getMfaResetJarSigningKeyId() {
         return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS");
-    }
-
-    public URI getCredentialStoreURI() {
-        return getURIOrDefault("CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk");
     }
 
     public String getLegacyAccountDeletionTopicArn() {
