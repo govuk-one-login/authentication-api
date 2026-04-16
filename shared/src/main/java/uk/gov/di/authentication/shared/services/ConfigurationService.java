@@ -749,7 +749,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     // FEATURE SWITCHES
     public boolean isEnhancedAuthCodeProtectionEnabled() {
         return System.getenv()
-                .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
+                .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 
@@ -765,25 +765,25 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean supportAccountCreationTTL() {
         return System.getenv()
-                .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", String.valueOf(false))
+                .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean supportReauthSignoutEnabled() {
         return System.getenv()
-                .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", String.valueOf(false))
+                .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean supportPasskeys() {
         return System.getenv()
-                .getOrDefault("SUPPORT_PASSKEYS", String.valueOf(false))
+                .getOrDefault("SUPPORT_PASSKEYS", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isAuthenticationAttemptsServiceEnabled() {
         return System.getenv()
-                .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", String.valueOf(false))
+                .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 
@@ -821,13 +821,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isAccountManagementInternationalSmsEnabled() {
         return System.getenv()
-                .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", "true")
+                .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", FEATURE_SWITCH_ON)
                 .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isInternalApiNewInternationalSmsEnabled() {
         return System.getenv()
-                .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", "true")
+                .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", FEATURE_SWITCH_ON)
                 .equals(FEATURE_SWITCH_ON);
     }
 
@@ -839,7 +839,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isMfaMethodManagementApiEnabled() {
         return System.getenv()
-                .getOrDefault("MFA_METHOD_MANAGEMENT_API_ENABLED", String.valueOf(false))
+                .getOrDefault("MFA_METHOD_MANAGEMENT_API_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 
@@ -851,7 +851,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isInternationalSmsSendingEnabled() {
         return System.getenv()
-                .getOrDefault("INTERNATIONAL_SMS_SENDING_ENABLED", "true")
+                .getOrDefault("INTERNATIONAL_SMS_SENDING_ENABLED", FEATURE_SWITCH_ON)
                 .equals(FEATURE_SWITCH_ON);
     }
 
@@ -869,7 +869,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isIpvJwksCallEnabled() {
         return System.getenv()
-                .getOrDefault("IPV_JWKS_CALL_ENABLED", String.valueOf(false))
+                .getOrDefault("IPV_JWKS_CALL_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 
