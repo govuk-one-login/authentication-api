@@ -1,9 +1,7 @@
 package uk.gov.di.authentication.frontendapi.services;
 
-import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
@@ -21,14 +19,13 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.core.exception.SdkException;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCDownstreamScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
-import uk.gov.di.authentication.frontendapi.entity.amc.JwtFailureReason;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.HashHelper;
@@ -38,7 +35,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.io.IOException;
 import java.net.URI;
 import java.security.interfaces.RSAPublicKey;
-import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
@@ -64,7 +60,7 @@ public class AMCService {
         this.jwtService = jwtService;
     }
 
-    public Result<JwtFailureReason, AMCAuthorizationUrlAndCookie> buildAuthorizationResult(
+    public Result<AMCFailureReason, AMCAuthorizationUrlAndCookie> buildAuthorizationResult(
             String internalPairwiseSubject,
             AMCScope amcScope,
             AuthSessionItem authSessionItem,
@@ -101,19 +97,21 @@ public class AMCService {
                         });
     }
 
-    public Result<JwtFailureReason, TokenRequest> buildTokenRequest(
+    public Result<AMCFailureReason, TokenRequest> buildTokenRequest(
             String authCode, String usedRedirectUrl) {
         var clientAssertionJwt = buildClientAssertionJwt();
         var keyId = configurationService.getAuthToAMCTransportJWTSigningKey();
-        var signedJWTResult = signJWT(clientAssertionJwt.toJWTClaimsSet(), keyId);
-        return signedJWTResult.map(
-                signedJWT ->
-                        new TokenRequest(
-                                configurationService.getAMCTokenEndpointURI(),
-                                new PrivateKeyJWT(signedJWT),
-                                new AuthorizationCodeGrant(
-                                        new AuthorizationCode(authCode),
-                                        URI.create(usedRedirectUrl))));
+        var signedJWTResult = jwtService.signJWT(clientAssertionJwt.toJWTClaimsSet(), keyId);
+        return signedJWTResult
+                .mapFailure(this::mapJwtFailureReason)
+                .map(
+                        signedJWT ->
+                                new TokenRequest(
+                                        configurationService.getAMCTokenEndpointURI(),
+                                        new PrivateKeyJWT(signedJWT),
+                                        new AuthorizationCodeGrant(
+                                                new AuthorizationCode(authCode),
+                                                URI.create(usedRedirectUrl))));
     }
 
     public Result<JourneyOutcomeError, HTTPResponse> requestJourneyOutcome(
@@ -131,40 +129,9 @@ public class AMCService {
         }
     }
 
-    private Result<JwtFailureReason, SignedJWT> signJWT(JWTClaimsSet jwtClaims, String keyId) {
-        try {
-            return Result.success(jwtService.signJWT(jwtClaims, keyId));
-        } catch (JwtServiceException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof SdkException) {
-                return Result.failure(JwtFailureReason.SIGNING_ERROR);
-            } else if (cause instanceof ParseException) {
-                return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
-            } else if (cause instanceof JOSEException) {
-                return Result.failure(JwtFailureReason.TRANSCODING_ERROR);
-            }
-            return Result.failure(JwtFailureReason.UNKNOWN_JWT_SIGNING_ERROR);
-        }
-    }
-
-    private Result<JwtFailureReason, EncryptedJWT> encryptJWT(
-            SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) {
-        try {
-            return Result.success(jwtService.encryptJWT(signedJWT, publicEncryptionKey));
-        } catch (JwtServiceException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof JOSEException) {
-                return Result.failure(JwtFailureReason.ENCRYPTION_ERROR);
-            } else if (cause instanceof ParseException) {
-                return Result.failure(JwtFailureReason.JWT_ENCODING_ERROR);
-            }
-            return Result.failure(JwtFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR);
-        }
-    }
-
     private record EncryptedJWTAndAmcCookie(EncryptedJWT encryptedJWT, String amcCookie) {}
 
-    private Result<JwtFailureReason, EncryptedJWTAndAmcCookie> createTransportJWTAndAmcCookie(
+    private Result<AMCFailureReason, EncryptedJWTAndAmcCookie> createTransportJWTAndAmcCookie(
             String internalPairwiseSubject,
             AMCScope amcScope,
             String amcRedirectUri,
@@ -209,22 +176,27 @@ public class AMCService {
                                     (claimName, accessToken) ->
                                             claimsBuilder.claim(claimName, accessToken.getValue()));
 
-                            return signJWT(
-                                    claimsBuilder.build(),
-                                    configurationService.getAuthToAMCTransportJWTSigningKey());
+                            return jwtService
+                                    .signJWT(
+                                            claimsBuilder.build(),
+                                            configurationService
+                                                    .getAuthToAMCTransportJWTSigningKey())
+                                    .mapFailure(this::mapJwtFailureReason);
                         })
                 .flatMap(
                         signedJWT -> {
                             var hashedCookie = HashHelper.hashSha256String(signedJWT.serialize());
-                            return encryptJWT(signedJWT, publicEncryptionKey)
+                            return jwtService
+                                    .encryptJWT(signedJWT, publicEncryptionKey)
                                     .map(
                                             encryptedJWT ->
                                                     new EncryptedJWTAndAmcCookie(
-                                                            encryptedJWT, hashedCookie));
+                                                            encryptedJWT, hashedCookie))
+                                    .mapFailure(this::mapJwtFailureReason);
                         });
     }
 
-    private Result<JwtFailureReason, Map<String, BearerAccessToken>> createAccessTokenClaimsMap(
+    private Result<AMCFailureReason, Map<String, BearerAccessToken>> createAccessTokenClaimsMap(
             List<AccessTokenConfig> configs,
             String internalPairwiseSubject,
             AuthSessionItem authSessionItem,
@@ -252,7 +224,7 @@ public class AMCService {
         return Result.success(accessTokens);
     }
 
-    private Result<JwtFailureReason, BearerAccessToken> createAccessToken(
+    private Result<AMCFailureReason, BearerAccessToken> createAccessToken(
             String internalPairwiseSubject,
             AMCDownstreamScope scope,
             AuthSessionItem authSessionItem,
@@ -274,13 +246,15 @@ public class AMCService {
                         .jwtID(UUID.randomUUID().toString())
                         .build();
 
-        return signJWT(claims, signingKey)
+        return jwtService
+                .signJWT(claims, signingKey)
                 .map(
                         signedJWT ->
                                 new BearerAccessToken(
                                         signedJWT.serialize(),
                                         configurationService.getSessionExpiry(),
-                                        new Scope(scope.getValue())));
+                                        new Scope(scope.getValue())))
+                .mapFailure(this::mapJwtFailureReason);
     }
 
     private JWTAuthenticationClaimsSet buildClientAssertionJwt() {
@@ -296,5 +270,17 @@ public class AMCService {
                 now,
                 now,
                 new JWTID());
+    }
+
+    private AMCFailureReason mapJwtFailureReason(JwtFailureReason jwtFailureReason) {
+        return switch (jwtFailureReason) {
+            case JWT_ENCODING_ERROR -> AMCFailureReason.JWT_ENCODING_ERROR;
+            case UNKNOWN_JWT_SIGNING_ERROR -> AMCFailureReason.UNKNOWN_JWT_SIGNING_ERROR;
+            case TRANSCODING_ERROR -> AMCFailureReason.TRANSCODING_ERROR;
+            case SIGNING_ERROR, KEY_RETRIEVAL_ERROR -> AMCFailureReason.SIGNING_ERROR;
+            case ENCRYPTION_ERROR -> AMCFailureReason.ENCRYPTION_ERROR;
+            case UNKNOWN_JWT_ENCRYPTING_ERROR -> AMCFailureReason.UNKNOWN_JWT_ENCRYPTING_ERROR;
+            case JWKS_RETRIEVAL_ERROR -> AMCFailureReason.JWKS_RETRIEVAL_ERROR;
+        };
     }
 }

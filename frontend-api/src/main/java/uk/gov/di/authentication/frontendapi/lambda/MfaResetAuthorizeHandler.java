@@ -128,6 +128,13 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             var ipvReverificationRequestURI =
                     ipvReverificationService.buildIpvReverificationRedirectUri(
                             internalCommonSubjectId, clientSessionId, authenticationState);
+            if (ipvReverificationRequestURI.isFailure()) {
+                LOG.error(
+                        "Error building the IPV reverification request. Failure: {}",
+                        ipvReverificationRequestURI.getFailure());
+                return generateApiGatewayProxyResponse(
+                        500, MFA_RESET_JAR_GENERATION_ERROR.getMessage());
+            }
 
             idReverificationStateService.store(
                     authenticationState.getValue(),
@@ -158,7 +165,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
             return generateApiGatewayProxyResponse(
-                    200, new MfaResetResponse(ipvReverificationRequestURI));
+                    200, new MfaResetResponse(ipvReverificationRequestURI.getSuccess()));
         } catch (Json.JsonException | RuntimeException e) {
             LOG.error("Error building the IPV reverification request.", e);
             return generateApiGatewayProxyResponse(

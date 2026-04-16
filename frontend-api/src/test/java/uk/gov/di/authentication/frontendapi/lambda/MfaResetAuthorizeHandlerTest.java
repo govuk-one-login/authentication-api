@@ -8,16 +8,19 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.IPVReverificationFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -139,7 +142,7 @@ class MfaResetAuthorizeHandlerTest {
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
                         eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
-                .thenReturn(TEST_REDIRECT_URI);
+                .thenReturn(Result.success(TEST_REDIRECT_URI));
 
         var request = new MfaResetRequest(EMAIL, TEST_REDIRECT_URI);
 
@@ -167,6 +170,11 @@ class MfaResetAuthorizeHandlerTest {
 
     @Test
     void storesTheStateValuesForCrossBrowserIssue() {
+        final String TEST_REDIRECT_URI = "https://some.uri.gov.uk/authorize?request=x.y.z";
+        when(ipvReverificationService.buildIpvReverificationRedirectUri(
+                        eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
+                .thenReturn(Result.success(TEST_REDIRECT_URI));
+
         handler.handleRequest(TEST_INVOKE_EVENT, context);
 
         ArgumentCaptor<State> authenticationStateCaptor = ArgumentCaptor.forClass(State.class);
@@ -181,10 +189,10 @@ class MfaResetAuthorizeHandlerTest {
     }
 
     @Test
-    void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
+    void returns500WithErrorMessageWhenIpvReverificationServiceExceptionIsThrown() {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
                         eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
-                .thenThrow(new JwtServiceException("SomeError"));
+                .thenThrow(new IPVReverificationServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
@@ -192,11 +200,13 @@ class MfaResetAuthorizeHandlerTest {
         assertThat(response, hasBody(MFA_RESET_JAR_GENERATION_ERROR.getMessage()));
     }
 
-    @Test
-    void returns500WithErrorMessageWhenIpvReverificationServiceExceptionIsThrown() {
+    @ParameterizedTest
+    @EnumSource(IPVReverificationFailureReason.class)
+    void returnsA500WithErrorMessageWhenIpvReverificationServiceReturnsFailureResult(
+            IPVReverificationFailureReason ipvReverificationFailureReason) {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
                         eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
-                .thenThrow(new IPVReverificationServiceException("SomeError"));
+                .thenReturn(Result.failure(ipvReverificationFailureReason));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 

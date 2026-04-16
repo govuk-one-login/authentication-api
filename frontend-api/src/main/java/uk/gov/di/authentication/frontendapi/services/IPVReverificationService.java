@@ -11,7 +11,6 @@ import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -22,8 +21,9 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.IPVReverificationFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
@@ -120,42 +120,50 @@ public class IPVReverificationService {
         this.jwkSource = jwkSource;
     }
 
-    public String buildIpvReverificationRedirectUri(
-            Subject subject, String clientSessionId, State state) throws JwtServiceException {
+    public Result<IPVReverificationFailureReason, String> buildIpvReverificationRedirectUri(
+            Subject subject, String clientSessionId, State state) {
         ClaimsSetRequest claims = buildMfaResetClaimsRequest(subject);
-        EncryptedJWT requestJWT =
-                constructMfaResetAuthorizationJWT(state, subject, claims, clientSessionId);
 
-        AuthorizationRequest.Builder authRequestBuilder =
-                new AuthorizationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new ClientID(configurationService.getIPVAuthorisationClientId()))
-                        .endpointURI(configurationService.getIPVAuthorisationURI())
-                        .requestObject(requestJWT);
-
-        AuthorizationRequest ipvAuthorisationRequest = authRequestBuilder.build();
-        String ipvReverificationRequestURI = ipvAuthorisationRequest.toURI().toString();
-
-        LOG.info("IPV reverification JAR created, redirect URI {}", ipvReverificationRequestURI);
-
-        return ipvReverificationRequestURI;
+        return constructMfaResetAuthorizationJWT(state, subject, claims, clientSessionId)
+                .map(
+                        jwt -> {
+                            var responseType = new ResponseType(ResponseType.Value.CODE);
+                            var clientId =
+                                    new ClientID(
+                                            configurationService.getIPVAuthorisationClientId());
+                            var endpoint = configurationService.getIPVAuthorisationURI();
+                            var authRequest =
+                                    new AuthorizationRequest.Builder(responseType, clientId)
+                                            .endpointURI(endpoint)
+                                            .requestObject(jwt)
+                                            .build();
+                            var redirectUri = authRequest.toURI().toString();
+                            LOG.info(
+                                    "IPV reverification JAR created, redirect URI {}", redirectUri);
+                            return redirectUri;
+                        });
     }
 
-    private EncryptedJWT constructMfaResetAuthorizationJWT(
+    private Result<IPVReverificationFailureReason, EncryptedJWT> constructMfaResetAuthorizationJWT(
             State state, Subject subject, ClaimsSetRequest claims, String clientSessionId) {
         LOG.info("Generating MFA Reset request JWT");
+
         JWTClaimsSet mfaResetAuthorizationClaims =
                 createMfaResetAuthorizationClaims(state, subject, claims, clientSessionId);
 
-        SignedJWT signedJWT =
-                jwtService.signJWT(
+        return jwtService
+                .signJWT(
                         mfaResetAuthorizationClaims,
-                        configurationService.getMfaResetJarSigningKeyId());
-        LOG.info("Created Signed MFA Reset JWT");
-
-        EncryptedJWT encryptedJWT = jwtService.encryptJWT(signedJWT, getPublicKey());
-        LOG.info("Created encrypted MFA Reset request JWT");
-        return encryptedJWT;
+                        configurationService.getMfaResetJarSigningKeyId())
+                .flatMap(
+                        jwt -> {
+                            LOG.info("Created Signed MFA Reset JWT");
+                            return jwtService.encryptJWT(jwt, getPublicKey());
+                        })
+                .fold(
+                        failure ->
+                                Result.failure(IPVReverificationFailureReason.JWT_CREATION_ERROR),
+                        Result::success);
     }
 
     private JWTClaimsSet createMfaResetAuthorizationClaims(

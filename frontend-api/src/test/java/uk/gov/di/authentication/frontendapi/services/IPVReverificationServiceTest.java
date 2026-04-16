@@ -32,11 +32,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import uk.gov.di.authentication.frontendapi.IPVReverificationFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -65,6 +69,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -142,8 +147,8 @@ class IPVReverificationServiceTest {
                         Base64URL.encode(testJwtClaims.toString()),
                         TEST_ENCODED_JWS_SIGNATURE);
         testEncryptedJwt = constructTestEncryptedJWT(testSignedJwt);
-        when(jwtService.signJWT(any(), any())).thenReturn(testSignedJwt);
-        when(jwtService.encryptJWT(any(), any())).thenReturn(testEncryptedJwt);
+        when(jwtService.signJWT(any(), any())).thenReturn(Result.success(testSignedJwt));
+        when(jwtService.encryptJWT(any(), any())).thenReturn(Result.success(testEncryptedJwt));
         mockIdGen = Mockito.mockStatic(IdGenerator.class);
         mockIdGen.when(IdGenerator::generate).thenReturn(TEST_UUID);
     }
@@ -179,9 +184,11 @@ class IPVReverificationServiceTest {
                             when(mock.getValue()).thenReturn(TEST_STATE_VALUE);
                         })) {
 
-            String redirectUri =
+            var redirectUriResult =
                     ipvReverificationService.buildIpvReverificationRedirectUri(
                             TEST_SUBJECT, TEST_CLIENT_SESSION_ID, STATE);
+
+            var redirectUri = redirectUriResult.getSuccess();
 
             RSAPublicKey expectedPublicKey =
                     new RSAKey.Builder(
@@ -222,9 +229,11 @@ class IPVReverificationServiceTest {
                 new IPVReverificationService(
                         configurationService, nowClock, jwtService, tokenService, jwkSource);
 
-        String redirectUri =
+        var redirectUriResult =
                 ipvReverificationService.buildIpvReverificationRedirectUri(
                         TEST_SUBJECT, TEST_CLIENT_SESSION_ID, STATE);
+
+        var redirectUri = redirectUriResult.getSuccess();
 
         RSAPublicKey expectedPublicKey =
                 new RSAKey.Builder(
@@ -257,6 +266,20 @@ class IPVReverificationServiceTest {
         assertEquals(
                 "Missing required environment variable: IPV_PUBLIC_ENCRYPTION_KEY",
                 exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @EnumSource(JwtFailureReason.class)
+    void shouldReturnJWTCreationErrorFailureWhenEncryptJwtReturnsAnyFailure(
+            JwtFailureReason jwtFailureReason) {
+        when(jwtService.encryptJWT(any(), any())).thenReturn(Result.failure(jwtFailureReason));
+
+        var result =
+                ipvReverificationService.buildIpvReverificationRedirectUri(
+                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, STATE);
+
+        assertTrue(result.isFailure());
+        assertEquals(IPVReverificationFailureReason.JWT_CREATION_ERROR, result.getFailure());
     }
 
     private JWTClaimsSet constructTestClaimSet() {
