@@ -799,12 +799,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals(FEATURE_SWITCH_ON);
     }
 
-    public boolean isIdentityEnabled() {
-        return System.getenv()
-                .getOrDefault("IDENTITY_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public boolean isAccountInterventionServiceCallInAuthenticateEnabled() {
         return System.getenv()
                 .getOrDefault(

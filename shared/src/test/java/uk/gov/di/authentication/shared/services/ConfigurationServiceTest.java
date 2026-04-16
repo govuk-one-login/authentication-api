@@ -309,11 +309,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void isIdentityEnabledShouldDefault() {
-        assertFalse(configurationService.isIdentityEnabled());
-    }
-
-    @Test
     void getIDTokenExpiryShouldDefault() {
         assertEquals(120, configurationService.getIDTokenExpiry());
     }

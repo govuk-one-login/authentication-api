@@ -123,7 +123,6 @@ class StartHandlerTest {
 
     @BeforeEach
     void beforeEach() {
-        when(configurationService.isIdentityEnabled()).thenReturn(true);
         when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
