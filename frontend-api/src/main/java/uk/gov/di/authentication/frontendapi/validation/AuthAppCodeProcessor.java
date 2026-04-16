@@ -4,7 +4,6 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -36,7 +35,6 @@ import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVER
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
@@ -50,7 +48,6 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
-            int maxRetries,
             CodeRequest codeRequest,
             AuditService auditService,
             DynamoAccountModifiersService accountModifiersService,
@@ -58,7 +55,6 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         super(
                 userContext,
                 codeStorageService,
-                maxRetries,
                 authenticationService,
                 auditService,
                 accountModifiersService,
@@ -70,38 +66,11 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public Optional<ErrorResponse> validateCode() {
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(AUTH_APP, codeRequest.getJourneyType());
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
         var nonRegistrationJourneyTypes =
                 List.of(
                         JourneyType.SIGN_IN,
                         JourneyType.PASSWORD_RESET_MFA,
                         JourneyType.REAUTHENTICATION);
-
-        if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
-        }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(
-                        AUTH_APP, codeRequest.getJourneyType());
-        if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
-        }
-
-        if (codeRequestType.getJourneyType() != JourneyType.REAUTHENTICATION) {
-            incrementRetryCount();
-        }
-
-        if (hasExceededRetryLimit()) {
-            LOG.info("Exceeded code retry limit");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
-        }
 
         var authAppSecret =
                 nonRegistrationJourneyTypes.contains(codeRequest.getJourneyType())
@@ -122,8 +91,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             LOG.info("Auth code is not valid");
             return Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED);
         }
-        LOG.info("Auth code valid. Resetting code request count");
-        resetCodeIncorrectEntryCount();
+        LOG.info("Auth code valid");
 
         return Optional.empty();
     }

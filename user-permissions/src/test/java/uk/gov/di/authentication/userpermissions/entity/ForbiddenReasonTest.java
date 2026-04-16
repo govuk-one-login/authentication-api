@@ -1,9 +1,10 @@
 package uk.gov.di.authentication.userpermissions.entity;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ForbiddenReasonTest {
 
@@ -38,5 +39,28 @@ class ForbiddenReasonTest {
         // Then
         assertNotNull(result);
         assertEquals("EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT", result);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = ForbiddenReason.class,
+            names = {
+                "EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT",
+                "EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT"
+            })
+    void hasExceededOtpSubmissionLimitReturnsTrueForOtpSubmissionReasons(ForbiddenReason reason) {
+        assertTrue(reason.hasExceededOtpSubmissionLimit());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = ForbiddenReason.class,
+            names = {
+                "EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT",
+                "EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT"
+            },
+            mode = EnumSource.Mode.EXCLUDE)
+    void hasExceededOtpSubmissionLimitReturnsFalseForOtherReasons(ForbiddenReason reason) {
+        assertFalse(reason.hasExceededOtpSubmissionLimit());
     }
 }
