@@ -25,12 +25,14 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,10 +42,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
-import uk.gov.di.authentication.frontendapi.entity.amc.AMCDownstreamScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccountDataScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccountManagementScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
@@ -135,22 +137,23 @@ class AMCServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final JwtService jwtService = mock(JwtService.class);
+    private final AccessTokenConstructorService accessTokenConstructorService =
+            mock(AccessTokenConstructorService.class);
     private ECKey accessTokenKey;
     private ECKey otherAccessTokenKey;
     private ECKey compositeJWTKey;
 
     @BeforeEach
     void setup() throws Exception {
-        amcService = new AMCService(configurationService, NOW_CLOCK, jwtService);
+        amcService =
+                new AMCService(
+                        configurationService, NOW_CLOCK, jwtService, accessTokenConstructorService);
         accessTokenKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         compositeJWTKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         otherAccessTokenKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-        mockJwtSigning(
-                Map.of(
-                        ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
-                        COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey,
-                        OTHER_ACCESS_TOKEN_KEY_ALIAS, otherAccessTokenKey));
+        mockJwtSigning(Map.of(COMPOSITE_JWT_KEY_ALIAS, compositeJWTKey));
+        mockAccessTokenCreation();
         mockJwtEncryption();
         authSessionItem =
                 new AuthSessionItem()
@@ -274,7 +277,6 @@ class AMCServiceTest {
 
         @Test
         void shouldReturnFailureWhenSignatureTranscodingFails() {
-
             when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
                     .thenReturn(Result.failure(JwtFailureReason.TRANSCODING_ERROR));
 
@@ -318,7 +320,42 @@ class AMCServiceTest {
             when(jwtService.signJWT(any(), any())).thenReturn(Result.failure(signingFailureReason));
 
             AMCService serviceWithMockJwt =
-                    new AMCService(configurationService, NOW_CLOCK, jwtService);
+                    new AMCService(
+                            configurationService,
+                            NOW_CLOCK,
+                            jwtService,
+                            accessTokenConstructorService);
+
+            var result =
+                    serviceWithMockJwt.buildAuthorizationResult(
+                            INTERNAL_PAIRWISE_ID,
+                            AMCScope.ACCOUNT_DELETE,
+                            authSessionItem,
+                            PUBLIC_SUBJECT,
+                            REDIRECT_URI,
+                            ACCESS_TOKEN_CONFIG,
+                            TEST_PUBLIC_ENCRYPTION_KEY,
+                            STATE);
+
+            assertTrue(result.isFailure());
+            assertEquals(expectedFailureReason, result.getFailure());
+        }
+
+        @ParameterizedTest
+        @MethodSource("jwtFailureReasonsToAMCFailureReasons")
+        void shouldMapJwtFailureReasonsFromCreateSignedAccessTokenToAMCFailureReason(
+                JwtFailureReason jwtFailureReason, AMCFailureReason expectedFailureReason) {
+            var externalApiAccessTokenService = mock(AccessTokenConstructorService.class);
+            when(externalApiAccessTokenService.createSignedAccessToken(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(Result.failure(jwtFailureReason));
+
+            AMCService serviceWithMockJwt =
+                    new AMCService(
+                            configurationService,
+                            NOW_CLOCK,
+                            jwtService,
+                            externalApiAccessTokenService);
 
             var result =
                     serviceWithMockJwt.buildAuthorizationResult(
@@ -367,7 +404,7 @@ class AMCServiceTest {
         }
 
         private void assertAccessTokenClaims(
-                AMCDownstreamScope expectedScope,
+                AccessTokenScope expectedScope,
                 String expectedAudience,
                 JWTClaimsSet accessTokenClaims) {
             assertAll(
@@ -566,6 +603,59 @@ class AMCServiceTest {
                             } catch (JOSEException | ParseException e) {
                                 throw new RuntimeException(e);
                             }
+                        });
+    }
+
+    private void mockAccessTokenCreation() {
+        when(accessTokenConstructorService.createSignedAccessToken(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenAnswer(
+                        invocation -> {
+                            String internalPairwiseSubject = invocation.getArgument(0);
+                            AccessTokenScope scope = invocation.getArgument(1);
+                            AuthSessionItem session = invocation.getArgument(2);
+                            Date issueTime = invocation.getArgument(3);
+                            Date expiryDate = invocation.getArgument(4);
+                            String audience = invocation.getArgument(5);
+                            String issuer = invocation.getArgument(6);
+                            String clientId = invocation.getArgument(7);
+                            String signingKeyAlias = invocation.getArgument(8);
+
+                            ECKey key =
+                                    Map.of(
+                                                    ACCESS_TOKEN_KEY_ALIAS, accessTokenKey,
+                                                    OTHER_ACCESS_TOKEN_KEY_ALIAS,
+                                                            otherAccessTokenKey)
+                                            .get(signingKeyAlias);
+
+                            var claims =
+                                    new JWTClaimsSet.Builder()
+                                            .claim("scope", scope.getValue())
+                                            .issuer(issuer)
+                                            .audience(audience)
+                                            .expirationTime(expiryDate)
+                                            .issueTime(issueTime)
+                                            .notBeforeTime(issueTime)
+                                            .subject(internalPairwiseSubject)
+                                            .claim("client_id", clientId)
+                                            .claim("sid", session.getSessionId())
+                                            .jwtID(UUID.randomUUID().toString())
+                                            .build();
+
+                            SignedJWT signedJWT =
+                                    new SignedJWT(
+                                            new JWSHeader.Builder(JWSAlgorithm.ES256)
+                                                    .type(com.nimbusds.jose.JOSEObjectType.JWT)
+                                                    .keyID(key.getKeyID())
+                                                    .build(),
+                                            claims);
+                            signedJWT.sign(new ECDSASigner(key));
+
+                            return Result.success(
+                                    new BearerAccessToken(
+                                            signedJWT.serialize(),
+                                            3600L,
+                                            new Scope(scope.getValue())));
                         });
     }
 }

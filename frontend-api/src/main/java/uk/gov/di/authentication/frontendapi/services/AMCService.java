@@ -6,7 +6,6 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
@@ -21,7 +20,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
-import uk.gov.di.authentication.frontendapi.entity.amc.AMCDownstreamScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
@@ -48,16 +46,19 @@ public class AMCService {
     private final ConfigurationService configurationService;
     private final NowHelper.NowClock nowClock;
     private final JwtService jwtService;
+    private final AccessTokenConstructorService accessTokenConstructorService;
     private static final Logger LOG = LogManager.getLogger(AMCService.class);
     private static final Long CLIENT_ASSERTION_LIFETIME = 5L;
 
     public AMCService(
             ConfigurationService configurationService,
             NowHelper.NowClock nowClock,
-            JwtService jwtService) {
+            JwtService jwtService,
+            AccessTokenConstructorService accessTokenConstructorService) {
         this.configurationService = configurationService;
         this.nowClock = nowClock;
         this.jwtService = jwtService;
+        this.accessTokenConstructorService = accessTokenConstructorService;
     }
 
     public Result<AMCFailureReason, AMCAuthorizationUrlAndCookie> buildAuthorizationResult(
@@ -206,14 +207,18 @@ public class AMCService {
 
         for (AccessTokenConfig config : configs) {
             var result =
-                    createAccessToken(
-                            internalPairwiseSubject,
-                            config.scope(),
-                            authSessionItem,
-                            issueTime,
-                            expiryDate,
-                            config.audience(),
-                            config.signingKey());
+                    accessTokenConstructorService
+                            .createSignedAccessToken(
+                                    internalPairwiseSubject,
+                                    config.scope(),
+                                    authSessionItem,
+                                    issueTime,
+                                    expiryDate,
+                                    config.audience(),
+                                    configurationService.getAuthIssuerClaim(),
+                                    configurationService.getAMCClientId(),
+                                    config.signingKey())
+                            .mapFailure(this::mapJwtFailureReason);
 
             if (result.isFailure()) {
                 return Result.failure(result.getFailure());
@@ -222,39 +227,6 @@ public class AMCService {
             accessTokens.put(config.accessTokenName(), result.getSuccess());
         }
         return Result.success(accessTokens);
-    }
-
-    private Result<AMCFailureReason, BearerAccessToken> createAccessToken(
-            String internalPairwiseSubject,
-            AMCDownstreamScope scope,
-            AuthSessionItem authSessionItem,
-            Date issueTime,
-            Date expiryDate,
-            String audience,
-            String signingKey) {
-        var claims =
-                new JWTClaimsSet.Builder()
-                        .claim("scope", scope.getValue())
-                        .issuer(configurationService.getAuthIssuerClaim())
-                        .audience(audience)
-                        .expirationTime(expiryDate)
-                        .issueTime(issueTime)
-                        .notBeforeTime(issueTime)
-                        .subject(internalPairwiseSubject)
-                        .claim("client_id", configurationService.getAMCClientId())
-                        .claim("sid", authSessionItem.getSessionId())
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
-
-        return jwtService
-                .signJWT(claims, signingKey)
-                .map(
-                        signedJWT ->
-                                new BearerAccessToken(
-                                        signedJWT.serialize(),
-                                        configurationService.getSessionExpiry(),
-                                        new Scope(scope.getValue())))
-                .mapFailure(this::mapJwtFailureReason);
     }
 
     private JWTAuthenticationClaimsSet buildClientAssertionJwt() {
