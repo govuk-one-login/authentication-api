@@ -10,7 +10,47 @@ updates:
     open-pull-requests-limit: 100
     ignore:
       - dependency-name: "com.nimbusds:oauth2-oidc-sdk"
+      - dependency-name: "org.junit*:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "org.mockito:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "org.hamcrest:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "org.wiremock:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "com.approvaltests:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "org.awaitility:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "uk.org.webcompere:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "au.com.dius.pact*:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "net.javacrumbs.json-unit:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "software.amazon.awssdk:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "com.amazonaws:*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "aws.sdk.kotlin:*"
+        update-types: ["version-update:semver-patch"]
     groups:
+      dev-dependencies:
+        patterns:
+          - "org.junit*:*"
+          - "org.mockito:*"
+          - "org.hamcrest:*"
+          - "org.wiremock:*"
+          - "com.approvaltests:*"
+          - "org.awaitility:*"
+          - "uk.org.webcompere:*"
+          - "au.com.dius.pact*:*"
+          - "net.javacrumbs.json-unit:*"
+      aws-dependencies:
+        patterns:
+          - "software.amazon.awssdk:*"
+          - "com.amazonaws:*"
+          - "aws.sdk.kotlin:*"
       gradle-security-updates:
         applies-to: security-updates
         update-types:
