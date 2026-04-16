@@ -147,6 +147,10 @@ subprojects {
                         because 'CVE-2026-1605 is fixed in org.eclipse.jetty:jetty-server:12.0.32 and higher'
                     }
 
+                    add(conf.name, 'org.eclipse.jetty:jetty-http:[12.0.33,12.1.0)') {
+                        because 'CVE-2026-2332 is fixed in org.eclipse.jetty:jetty-http:12.0.33 and higher'
+                    }
+
                     // Jackson constraints
                     add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
                         because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
