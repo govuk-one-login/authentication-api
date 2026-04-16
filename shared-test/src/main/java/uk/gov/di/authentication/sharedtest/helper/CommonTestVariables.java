@@ -32,6 +32,8 @@ public class CommonTestVariables {
     public static final String PUBLIC_SUBJECT_ID = "public-subject-id";
     public static final String JOURNEY_ID = "journey-id";
     public static final String TEST_OTP_CODE = "123456";
+    public static final String INTERNAL_PAIRWISE_ID =
+            "urn:fdc:gov.uk:2022:xH7hrtJCgdi2NEF7TXcOC6SMz8DohdoLo9hWqQMWPRk";
     public static final Map<String, String> VALID_HEADERS =
             Map.ofEntries(
                     Map.entry(
