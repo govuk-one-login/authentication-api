@@ -680,10 +680,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("LEGACY_ACCOUNT_DELETION_TOPIC_ARN");
     }
 
-    private boolean getFlagOrFalse(String envVar) {
-        return System.getenv().containsKey(envVar) && Boolean.parseBoolean(System.getenv(envVar));
-    }
-
     private URI getURIOrDefault(String envVar, String defaultUri) {
         return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
     }
