@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.sharedtest.logging;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -33,6 +34,28 @@ public class LogEventMatcher {
             @Override
             protected boolean matchesSafely(LogEvent item) {
                 var message = item.getMessage().getFormattedMessage();
+
+                return Arrays.stream(values).anyMatch(message::contains);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText(
+                        "a log event with message containing [" + Arrays.asList(values) + "]");
+            }
+        };
+    }
+
+    public static Matcher<LogEvent> withLevelAndMessageContaining(Level level, String... values) {
+        return new TypeSafeMatcher<>() {
+
+            @Override
+            protected boolean matchesSafely(LogEvent item) {
+                var message = item.getMessage().getFormattedMessage();
+
+                if (!item.getLevel().equals(level)) {
+                    return false;
+                }
 
                 return Arrays.stream(values).anyMatch(message::contains);
             }
