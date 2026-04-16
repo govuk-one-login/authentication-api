@@ -108,30 +108,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("REAUTH_ENTER_SMS_CODE_COUNT_TTL", "3600"));
     }
 
-    public boolean supportAccountCreationTTL() {
-        return System.getenv()
-                .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", String.valueOf(false))
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean supportReauthSignoutEnabled() {
-        return System.getenv()
-                .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", String.valueOf(false))
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean supportPasskeys() {
-        return System.getenv()
-                .getOrDefault("SUPPORT_PASSKEYS", String.valueOf(false))
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isAuthenticationAttemptsServiceEnabled() {
-        return System.getenv()
-                .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", String.valueOf(false))
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public long getLockoutDuration() {
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_DURATION", "900"));
     }
@@ -223,12 +199,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
     }
 
-    public boolean isBulkUserEmailEmailSendingEnabled() {
-        return System.getenv()
-                .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public String getBulkUserEmailType() {
         String value = System.getenv().get("BULK_USER_EMAIL_TYPE");
         if (value == null || value.isEmpty()) {
@@ -243,12 +213,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getTicfCRILambdaIdentifier() {
         return System.getenv().getOrDefault("TICF_CRI_LAMBDA_IDENTIFIER", "");
-    }
-
-    public boolean isInvokeTicfCRILambdaEnabled() {
-        return System.getenv()
-                .getOrDefault("INVOKE_TICF_CRI_LAMBDA", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
     }
 
     public URI getAuthenticationAuthCallbackURI() {
@@ -326,12 +290,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean getHeadersCaseInsensitive() {
         return false;
-    }
-
-    public boolean isIdentityEnabled() {
-        return System.getenv()
-                .getOrDefault("IDENTITY_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
     }
 
     public long getIDTokenExpiry() {
@@ -467,26 +425,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP"));
     }
 
-    public boolean isAccountInterventionServiceCallInAuthenticateEnabled() {
-        return System.getenv()
-                .getOrDefault(
-                        "ACCOUNT_INTERVENTION_SERVICE_CALL_IN_AUTHENTICATE_ENABLED",
-                        FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isTestClientsEnabled() {
-        return System.getenv()
-                .getOrDefault("TEST_CLIENTS_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isPhoneCheckerWithReplyEnabled() {
-        return System.getenv()
-                .getOrDefault("PHONE_CHECKER_WITH_RETRY", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public String getSyntheticsUsers() {
         return System.getenv().getOrDefault("SYNTHETICS_USERS", "");
     }
@@ -579,24 +517,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getTicfCriServiceURI() {
         return System.getenv("TICF_CRI_SERVICE_URI");
-    }
-
-    public boolean abortOnAccountInterventionsErrorResponse() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean accountInterventionsServiceActionEnabled() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isAccountInterventionServiceCallEnabled() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
     }
 
     public long getAccountInterventionServiceCallTimeout() {
@@ -694,18 +614,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("IPV_AUTHORISATION_CLIENT_ID", "");
     }
 
-    public boolean isMfaMethodManagementApiEnabled() {
-        return System.getenv()
-                .getOrDefault("MFA_METHOD_MANAGEMENT_API_ENABLED", String.valueOf(false))
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isUsingStronglyConsistentReads() {
-        return System.getenv()
-                .getOrDefault("USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public URL getIpvJwksUrl() throws MalformedURLException {
         try {
             return new URL(System.getenv().getOrDefault("IPV_JWKS_URL", ""));
@@ -715,54 +623,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public boolean isIpvJwksCallEnabled() {
-        return System.getenv()
-                .getOrDefault("IPV_JWKS_CALL_ENABLED", String.valueOf(false))
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public double getDomesticSmsQuotaThreshold() {
         return Double.parseDouble(
                 System.getenv().getOrDefault("DOMESTIC_SMS_QUOTA_THRESHOLD", "600000"));
     }
 
-    public boolean isInternationalSmsSendingEnabled() {
-        return System.getenv()
-                .getOrDefault("INTERNATIONAL_SMS_SENDING_ENABLED", "true")
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public double getInternationalSmsQuotaThreshold() {
         return Double.parseDouble(
                 System.getenv().getOrDefault("INTERNATIONAL_SMS_QUOTA_THRESHOLD", "15000"));
-    }
-
-    public boolean isAccountManagementInternationalSmsEnabled() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", "true")
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isInternalApiNewInternationalSmsEnabled() {
-        return System.getenv()
-                .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", "true")
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isForcedMFAResetAfterMFACheckEnabled() {
-        return System.getenv()
-                .getOrDefault("FORCED_MFA_RESET_AFTER_MFA_CHECK_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isTestSigningKeyEnabled() {
-        return System.getenv()
-                .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isBulkAccountDeletionEnabled() {
-        return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
     }
 
     public String getEmailSqsLambdaFunctionName() {
@@ -860,12 +728,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("AD_JWKS_BUCKET_NAME", "");
     }
 
-    public boolean isEnhancedAuthCodeProtectionEnabled() {
-        return System.getenv()
-                .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public String getAccountDataURI() {
         return System.getenv("ACCOUNT_DATA_API_URI");
     }
@@ -882,5 +744,144 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             LOG.error("Invalid AMC JWKS URL: {}", e.getMessage());
             throw new MalformedURLException(e.getMessage());
         }
+    }
+
+    // FEATURE SWITCHES
+    public boolean isEnhancedAuthCodeProtectionEnabled() {
+        return System.getenv()
+                .getOrDefault("ENHANCED_AUTH_CODE_PROTECTION_ENABLED", "false")
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isTestSigningKeyEnabled() {
+        return System.getenv()
+                .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isBulkAccountDeletionEnabled() {
+        return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
+    }
+
+    public boolean supportAccountCreationTTL() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean supportReauthSignoutEnabled() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean supportPasskeys() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_PASSKEYS", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isAuthenticationAttemptsServiceEnabled() {
+        return System.getenv()
+                .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isBulkUserEmailEmailSendingEnabled() {
+        return System.getenv()
+                .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isInvokeTicfCRILambdaEnabled() {
+        return System.getenv()
+                .getOrDefault("INVOKE_TICF_CRI_LAMBDA", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isIdentityEnabled() {
+        return System.getenv()
+                .getOrDefault("IDENTITY_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isAccountInterventionServiceCallInAuthenticateEnabled() {
+        return System.getenv()
+                .getOrDefault(
+                        "ACCOUNT_INTERVENTION_SERVICE_CALL_IN_AUTHENTICATE_ENABLED",
+                        FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isTestClientsEnabled() {
+        return System.getenv()
+                .getOrDefault("TEST_CLIENTS_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isAccountManagementInternationalSmsEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED", "true")
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isInternalApiNewInternationalSmsEnabled() {
+        return System.getenv()
+                .getOrDefault("INTERNAL_API_NEW_INTERNATIONAL_SMS_ENABLED", "true")
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isForcedMFAResetAfterMFACheckEnabled() {
+        return System.getenv()
+                .getOrDefault("FORCED_MFA_RESET_AFTER_MFA_CHECK_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isMfaMethodManagementApiEnabled() {
+        return System.getenv()
+                .getOrDefault("MFA_METHOD_MANAGEMENT_API_ENABLED", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isUsingStronglyConsistentReads() {
+        return System.getenv()
+                .getOrDefault("USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isInternationalSmsSendingEnabled() {
+        return System.getenv()
+                .getOrDefault("INTERNATIONAL_SMS_SENDING_ENABLED", "true")
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean accountInterventionsServiceActionEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isAccountInterventionServiceCallEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isIpvJwksCallEnabled() {
+        return System.getenv()
+                .getOrDefault("IPV_JWKS_CALL_ENABLED", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean abortOnAccountInterventionsErrorResponse() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isPhoneCheckerWithReplyEnabled() {
+        return System.getenv()
+                .getOrDefault("PHONE_CHECKER_WITH_RETRY", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 }
