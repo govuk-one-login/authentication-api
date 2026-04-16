@@ -23,6 +23,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
 import uk.gov.di.authentication.frontendapi.entity.amc.TransportJWTConfig;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.frontendapi.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -73,7 +74,10 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                 new AMCService(
                         configurationService,
                         new NowHelper.NowClock(Clock.systemUTC()),
-                        new JwtService(new KmsConnectionService(configurationService)));
+                        new JwtService(new KmsConnectionService(configurationService)),
+                        new AccessTokenConstructorService(
+                                new JwtService(new KmsConnectionService(configurationService)),
+                                configurationService));
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
     }
 

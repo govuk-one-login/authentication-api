@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.frontendapi.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -54,7 +55,10 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                 new AMCService(
                         configurationService,
                         new NowHelper.NowClock(Clock.systemUTC()),
-                        new JwtService(new KmsConnectionService(configurationService)));
+                        new JwtService(new KmsConnectionService(configurationService)),
+                        new AccessTokenConstructorService(
+                                new JwtService(new KmsConnectionService(configurationService)),
+                                configurationService));
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
     }
 
