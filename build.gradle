@@ -174,16 +174,16 @@ subprojects {
                         because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                     }
 
-                    add(conf.name, 'org.apache.logging.log4j:log4j-core:[2.25.3,3.0.0)') {
-                        because 'CVE-2025-68161 is fixed in 2.25.3 and higher'
+                    add(conf.name, 'org.apache.logging.log4j:log4j-core:[2.25.4,3.0.0)') {
+                        because 'CVE-2026-34480 is fixed in 2.25.4 and higher'
                     }
                 }
             }
         }
 
         constraints {
-            spotbugs('org.apache.logging.log4j:log4j-core:[2.25.3,3.0.0)') {
-                because 'CVE-2025-68161 is fixed in 2.25.3 and higher'
+            spotbugs('org.apache.logging.log4j:log4j-core:[2.25.4,3.0.0)') {
+                because 'CVE-2026-34480 is fixed in 2.25.4 and higher'
             }
         }
 
@@ -408,8 +408,8 @@ dependencies {
     jacocoAggregation subprojects
 
     constraints {
-        spotbugs('org.apache.logging.log4j:log4j-core:[2.25.3,)') {
-            because 'CVE-2025-68161 is fixed in 2.25.3 and higher'
+        spotbugs('org.apache.logging.log4j:log4j-core:[2.25.4,)') {
+            because 'CVE-2026-34480 is fixed in 2.25.4 and higher'
         }
     }
 }
