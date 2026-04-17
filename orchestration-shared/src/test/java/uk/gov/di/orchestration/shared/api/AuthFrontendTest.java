@@ -139,4 +139,11 @@ class AuthFrontendTest {
         var actualUri = authFrontend.errorIpvCallbackURI();
         assertThat(actualUri, equalTo(expectedUri));
     }
+
+    @Test
+    void sessionEndedURIReturnsCorrectUri() {
+        var expectedUri = URI.create("https://auth.frontend/session-ended");
+        var actualUri = authFrontend.sessionEndedUri();
+        assertThat(actualUri, equalTo(expectedUri));
+    }
 }
