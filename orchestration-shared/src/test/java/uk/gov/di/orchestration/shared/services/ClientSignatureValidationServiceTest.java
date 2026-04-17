@@ -14,19 +14,24 @@ import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentMatchers;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import software.amazon.awssdk.services.lambda.model.InvokeResponse;
+import software.amazon.awssdk.services.lambda.model.LambdaException;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
+import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -39,10 +44,13 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.nimbusds.jose.JWSAlgorithm.RS256;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withLevelAndMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class ClientSignatureValidationServiceTest {
@@ -62,6 +70,10 @@ class ClientSignatureValidationServiceTest {
 
     private ClientRegistry client;
     private KeyPair keyPair;
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(ClientSignatureValidationService.class);
 
     @BeforeEach
     void setup() {
@@ -185,6 +197,42 @@ class ClientSignatureValidationServiceTest {
             assertThrows(
                     JwksException.class,
                     () -> clientSignatureValidationService.validate(signedJWT, client));
+        }
+
+        @Test
+        void shouldLogAndThrowJwksExceptionWhenInvokeReturnsLambdaException() {
+            when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any()))
+                    .thenThrow(LambdaException.class);
+            var signedJWT = generateSignedJWT(keyPair.getPrivate());
+
+            assertThrows(
+                    JwksException.class,
+                    () -> clientSignatureValidationService.validate(signedJWT, client));
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withLevelAndMessageContaining(
+                                    Level.ERROR,
+                                    "LambdaException thrown while invoking FetchJwksFunction")));
+        }
+
+        @Test
+        void shouldLogAndThrowJwksExceptionWhenInvokeReturnsException() {
+            when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any()))
+                    .thenThrow(SdkClientException.class);
+            var signedJWT = generateSignedJWT(keyPair.getPrivate());
+
+            assertThrows(
+                    JwksException.class,
+                    () -> clientSignatureValidationService.validate(signedJWT, client));
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withLevelAndMessageContaining(
+                                    Level.ERROR,
+                                    "Exception thrown while invoking FetchJwksFunction")));
         }
 
         @Test

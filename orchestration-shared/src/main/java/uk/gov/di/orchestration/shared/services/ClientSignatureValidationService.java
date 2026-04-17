@@ -14,6 +14,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.lambda.LambdaClient;
@@ -44,6 +45,7 @@ public class ClientSignatureValidationService {
 
     private static final Logger LOG = LogManager.getLogger(ClientSignatureValidationService.class);
     private static final String TOKEN_PATH = "token";
+    public static final String MISSING = "missing";
 
     private final OidcAPI oidcAPI;
     private final ConfigurationService configurationService;
@@ -202,7 +204,26 @@ public class ClientSignatureValidationService {
                             .build();
             return awsLambda.invoke(request);
         } catch (LambdaException e) {
-            LOG.error("LambdaException thrown while invoking FetchJwksFunction");
+            var errorMessage =
+                    Optional.ofNullable(e.awsErrorDetails())
+                            .map(AwsErrorDetails::errorMessage)
+                            .orElse(MISSING);
+
+            var errorCode =
+                    Optional.ofNullable(e.awsErrorDetails())
+                            .map(AwsErrorDetails::errorCode)
+                            .orElse(MISSING);
+
+            var requestId = Optional.ofNullable(e.requestId()).orElse(MISSING);
+
+            LOG.error(
+                    "LambdaException thrown while invoking FetchJwksFunction: {}\n Error code: {}\n Request ID: {}",
+                    errorMessage,
+                    errorCode,
+                    requestId);
+            throw new JwksException(e.getMessage());
+        } catch (Exception e) {
+            LOG.error("Exception thrown while invoking FetchJwksFunction: ", e);
             throw new JwksException(e.getMessage());
         }
     }
