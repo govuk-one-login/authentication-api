@@ -65,6 +65,12 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.STATUS_CODE;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.IPV_TOKEN_REQUEST_FAILED;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.IPV_TOKEN_REQUEST_SUCCESSFUL;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.IPV_USER_INFO_REQUEST_FAILED;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.IPV_USER_INFO_REQUEST_SUCCESSFUL;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -98,6 +104,7 @@ public class IPVCallbackHandler
     private final CommonFrontend frontend;
     private final IdentityProgressService identityProgressService;
     protected final Json objectMapper = SerializationService.getInstance();
+    private final Metrics metrics;
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -117,7 +124,8 @@ public class IPVCallbackHandler
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             IPVCallbackHelper ipvCallbackHelper,
             CommonFrontend frontend,
-            IdentityProgressService identityProgressService) {
+            IdentityProgressService identityProgressService,
+            Metrics metrics) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -132,6 +140,7 @@ public class IPVCallbackHandler
         this.ipvCallbackHelper = ipvCallbackHelper;
         this.frontend = frontend;
         this.identityProgressService = identityProgressService;
+        this.metrics = metrics;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -155,6 +164,7 @@ public class IPVCallbackHandler
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
         this.frontend = new AuthFrontend(configurationService);
         this.identityProgressService = new IdentityProgressService(configurationService);
+        this.metrics = new Metrics(configurationService);
     }
 
     @Override
@@ -331,6 +341,15 @@ public class IPVCallbackHandler
                                     ipvTokenService.getToken(
                                             input.getQueryStringParameters().get("code")));
             if (!tokenResponse.indicatesSuccess()) {
+
+                metrics.increment(
+                        IPV_TOKEN_REQUEST_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                STATUS_CODE.getValue(),
+                                String.valueOf(tokenResponse.toHTTPResponse().getStatusCode())));
+
                 auditService.submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
                 return RedirectService.redirectToFrontendErrorPageWithErrorLog(
@@ -342,6 +361,10 @@ public class IPVCallbackHandler
             }
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
+
+            metrics.increment(
+                    IPV_TOKEN_REQUEST_SUCCESSFUL.getValue(),
+                    Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
 
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
@@ -356,6 +379,11 @@ public class IPVCallbackHandler
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientId, user);
+
+            metrics.increment(
+                    IPV_USER_INFO_REQUEST_SUCCESSFUL.getValue(),
+                    Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+
             var vtrList = orchClientSession.getVtrList();
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
@@ -497,6 +525,14 @@ public class IPVCallbackHandler
             return RedirectService.redirectToFrontendErrorPageForNoSession(
                     frontend.errorIpvCallbackURI(), e);
         } catch (UnsuccessfulCredentialResponseException e) {
+            metrics.increment(
+                    IPV_USER_INFO_REQUEST_FAILED.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            STATUS_CODE.getValue(),
+                            String.valueOf(e.getHttpCode())));
+
             return RedirectService.redirectToFrontendErrorPageWithWarnLog(frontend.errorURI(), e);
         } catch (IpvCallbackException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(frontend.errorURI(), e);
