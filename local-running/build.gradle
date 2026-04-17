@@ -7,6 +7,12 @@ group = "uk.gov.di.authentication.local"
 version = "unspecified"
 
 dependencies {
+    constraints {
+        implementation('org.eclipse.jetty:jetty-http:[12.1.7,)') {
+            because 'CVE-2026-2332 is fixed in org.eclipse.jetty:jetty-http:12.1.7 and higher'
+        }
+    }
+
     implementation libs.javalin,
             libs.bundles.awsDynamoDb,
             libs.awsKms,
