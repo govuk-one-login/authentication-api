@@ -98,6 +98,7 @@ Resources:
             !Ref AWS::NoValue,
           ]
         - !Ref DynamoInternationalNumberSendCountReadAccessPolicy
+        - !Ref DynamoAuthenticationAttemptReadPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
