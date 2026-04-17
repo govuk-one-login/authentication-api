@@ -89,6 +89,10 @@ import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.A
 import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
 import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.STATUS_CODE;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTH_TOKEN_REQUEST_FAILED;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTH_TOKEN_REQUEST_SUCCESSFUL;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -332,7 +336,19 @@ public class AuthenticationCallbackHandler
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
+
+                metrics.increment(
+                        AUTH_TOKEN_REQUEST_SUCCESSFUL.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
             } else {
+                metrics.increment(
+                        AUTH_TOKEN_REQUEST_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                STATUS_CODE.getValue(),
+                                String.valueOf(tokenResponse.toHTTPResponse().getStatusCode())));
+
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
