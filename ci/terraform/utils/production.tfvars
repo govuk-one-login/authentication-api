@@ -14,10 +14,10 @@ bulk_user_email_type                              = "INTERNATIONAL_NUMBERS_FORCE
 bulk_user_email_audience_load_pause_duration      = 300000
 
 bulk_user_email_send_schedule_enabled    = true
-bulk_user_email_send_schedule_expression = "cron(* 8-14 ? 3-4 2-6 2026)"
+bulk_user_email_send_schedule_expression = "cron(* 8-14 17 4 ? 2026)"
 bulk_user_email_email_sending_enabled    = true
 bulk_user_email_batch_size               = 107
-bulk_user_email_send_mode                = "PENDING"
+bulk_user_email_send_mode                = "DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES"
 bulk_user_email_sender_type              = "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET"
 
 # Logging
