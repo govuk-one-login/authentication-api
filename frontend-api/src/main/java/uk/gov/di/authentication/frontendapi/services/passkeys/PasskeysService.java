@@ -35,6 +35,11 @@ public class PasskeysService {
     }
 
     public Result<PasskeyRetrieveError, Boolean> hasActivePasskey(String publicSubjectId) {
+        return retrievePasskeys(publicSubjectId).map(response -> !response.passkeys().isEmpty());
+    }
+
+    public Result<PasskeyRetrieveError, PasskeysRetrieveResponse> retrievePasskeys(
+            String publicSubjectId) {
         var accountDataBaseUri = configurationService.getAccountDataURI();
         var getPasskeysRequestUri =
                 buildURI(
@@ -53,8 +58,7 @@ public class PasskeysService {
             }
 
             LOG.info("Successful response received from retrieve passkeys endpoint");
-            return parseResponse(httpResponse)
-                    .map(passkeyRetrieveResponse -> !passkeyRetrieveResponse.passkeys().isEmpty());
+            return parseResponse(httpResponse);
         } catch (IOException e) {
             LOG.error("IOException in retrieve passkeys", e);
             return Result.failure(PasskeyRetrieveError.IO_EXCEPTION);

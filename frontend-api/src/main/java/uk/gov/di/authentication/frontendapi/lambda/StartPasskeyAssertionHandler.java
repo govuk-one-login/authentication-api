@@ -73,9 +73,9 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
         if (userProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.USER_NOT_FOUND);
         }
-        var subjectId = userProfile.get().getSubjectID();
+        var publicSubjectId = userProfile.get().getPublicSubjectID();
 
-        var assertionRequest = passkeyAssertionService.startAssertion(subjectId);
+        var assertionRequest = passkeyAssertionService.startAssertion(publicSubjectId);
 
         String credentialsJson;
         String assertionRequestJsonToStore;
