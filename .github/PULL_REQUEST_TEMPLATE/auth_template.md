@@ -29,7 +29,7 @@ When deprecating session data, split the work into two PRs:
 2. After any sessions containing that data have expired, remove the value’s definition.
 -->
 
-- [ ] Deployment of this PR will not break active user journeys
+- [ ] Assessed the impact on active user sessions and confirmed no breaking changes
 
 <!-- 🚨⚠️ Orchestration and Authentication mutual dependencies ⚠️ 🚨
 
@@ -39,7 +39,7 @@ Check with counterparts to see if changes need to be made in the other team's co
 In particular pay attention to classes representing Session data where changes need to be applied on both sides to avoid deserialization errors.
 -->
 
-- [ ] Impact on orch and auth mutual dependencies has been checked.
+- [ ] Orch and Auth mutual dependencies have been checked for breaking changes
 
 <!-- Changes required to stub-orchestration?
 
@@ -47,7 +47,7 @@ If the contract between Orch and Auth has changed then this may need to be refle
 
 -->
 
-- [ ] No changes required or changes have been made to stub-orchestration.
+- [ ] Stub-orchestration has been updated (or no changes required)
 
 <!-- UCD Review
 When a new feature or front-end change goes live, ensure that a review of it has been performed by UCD. The review may have already taken place, but it is important to check that it did before going live.
@@ -59,7 +59,7 @@ Contact UCD colleagues in the Authentication team to identify the best way to ap
 Delete this item if this PR does not need a UCD review.
 -->
 
-- [ ] A UCD review has been performed.
+- [ ] A UCD review has been performed (or no review required)
 
 <!-- Pairing
 We want to make sure ensemble commits are correctly attributed to the contributors, so everyone who is not the committer should have a separate `Co-authored-by` line in the trailer of the commit.
@@ -67,7 +67,7 @@ We want to make sure ensemble commits are correctly attributed to the contributo
 See this page for more information: https://gds-way.digital.cabinet-office.gov.uk/standards/pair-programming.html#pair-programming-and-version-control
 -->
 
-- [ ] All commits contain one or more `Co-authored-by` lines where pairing or mobbing has taken place
+- [ ] Co-authors have been attributed in commits (using one or more `Co-authored-by` lines) where pairing or mobbing has taken place (or none required)
 
 ## Related PRs
 
