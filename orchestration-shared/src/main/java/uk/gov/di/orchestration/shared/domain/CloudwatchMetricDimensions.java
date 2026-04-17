@@ -7,7 +7,8 @@ public enum CloudwatchMetricDimensions {
     REQUESTED_LEVEL_OF_CONFIDENCE("RequestedLevelOfConfidence"),
     MFA_REQUIRED("MfaRequired"),
     CLIENT_NAME("ClientName"),
-    ACCOUNT_INTERVENTION_STATE("AccountInterventionState");
+    ACCOUNT_INTERVENTION_STATE("AccountInterventionState"),
+    STATUS_CODE("StatusCode");
 
     private String value;
 
