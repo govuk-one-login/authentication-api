@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -107,10 +108,7 @@ class AccountDataCredentialRepositoryTest {
             assertThat(result.isPresent(), is(true));
             assertThat(
                     result.get(),
-                    equalTo(
-                            new ByteArray(
-                                    PUBLIC_SUBJECT_ID.getBytes(
-                                            java.nio.charset.StandardCharsets.UTF_8))));
+                    equalTo(new ByteArray(PUBLIC_SUBJECT_ID.getBytes(StandardCharsets.UTF_8))));
         }
 
         @Test
@@ -128,9 +126,7 @@ class AccountDataCredentialRepositoryTest {
     class GetUsernameForUserHandle {
         @Test
         void returnsEmailWhenUserExists() {
-            var userHandle =
-                    new ByteArray(
-                            PUBLIC_SUBJECT_ID.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            var userHandle = new ByteArray(PUBLIC_SUBJECT_ID.getBytes(StandardCharsets.UTF_8));
             when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                     .thenReturn(
                             Optional.of(
@@ -146,9 +142,7 @@ class AccountDataCredentialRepositoryTest {
 
         @Test
         void returnsEmptyWhenUserNotFound() {
-            var userHandle =
-                    new ByteArray(
-                            PUBLIC_SUBJECT_ID.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            var userHandle = new ByteArray(PUBLIC_SUBJECT_ID.getBytes(StandardCharsets.UTF_8));
             when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                     .thenReturn(Optional.empty());
 
@@ -161,7 +155,7 @@ class AccountDataCredentialRepositoryTest {
     @Nested
     class Lookup {
         private static final ByteArray USER_HANDLE =
-                new ByteArray(PUBLIC_SUBJECT_ID.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                new ByteArray(PUBLIC_SUBJECT_ID.getBytes(StandardCharsets.UTF_8));
 
         @Test
         void returnsRegisteredCredentialWhenFound() {
