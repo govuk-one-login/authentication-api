@@ -9,7 +9,19 @@ public enum CloudwatchMetrics {
     SIGN_IN_NEW_ACCOUNT_BY_CLIENT("SignInNewAccountByClient"),
     SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT("SignInExistingAccountByClient"),
     SUCCESSFUL_TOKEN_ISSUED("SuccessfulTokenIssued"),
-    USER_INFO_RETURNED("UserInfoReturned");
+    USER_INFO_RETURNED("UserInfoReturned"),
+    AUTH_TOKEN_REQUEST_SUCCESSFUL("AuthTokenRequestSuccessful"),
+    AUTH_TOKEN_REQUEST_FAILED("AuthTokenRequestFailed"),
+    AUTH_USER_INFO_REQUEST_SUCCESSFUL("AuthUserInfoRequestSuccessful"),
+    AUTH_USER_INFO_REQUEST_FAILED("AuthUserInfoRequestFailed"),
+    IPV_TOKEN_REQUEST_SUCCESSFUL("IpvTokenRequestSuccessful"),
+    IPV_TOKEN_REQUEST_FAILED("IpvTokenRequestFailed"),
+    IPV_USER_INFO_REQUEST_SUCCESSFUL("IpvUserInfoRequestSuccessful"),
+    IPV_USER_INFO_REQUEST_FAILED("IpvUserInfoRequestFailed"),
+    DOC_APP_TOKEN_REQUEST_SUCCESSFUL("DocAppTokenRequestSuccessful"),
+    DOC_APP_TOKEN_REQUEST_FAILED("DocAppTokenRequestFailed"),
+    DOC_APP_USER_INFO_REQUEST_SUCCESSFUL("DocAppUserInfoRequestSuccessful"),
+    DOC_APP_USER_INFO_REQUEST_FAILED("DocAppUserInfoRequestFailed");
     private String value;
 
     CloudwatchMetrics(String value) {
