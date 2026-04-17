@@ -233,36 +233,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void isCustomDocAppClaimEnabledShouldDefault() {
-        assertFalse(configurationService.isCustomDocAppClaimEnabled());
-    }
-
-    @Test
-    void getDocAppAuthorisationURIShouldDefault() {
-        assertEquals(URI.create(""), configurationService.getDocAppAuthorisationURI());
-    }
-
-    @Test
-    void getDocAppAuthorisationCallbackURIShouldDefault() {
-        assertEquals(URI.create(""), configurationService.getDocAppAuthorisationCallbackURI());
-    }
-
-    @Test
-    void getDocAppAuthorisationClientIdShouldDefault() {
-        assertEquals("", configurationService.getDocAppAuthorisationClientId());
-    }
-
-    @Test
-    void getDocAppJwksUriShouldDefault() {
-        assertEquals(URI.create(""), configurationService.getDocAppJwksUri());
-    }
-
-    @Test
-    void getDocAppTokenSigningKeyAliasShouldNotDefault() {
-        assertNull(configurationService.getDocAppTokenSigningKeyAlias());
-    }
-
-    @Test
     void getDynamoArnPrefixShouldDefault() {
         assertFalse(configurationService.getDynamoArnPrefix().isPresent());
     }
@@ -336,11 +306,6 @@ class ConfigurationServiceTest {
     @Test
     void getHeadersCaseInsensitiveAlwaysFalse() {
         assertFalse(configurationService.getHeadersCaseInsensitive());
-    }
-
-    @Test
-    void isIdentityEnabledShouldDefault() {
-        assertFalse(configurationService.isIdentityEnabled());
     }
 
     @Test
@@ -434,11 +399,6 @@ class ConfigurationServiceTest {
     @Test
     void getReducedLockoutDurationShouldDefault() {
         assertEquals(900, configurationService.getReducedLockoutDuration());
-    }
-
-    @Test
-    void sessionCookieMaxAgeShouldEqualDefaultWhenEnvVarUnset() {
-        assertEquals(3600, configurationService.getSessionCookieMaxAge());
     }
 
     @Test
@@ -567,13 +527,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getCredentialStoreURIShouldDefault() {
-        assertEquals(
-                URI.create("https://credential-store.account.gov.uk"),
-                configurationService.getCredentialStoreURI());
-    }
-
-    @Test
     void getLegacyAccountDeletionTopicArnShouldNotDefault() {
         assertNull(configurationService.getLegacyAccountDeletionTopicArn());
     }
@@ -613,11 +566,6 @@ class ConfigurationServiceTest {
     @Test
     void getIPVAuthorisationClientIdShouldDefault() {
         assertEquals("", configurationService.getIPVAuthorisationClientId());
-    }
-
-    @Test
-    void getSessionCookieAttributesShouldEqualDefaultWhenEnvVarUnset() {
-        assertEquals("Secure; HttpOnly;", configurationService.getSessionCookieAttributes());
     }
 
     @Test
