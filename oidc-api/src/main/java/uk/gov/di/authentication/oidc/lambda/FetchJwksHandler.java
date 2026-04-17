@@ -14,6 +14,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class FetchJwksHandler implements RequestHandler<Map<String, String>, String> {
@@ -38,6 +40,7 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Str
     @Override
     public String handleRequest(Map<String, String> event, Context context) {
         attachTraceId();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         String url = event.get("url");
         String keyId = event.get("keyId");
         final String errorResponse = "error";
