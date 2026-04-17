@@ -1,5 +1,6 @@
 package uk.gov.di.accountmanagement.services;
 
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
@@ -21,9 +22,10 @@ public class AwsSnsClient {
         var builder =
                 SnsClient.builder()
                         .region(Region.of(region))
-                        .credentialsProvider(EnvironmentVariableCredentialsProvider.create());
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build());
         if (endpointUri != null && !endpointUri.isEmpty()) {
-            builder.endpointOverride(URI.create(endpointUri));
+            builder.endpointOverride(URI.create(endpointUri))
+                    .credentialsProvider(EnvironmentVariableCredentialsProvider.create());
         }
         this.snsClient = builder.build();
         this.topicArn = topicArn;
