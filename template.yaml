@@ -8237,8 +8237,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-FetchJwks-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} FetchJwks lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} FetchJwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8277,8 +8282,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-OpenIdConfiguration-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} OpenIdConfiguration lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} OpenIdConfiguration lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8317,8 +8327,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-trustmark-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8356,8 +8371,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-DocAppCallback-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} DocAppCallback lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} DocAppCallback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8394,8 +8414,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-TokenFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} TokenFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} TokenFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8432,8 +8457,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-LogoutFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} LogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} LogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8470,8 +8500,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-AuthenticationCallbackFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthenticationCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthenticationCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8509,8 +8544,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-JwksFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} JwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} JwksFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8548,8 +8588,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-AuthorisationFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthorisationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthorisationFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8587,8 +8632,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-UserInfoFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} UserInfoFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} UserInfoFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8626,8 +8676,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-AuthCodeFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthCodeFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthCodeFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8667,8 +8722,10 @@ Resources:
     Condition: IsNotProduction
     Properties:
       AlarmName: !Sub ${Environment}-UpdateClientConfigFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} UpdateClientConfigFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} UpdateClientConfigFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8708,8 +8765,10 @@ Resources:
     Condition: IsNotProduction
     Properties:
       AlarmName: !Sub ${Environment}-ClientRegistrationFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} ClientRegistrationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} ClientRegistrationFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8747,8 +8806,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-IpvCallbackFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} IpvCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} IpvCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8787,8 +8851,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-SpotResponseFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} SpotResponseFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} SpotResponseFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8826,8 +8895,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-StorageTokenJwkFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} StorageTokenJwkFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} StorageTokenJwkFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8864,8 +8938,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-IpvJwksFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} IpvJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} IpvJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8902,8 +8981,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-AuthJwksFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8940,8 +9024,13 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-GlobalLogoutFunction-error-anomaly-alarm
-      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} GlobalLogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: false
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} GlobalLogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
