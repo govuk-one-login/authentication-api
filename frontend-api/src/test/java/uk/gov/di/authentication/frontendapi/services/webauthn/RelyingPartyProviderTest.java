@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -20,6 +22,8 @@ import static org.mockito.Mockito.when;
 class RelyingPartyProviderTest {
 
     @Mock private ConfigurationService configurationService;
+    private final PasskeysService passkeysService = mock(PasskeysService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
 
     private static final String RELYING_PARTY_ID_A = "test.example.com";
     private static final String RELYING_PARTY_NAME_A = "Test Service";
@@ -37,7 +41,9 @@ class RelyingPartyProviderTest {
     class Provide {
         @Test
         void returnsRelyingPartyInstance() {
-            RelyingParty result = RelyingPartyProvider.provide(configurationService);
+            RelyingParty result =
+                    RelyingPartyProvider.provide(
+                            configurationService, passkeysService, authenticationService);
 
             assertThat(result, is(notNullValue()));
             assertThat(result.getIdentity().getId(), equalTo(RELYING_PARTY_ID_A));
@@ -46,8 +52,12 @@ class RelyingPartyProviderTest {
 
         @Test
         void returnsSameInstanceOnMultipleCalls() {
-            RelyingParty first = RelyingPartyProvider.provide(configurationService);
-            RelyingParty second = RelyingPartyProvider.provide(configurationService);
+            RelyingParty first =
+                    RelyingPartyProvider.provide(
+                            configurationService, passkeysService, authenticationService);
+            RelyingParty second =
+                    RelyingPartyProvider.provide(
+                            configurationService, passkeysService, authenticationService);
 
             assertThat(first, sameInstance(second));
         }
@@ -58,8 +68,12 @@ class RelyingPartyProviderTest {
             when(otherConfigService.getWebAuthnRelyingPartyId()).thenReturn(RELYING_PARTY_ID_B);
             when(otherConfigService.getWebAuthnRelyingPartyName()).thenReturn(RELYING_PARTY_NAME_B);
 
-            RelyingParty first = RelyingPartyProvider.provide(configurationService);
-            RelyingParty second = RelyingPartyProvider.provide(otherConfigService);
+            RelyingParty first =
+                    RelyingPartyProvider.provide(
+                            configurationService, passkeysService, authenticationService);
+            RelyingParty second =
+                    RelyingPartyProvider.provide(
+                            otherConfigService, passkeysService, authenticationService);
 
             assertThat(first, not(sameInstance(second)));
             assertThat(first.getIdentity().getId(), equalTo(RELYING_PARTY_ID_A));

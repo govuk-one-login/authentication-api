@@ -59,7 +59,7 @@ class PasskeysServiceTest {
 
         @MethodSource("successfulTestCases")
         @ParameterizedTest
-        void shouldReturnTheExpectedResultForASuccessfulPasskeysResponse(
+        void hasActivePasskeyShouldReturnTheExpectedResultForASuccessfulPasskeysResponse(
                 List<String> returnedPasskeys, boolean expectedResult)
                 throws IOException, InterruptedException {
             when(httpResponse.body()).thenReturn(passkeyResponse(returnedPasskeys));
@@ -77,12 +77,31 @@ class PasskeysServiceTest {
             var hasActivePasskey = result.getSuccess();
             assertEquals(expectedResult, hasActivePasskey);
         }
+
+        @Test
+        void retrievePasskeysShouldReturnFullResponseOnSuccess()
+                throws IOException, InterruptedException {
+            when(httpResponse.body())
+                    .thenReturn(passkeyResponse(List.of(aPasskeyWithId("123456"))));
+            when(httpResponse.statusCode()).thenReturn(200);
+            when(httpClient.send(
+                            argThat(
+                                    request ->
+                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                            any()))
+                    .thenReturn(httpResponse);
+
+            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID);
+            assertTrue(result.isSuccess());
+            assertEquals(1, result.getSuccess().passkeys().size());
+            assertEquals("123456", result.getSuccess().passkeys().get(0).passkeyId());
+        }
     }
 
     @Nested
     class FailureCases {
         @Test
-        void shouldReturnFailureWhenAccountDataApiReturnsANon200ResponseCode()
+        void hasActivePasskeyShouldReturnFailureWhenAccountDataApiReturnsANon200ResponseCode()
                 throws IOException, InterruptedException {
             when(httpResponse.statusCode()).thenReturn(500);
             when(httpClient.send(
@@ -102,7 +121,7 @@ class PasskeysServiceTest {
         @ValueSource(strings = {"{ invalid json ", "{\"foo\": \"bar\"}"})
         @ParameterizedTest
         void
-                shouldReturnFailureWhenAccountDataApiResponseReturnsResponseThatCannotBeParsedAsPasskeysRetrieveResponse(
+                hasActivePasskeyShouldReturnFailureWhenAccountDataApiResponseReturnsResponseThatCannotBeParsedAsPasskeysRetrieveResponse(
                         String invalidResponseBody) throws IOException, InterruptedException {
             when(httpResponse.body()).thenReturn(invalidResponseBody);
             when(httpResponse.statusCode()).thenReturn(200);
@@ -131,7 +150,7 @@ class PasskeysServiceTest {
 
         @MethodSource("exceptionsToExpectedErrors")
         @ParameterizedTest
-        void shouldReturnFailureWhenAccountDataApiThrowsAnIOException(
+        void hasActivePasskeyShouldReturnFailureWhenAccountDataApiThrowsAnIOException(
                 Exception e, PasskeyRetrieveError expectedError)
                 throws IOException, InterruptedException {
             when(httpClient.send(
@@ -146,6 +165,22 @@ class PasskeysServiceTest {
 
             var failure = result.getFailure();
             assertEquals(expectedError, failure);
+        }
+
+        @Test
+        void shouldReturnFailureWhenApiReturnsNon200() throws IOException, InterruptedException {
+            when(httpResponse.statusCode()).thenReturn(500);
+            when(httpClient.send(
+                            argThat(
+                                    request ->
+                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                            any()))
+                    .thenReturn(httpResponse);
+
+            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID);
+            assertTrue(result.isFailure());
+            assertEquals(
+                    PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, result.getFailure());
         }
     }
 

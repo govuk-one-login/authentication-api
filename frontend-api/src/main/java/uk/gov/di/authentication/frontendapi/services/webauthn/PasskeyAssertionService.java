@@ -25,8 +25,8 @@ public class PasskeyAssertionService {
         this.jsonParser = jsonParser;
     }
 
-    public AssertionRequest startAssertion(String subjectId) {
-        var userHandle = new ByteArray(subjectId.getBytes(StandardCharsets.UTF_8));
+    public AssertionRequest startAssertion(String publicSubjectId) {
+        var userHandle = new ByteArray(publicSubjectId.getBytes(StandardCharsets.UTF_8));
         return relyingParty.startAssertion(
                 StartAssertionOptions.builder().userHandle(Optional.of(userHandle)).build());
     }
