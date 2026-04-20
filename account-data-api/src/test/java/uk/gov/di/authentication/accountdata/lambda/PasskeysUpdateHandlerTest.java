@@ -38,6 +38,8 @@ class PasskeysUpdateHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeysService passkeysService = mock(PasskeysService.class);
+    private static final Map<String, Object> AUTHORIZER_PARAMS =
+            Map.of("principalId", PUBLIC_SUBJECT_ID);
 
     private PasskeysUpdateHandler handler;
 
@@ -127,7 +129,7 @@ class PasskeysUpdateHandlerTest {
         void shouldReturn400WhenRequestBodyIsInvalid(String invalidRequestBody) {
             // Given
             var request =
-                    baseApiProxyRequest()
+                    baseApiProxyRequest(AUTHORIZER_PARAMS)
                             .withPathParameters(
                                     Map.ofEntries(
                                             Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID),
@@ -150,7 +152,7 @@ class PasskeysUpdateHandlerTest {
             var pathParamsWithoutPublicSubject =
                     Map.ofEntries(Map.entry("passkeyId", PRIMARY_PASSKEY_ID));
             var request =
-                    baseApiProxyRequest()
+                    baseApiProxyRequest(AUTHORIZER_PARAMS)
                             .withPathParameters(pathParamsWithoutPublicSubject)
                             .withBody(requestBody);
 
@@ -163,6 +165,31 @@ class PasskeysUpdateHandlerTest {
         }
 
         @Test
+        void shouldReturn401WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams() {
+            // Given
+            var authorizerParamsWithDifferentPublicSubjectId =
+                    Map.<String, Object>of("principalId", "a-different-public-subject-id");
+            var request =
+                    baseApiProxyRequest(authorizerParamsWithDifferentPublicSubjectId)
+                            .withPathParameters(
+                                    Map.of(
+                                            "publicSubjectId",
+                                            PUBLIC_SUBJECT_ID,
+                                            "passkeyId",
+                                            PRIMARY_PASSKEY_ID))
+                            .withBody(
+                                    "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}"
+                                            .formatted(SIGN_COUNT, LAST_USED_AT));
+
+            // When
+            var result = handler.handleRequest(request, context);
+
+            // Then
+            assertThat(result, hasStatus(401));
+            assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+        }
+
+        @Test
         void shouldReturn400WhenRequestIsMissingPasskeyId() {
             // Given
             var requestBody =
@@ -170,7 +197,7 @@ class PasskeysUpdateHandlerTest {
             var pathParamsWithoutPublicSubject =
                     Map.ofEntries(Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID));
             var request =
-                    baseApiProxyRequest()
+                    baseApiProxyRequest(AUTHORIZER_PARAMS)
                             .withPathParameters(pathParamsWithoutPublicSubject)
                             .withBody(requestBody);
 
@@ -185,15 +212,16 @@ class PasskeysUpdateHandlerTest {
 
     private APIGatewayProxyRequestEvent passkeysUpdateRequest(
             int signCount, String lastUsed, String publicSubjectId, String passkeyId) {
-        return baseApiProxyRequest()
+        return baseApiProxyRequest(AUTHORIZER_PARAMS)
                 .withPathParameters(
                         Map.of("publicSubjectId", publicSubjectId, "passkeyId", passkeyId))
                 .withBody(
                         "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}".formatted(signCount, lastUsed));
     }
 
-    private APIGatewayProxyRequestEvent baseApiProxyRequest() {
-        return new APIGatewayProxyRequestEvent()
-                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+    private APIGatewayProxyRequestEvent baseApiProxyRequest(Map<String, Object> authorizerParams) {
+        var context = contextWithSourceIp(IP_ADDRESS);
+        context.setAuthorizer(authorizerParams);
+        return new APIGatewayProxyRequestEvent().withRequestContext(context);
     }
 }

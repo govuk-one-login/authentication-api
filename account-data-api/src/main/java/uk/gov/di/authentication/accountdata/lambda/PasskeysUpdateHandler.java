@@ -19,6 +19,8 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.time.DateTimeException;
 import java.time.Instant;
 
+import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason.UNAUTHORIZED_REQUEST;
+import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -65,6 +67,7 @@ public class PasskeysUpdateHandler
         LOG.info("PasskeysUpdateHandler called");
 
         return parseUpdateRequest(input)
+                .flatMap(updateContext -> validateAuthorizedSubjectId(updateContext, input))
                 .flatMap(
                         requestContext ->
                                 passkeysService.updatePasskey(
@@ -108,6 +111,17 @@ public class PasskeysUpdateHandler
                 new PasskeysUpdateContext(publicSubjectId, passkeyId, passkeysUpdateRequest));
     }
 
+    private Result<PasskeysUpdateFailureReason, PasskeysUpdateContext> validateAuthorizedSubjectId(
+            PasskeysUpdateContext passkeysUpdateContext, APIGatewayProxyRequestEvent input) {
+        if (isSubjectIdAuthorized(
+                passkeysUpdateContext.publicSubjectId, input.getRequestContext())) {
+            return Result.success(passkeysUpdateContext);
+        } else {
+            LOG.warn("SubjectId in path parameter does not match Authorizer principalId");
+            return Result.failure(UNAUTHORIZED_REQUEST);
+        }
+    }
+
     private APIGatewayProxyResponseEvent mapFailureReasonToErrorResponse(
             PasskeysUpdateFailureReason failureReason) {
         LOG.warn("Failed to update passkey for reason: {} ", failureReason.getValue());
@@ -122,6 +136,8 @@ public class PasskeysUpdateHandler
                     404, ErrorResponse.PASSKEY_NOT_FOUND);
             case FAILED_TO_UPDATE_PASSKEY -> generateApiGatewayProxyErrorResponse(
                     500, ErrorResponse.INTERNAL_SERVER_ERROR);
+            case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
+                    401, ErrorResponse.UNAUTHORIZED_REQUEST);
         };
     }
 

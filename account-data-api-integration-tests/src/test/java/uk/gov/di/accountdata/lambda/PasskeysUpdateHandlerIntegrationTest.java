@@ -41,6 +41,8 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     private static final int UPDATED_SIGN_COUNT = SIGN_COUNT + 1;
     private static final String UPDATED_LAST_USED_AT =
             Instant.parse(LAST_USED_AT).plus(1, ChronoUnit.MINUTES).toString();
+    private static final Map<String, Object> AUTHORIZER_PARAMS =
+            Map.of("principalId", PUBLIC_SUBJECT_ID);
 
     @BeforeEach
     void setUp() {
@@ -72,7 +74,8 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                     "publicSubjectId",
                                     PUBLIC_SUBJECT_ID,
                                     "passkeyId",
-                                    PRIMARY_PASSKEY_ID));
+                                    PRIMARY_PASSKEY_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertEquals(204, response.getStatusCode());
@@ -113,7 +116,8 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                     "publicSubjectId",
                                     PUBLIC_SUBJECT_ID,
                                     "passkeyId",
-                                    requestPasskeyId));
+                                    requestPasskeyId),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertEquals(404, response.getStatusCode());
@@ -136,7 +140,8 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                     "publicSubjectId",
                                     PUBLIC_SUBJECT_ID,
                                     "passkeyId",
-                                    PRIMARY_PASSKEY_ID));
+                                    PRIMARY_PASSKEY_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertEquals(400, response.getStatusCode());
@@ -167,7 +172,8 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                     "publicSubjectId",
                                     PUBLIC_SUBJECT_ID,
                                     "passkeyId",
-                                    PRIMARY_PASSKEY_ID));
+                                    PRIMARY_PASSKEY_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertEquals(400, response.getStatusCode());
