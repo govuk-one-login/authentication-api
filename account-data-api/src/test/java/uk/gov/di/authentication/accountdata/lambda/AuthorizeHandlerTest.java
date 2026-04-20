@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
+import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
 import uk.gov.di.authentication.accountdata.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -96,6 +97,21 @@ class AuthorizeHandlerTest {
     }
 
     @Test
+    void authorizeHandlerShouldRejectMissingToken() {
+        var handler = new AuthorizeHandler(remoteJwksService);
+
+        event.setAuthorizationToken("");
+
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertEquals("Unauthorized", exception.getMessage());
+    }
+
+    @Test
     void authorizeHandlerShouldRejectExpiredToken() throws JOSEException {
         var handler = new AuthorizeHandler(remoteJwksService);
 
@@ -150,6 +166,21 @@ class AuthorizeHandlerTest {
         RuntimeException exception =
                 assertThrows(
                         RuntimeException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertEquals("Unauthorized", exception.getMessage());
+    }
+
+    @Test
+    void authorizeHandlerShouldRejectUnparseableToken() {
+        var handler = new AuthorizeHandler(remoteJwksService);
+
+        event.setAuthorizationToken("Bearer not-a-valid-jwt");
+
+        RuntimeException exception =
+                assertThrows(
+                        UnauthorizedException.class,
                         () -> handler.handleRequest(event, context),
                         "Expected to throw exception");
 
