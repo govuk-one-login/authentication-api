@@ -49,7 +49,7 @@ jobs:
           use-installer: true
 
       - name: Set up AWS creds
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         with:
           role-to-assume: ${{ inputs.api_name == 'account-data' && secrets.GH_ACTIONS_AD_ROLE_ARN || inputs.api_name == 'account-management' && secrets.GH_ACTIONS_AM_ROLE_ARN || inputs.api_name == 'auth-int-ext' && secrets.GH_ACTIONS_ROLE_ARN || inputs.api_name == 'stubs' && secrets.GH_ACTIONS_ROLE_ARN_STUBS_API || inputs.api_name == 'utils' && secrets.GH_ACTIONS_UT_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -62,7 +62,7 @@ jobs:
           cache: gradle
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
