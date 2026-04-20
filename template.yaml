@@ -8723,7 +8723,9 @@ Resources:
     Properties:
       AlarmName: !Sub ${Environment}-UpdateClientConfigFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} UpdateClientConfigFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
-      ActionsEnabled: false
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8764,7 +8766,9 @@ Resources:
     Properties:
       AlarmName: !Sub ${Environment}-ClientRegistrationFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} ClientRegistrationFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
-      ActionsEnabled: false
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
