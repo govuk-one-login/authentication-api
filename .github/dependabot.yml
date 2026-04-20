@@ -9,6 +9,8 @@ updates:
       default-days: 7
     open-pull-requests-limit: 100
     ignore:
+      - dependency-name: "gradle"
+        versions: ["[9.0,)"]
       - dependency-name: "com.nimbusds:oauth2-oidc-sdk"
       - dependency-name: "org.junit*:*"
         update-types: ["version-update:semver-patch"]
