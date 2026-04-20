@@ -9,6 +9,9 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.util.Objects;
+
+import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
@@ -38,6 +41,15 @@ public class PasskeysDeleteHandler
     public APIGatewayProxyResponseEvent passkeysDeleteHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("PasskeysDeleteHandler called");
+
+        if (Objects.isNull(input.getPathParameters().get("publicSubjectId"))) {
+            return generateApiGatewayProxyResponse(400, "");
+        }
+
+        if (!isSubjectIdAuthorized(
+                input.getPathParameters().get("publicSubjectId"), input.getRequestContext())) {
+            return generateApiGatewayProxyResponse(401, "");
+        }
 
         return generateApiGatewayProxyResponse(204, "");
     }
