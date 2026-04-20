@@ -76,13 +76,14 @@ public class AuthorizeHandler
     }
 
     private Result<UnauthorizedException, Void> verifySignature(SignedJWT signedJWT) {
+        var failure = Result.<UnauthorizedException, Void>failure(new UnauthorizedException());
         try {
             var maybeJwk =
                     jwksService.retrieveJwkFromURLWithKeyId(signedJWT.getHeader().getKeyID());
 
             if (maybeJwk.isFailure()) {
                 LOG.warn("Error retrieving jwks key: {}", maybeJwk.getFailure());
-                return Result.failure(new UnauthorizedException());
+                return failure;
             }
             var jwk = maybeJwk.getSuccess();
             var algorithm = signedJWT.getHeader().getAlgorithm();
@@ -92,16 +93,17 @@ public class AuthorizeHandler
                 verifier = new ECDSAVerifier(jwk.toECKey());
             } else {
                 LOG.error("Unsupported signature algorithm: {}", algorithm);
-                return Result.failure(new UnauthorizedException());
+                return failure;
             }
 
             if (!signedJWT.verify(verifier)) {
-                return Result.failure(new UnauthorizedException());
+                return failure;
             } else {
                 return Result.success(null);
             }
         } catch (JOSEException e) {
-            throw new RuntimeException("TODO");
+            LOG.error("Error verifying signature: {}", e.getMessage());
+            return failure;
         }
     }
 
