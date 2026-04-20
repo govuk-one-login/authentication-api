@@ -13,6 +13,7 @@ import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
-import uk.gov.di.authentication.accountdata.helpers.TokenGeneratorHelper;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -35,6 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.accountdata.helpers.TokenGeneratorHelper.claimsSetBuilder;
+import static uk.gov.di.authentication.accountdata.helpers.TokenGeneratorHelper.claimsSetBuilderWithoutSubject;
+import static uk.gov.di.authentication.accountdata.helpers.TokenGeneratorHelper.generateSignedToken;
 
 class AuthorizeHandlerTest {
     private static final String KEY_ID = "14342354354353";
@@ -197,12 +200,45 @@ class AuthorizeHandlerTest {
         RSAKey rsaKey = new RSAKeyGenerator(2048).keyID(KEY_ID).generate();
         JWSSigner signer = new RSASSASigner(rsaKey);
 
-        var signedToken =
-                TokenGeneratorHelper.generateSignedToken(
-                        signer, KEY_ID, expiryDateFiveMinutesFromNow, SUBJECT);
+        var builder = claimsSetBuilder(SUBJECT, expiryDateFiveMinutesFromNow);
+        var signedToken = generateSignedToken(signer, KEY_ID, builder);
         var token = new BearerAccessToken(signedToken.serialize());
 
         event.setAuthorizationToken(token.toAuthorizationHeader());
+
+        RuntimeException exception =
+                assertThrows(
+                        UnauthorizedException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertEquals("Unauthorized", exception.getMessage());
+    }
+
+    @Test
+    void authorizeHandlerShouldRejectMissingSubjectId() throws JOSEException {
+        var handler = new AuthorizeHandler(remoteJwksService);
+
+        var claimsWithoutSubject = claimsSetBuilderWithoutSubject(expiryDateFiveMinutesFromNow);
+        var signedToken = createBearerAccessToken(ecSigningKey, claimsWithoutSubject);
+        event.setAuthorizationToken(signedToken.toAuthorizationHeader());
+
+        RuntimeException exception =
+                assertThrows(
+                        UnauthorizedException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertEquals("Unauthorized", exception.getMessage());
+    }
+
+    @Test
+    void authorizeHandlerShouldRejectEmptySubjectId() throws JOSEException {
+        var handler = new AuthorizeHandler(remoteJwksService);
+
+        var claimsWithEmptySubject = claimsSetBuilder("", expiryDateFiveMinutesFromNow);
+        var signedToken = createBearerAccessToken(ecSigningKey, claimsWithEmptySubject);
+        event.setAuthorizationToken(signedToken.toAuthorizationHeader());
 
         RuntimeException exception =
                 assertThrows(
@@ -228,9 +264,14 @@ class AuthorizeHandlerTest {
 
     private static BearerAccessToken createBearerAccessTokenWithExpiry(
             Date expiryDate, ECKey ecSigningKey) throws JOSEException {
+        var claimsBuilder = claimsSetBuilder(SUBJECT, expiryDate);
+        return createBearerAccessToken(ecSigningKey, claimsBuilder);
+    }
+
+    private static BearerAccessToken createBearerAccessToken(
+            ECKey ecSigningKey, JWTClaimsSet.Builder claimsBuilder) throws JOSEException {
         JWSSigner signer = new ECDSASigner(ecSigningKey);
-        var signedToken =
-                TokenGeneratorHelper.generateSignedToken(signer, KEY_ID, expiryDate, SUBJECT);
+        var signedToken = generateSignedToken(signer, KEY_ID, claimsBuilder);
         return new BearerAccessToken(signedToken.serialize());
     }
 }

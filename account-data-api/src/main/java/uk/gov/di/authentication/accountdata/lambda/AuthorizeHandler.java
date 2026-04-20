@@ -58,15 +58,16 @@ public class AuthorizeHandler
             var signedAccessToken = SignedJWT.parse(accessToken.getValue());
             var claimsSet = signedAccessToken.getJWTClaimsSet();
 
-            var maybeValidationFailure =
+            var maybeValidatedClaims =
                     validateAccessTokenExpiryTime(claimsSet)
-                            .flatMap(success -> verifySignature(signedAccessToken));
+                            .flatMap(success -> verifySignature(signedAccessToken))
+                            .flatMap(success -> validateClaimsSet(claimsSet));
 
-            if (maybeValidationFailure.isFailure()) {
-                throw maybeValidationFailure.getFailure();
+            if (maybeValidatedClaims.isFailure()) {
+                throw maybeValidatedClaims.getFailure();
             }
 
-            var subject = signedAccessToken.getJWTClaimsSet().getSubject();
+            var subject = maybeValidatedClaims.getSuccess().getSubject();
             var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
             return getAllowExecuteApiPolicyForSubject(subject, methodArn);
         } catch (ParseException | java.text.ParseException e) {
@@ -119,6 +120,14 @@ public class AuthorizeHandler
         } else {
             return Result.success(null);
         }
+    }
+
+    private Result<UnauthorizedException, JWTClaimsSet> validateClaimsSet(JWTClaimsSet claimsSet) {
+        if (claimsSet.getSubject() == null || claimsSet.getSubject().isEmpty()) {
+            LOG.warn("Access Token subject is missing");
+            return Result.failure(new UnauthorizedException());
+        }
+        return Result.success(claimsSet);
     }
 
     private Map<String, Object> getAllowExecuteApiPolicyForSubject(

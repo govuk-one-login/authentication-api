@@ -14,19 +14,22 @@ import java.util.List;
 import java.util.UUID;
 
 public class TokenGeneratorHelper {
+    public static JWTClaimsSet.Builder claimsSetBuilderWithoutSubject(Date expiryDate) {
+        return new JWTClaimsSet.Builder()
+                .claim("scope", List.of("some-scopes"))
+                .issuer("https://example.com")
+                .expirationTime(expiryDate)
+                .issueTime(NowHelper.now())
+                .claim("client_id", "some-client-id")
+                .jwtID(UUID.randomUUID().toString());
+    }
+
+    public static JWTClaimsSet.Builder claimsSetBuilder(String subject, Date expiryDate) {
+        return claimsSetBuilderWithoutSubject(expiryDate).subject(subject);
+    }
 
     public static SignedJWT generateSignedToken(
-            JWSSigner signer, String keyId, Date expiryDate, String subject) {
-
-        JWTClaimsSet.Builder claimsBuilder =
-                new JWTClaimsSet.Builder()
-                        .claim("scope", List.of("some-scopes"))
-                        .issuer("https://example.com")
-                        .expirationTime(expiryDate)
-                        .issueTime(NowHelper.now())
-                        .claim("client_id", "some-client-id")
-                        .subject(subject)
-                        .jwtID(UUID.randomUUID().toString());
+            JWSSigner signer, String keyId, JWTClaimsSet.Builder claimsBuilder) {
 
         var algorithm = signer instanceof RSASSASigner ? JWSAlgorithm.RS256 : JWSAlgorithm.ES256;
         var jwsHeader = new JWSHeader.Builder(algorithm).keyID(keyId).build();
