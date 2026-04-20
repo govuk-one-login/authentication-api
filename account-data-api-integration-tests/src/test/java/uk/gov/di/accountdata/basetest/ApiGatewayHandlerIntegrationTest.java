@@ -24,24 +24,6 @@ public abstract class ApiGatewayHandlerIntegrationTest {
             Optional<String> body,
             Map<String, String> headers,
             Map<String, String> queryString,
-            Map<String, String> pathParams) {
-        String requestId = UUID.randomUUID().toString();
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        request.withHeaders(headers)
-                .withQueryStringParameters(queryString)
-                .withPathParameters(pathParams)
-                .withRequestContext(
-                        new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                                .withRequestId(requestId));
-        body.ifPresent(request::withBody);
-
-        return handler.handleRequest(request, context);
-    }
-
-    protected APIGatewayProxyResponseEvent makeRequest(
-            Optional<String> body,
-            Map<String, String> headers,
-            Map<String, String> queryString,
             Map<String, String> pathParams,
             Map<String, Object> authorizerParams) {
         String requestId = UUID.randomUUID().toString();
