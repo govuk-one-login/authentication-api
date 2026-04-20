@@ -70,7 +70,8 @@ public class AuthorizeHandler
             var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
             return getAllowExecuteApiPolicyForSubject(subject, methodArn);
         } catch (ParseException | java.text.ParseException e) {
-            throw new RuntimeException("TODO");
+            LOG.warn("Unable to parse Access Token {}", e.getMessage());
+            throw new UnauthorizedException();
         }
     }
 
