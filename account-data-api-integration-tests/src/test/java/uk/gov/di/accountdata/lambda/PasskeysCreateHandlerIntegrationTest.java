@@ -33,6 +33,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     private final ConfigurationService configurationService = ConfigurationService.getInstance();
     DynamoPasskeyService dynamoPasskeyService = new DynamoPasskeyService(configurationService);
+    private static final Map<String, Object> AUTHORIZER_PARAMS =
+            Map.of("principalId", PUBLIC_SUBJECT_ID);
 
     @RegisterExtension
     protected static final AuthenticatorExtension authenticatorExtension =
@@ -70,7 +72,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                             Optional.of(requestBody),
                             headers,
                             Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertThat(response.getStatusCode(), equalTo(201));
@@ -109,7 +112,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                             Optional.of(requestBodyWithNullCredential),
                             headers,
                             Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertThat(response.getStatusCode(), equalTo(400));
@@ -142,7 +146,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                             Optional.of(requestBodyWithDuplicatePasskeyId),
                             headers,
                             Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertThat(response.getStatusCode(), equalTo(409));
@@ -172,7 +177,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                             Optional.of(requestBodyWithInvalidAaguid),
                             headers,
                             Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertThat(response.getStatusCode(), equalTo(422));

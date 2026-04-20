@@ -37,4 +37,24 @@ public abstract class ApiGatewayHandlerIntegrationTest {
 
         return handler.handleRequest(request, context);
     }
+
+    protected APIGatewayProxyResponseEvent makeRequest(
+            Optional<String> body,
+            Map<String, String> headers,
+            Map<String, String> queryString,
+            Map<String, String> pathParams,
+            Map<String, Object> authorizerParams) {
+        String requestId = UUID.randomUUID().toString();
+        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        var requestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext().withRequestId(requestId);
+        requestContext.setAuthorizer(authorizerParams);
+        request.withHeaders(headers)
+                .withQueryStringParameters(queryString)
+                .withPathParameters(pathParams)
+                .withRequestContext(requestContext);
+        body.ifPresent(request::withBody);
+
+        return handler.handleRequest(request, context);
+    }
 }
