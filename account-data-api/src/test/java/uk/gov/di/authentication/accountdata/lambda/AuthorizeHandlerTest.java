@@ -7,9 +7,12 @@ import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -177,6 +180,29 @@ class AuthorizeHandlerTest {
         var handler = new AuthorizeHandler(remoteJwksService);
 
         event.setAuthorizationToken("Bearer not-a-valid-jwt");
+
+        RuntimeException exception =
+                assertThrows(
+                        UnauthorizedException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertEquals("Unauthorized", exception.getMessage());
+    }
+
+    @Test
+    void authorizeHandlerShouldRejectAnUnsupportedAlgorithm() throws JOSEException {
+        var handler = new AuthorizeHandler(remoteJwksService);
+
+        RSAKey rsaKey = new RSAKeyGenerator(2048).keyID(KEY_ID).generate();
+        JWSSigner signer = new RSASSASigner(rsaKey);
+
+        var signedToken =
+                TokenGeneratorHelper.generateSignedToken(
+                        signer, KEY_ID, expiryDateFiveMinutesFromNow, SUBJECT);
+        var token = new BearerAccessToken(signedToken.serialize());
+
+        event.setAuthorizationToken(token.toAuthorizationHeader());
 
         RuntimeException exception =
                 assertThrows(
