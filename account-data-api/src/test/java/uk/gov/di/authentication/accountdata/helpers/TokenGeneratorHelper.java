@@ -15,7 +15,8 @@ import java.util.UUID;
 
 public class TokenGeneratorHelper {
 
-    public static SignedJWT generateSignedToken(JWSSigner signer, String keyId, Date expiryDate) {
+    public static SignedJWT generateSignedToken(
+            JWSSigner signer, String keyId, Date expiryDate, String subject) {
 
         JWTClaimsSet.Builder claimsBuilder =
                 new JWTClaimsSet.Builder()
@@ -24,7 +25,7 @@ public class TokenGeneratorHelper {
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", "some-client-id")
-                        .subject("some-subject")
+                        .subject(subject)
                         .jwtID(UUID.randomUUID().toString());
 
         var algorithm = signer instanceof RSASSASigner ? JWSAlgorithm.RS256 : JWSAlgorithm.ES256;

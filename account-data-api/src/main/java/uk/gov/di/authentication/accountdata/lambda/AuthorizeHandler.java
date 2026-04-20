@@ -3,7 +3,6 @@ package uk.gov.di.authentication.accountdata.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayCustomAuthorizerEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
@@ -25,9 +24,11 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.MalformedURLException;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 public class AuthorizeHandler
-        implements RequestHandler<APIGatewayCustomAuthorizerEvent, APIGatewayProxyResponseEvent> {
+        implements RequestHandler<APIGatewayCustomAuthorizerEvent, Map<String, Object>> {
     private static final Logger LOG = LogManager.getLogger(AuthorizeHandler.class);
     private RemoteJwksService jwksService;
 
@@ -49,7 +50,7 @@ public class AuthorizeHandler
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(
+    public Map<String, Object> handleRequest(
             APIGatewayCustomAuthorizerEvent apiGatewayCustomAuthorizerEvent, Context context) {
         var token = apiGatewayCustomAuthorizerEvent.getAuthorizationToken();
         try {
@@ -65,7 +66,9 @@ public class AuthorizeHandler
                 throw maybeValidationFailure.getFailure();
             }
 
-            return new APIGatewayProxyResponseEvent().withStatusCode(200);
+            var subject = signedAccessToken.getJWTClaimsSet().getSubject();
+            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
+            return getAllowExecuteApiPolicyForSubject(subject, methodArn);
         } catch (ParseException | java.text.ParseException e) {
             throw new RuntimeException("TODO");
         }
@@ -112,5 +115,21 @@ public class AuthorizeHandler
         } else {
             return Result.success(null);
         }
+    }
+
+    private Map<String, Object> getAllowExecuteApiPolicyForSubject(
+            String subject, String methodArn) {
+        var executeApiStatement =
+                Map.ofEntries(
+                        Map.entry("Action", "execute-api:Invoke"),
+                        Map.entry("Effect", "Allow"),
+                        Map.entry("Resource", methodArn));
+        return Map.ofEntries(
+                Map.entry("principalId", subject),
+                Map.entry(
+                        "policyDocument",
+                        Map.ofEntries(
+                                Map.entry("Version", "2012-10-17"),
+                                Map.entry("Statement", List.of(executeApiStatement)))));
     }
 }
