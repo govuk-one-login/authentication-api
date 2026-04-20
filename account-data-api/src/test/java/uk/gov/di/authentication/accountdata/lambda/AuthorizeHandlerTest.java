@@ -2,6 +2,8 @@ package uk.gov.di.authentication.accountdata.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayCustomAuthorizerEvent;
+import com.google.gson.Gson;
+import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
@@ -36,8 +38,12 @@ class AuthorizeHandlerTest {
     private final RemoteJwksService remoteJwksService = mock(RemoteJwksService.class);
     private static final Date expiryDateFiveMinutesFromNow =
             Date.from(Instant.now().plus(5, ChronoUnit.MINUTES));
+    private static final String METHOD_ARN =
+            "arn:aws:execute-api:eu-west-2:123456789:abc123/dev/GET/accounts";
+    private static final String SUBJECT = "some-subject";
 
     private static ECKey ecSigningKey;
+    private APIGatewayCustomAuthorizerEvent event;
 
     @BeforeAll
     static void setupKeyPair() throws JOSEException {
@@ -46,6 +52,8 @@ class AuthorizeHandlerTest {
 
     @BeforeEach
     void setup() {
+        event = new APIGatewayCustomAuthorizerEvent();
+        event.setMethodArn(METHOD_ARN);
         when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
                 .thenReturn(Result.success(ecSigningKey.toPublicJWK()));
     }
@@ -62,12 +70,29 @@ class AuthorizeHandlerTest {
         var bearerAccessToken =
                 createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
 
-        var event = new APIGatewayCustomAuthorizerEvent();
         event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 
         var result = handler.handleRequest(event, context);
 
-        assertEquals(200, result.getStatusCode());
+        var expectedPolicyDocument =
+                """
+                {
+                    "principalId": "%s",
+                    "policyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [{
+                            "Action": "execute-api:Invoke",
+                            "Effect": "Allow",
+                            "Resource": "%s"
+                        }]
+                    }
+                }
+                """
+                        .formatted(SUBJECT, METHOD_ARN);
+
+        assertEquals(
+                JsonParser.parseString(expectedPolicyDocument),
+                JsonParser.parseString(new Gson().toJson(result)));
     }
 
     @Test
@@ -78,7 +103,6 @@ class AuthorizeHandlerTest {
         var bearerAccessToken =
                 createBearerAccessTokenWithExpiry(Date.from(yesterdayInstant), ecSigningKey);
 
-        var event = new APIGatewayCustomAuthorizerEvent();
         event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
         RuntimeException exception =
                 assertThrows(
@@ -100,7 +124,6 @@ class AuthorizeHandlerTest {
         var bearerAccessToken =
                 createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
 
-        var event = new APIGatewayCustomAuthorizerEvent();
         event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 
         RuntimeException exception =
@@ -122,7 +145,6 @@ class AuthorizeHandlerTest {
         var bearerAccessToken =
                 createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
 
-        var event = new APIGatewayCustomAuthorizerEvent();
         event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 
         RuntimeException exception =
@@ -150,7 +172,8 @@ class AuthorizeHandlerTest {
     private static BearerAccessToken createBearerAccessTokenWithExpiry(
             Date expiryDate, ECKey ecSigningKey) throws JOSEException {
         JWSSigner signer = new ECDSASigner(ecSigningKey);
-        var signedToken = TokenGeneratorHelper.generateSignedToken(signer, KEY_ID, expiryDate);
+        var signedToken =
+                TokenGeneratorHelper.generateSignedToken(signer, KEY_ID, expiryDate, SUBJECT);
         return new BearerAccessToken(signedToken.serialize());
     }
 }
