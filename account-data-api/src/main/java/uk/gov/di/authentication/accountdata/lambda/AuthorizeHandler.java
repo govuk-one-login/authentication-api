@@ -91,7 +91,8 @@ public class AuthorizeHandler
             if (JWSAlgorithm.ES256.equals(algorithm)) {
                 verifier = new ECDSAVerifier(jwk.toECKey());
             } else {
-                throw new RuntimeException("TODO");
+                LOG.error("Unsupported signature algorithm: {}", algorithm);
+                return Result.failure(new UnauthorizedException());
             }
 
             if (!signedJWT.verify(verifier)) {
