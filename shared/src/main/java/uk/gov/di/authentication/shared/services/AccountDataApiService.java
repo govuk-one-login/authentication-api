@@ -72,8 +72,7 @@ public class AccountDataApiService {
         try {
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (HttpTimeoutException e) {
-            throw timeoutException(
-                    configurationService.getAccountInterventionServiceCallTimeout(), e);
+            throw timeoutException(configurationService.getAccountDataApiCallTimeout(), e);
         } catch (IOException e) {
             throw ioException(e);
         } catch (InterruptedException e) {

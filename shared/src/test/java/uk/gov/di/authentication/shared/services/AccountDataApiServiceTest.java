@@ -35,13 +35,14 @@ class AccountDataApiServiceTest {
     private AccountDataApiService service;
 
     private static final String TOKEN = "token";
+    private static final long TIMEOUT = 1000L;
 
     @BeforeEach
     void setUp() {
         closeable = MockitoAnnotations.openMocks(this);
         service = new AccountDataApiService(httpClient, configurationService);
         when(configurationService.getAccountDataURI()).thenReturn("https://example.com");
-        when(configurationService.getAccountDataApiCallTimeout()).thenReturn(1000L);
+        when(configurationService.getAccountDataApiCallTimeout()).thenReturn(TIMEOUT);
     }
 
     @AfterEach
@@ -117,7 +118,7 @@ class AccountDataApiServiceTest {
                         assertThrows(
                                 UnsuccessfulAccountDataApiResponseException.class,
                                 () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
-                assertThat(exception.getMessage(), containsString("Timeout"));
+                assertThat(exception.getMessage(), containsString("timeout of " + TIMEOUT));
                 assertThat(
                         exception.getCause(), instanceOf(java.net.http.HttpTimeoutException.class));
             }
@@ -226,7 +227,7 @@ class AccountDataApiServiceTest {
                                 () ->
                                         service.deletePasskey(
                                                 "testPublicSubjectId", "testPasskeyId", TOKEN));
-                assertThat(exception.getMessage(), containsString("Timeout"));
+                assertThat(exception.getMessage(), containsString("timeout of " + TIMEOUT));
                 assertThat(
                         exception.getCause(), instanceOf(java.net.http.HttpTimeoutException.class));
             }
