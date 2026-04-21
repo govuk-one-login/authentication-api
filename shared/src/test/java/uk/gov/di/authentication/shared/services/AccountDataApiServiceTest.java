@@ -34,6 +34,8 @@ class AccountDataApiServiceTest {
 
     private AccountDataApiService service;
 
+    private static final String TOKEN = "token";
+
     @BeforeEach
     void setUp() {
         closeable = MockitoAnnotations.openMocks(this);
@@ -61,7 +63,7 @@ class AccountDataApiServiceTest {
                 when(httpClient.send(any(), any())).thenReturn(null);
 
                 // Act
-                service.retrievePasskeys("testPublicSubjectId");
+                service.retrievePasskeys("testPublicSubjectId", TOKEN);
 
                 // Assert
                 verify(httpClient).send(httpRequestCaptor.capture(), any());
@@ -71,6 +73,13 @@ class AccountDataApiServiceTest {
                                 URI.create(
                                         "https://example.com/accounts/testPublicSubjectId/authenticators/passkeys")));
                 assertThat(httpRequestCaptor.getValue().method(), equalTo("GET"));
+                assertThat(
+                        httpRequestCaptor
+                                .getValue()
+                                .headers()
+                                .firstValue("Authorization")
+                                .orElse(""),
+                        equalTo("Bearer " + TOKEN));
             }
 
             @Test
@@ -85,7 +94,7 @@ class AccountDataApiServiceTest {
                 when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
 
                 // Act
-                var resp = service.retrievePasskeys("testPublicSubjectId");
+                var resp = service.retrievePasskeys("testPublicSubjectId", TOKEN);
 
                 // Assert
                 assertThat(resp.statusCode(), equalTo(200));
@@ -107,7 +116,7 @@ class AccountDataApiServiceTest {
                 var exception =
                         assertThrows(
                                 UnsuccessfulAccountDataApiResponseException.class,
-                                () -> service.retrievePasskeys("testPublicSubjectId"));
+                                () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
                 assertThat(exception.getMessage(), containsString("Timeout"));
                 assertThat(
                         exception.getCause(), instanceOf(java.net.http.HttpTimeoutException.class));
@@ -123,7 +132,7 @@ class AccountDataApiServiceTest {
                 var exception =
                         assertThrows(
                                 UnsuccessfulAccountDataApiResponseException.class,
-                                () -> service.retrievePasskeys("testPublicSubjectId"));
+                                () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
                 assertThat(exception.getMessage(), containsString("Error when attempting to call"));
                 assertThat(exception.getCause(), instanceOf(IOException.class));
             }
@@ -140,7 +149,7 @@ class AccountDataApiServiceTest {
                 var exception =
                         assertThrows(
                                 UnsuccessfulAccountDataApiResponseException.class,
-                                () -> service.retrievePasskeys("testPublicSubjectId"));
+                                () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
                 assertThat(exception.getMessage(), containsString("Interrupted exception"));
                 assertThat(exception.getCause(), instanceOf(InterruptedException.class));
             }
@@ -161,7 +170,7 @@ class AccountDataApiServiceTest {
                 when(httpClient.send(any(), any())).thenReturn(null);
 
                 // Act
-                service.deletePasskey("testPublicSubjectId", "testPasskeyId");
+                service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
 
                 // Assert
                 verify(httpClient).send(httpRequestCaptor.capture(), any());
@@ -171,6 +180,13 @@ class AccountDataApiServiceTest {
                                 URI.create(
                                         "https://example.com/accounts/testPublicSubjectId/authenticators/passkeys/testPasskeyId")));
                 assertThat(httpRequestCaptor.getValue().method(), equalTo("DELETE"));
+                assertThat(
+                        httpRequestCaptor
+                                .getValue()
+                                .headers()
+                                .firstValue("Authorization")
+                                .orElse(""),
+                        equalTo("Bearer " + TOKEN));
             }
 
             @Test
@@ -185,7 +201,7 @@ class AccountDataApiServiceTest {
                 when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
 
                 // Act
-                var resp = service.deletePasskey("testPublicSubjectId", "testPasskeyId");
+                var resp = service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
 
                 // Assert
                 assertThat(resp.statusCode(), equalTo(200));
@@ -209,7 +225,7 @@ class AccountDataApiServiceTest {
                                 UnsuccessfulAccountDataApiResponseException.class,
                                 () ->
                                         service.deletePasskey(
-                                                "testPublicSubjectId", "testPasskeyId"));
+                                                "testPublicSubjectId", "testPasskeyId", TOKEN));
                 assertThat(exception.getMessage(), containsString("Timeout"));
                 assertThat(
                         exception.getCause(), instanceOf(java.net.http.HttpTimeoutException.class));
@@ -227,7 +243,7 @@ class AccountDataApiServiceTest {
                                 UnsuccessfulAccountDataApiResponseException.class,
                                 () ->
                                         service.deletePasskey(
-                                                "testPublicSubjectId", "testPasskeyId"));
+                                                "testPublicSubjectId", "testPasskeyId", TOKEN));
                 assertThat(exception.getMessage(), containsString("Error when attempting to call"));
                 assertThat(exception.getCause(), instanceOf(IOException.class));
             }
@@ -246,7 +262,7 @@ class AccountDataApiServiceTest {
                                 UnsuccessfulAccountDataApiResponseException.class,
                                 () ->
                                         service.deletePasskey(
-                                                "testPublicSubjectId", "testPasskeyId"));
+                                                "testPublicSubjectId", "testPasskeyId", TOKEN));
                 assertThat(exception.getMessage(), containsString("Interrupted exception"));
                 assertThat(exception.getCause(), instanceOf(InterruptedException.class));
             }
