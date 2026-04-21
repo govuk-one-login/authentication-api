@@ -54,9 +54,11 @@ public class PasskeysDeleteProxyHandler
 
         var publicSubjectId = input.getPathParameters().getOrDefault("publicSubjectId", "");
         var passkeyIdentifier = input.getPathParameters().getOrDefault("passkeyIdentifier", "");
+        var token = input.getHeaders().getOrDefault("X-ADAPI-AccessToken", "");
 
         try {
-            var response = accountDataApiService.deletePasskey(publicSubjectId, passkeyIdentifier);
+            var response =
+                    accountDataApiService.deletePasskey(publicSubjectId, passkeyIdentifier, token);
             return generateApiGatewayProxyResponse(response.statusCode(), response.body());
         } catch (UnsuccessfulAccountDataApiResponseException e) {
             LOG.warn(
