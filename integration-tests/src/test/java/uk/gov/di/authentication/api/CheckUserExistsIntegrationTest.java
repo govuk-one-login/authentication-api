@@ -4,12 +4,16 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
@@ -25,6 +29,10 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
+import uk.org.webcompere.systemstubs.jupiter.SystemStub;
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.util.HashMap;
 import java.util.List;
@@ -50,9 +58,16 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
+@ExtendWith(SystemStubsExtension.class)
 class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static WireMockServer wireMockServer;
+
+    @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
+
+    @RegisterExtension
+    private static final KmsKeyExtension authToAccountDataSigningKey =
+            new KmsKeyExtension("auth-to-account-data-signing-key", KeyUsageType.SIGN_VERIFY);
 
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String SECTOR_IDENTIFIER_HOST = "test.com";
@@ -572,6 +587,16 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     class Passkeys {
         String accountDataApiBaseUri;
 
+        @BeforeAll
+        static void setupEnvironment() {
+            environment.set(
+                    "AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "https://example.com/ADAPIAudience");
+            environment.set("AUTH_ISSUER_CLAIM", "https://signin.account.gov.uk/");
+            environment.set("AMC_CLIENT_ID", "amc-client-id");
+            environment.set(
+                    "AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", authToAccountDataSigningKey.getKeyId());
+        }
+
         @BeforeEach
         void setUp() {
             wireMockServer =
@@ -579,6 +604,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             wireMockServer.start();
 
             accountDataApiBaseUri = "http://localhost:" + wireMockServer.port();
+
             txmaAuditQueue.clear();
         }
 
