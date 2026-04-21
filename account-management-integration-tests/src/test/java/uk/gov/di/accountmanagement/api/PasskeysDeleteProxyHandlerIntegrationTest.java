@@ -1,6 +1,7 @@
 package uk.gov.di.accountmanagement.api;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import java.util.Optional;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -53,6 +55,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
         var publicSubjectId = "abc";
         var passkeyId = "def";
+        var token = "hij";
 
         accountDataApiWireMockServer.stubFor(
                 delete(
@@ -61,13 +64,14 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys/"
                                                 + passkeyId))
+                        .withHeader("Authorization", WireMock.equalTo("Bearer " + token))
                         .willReturn(aResponse().withStatus(204)));
 
         // Act
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Collections.emptyMap(),
+                        Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
                         Collections.emptyMap(),
@@ -75,6 +79,15 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
         // Assert
         assertThat(response, hasStatus(204));
+        accountDataApiWireMockServer.verify(
+                1,
+                deleteRequestedFor(
+                                urlPathMatching(
+                                        "/accounts/"
+                                                + publicSubjectId
+                                                + "/authenticators/passkeys/"
+                                                + passkeyId))
+                        .withHeader("Authorization", WireMock.equalTo("Bearer " + token)));
     }
 
     @Test
@@ -84,6 +97,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
         var publicSubjectId = "abc";
         var passkeyId = "def";
+        var token = "hij";
         var adapiResponse =
                 """
                 {
@@ -99,13 +113,14 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys/"
                                                 + passkeyId))
+                        .withHeader("Authorization", WireMock.equalTo("Bearer " + token))
                         .willReturn(aResponse().withStatus(404).withBody(adapiResponse)));
 
         // Act
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Collections.emptyMap(),
+                        Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
                         Collections.emptyMap(),
@@ -114,6 +129,15 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         // Assert
         assertThat(response, hasStatus(404));
         assertThat(response.getBody(), equalTo(adapiResponse));
+        accountDataApiWireMockServer.verify(
+                1,
+                deleteRequestedFor(
+                                urlPathMatching(
+                                        "/accounts/"
+                                                + publicSubjectId
+                                                + "/authenticators/passkeys/"
+                                                + passkeyId))
+                        .withHeader("Authorization", WireMock.equalTo("Bearer " + token)));
     }
 
     @Test
@@ -123,6 +147,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
         var publicSubjectId = "abc";
         var passkeyId = "def";
+        var token = "hij";
         var adapiResponse =
                 """
                 {
@@ -138,13 +163,14 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys/"
                                                 + passkeyId))
+                        .withHeader("Authorization", WireMock.equalTo("Bearer " + token))
                         .willReturn(aResponse().withStatus(500).withBody(adapiResponse)));
 
         // Act
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Collections.emptyMap(),
+                        Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
                         Collections.emptyMap(),
@@ -153,5 +179,14 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         // Assert
         assertThat(response, hasStatus(500));
         assertThat(response.getBody(), equalTo(adapiResponse));
+        accountDataApiWireMockServer.verify(
+                1,
+                deleteRequestedFor(
+                                urlPathMatching(
+                                        "/accounts/"
+                                                + publicSubjectId
+                                                + "/authenticators/passkeys/"
+                                                + passkeyId))
+                        .withHeader("Authorization", WireMock.equalTo("Bearer " + token)));
     }
 }

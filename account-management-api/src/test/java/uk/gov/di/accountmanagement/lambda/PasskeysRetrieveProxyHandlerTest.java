@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.http.HttpResponse;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -25,12 +26,15 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class PasskeysRetrieveProxyHandlerTest {
+class PasskeysRetrieveProxyHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AccountDataApiService accountDataApiService = mock(AccountDataApiService.class);
 
     private PasskeysRetrieveProxyHandler handler;
+
+    private static final String ADAPI_TOKEN_HEADER = "X-ADAPI-AccessToken";
+    private static final String TOKEN = "token";
 
     @BeforeEach
     void setUp() {
@@ -45,7 +49,7 @@ public class PasskeysRetrieveProxyHandlerTest {
             var mockHttpResponse = mock(HttpResponse.class);
             when(mockHttpResponse.statusCode()).thenReturn(200);
             when(mockHttpResponse.body()).thenReturn("{\"passkeys\": []}");
-            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID))
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
                     .thenReturn(mockHttpResponse);
 
             // Act
@@ -54,7 +58,7 @@ public class PasskeysRetrieveProxyHandlerTest {
             // Assert
             assertThat(result, hasStatus(200));
             assertThat(result, hasBody("{\"passkeys\": []}"));
-            verify(accountDataApiService).retrievePasskeys(PUBLIC_SUBJECT_ID);
+            verify(accountDataApiService).retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN);
         }
     }
 
@@ -64,7 +68,7 @@ public class PasskeysRetrieveProxyHandlerTest {
         void shouldReturn500IfServiceThrowsException()
                 throws UnsuccessfulAccountDataApiResponseException {
             // Arrange
-            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID))
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
                     .thenThrow(new UnsuccessfulAccountDataApiResponseException("service error", 0));
 
             // Act
@@ -73,14 +77,17 @@ public class PasskeysRetrieveProxyHandlerTest {
             // Assert
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
-            verify(accountDataApiService).retrievePasskeys(PUBLIC_SUBJECT_ID);
+            verify(accountDataApiService).retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN);
         }
     }
 
     private APIGatewayProxyRequestEvent passkeysRetrieveProxyRequest() {
+        var validHeadersWithToken = new HashMap<>(VALID_HEADERS);
+        validHeadersWithToken.put(ADAPI_TOKEN_HEADER, TOKEN);
+
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters((Map.of("publicSubjectId", PUBLIC_SUBJECT_ID)))
-                .withHeaders(VALID_HEADERS)
+                .withHeaders(validHeadersWithToken)
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 }

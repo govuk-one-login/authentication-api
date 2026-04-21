@@ -53,9 +53,17 @@ public class PasskeysRetrieveProxyHandler
         LOG.info("PasskeysRetrieveProxyHandler invoked");
 
         var publicSubjectId = input.getPathParameters().getOrDefault("publicSubjectId", "");
+        if (publicSubjectId.isEmpty()) {
+            LOG.warn("No publicSubjectId in path parameters, request will likely fail");
+        }
+
+        var token = input.getHeaders().getOrDefault("X-ADAPI-AccessToken", "");
+        if (token.isEmpty()) {
+            LOG.warn("No X-ADAPI-AccessToken in headers, request will likely fail");
+        }
 
         try {
-            var response = accountDataApiService.retrievePasskeys(publicSubjectId);
+            var response = accountDataApiService.retrievePasskeys(publicSubjectId, token);
             return generateApiGatewayProxyResponse(response.statusCode(), response.body());
         } catch (UnsuccessfulAccountDataApiResponseException e) {
             LOG.warn(
