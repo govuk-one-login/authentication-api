@@ -245,6 +245,14 @@ components:
       type: "apiKey"
       name: "Authorization"
       in: "header"
+      x-amazon-apigateway-authtype: "custom"
+      x-amazon-apigateway-authorizer:
+        type: "token"
+        authorizerUri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunction.Arn}:active/invocations"
+        authorizerCredentials:
+          Fn::GetAtt: [ApiGatewayAuthorizerRole, Arn]
+        authorizerResultTtlInSeconds: 0
   schemas:
     PasskeyAuthenticatorCreate:
       type: object
