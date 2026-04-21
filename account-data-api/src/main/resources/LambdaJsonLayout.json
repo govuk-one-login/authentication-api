@@ -60,6 +60,10 @@
       "field": "lineNumber"
     }
   },
+  "session-id": {
+    "$resolver": "mdc",
+    "key": "sessionId"
+  },
   "aws-request-id": {
     "$resolver": "mdc",
     "key": "awsRequestId"
