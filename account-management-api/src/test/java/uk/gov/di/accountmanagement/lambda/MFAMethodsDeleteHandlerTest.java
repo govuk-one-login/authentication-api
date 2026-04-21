@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -37,20 +36,21 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_DELETE_COMPLETED;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.TXMA_ENCODED_HEADER_VALUE;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -131,40 +131,23 @@ class MFAMethodsDeleteHandlerTest {
                                             NotificationType.BACKUP_METHOD_REMOVED,
                                             LocaleHelper.SupportedLanguage.EN)));
 
-            ArgumentCaptor<AuditContext> auditContextCaptor =
-                    ArgumentCaptor.forClass(AuditContext.class);
+            var expectedAuditContext =
+                    AuditContext.emptyAuditContext()
+                            .withPhoneNumber(SMS_MFA_METHOD.getDestination())
+                            .withEmail(TEST_EMAIL)
+                            .withClientSessionId(SESSION_ID)
+                            .withSubjectId(TEST_INTERNAL_SUBJECT)
+                            .withIpAddress(IP_ADDRESS)
+                            .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                            .withPersistentSessionId(PERSISTENT_ID)
+                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()))
+                            .withMetadataItem(pair("mfa-type", SMS.getValue(), false));
 
             verify(auditService)
                     .submitAuditEvent(
-                            eq(AUTH_MFA_METHOD_DELETE_COMPLETED),
-                            auditContextCaptor.capture(),
-                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-
-            AuditContext capturedContext = auditContextCaptor.getValue();
-
-            assertEquals(SMS_MFA_METHOD.getDestination(), capturedContext.phoneNumber());
-
-            assertTrue(
-                    capturedContext
-                            .getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_MFA_TYPE)
-                            .isPresent());
-            assertEquals(
-                    SMS.name(),
-                    capturedContext
-                            .getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_MFA_TYPE)
-                            .get()
-                            .value());
-
-            assertTrue(
-                    capturedContext
-                            .getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE)
-                            .isPresent());
-            assertEquals(
-                    ACCOUNT_MANAGEMENT.name(),
-                    capturedContext
-                            .getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE)
-                            .get()
-                            .value());
+                            AUTH_MFA_METHOD_DELETE_COMPLETED,
+                            expectedAuditContext,
+                            AUDIT_EVENT_COMPONENT_ID_HOME);
         }
 
         @Test
@@ -314,7 +297,7 @@ class MFAMethodsDeleteHandlerTest {
         authorizerParams.put("principalId", principal);
         authorizerParams.put("clientId", TEST_CLIENT);
         proxyRequestContext.setAuthorizer(authorizerParams);
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp(IP_ADDRESS));
 
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(

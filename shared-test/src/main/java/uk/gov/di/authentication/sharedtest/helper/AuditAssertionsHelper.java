@@ -160,6 +160,7 @@ public class AuditAssertionsHelper {
                         .get("device_information"));
     }
 
+    // Deprecate this when no longer used
     public static void containsMetadataPair(
             AuditContext capturedObject, String field, String value) {
         capturedObject
