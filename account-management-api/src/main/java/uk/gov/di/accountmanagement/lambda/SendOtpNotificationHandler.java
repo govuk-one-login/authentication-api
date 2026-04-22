@@ -412,6 +412,8 @@ public class SendOtpNotificationHandler
         if (notificationType == NotificationType.VERIFY_PHONE_NUMBER) {
             PriorityIdentifier priorityIdentifier;
             if (Objects.isNull(sendNotificationRequest.priorityIdentifier())) {
+                LOG.warn(
+                        "Priority identifier not sent in request, this behaviour will soon be disallowed");
                 priorityIdentifier = PriorityIdentifier.DEFAULT;
             } else {
                 priorityIdentifier = sendNotificationRequest.priorityIdentifier();
