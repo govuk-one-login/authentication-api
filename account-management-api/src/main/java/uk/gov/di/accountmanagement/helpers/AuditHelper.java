@@ -9,7 +9,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -88,29 +87,6 @@ public class AuditHelper {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
-    }
-
-    public static Result<ErrorResponse, AuditContext> buildAuditContextForMfaMethod(
-            APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
-            MFAMethod mfaMethod,
-            ConfigurationService configurationService,
-            DynamoService dynamoService) {
-        return accountManagementAuditContext(
-                        configurationService, dynamoService, input, userProfile)
-                .map(
-                        baseContext -> {
-                            var phoneNumber =
-                                    mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.name())
-                                            ? mfaMethod.getDestination()
-                                            : AuditService.UNKNOWN;
-                            return baseContext
-                                    .withPhoneNumber(phoneNumber)
-                                    .withMetadataItem(
-                                            pair(
-                                                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                                    mfaMethod.getMfaMethodType()));
-                        });
     }
 
     public static Result<ErrorResponse, AuditContext> updateAuditContextForFailedMFACreation(
