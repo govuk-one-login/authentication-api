@@ -549,6 +549,7 @@ class MFAMethodsCreateHandlerTest {
         void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
             when(configurationService.isAccountManagementInternationalSmsEnabled())
                     .thenReturn(false);
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL)).thenReturn(Result.success(List.of()));
 
             var event =
                     generateApiGatewayEvent(
