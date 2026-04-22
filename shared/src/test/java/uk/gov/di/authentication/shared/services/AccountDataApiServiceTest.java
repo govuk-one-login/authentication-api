@@ -4,6 +4,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -53,214 +55,165 @@ class AccountDataApiServiceTest {
 
     @Nested
     class RetrievePasskeys {
-        @Nested
-        class SuccessfulRequest {
-            @Test
-            void shouldBuildCorrectRequestUri()
-                    throws IOException,
-                            InterruptedException,
-                            UnsuccessfulAccountDataApiResponseException {
-                // Arrange
-                var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-                when(httpClient.send(any(), any())).thenReturn(null);
+        @Test
+        void shouldBuildCorrectRequestUri()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException {
+            // Arrange
+            var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+            when(httpClient.send(any(), any())).thenReturn(null);
 
-                // Act
-                service.retrievePasskeys("testPublicSubjectId", TOKEN);
+            // Act
+            service.retrievePasskeys("testPublicSubjectId", TOKEN);
 
-                // Assert
-                verify(httpClient).send(httpRequestCaptor.capture(), any());
-                assertThat(
-                        httpRequestCaptor.getValue().uri(),
-                        equalTo(
-                                URI.create(
-                                        "https://example.com/accounts/testPublicSubjectId/authenticators/passkeys")));
-                assertThat(httpRequestCaptor.getValue().method(), equalTo("GET"));
-                assertThat(
-                        httpRequestCaptor
-                                .getValue()
-                                .headers()
-                                .firstValue("Authorization")
-                                .orElse(""),
-                        equalTo("Bearer " + TOKEN));
-            }
-
-            @Test
-            void shouldReturnVerbatimHttpResponse()
-                    throws IOException,
-                            InterruptedException,
-                            UnsuccessfulAccountDataApiResponseException {
-                // Arrange
-                var mockHttpResponse = mock(HttpResponse.class);
-                when(mockHttpResponse.statusCode()).thenReturn(200);
-                when(mockHttpResponse.body()).thenReturn("{'test': true}");
-                when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
-
-                // Act
-                var resp = service.retrievePasskeys("testPublicSubjectId", TOKEN);
-
-                // Assert
-                assertThat(resp.statusCode(), equalTo(200));
-                assertThat(resp.body(), equalTo("{'test': true}"));
-            }
+            // Assert
+            verify(httpClient).send(httpRequestCaptor.capture(), any());
+            assertThat(
+                    httpRequestCaptor.getValue().uri(),
+                    equalTo(
+                            URI.create(
+                                    "https://example.com/accounts/testPublicSubjectId/authenticators/passkeys")));
+            assertThat(httpRequestCaptor.getValue().method(), equalTo("GET"));
+            assertThat(
+                    httpRequestCaptor.getValue().headers().firstValue("Authorization").orElse(""),
+                    equalTo("Bearer " + TOKEN));
         }
 
-        @Nested
-        class FailedRequest {
-            @Test
-            void shouldThrowWrappedExceptionIfHttpTimeoutExceptionEncountered()
-                    throws IOException, InterruptedException {
-                // Arrange
-                doThrow(new HttpTimeoutException("timed out")).when(httpClient).send(any(), any());
+        @Test
+        void shouldReturnVerbatimHttpResponse()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(mockHttpResponse.statusCode()).thenReturn(200);
+            when(mockHttpResponse.body()).thenReturn("{'test': true}");
+            when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
 
-                // Act & Assert
-                var exception =
-                        assertThrows(
-                                UnsuccessfulAccountDataApiResponseException.class,
-                                () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
-                assertThat(exception.getMessage(), containsString("timeout of " + TIMEOUT));
-                assertThat(exception.getCause(), instanceOf(HttpTimeoutException.class));
-            }
+            // Act
+            var resp = service.retrievePasskeys("testPublicSubjectId", TOKEN);
 
-            @Test
-            void shouldThrowWrappedExceptionIfIOExceptionEncountered()
-                    throws IOException, InterruptedException {
-                // Arrange
-                doThrow(new IOException("connection failed")).when(httpClient).send(any(), any());
-
-                // Act & Assert
-                var exception =
-                        assertThrows(
-                                UnsuccessfulAccountDataApiResponseException.class,
-                                () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
-                assertThat(exception.getMessage(), containsString("Error when attempting to call"));
-                assertThat(exception.getCause(), instanceOf(IOException.class));
-            }
-
-            @Test
-            void shouldThrowWrappedExceptionIfInterruptedExceptionEncountered()
-                    throws IOException, InterruptedException {
-                // Arrange
-                doThrow(new InterruptedException("interrupted"))
-                        .when(httpClient)
-                        .send(any(), any());
-
-                // Act & Assert
-                var exception =
-                        assertThrows(
-                                UnsuccessfulAccountDataApiResponseException.class,
-                                () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
-                assertThat(exception.getMessage(), containsString("Interrupted exception"));
-                assertThat(exception.getCause(), instanceOf(InterruptedException.class));
-            }
+            // Assert
+            assertThat(resp.statusCode(), equalTo(200));
+            assertThat(resp.body(), equalTo("{'test': true}"));
         }
     }
 
     @Nested
     class DeletePasskey {
-        @Nested
-        class SuccessfulRequest {
-            @Test
-            void shouldBuildCorrectRequestUri()
-                    throws IOException,
-                            InterruptedException,
-                            UnsuccessfulAccountDataApiResponseException {
-                // Arrange
-                var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-                when(httpClient.send(any(), any())).thenReturn(null);
+        @Test
+        void shouldBuildCorrectRequestUri()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException {
+            // Arrange
+            var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+            when(httpClient.send(any(), any())).thenReturn(null);
 
-                // Act
-                service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
+            // Act
+            service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
 
-                // Assert
-                verify(httpClient).send(httpRequestCaptor.capture(), any());
-                assertThat(
-                        httpRequestCaptor.getValue().uri(),
-                        equalTo(
-                                URI.create(
-                                        "https://example.com/accounts/testPublicSubjectId/authenticators/passkeys/testPasskeyId")));
-                assertThat(httpRequestCaptor.getValue().method(), equalTo("DELETE"));
-                assertThat(
-                        httpRequestCaptor
-                                .getValue()
-                                .headers()
-                                .firstValue("Authorization")
-                                .orElse(""),
-                        equalTo("Bearer " + TOKEN));
-            }
-
-            @Test
-            void shouldReturnVerbatimHttpResponse()
-                    throws IOException,
-                            InterruptedException,
-                            UnsuccessfulAccountDataApiResponseException {
-                // Arrange
-                var mockHttpResponse = mock(HttpResponse.class);
-                when(mockHttpResponse.statusCode()).thenReturn(200);
-                when(mockHttpResponse.body()).thenReturn("{'deleted': true}");
-                when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
-
-                // Act
-                var resp = service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
-
-                // Assert
-                assertThat(resp.statusCode(), equalTo(200));
-                assertThat(resp.body(), equalTo("{'deleted': true}"));
-            }
+            // Assert
+            verify(httpClient).send(httpRequestCaptor.capture(), any());
+            assertThat(
+                    httpRequestCaptor.getValue().uri(),
+                    equalTo(
+                            URI.create(
+                                    "https://example.com/accounts/testPublicSubjectId/authenticators/passkeys/testPasskeyId")));
+            assertThat(httpRequestCaptor.getValue().method(), equalTo("DELETE"));
+            assertThat(
+                    httpRequestCaptor.getValue().headers().firstValue("Authorization").orElse(""),
+                    equalTo("Bearer " + TOKEN));
         }
 
-        @Nested
-        class FailedRequest {
-            @Test
-            void shouldThrowWrappedExceptionIfHttpTimeoutExceptionEncountered()
-                    throws IOException, InterruptedException {
-                // Arrange
-                doThrow(new HttpTimeoutException("timed out")).when(httpClient).send(any(), any());
+        @Test
+        void shouldReturnVerbatimHttpResponse()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(mockHttpResponse.statusCode()).thenReturn(200);
+            when(mockHttpResponse.body()).thenReturn("{'deleted': true}");
+            when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
 
-                // Act & Assert
-                var exception =
-                        assertThrows(
-                                UnsuccessfulAccountDataApiResponseException.class,
-                                () ->
-                                        service.deletePasskey(
-                                                "testPublicSubjectId", "testPasskeyId", TOKEN));
-                assertThat(exception.getMessage(), containsString("timeout of " + TIMEOUT));
-                assertThat(exception.getCause(), instanceOf(HttpTimeoutException.class));
-            }
+            // Act
+            var resp = service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
 
-            @Test
-            void shouldThrowWrappedExceptionIfIOExceptionEncountered()
-                    throws IOException, InterruptedException {
-                // Arrange
-                doThrow(new IOException("connection failed")).when(httpClient).send(any(), any());
+            // Assert
+            assertThat(resp.statusCode(), equalTo(200));
+            assertThat(resp.body(), equalTo("{'deleted': true}"));
+        }
+    }
 
-                // Act & Assert
-                var exception =
-                        assertThrows(
-                                UnsuccessfulAccountDataApiResponseException.class,
-                                () ->
-                                        service.deletePasskey(
-                                                "testPublicSubjectId", "testPasskeyId", TOKEN));
-                assertThat(exception.getMessage(), containsString("Error when attempting to call"));
-                assertThat(exception.getCause(), instanceOf(IOException.class));
-            }
+    @Nested
+    class FailedRequest {
+        @ParameterizedTest
+        @EnumSource(PasskeysMethod.class)
+        void shouldThrowWrappedExceptionIfHttpTimeoutExceptionEncountered(PasskeysMethod method)
+                throws IOException, InterruptedException {
+            // Arrange
+            doThrow(new HttpTimeoutException("timed out")).when(httpClient).send(any(), any());
 
-            @Test
-            void shouldThrowWrappedExceptionIfInterruptedExceptionEncountered()
-                    throws IOException, InterruptedException {
-                // Arrange
-                doThrow(new InterruptedException("interrupted"))
-                        .when(httpClient)
-                        .send(any(), any());
+            // Act
+            var exception =
+                    assertThrows(
+                            UnsuccessfulAccountDataApiResponseException.class,
+                            () -> method.call(service));
 
-                // Act & Assert
-                var exception =
-                        assertThrows(
-                                UnsuccessfulAccountDataApiResponseException.class,
-                                () ->
-                                        service.deletePasskey(
-                                                "testPublicSubjectId", "testPasskeyId", TOKEN));
-                assertThat(exception.getMessage(), containsString("Interrupted exception"));
-                assertThat(exception.getCause(), instanceOf(InterruptedException.class));
+            // Assert
+            assertThat(exception.getMessage(), containsString("timeout of " + TIMEOUT));
+            assertThat(exception.getCause(), instanceOf(HttpTimeoutException.class));
+        }
+
+        @ParameterizedTest
+        @EnumSource(PasskeysMethod.class)
+        void shouldThrowWrappedExceptionIfIOExceptionEncountered(PasskeysMethod method)
+                throws IOException, InterruptedException {
+            // Arrange
+            doThrow(new IOException("connection failed")).when(httpClient).send(any(), any());
+
+            // Act
+            var exception =
+                    assertThrows(
+                            UnsuccessfulAccountDataApiResponseException.class,
+                            () -> method.call(service));
+
+            // Assert
+            assertThat(exception.getMessage(), containsString("Error when attempting to call"));
+            assertThat(exception.getCause(), instanceOf(IOException.class));
+        }
+
+        @ParameterizedTest
+        @EnumSource(PasskeysMethod.class)
+        void shouldThrowWrappedExceptionIfInterruptedExceptionEncountered(PasskeysMethod method)
+                throws IOException, InterruptedException {
+            // Arrange
+            doThrow(new InterruptedException("interrupted")).when(httpClient).send(any(), any());
+
+            // Act
+            var exception =
+                    assertThrows(
+                            UnsuccessfulAccountDataApiResponseException.class,
+                            () -> method.call(service));
+
+            // Assert
+            assertThat(exception.getMessage(), containsString("Interrupted exception"));
+            assertThat(exception.getCause(), instanceOf(InterruptedException.class));
+        }
+    }
+
+    enum PasskeysMethod {
+        RETRIEVE_PASSKEYS,
+        DELETE_PASSKEY;
+
+        void call(AccountDataApiService service)
+                throws UnsuccessfulAccountDataApiResponseException {
+            switch (this) {
+                case RETRIEVE_PASSKEYS -> service.retrievePasskeys("testPublicSubjectId", TOKEN);
+                case DELETE_PASSKEY -> service.deletePasskey(
+                        "testPublicSubjectId", "testPasskeyId", TOKEN);
             }
         }
     }
