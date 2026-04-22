@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -39,6 +40,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
@@ -135,7 +137,7 @@ public class MFAMethodsCreateHandler
     }
 
     private Result<APIGatewayProxyResponseEvent, UserProfile>
-            getUserProfileWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
+    getUserProfileWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
         if (!configurationService.isMfaMethodManagementApiEnabled()) {
             LOG.error(
                     "Request to create MFA method in {} environment but feature is switched off.",
@@ -392,49 +394,32 @@ public class MFAMethodsCreateHandler
                                                 method, baseAuditContext));
             } else {
                 AuditContext context = baseAuditContext;
+                var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
+                var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
+                context = context
+                        .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType))
+                        .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority));
 
-                context =
-                        context.withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                                mfaMethodCreateRequest
-                                                        .mfaMethod()
-                                                        .method()
-                                                        .mfaMethodType()
-                                                        .toString()))
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                                PriorityIdentifier.BACKUP.name().toLowerCase()));
-
-                if (mfaMethodCreateRequest.mfaMethod().method()
-                        instanceof RequestSmsMfaDetail requestSmsMfaDetail1) {
-                    context = context.withPhoneNumber(requestSmsMfaDetail1.phoneNumber());
-                    context =
-                            context.withMetadataItem(
+                if (mfaMethodCreateRequest.mfaMethod().method() instanceof RequestSmsMfaDetail requestSmsMfaDetail1) {
+                    context = context
+                            .withPhoneNumber(requestSmsMfaDetail1.phoneNumber())
+                            .withMetadataItem(
                                     pair(
                                             AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
-                                            PhoneNumberHelper.getCountry(
-                                                    requestSmsMfaDetail1.phoneNumber())));
+                                            PhoneNumberHelper.getCountry(requestSmsMfaDetail1.phoneNumber())));
 
-                    if (auditEvent.equals(AUTH_CODE_VERIFIED)
-                            && requestSmsMfaDetail1.otp() != null) {
-                        context =
-                                context.withMetadataItem(
-                                                pair(
-                                                        AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
-                                                        requestSmsMfaDetail1.otp()))
-                                        .withMetadataItem(
-                                                pair(
-                                                        AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
-                                                        MFA_SMS.name()));
+                    if (auditEvent.equals(AUTH_CODE_VERIFIED) && requestSmsMfaDetail1.otp() != null) {
+                        var mfaCodeEnteredPair =
+                                pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, requestSmsMfaDetail1.otp());
+                        var notificationTypePair = pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
+                        context = context
+                                .withMetadataItem(mfaCodeEnteredPair)
+                                .withMetadataItem(notificationTypePair);
                     }
                 }
 
                 if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-                    context =
-                            context.withMetadataItem(
-                                    pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
+                    context = context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
                 }
 
                 return Result.success(context);
@@ -452,7 +437,7 @@ public class MFAMethodsCreateHandler
             MfaMethodCreateRequest mfaMethodCreateRequest) {
         var maybeAuditContext =
                 accountManagementAuditContext(
-                                configurationService, dynamoService, input, userProfile)
+                        configurationService, dynamoService, input, userProfile)
                         .flatMap(
                                 baseContext ->
                                         buildAuditContext(
