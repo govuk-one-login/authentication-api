@@ -51,7 +51,13 @@ public class ApiGatewayLambdaHandler {
 
             ctx.status(responseEvent.getStatusCode())
                     .json(responseEvent.getBody());
+
             responseEvent.getHeaders().forEach(ctx::header);
+            if (responseEvent.getMultiValueHeaders() != null) {
+                responseEvent.getMultiValueHeaders().forEach((key, values) -> {
+                    values.forEach((value) -> ctx.res().addHeader(key, value));
+                });
+            }
         } catch (RuntimeException e) {
             LOG.error("Runtime exception thrown by handler", e);
             ctx.status(500).json(Map.of("message", e.getMessage()));

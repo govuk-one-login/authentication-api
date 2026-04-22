@@ -1,6 +1,6 @@
-# Local running for Authentication API
+# Local running for Orchestration API
 
-This directory contains a wrapper for running the authentication API locally without an AWS environment.
+This directory contains a wrapper for running the orchestration API locally without an AWS environment.
 
 It can be used to test code changes quickly and with a debugger,
 but cannot be used to fully test changes involving AWS components.
@@ -10,22 +10,22 @@ but cannot be used to fully test changes involving AWS components.
 The local-running app runs a [Javalin](https://javalin.io/) webserver which simulates the API Gateway integration,
 transforming incoming requests to lambda handler invocations.
 
-See [LocalAuthApi.java](src/main/java/uk/gov/di/orchestration/local/LocalAuthApi.java) for the mapping.
+See [LocalOrchestrationApi.java](src/main/java/uk/gov/di/orchestration/local/LocalOrchestrationApi.java) for the mapping.
 
-It runs both `frontend-api` and `external-api` on the same server.
+It runs the OIDC API as well as the Auth, IPV and Doc Checking APIs on the same server.
 
 ## How to use
 
 ### Prerequisites
 
-The `authentication-stubs` and `authentication-frontend` repos will need to be checked out (or symlinked)
+The `orch-stubs` and `relying-party-stub` repos will need to be checked out (or symlinked)
 at the same level as `authentication-api`, and the containers will be built from the current branch:
 
 ```
 <dev workspace>
 ├─ authentication-api/
-├─ authentication-frontend/
-└─ authentication-stubs/
+├─ orch-stubs/
+└─ relying-party-stub/
 ```
 
 ### Basic usage
@@ -35,50 +35,23 @@ The simplest way is to run `docker compose up` in this directory. This will spin
 - `aws` - Localstack instance for SSM, KMS, and SQS dependencies
 - `redis` - Redis container for remaining redis dependencies
 - `dynamodb` - DynamoDB container for DynamoDB tables
-- `orchestration-stub` - Orchestration stub for starting auth journeys, running on [http://localhost:4400]
-- `authentication-frontend` - Auth frontend running on [http://localhost:4401]
-- `authentication-api` - Local running Auth API running on [http://localhost:4402]
+- `relying-party-stub` - RP stub for starting journeys, running on [http://localhost:4000]
+- `orchestration-api` - Orchestration API, running on [http://localhost:4400]
+- `orchestration-stubs` - Auth, IPV, SPOT and AIS stubs running on [http://localhost:4401]
 
-The orchestrator stub will run at [http://localhost:4400] and journeys can be started there.
+The RP stub will run at [http://localhost:4000] and journeys can be started there.
 
 Standard docker compose commands can be used to rebuild containers when needed,
-e.g. `docker compose build authentication-api`.
+e.g. `docker compose build orchestration-api`.
 
 ### Debugging
 
-#### Authentication API debugging
+#### Orchestration API debugging
 
-Authentication API exposes a debug port at `localhost:5402` for use with your favourite Java debugger.
+Orchestration API exposes a debug port at `localhost:5400` for use with your favourite Java debugger.
 
 In IntelliJ, you can set up a 'Remote JVM Debug' debug configuration targeting that port.
 It should use the classpath for the local-running:main gradle project.
-
-### Authentication Frontend debugging
-
-Authentication Frontend exposes a debug port at `localhost:5401` for use with your favourite Node debugger.
-
-In VSCode, you can set up a `launch.json` configuration to target the port. For example:
-
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "type": "node",
-      "request": "attach",
-      "name": "Authentication Frontend",
-      "skipFiles": ["<node_internals>/**"],
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-      "localRoot": "${workspaceFolder}/dist",
-      "remoteRoot": "/app/dist",
-      "address": "localhost",
-      "port": 5401
-    }
-  ]
-}
-```
-
-Note that you will need to build the project yourself (`yarn build`) to make the source maps available to the debugger.
 
 ### Advanced usage
 

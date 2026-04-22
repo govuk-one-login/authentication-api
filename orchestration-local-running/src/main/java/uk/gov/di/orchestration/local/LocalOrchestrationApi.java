@@ -7,6 +7,7 @@ import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.ipv.lambda.IpvJwksHandler;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
+import uk.gov.di.authentication.oidc.lambda.AuthJwksHandler;
 import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.authentication.oidc.lambda.JwksHandler;
@@ -24,34 +25,38 @@ public class LocalOrchestrationApi {
 
     // These path mappings must match those in the infrastructure-as-code configuration
     public LocalOrchestrationApi() {
-        var app = Javalin.create();
+        var app = Javalin.create(config -> {
 
-        // OIDC API
-        app.get("/.well-known/jwks.json", handlerFor(new JwksHandler()));
-        app.get("/.well-known/openid-configuration", handlerFor(new WellknownHandler()));
-        app.get("/.well-known/storage-token-jwk.json", handlerFor(new StorageTokenJwkHandler()));
-        app.get("/authorize", handlerFor(new AuthorisationHandler()));
-        app.get("/auth-code", handlerFor(new AuthCodeHandler()));
-        app.get("/logout", handlerFor(new LogoutHandler()));
-        app.get("/orchestration-redirect", handlerFor(new AuthenticationCallbackHandler()));
-        app.post("/token", handlerFor(new TokenHandler()));
-        app.get("/trustmark", handlerFor(new TrustMarkHandler()));
-        app.get("/userinfo", handlerFor(new UserInfoHandler()));
-        // TODO: backchannel logout - queue based
+                    // OIDC API
+                    config.routes.get("/.well-known/jwks.json", handlerFor(new JwksHandler()));
+                    config.routes.get("/.well-known/openid-configuration", handlerFor(new WellknownHandler()));
+                    config.routes.get("/.well-known/storage-token-jwk.json", handlerFor(new StorageTokenJwkHandler()));
+                    config.routes.get("/authorize", handlerFor(new AuthorisationHandler()));
+                    config.routes.get("/auth-code", handlerFor(new AuthCodeHandler()));
+                    config.routes.post("/token", handlerFor(new TokenHandler()));
+                    config.routes.get("/userinfo", handlerFor(new UserInfoHandler()));
+                    config.routes.get("/logout", handlerFor(new LogoutHandler()));
+                    config.routes.get("/trustmark", handlerFor(new TrustMarkHandler()));
+                    // TODO: backchannel logout - set up queue poll
 
-        // IPV API
-        app.get("./well-known/ipv-jwks.json", handlerFor(new IpvJwksHandler()));
-        app.get("/ipv-callback", handlerFor(new IPVCallbackHandler()));
-        // TODO: IPV Capacity (deprecated)
-        // TODO: Identity progress and processing identity (deprecated?)
-        // TODO: SPOT response processing - queue based
+                    // Auth API
+                    config.routes.get(".well-known/auth-jwks.json", handlerFor(new AuthJwksHandler()));
+                    config.routes.get("/orchestration-redirect", handlerFor(new AuthenticationCallbackHandler()));
 
-        // Doc checking app API
-        app.get("/doc-app-callback", handlerFor(new DocAppCallbackHandler()));
+                    // IPV API
+                    config.routes.get("./well-known/ipv-jwks.json", handlerFor(new IpvJwksHandler()));
+                    config.routes.get("/ipv-callback", handlerFor(new IPVCallbackHandler()));
+                    // TODO: IPV Capacity (deprecated)
+                    // TODO: Identity progress and processing identity (deprecated?)
+                    // TODO: SPOT response processing - set up queue poll
 
-        // Client Registry API
-        app.post("/connect/register", handlerFor(new ClientRegistrationHandler()));
-        app.put("/connect/register/{clientId}", handlerFor(new UpdateClientConfigHandler()));
+                    // Doc checking app API
+                    config.routes.get("/doc-app-callback", handlerFor(new DocAppCallbackHandler()));
+
+                    // Client Registry API
+                    config.routes.post("/connect/register", handlerFor(new ClientRegistrationHandler()));
+                    config.routes.put("/connect/register/{clientId}", handlerFor(new UpdateClientConfigHandler()));
+                });
 
         // Start app
         app.start(getPort());
