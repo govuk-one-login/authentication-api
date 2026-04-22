@@ -19,6 +19,7 @@ import static uk.gov.di.orchestration.shared.helpers.CookieHelper.BROWSER_SESSIO
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.PERSISTENT_COOKIE_NAME;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.REQUEST_COOKIE_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.RESPONSE_COOKIE_HEADER;
+import static uk.gov.di.orchestration.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.parseBrowserSessionCookie;
@@ -236,6 +237,27 @@ class CookieHelperTest {
         assertEmpty(
                 getHttpCookieFromResponseHeaders(
                         Map.of("header", "value"), "cookies_preferences_set"));
+    }
+
+    @Test
+    void shouldBuildCookieStrings() {
+        assertEquals(
+                "test-name=test-value; Max-Age=123; Domain=example.com; HttpOnly;",
+                buildCookieString("test-name", "test-value", 123, "HttpOnly;", "example.com"));
+    }
+
+    @Test
+    void shouldOmitDomainForLocalhostCookieStrings() {
+        assertEquals(
+                "test-name=test-value; Max-Age=123; HttpOnly;",
+                buildCookieString("test-name", "test-value", 123, "HttpOnly;", "localhost"));
+    }
+
+    @Test
+    void shouldOmitMaxAgeIfNullForCookieStrings() {
+        assertEquals(
+                "test-name=test-value; Domain=example.com; HttpOnly;",
+                buildCookieString("test-name", "test-value", null, "HttpOnly;", "example.com"));
     }
 
     private static void assertEmpty(Object input) {

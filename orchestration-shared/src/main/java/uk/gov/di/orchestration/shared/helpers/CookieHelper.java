@@ -183,14 +183,19 @@ public class CookieHelper {
             Integer maxAge,
             String attributes,
             String domain) {
-        return format(
-                "%s=%s; Max-Age=%d; Domain=%s; %s",
-                cookieName, cookieValue, maxAge, domain, attributes);
-    }
-
-    public static String buildCookieString(
-            String cookieName, String cookieValue, String attributes, String domain) {
-        return format("%s=%s; Domain=%s; %s", cookieName, cookieValue, domain, attributes);
+        var sb = new StringBuilder();
+        sb.append(cookieName).append('=').append(cookieValue).append(';');
+        if (maxAge != null) {
+            sb.append(" Max-Age=").append(maxAge).append(';');
+        }
+        // Localhost cookies should not set a domain
+        if (domain != null && !"localhost".equals(domain)) {
+            sb.append(" Domain=").append(domain).append(';');
+        }
+        if (attributes != null) {
+            sb.append(' ').append(attributes);
+        }
+        return sb.toString();
     }
 
     public static String appendTimestampToCookieValue(String cookieValue) {
