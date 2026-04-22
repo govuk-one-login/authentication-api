@@ -55,6 +55,29 @@ Resources:
                   ],
                   accountDataApiId,
                 ]
+          AUTH_TO_ACCOUNT_DATA_API_AUDIENCE: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://account.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://account.${Environment}.account.gov.uk"
+            - "https://account.account.gov.uk"
+          AUTH_TO_ACCOUNT_DATA_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-data-signing-key
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_ISSUER_CLAIM:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendBaseUrl,
+            ]
+          AMC_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcClientId,
+            ]
       LoggingConfig:
         LogGroup: !Ref UserExistsFunctionLogGroup
       Policies:
@@ -66,6 +89,7 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref RedisParametersAccessPolicy
+        - !Ref AuthToAccountDataSigningKeyPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:

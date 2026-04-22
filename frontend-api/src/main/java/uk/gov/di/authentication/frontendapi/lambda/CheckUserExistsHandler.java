@@ -206,7 +206,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         configurationService.isForcedMFAResetAfterMFACheckEnabled()
                                 && requiresMfaResetForInternationalNumber(
                                         authSession, userCredentials, userProfile.get());
-                hasActivePasskey = hasActivePasskey(userProfile.get().getPublicSubjectID());
+                hasActivePasskey =
+                        hasActivePasskey(userProfile.get().getPublicSubjectID(), authSession);
             } else {
                 authSession.setInternalCommonSubjectId(null);
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
@@ -245,17 +246,22 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         }
     }
 
-    private boolean hasActivePasskey(String publicSubjectId) {
+    private boolean hasActivePasskey(String publicSubjectId, AuthSessionItem authSession) {
         if (configurationService.supportPasskeys()) {
             LOG.info("Checking if user has active passkey");
-            var result = passkeysService.hasActivePasskey(publicSubjectId);
-            if (result.isFailure()) {
+
+            var hasActivePasskeyResult =
+                    passkeysService.hasActivePasskey(
+                            publicSubjectId,
+                            authSession.getInternalCommonSubjectId(),
+                            authSession.getSessionId());
+            if (hasActivePasskeyResult.isFailure()) {
                 LOG.warn(
                         "Error retrieving passkey information for user. Error: {}",
-                        result.getFailure());
+                        hasActivePasskeyResult.getFailure());
                 return false;
             }
-            return result.getSuccess();
+            return hasActivePasskeyResult.getSuccess();
         } else return false;
     }
 

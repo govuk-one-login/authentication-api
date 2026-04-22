@@ -6,9 +6,9 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenScope;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.util.Date;
 import java.util.UUID;
@@ -18,16 +18,21 @@ public class AccessTokenConstructorService {
     private final JwtService jwtService;
     private final ConfigurationService configurationService;
 
-    public AccessTokenConstructorService(
-            JwtService jwtService, ConfigurationService configurationService) {
-        this.jwtService = jwtService;
+    public AccessTokenConstructorService(ConfigurationService configurationService) {
+        this.jwtService = new JwtService(new KmsConnectionService(configurationService));
         this.configurationService = configurationService;
+    }
+
+    public AccessTokenConstructorService(
+            ConfigurationService configurationService, JwtService jwtService) {
+        this.configurationService = configurationService;
+        this.jwtService = jwtService;
     }
 
     public Result<JwtFailureReason, BearerAccessToken> createSignedAccessToken(
             String internalPairwiseSubject,
             AccessTokenScope scope,
-            AuthSessionItem authSessionItem,
+            String sessionId,
             Date issueTime,
             Date expiryDate,
             String audience,
@@ -44,7 +49,7 @@ public class AccessTokenConstructorService {
                         .notBeforeTime(issueTime)
                         .subject(internalPairwiseSubject)
                         .claim("client_id", clientId)
-                        .claim("sid", authSessionItem.getSessionId())
+                        .claim("sid", sessionId)
                         .jwtID(UUID.randomUUID().toString())
                         .build();
 

@@ -4,14 +4,22 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.StartPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.lambda.StartPasskeyAssertionHandler;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
+import uk.org.webcompere.systemstubs.jupiter.SystemStub;
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +32,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
+@ExtendWith(SystemStubsExtension.class)
 class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "user+passkey@digital.cabinet-office.gov.uk";
@@ -33,6 +42,20 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
     private static final String COSE_PUBLIC_KEY_BASE64URL = "cHVibGljLWtleS1jb3Nl";
 
     private WireMockServer wireMockServer;
+
+    @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
+
+    @RegisterExtension
+    private static final KmsKeyExtension authToAccountDataSigningKey =
+            new KmsKeyExtension("auth-to-account-data-signing-key", KeyUsageType.SIGN_VERIFY);
+
+    @BeforeAll
+    static void setupEnvironment() {
+        environment.set("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "https://example.com/ADAPIAudience");
+        environment.set("AUTH_ISSUER_CLAIM", "https://signin.account.gov.uk/");
+        environment.set("AMC_CLIENT_ID", "amc-client-id");
+        environment.set("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", authToAccountDataSigningKey.getKeyId());
+    }
 
     @BeforeEach
     void setUp() {

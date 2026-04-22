@@ -613,7 +613,7 @@ class AMCServiceTest {
                         invocation -> {
                             String internalPairwiseSubject = invocation.getArgument(0);
                             AccessTokenScope scope = invocation.getArgument(1);
-                            AuthSessionItem session = invocation.getArgument(2);
+                            String sessionId = invocation.getArgument(2);
                             Date issueTime = invocation.getArgument(3);
                             Date expiryDate = invocation.getArgument(4);
                             String audience = invocation.getArgument(5);
@@ -638,7 +638,7 @@ class AMCServiceTest {
                                             .notBeforeTime(issueTime)
                                             .subject(internalPairwiseSubject)
                                             .claim("client_id", clientId)
-                                            .claim("sid", session.getSessionId())
+                                            .claim("sid", sessionId)
                                             .jwtID(UUID.randomUUID().toString())
                                             .build();
 

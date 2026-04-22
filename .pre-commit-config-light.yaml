@@ -1,9 +1,4 @@
 repos:
-  - repo: https://github.com/govuk-one-login/pre-commit-hooks.git
-    rev: 0.0.1
-    hooks:
-      - id: gradle-spotless-apply
-
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:

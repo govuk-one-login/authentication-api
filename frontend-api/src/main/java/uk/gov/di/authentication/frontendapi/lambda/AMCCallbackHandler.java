@@ -56,9 +56,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         configurationService,
                         new NowHelper.NowClock(Clock.systemUTC()),
                         new JwtService(new KmsConnectionService(configurationService)),
-                        new AccessTokenConstructorService(
-                                new JwtService(new KmsConnectionService(configurationService)),
-                                configurationService));
+                        new AccessTokenConstructorService(configurationService));
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
     }
 

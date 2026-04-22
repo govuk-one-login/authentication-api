@@ -1,12 +1,16 @@
 package uk.gov.di.authentication.frontendapi.services.passkeys;
 
 import com.google.gson.JsonParseException;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccountDataScope;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeysRetrieveResponse;
+import uk.gov.di.authentication.frontendapi.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -15,6 +19,8 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
@@ -22,30 +28,56 @@ public class PasskeysService {
     private final ConfigurationService configurationService;
     HttpClient httpClient;
     private final SerializationService serializationService = SerializationService.getInstance();
+    private final AccessTokenConstructorService accessTokenConstructorService;
     private static final Logger LOG = LogManager.getLogger(PasskeysService.class);
+
+    private final NowHelper.NowClock nowClock = new NowHelper.NowClock(Clock.systemUTC());
+    private static final Long ADAPI_ACCESS_TOKEN_LIFETIME = 5L;
 
     public PasskeysService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        this.accessTokenConstructorService =
+                new AccessTokenConstructorService(configurationService);
         httpClient = HttpClientHelper.newInstrumentedHttpClient();
     }
 
-    public PasskeysService(ConfigurationService configurationService, HttpClient httpClient) {
+    public PasskeysService(
+            ConfigurationService configurationService,
+            HttpClient httpClient,
+            AccessTokenConstructorService accessTokenConstructorService) {
         this.configurationService = configurationService;
         this.httpClient = httpClient;
+        this.accessTokenConstructorService = accessTokenConstructorService;
     }
 
-    public Result<PasskeyRetrieveError, Boolean> hasActivePasskey(String publicSubjectId) {
-        return retrievePasskeys(publicSubjectId).map(response -> !response.passkeys().isEmpty());
+    public Result<PasskeyRetrieveError, Boolean> hasActivePasskey(
+            String publicSubjectId, String internalCommonSubjectId, String sessionId) {
+        return retrievePasskeys(publicSubjectId, internalCommonSubjectId, sessionId)
+                .map(response -> !response.passkeys().isEmpty());
     }
 
     public Result<PasskeyRetrieveError, PasskeysRetrieveResponse> retrievePasskeys(
-            String publicSubjectId) {
+            String publicSubjectId, String internalCommonSubjectId, String sessionId) {
+
+        var accountDataApiAccessTokenResult =
+                createAccountDataApiAccessToken(internalCommonSubjectId, sessionId);
+        if (accountDataApiAccessTokenResult.isFailure()) {
+            return Result.failure(accountDataApiAccessTokenResult.getFailure());
+        }
+
         var accountDataBaseUri = configurationService.getAccountDataURI();
         var getPasskeysRequestUri =
                 buildURI(
                         accountDataBaseUri,
                         "/accounts/" + publicSubjectId + "/authenticators/passkeys");
-        var request = HttpRequest.newBuilder(getPasskeysRequestUri).build();
+        var request =
+                HttpRequest.newBuilder(getPasskeysRequestUri)
+                        .header(
+                                "Authorization",
+                                accountDataApiAccessTokenResult
+                                        .getSuccess()
+                                        .toAuthorizationHeader())
+                        .build();
         LOG.info("Sending request to account data api retrieve endpoint");
         try {
             var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -88,5 +120,27 @@ public class PasskeysService {
             return Result.failure(
                     PasskeyRetrieveError.ERROR_PARSING_RESPONSE_FROM_PASSKEY_RETRIEVE);
         }
+    }
+
+    private Result<PasskeyRetrieveError, BearerAccessToken> createAccountDataApiAccessToken(
+            String internalCommonSubjectId, String sessionId) {
+        return accessTokenConstructorService
+                .createSignedAccessToken(
+                        internalCommonSubjectId,
+                        AccountDataScope.PASSKEY_RETRIEVE,
+                        sessionId,
+                        nowClock.now(),
+                        nowClock.nowPlus(ADAPI_ACCESS_TOKEN_LIFETIME, ChronoUnit.MINUTES),
+                        configurationService.getAuthToAccountDataApiAudience(),
+                        configurationService.getAuthIssuerClaim(),
+                        configurationService.getAMCClientId(),
+                        configurationService.getAuthToAccountDataSigningKey())
+                .mapFailure(
+                        failure -> {
+                            LOG.warn(
+                                    "Error creating account data api access token. Error: {}",
+                                    failure);
+                            return PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN;
+                        });
     }
 }
