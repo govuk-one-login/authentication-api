@@ -11,13 +11,10 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
-import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -29,18 +26,13 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
-import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuditHelper {
@@ -119,64 +111,6 @@ public class AuditHelper {
                                                     AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
                                                     mfaMethod.getMfaMethodType()));
                         });
-    }
-
-    public static AuditContext enrichAuditContextForMfaMethod(
-            AccountManagementAuditableEvent auditEvent,
-            AuditContext context,
-            MfaMethodCreateRequest mfaMethodCreateRequest) {
-
-        if (mfaMethodCreateRequest != null) {
-            context =
-                    context.withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                            mfaMethodCreateRequest
-                                                    .mfaMethod()
-                                                    .method()
-                                                    .mfaMethodType()
-                                                    .toString()))
-                            .withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                            PriorityIdentifier.BACKUP.name().toLowerCase()));
-
-            if (mfaMethodCreateRequest.mfaMethod().method()
-                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-                context = context.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
-                context =
-                        context.withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
-                                        PhoneNumberHelper.getCountry(
-                                                requestSmsMfaDetail.phoneNumber())));
-
-                if (auditEvent.equals(AccountManagementAuditableEvent.AUTH_CODE_VERIFIED)
-                        && requestSmsMfaDetail.otp() != null) {
-                    context =
-                            context.withMetadataItem(
-                                            pair(
-                                                    AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
-                                                    requestSmsMfaDetail.otp()))
-                                    .withMetadataItem(
-                                            pair(
-                                                    AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
-                                                    MFA_SMS.name()));
-                }
-            }
-
-            if (auditEvent.equals(AccountManagementAuditableEvent.AUTH_CODE_VERIFIED)) {
-                context =
-                        context.withMetadataItem(
-                                        pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                                ACCOUNT_MANAGEMENT.name()));
-            }
-        }
-
-        return context;
     }
 
     public static Result<ErrorResponse, AuditContext> updateAuditContextForFailedMFACreation(

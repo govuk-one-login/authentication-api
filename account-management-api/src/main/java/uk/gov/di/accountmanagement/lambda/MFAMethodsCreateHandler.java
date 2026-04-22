@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -48,14 +49,20 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_OTP;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -402,7 +409,7 @@ public class MFAMethodsCreateHandler
                                         configurationService, dynamoService, input, userProfile)
                                 .map(
                                         baseContext ->
-                                                AuditHelper.enrichAuditContextForMfaMethod(
+                                                enrichAuditContextForMfaMethod(
                                                         auditEvent,
                                                         baseContext,
                                                         mfaMethodCreateRequest));
@@ -482,6 +489,64 @@ public class MFAMethodsCreateHandler
 
         LOG.info("Successfully submitted audit event: {}", auditEvent.name());
         return Result.success(null);
+    }
+
+    private static AuditContext enrichAuditContextForMfaMethod(
+            AccountManagementAuditableEvent auditEvent,
+            AuditContext context,
+            MfaMethodCreateRequest mfaMethodCreateRequest) {
+
+        if (mfaMethodCreateRequest != null) {
+            context =
+                    context.withMetadataItem(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                            mfaMethodCreateRequest
+                                                    .mfaMethod()
+                                                    .method()
+                                                    .mfaMethodType()
+                                                    .toString()))
+                            .withMetadataItem(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                            PriorityIdentifier.BACKUP.name().toLowerCase()));
+
+            if (mfaMethodCreateRequest.mfaMethod().method()
+                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+                context = context.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
+                context =
+                        context.withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
+                                        PhoneNumberHelper.getCountry(
+                                                requestSmsMfaDetail.phoneNumber())));
+
+                if (auditEvent.equals(AccountManagementAuditableEvent.AUTH_CODE_VERIFIED)
+                        && requestSmsMfaDetail.otp() != null) {
+                    context =
+                            context.withMetadataItem(
+                                            pair(
+                                                    AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
+                                                    requestSmsMfaDetail.otp()))
+                                    .withMetadataItem(
+                                            pair(
+                                                    AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
+                                                    MFA_SMS.name()));
+                }
+            }
+
+            if (auditEvent.equals(AccountManagementAuditableEvent.AUTH_CODE_VERIFIED)) {
+                context =
+                        context.withMetadataItem(
+                                        pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                                ACCOUNT_MANAGEMENT.name()));
+            }
+        }
+
+        return context;
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
