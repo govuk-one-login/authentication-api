@@ -439,13 +439,6 @@ public class MFAMethodsCreateHandler
 
                 var context = context1;
 
-                if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)) {
-                    if (mfaMethodCreateRequest.mfaMethod().method()
-                            instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-                        context = context.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
-                    }
-                }
-
                 return Result.success(context);
             }
         } catch (Exception e) {
