@@ -18,6 +18,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
@@ -70,196 +71,203 @@ class AuthorizeHandlerTest {
         reset(remoteJwksService);
     }
 
-    @Test
-    void authorizeHandlerShouldAllowNonExpiredToken() throws JOSEException {
-        var handler = new AuthorizeHandler(remoteJwksService);
+    @Nested
+    class Success {
+        @Test
+        void authorizeHandlerShouldAllowNonExpiredToken() throws JOSEException {
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        var bearerAccessToken =
-                createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
 
-        event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 
-        var result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
-        var expectedPolicyDocument =
-                """
-                {
-                    "principalId": "%s",
-                    "policyDocument": {
-                        "Version": "2012-10-17",
-                        "Statement": [{
-                            "Action": "execute-api:Invoke",
-                            "Effect": "Allow",
-                            "Resource": "%s"
-                        }]
-                    }
-                }
-                """
-                        .formatted(SUBJECT, METHOD_ARN);
+            var expectedPolicyDocument =
+                    """
+                            {
+                                "principalId": "%s",
+                                "policyDocument": {
+                                    "Version": "2012-10-17",
+                                    "Statement": [{
+                                        "Action": "execute-api:Invoke",
+                                        "Effect": "Allow",
+                                        "Resource": "%s"
+                                    }]
+                                }
+                            }
+                            """
+                            .formatted(SUBJECT, METHOD_ARN);
 
-        assertEquals(
-                JsonParser.parseString(expectedPolicyDocument),
-                JsonParser.parseString(new Gson().toJson(result)));
+            assertEquals(
+                    JsonParser.parseString(expectedPolicyDocument),
+                    JsonParser.parseString(new Gson().toJson(result)));
+        }
     }
 
-    @Test
-    void authorizeHandlerShouldRejectMissingToken() {
-        var handler = new AuthorizeHandler(remoteJwksService);
+    @Nested
+    class Failure {
+        @Test
+        void authorizeHandlerShouldRejectMissingToken() {
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        event.setAuthorizationToken("");
+            event.setAuthorizationToken("");
 
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+            RuntimeException exception =
+                    assertThrows(
+                            RuntimeException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
 
-        assertEquals("Unauthorized", exception.getMessage());
-    }
+            assertEquals("Unauthorized", exception.getMessage());
+        }
 
-    @Test
-    void authorizeHandlerShouldRejectExpiredToken() throws JOSEException {
-        var handler = new AuthorizeHandler(remoteJwksService);
+        @Test
+        void authorizeHandlerShouldRejectExpiredToken() throws JOSEException {
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        var yesterdayInstant = Instant.now().minus(1, ChronoUnit.DAYS);
-        var bearerAccessToken =
-                createBearerAccessTokenWithExpiry(Date.from(yesterdayInstant), ecSigningKey);
+            var yesterdayInstant = Instant.now().minus(1, ChronoUnit.DAYS);
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(Date.from(yesterdayInstant), ecSigningKey);
 
-        event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+            RuntimeException exception =
+                    assertThrows(
+                            RuntimeException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
 
-        assertEquals("Unauthorized", exception.getMessage());
-    }
+            assertEquals("Unauthorized", exception.getMessage());
+        }
 
-    @Test
-    void authorizeHandlerShouldRejectTokenWhoseSignatureCannotBeVerified() throws JOSEException {
-        var differentKeyPair = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
-        when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
-                .thenReturn(Result.success(differentKeyPair.toPublicJWK()));
+        @Test
+        void authorizeHandlerShouldRejectTokenWhoseSignatureCannotBeVerified()
+                throws JOSEException {
+            var differentKeyPair = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
+            when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
+                    .thenReturn(Result.success(differentKeyPair.toPublicJWK()));
 
-        var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        var bearerAccessToken =
-                createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
 
-        event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+            RuntimeException exception =
+                    assertThrows(
+                            RuntimeException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
 
-        assertEquals("Unauthorized", exception.getMessage());
-    }
+            assertEquals("Unauthorized", exception.getMessage());
+        }
 
-    @Test
-    void authorizeHandlerShouldRejectTokenWhenJwksRetrievalFails() throws JOSEException {
-        when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
-                .thenReturn(Result.failure("Failed to retrieve jwks key"));
+        @Test
+        void authorizeHandlerShouldRejectTokenWhenJwksRetrievalFails() throws JOSEException {
+            when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
+                    .thenReturn(Result.failure("Failed to retrieve jwks key"));
 
-        var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        var bearerAccessToken =
-                createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
 
-        event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+            RuntimeException exception =
+                    assertThrows(
+                            RuntimeException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
 
-        assertEquals("Unauthorized", exception.getMessage());
-    }
+            assertEquals("Unauthorized", exception.getMessage());
+        }
 
-    @Test
-    void authorizeHandlerShouldRejectUnparseableToken() {
-        var handler = new AuthorizeHandler(remoteJwksService);
+        @Test
+        void authorizeHandlerShouldRejectUnparseableToken() {
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        event.setAuthorizationToken("Bearer not-a-valid-jwt");
+            event.setAuthorizationToken("Bearer not-a-valid-jwt");
 
-        RuntimeException exception =
-                assertThrows(
-                        UnauthorizedException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
 
-        assertEquals("Unauthorized", exception.getMessage());
-    }
+            assertEquals("Unauthorized", exception.getMessage());
+        }
 
-    @Test
-    void authorizeHandlerShouldRejectAnUnsupportedAlgorithm() throws JOSEException {
-        var handler = new AuthorizeHandler(remoteJwksService);
+        @Test
+        void authorizeHandlerShouldRejectAnUnsupportedAlgorithm() throws JOSEException {
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        RSAKey rsaKey = new RSAKeyGenerator(2048).keyID(KEY_ID).generate();
-        JWSSigner signer = new RSASSASigner(rsaKey);
+            RSAKey rsaKey = new RSAKeyGenerator(2048).keyID(KEY_ID).generate();
+            JWSSigner signer = new RSASSASigner(rsaKey);
 
-        var builder = claimsSetBuilder(SUBJECT, expiryDateFiveMinutesFromNow);
-        var signedToken = generateSignedToken(signer, KEY_ID, builder);
-        var token = new BearerAccessToken(signedToken.serialize());
+            var builder = claimsSetBuilder(SUBJECT, expiryDateFiveMinutesFromNow);
+            var signedToken = generateSignedToken(signer, KEY_ID, builder);
+            var token = new BearerAccessToken(signedToken.serialize());
 
-        event.setAuthorizationToken(token.toAuthorizationHeader());
+            event.setAuthorizationToken(token.toAuthorizationHeader());
 
-        RuntimeException exception =
-                assertThrows(
-                        UnauthorizedException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
 
-        assertEquals("Unauthorized", exception.getMessage());
-    }
+            assertEquals("Unauthorized", exception.getMessage());
+        }
 
-    @Test
-    void authorizeHandlerShouldRejectMissingSubjectId() throws JOSEException {
-        var handler = new AuthorizeHandler(remoteJwksService);
+        @Test
+        void authorizeHandlerShouldRejectMissingSubjectId() throws JOSEException {
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        var claimsWithoutSubject = claimsSetBuilderWithoutSubject(expiryDateFiveMinutesFromNow);
-        var signedToken = createBearerAccessToken(ecSigningKey, claimsWithoutSubject);
-        event.setAuthorizationToken(signedToken.toAuthorizationHeader());
+            var claimsWithoutSubject = claimsSetBuilderWithoutSubject(expiryDateFiveMinutesFromNow);
+            var signedToken = createBearerAccessToken(ecSigningKey, claimsWithoutSubject);
+            event.setAuthorizationToken(signedToken.toAuthorizationHeader());
 
-        RuntimeException exception =
-                assertThrows(
-                        UnauthorizedException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
 
-        assertEquals("Unauthorized", exception.getMessage());
-    }
+            assertEquals("Unauthorized", exception.getMessage());
+        }
 
-    @Test
-    void authorizeHandlerShouldRejectEmptySubjectId() throws JOSEException {
-        var handler = new AuthorizeHandler(remoteJwksService);
+        @Test
+        void authorizeHandlerShouldRejectEmptySubjectId() throws JOSEException {
+            var handler = new AuthorizeHandler(remoteJwksService);
 
-        var claimsWithEmptySubject = claimsSetBuilder("", expiryDateFiveMinutesFromNow);
-        var signedToken = createBearerAccessToken(ecSigningKey, claimsWithEmptySubject);
-        event.setAuthorizationToken(signedToken.toAuthorizationHeader());
+            var claimsWithEmptySubject = claimsSetBuilder("", expiryDateFiveMinutesFromNow);
+            var signedToken = createBearerAccessToken(ecSigningKey, claimsWithEmptySubject);
+            event.setAuthorizationToken(signedToken.toAuthorizationHeader());
 
-        RuntimeException exception =
-                assertThrows(
-                        UnauthorizedException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
 
-        assertEquals("Unauthorized", exception.getMessage());
-    }
+            assertEquals("Unauthorized", exception.getMessage());
+        }
 
-    @Test
-    void authorizeHandlerFailsToInitialiseWhenAccountDataJwksUrlMalformed()
-            throws MalformedURLException {
-        var configurationService = mock(ConfigurationService.class);
-        when(configurationService.getAccountDataJwksUrl())
-                .thenThrow(new MalformedURLException("uh oh"));
+        @Test
+        void authorizeHandlerFailsToInitialiseWhenAccountDataJwksUrlMalformed()
+                throws MalformedURLException {
+            var configurationService = mock(ConfigurationService.class);
+            when(configurationService.getAccountDataJwksUrl())
+                    .thenThrow(new MalformedURLException("uh oh"));
 
-        assertThrows(
-                AuthorizeException.class,
-                () -> new AuthorizeHandler(configurationService),
-                "Expected to throw exception");
+            assertThrows(
+                    AuthorizeException.class,
+                    () -> new AuthorizeHandler(configurationService),
+                    "Expected to throw exception");
+        }
     }
 
     private static BearerAccessToken createBearerAccessTokenWithExpiry(
