@@ -764,6 +764,8 @@ class MFAMethodsCreateHandlerTest {
                             eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
+            //Query: should this instead be reflecting the method that has failed to add? Ie sms
+
             containsMetadataPair(
                     capturedObject,
                     AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
