@@ -316,11 +316,7 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(TEST_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
-            // TODO: AUDIT_EVENT_EXTENSIONS_MFA_METHOD added twice and conflicts with the already
-            // added mfa method, can
-            //  be updated when production code fixed
+                            .withMetadataItem(pair("phone_number_country_code", "44"));
 
             verify(auditService)
                     .submitAuditEvent(

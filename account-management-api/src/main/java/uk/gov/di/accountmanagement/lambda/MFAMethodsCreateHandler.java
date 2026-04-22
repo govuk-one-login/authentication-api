@@ -304,11 +304,7 @@ public class MFAMethodsCreateHandler
 
         var addCompletedResult =
                 sendAuditEvent(
-                        AUTH_MFA_METHOD_ADD_COMPLETED,
-                        input,
-                        userProfile,
-                        mfaMethodCreateRequest,
-                        backupMfaMethod);
+                        AUTH_MFA_METHOD_ADD_COMPLETED, input, userProfile, mfaMethodCreateRequest);
 
         if (addCompletedResult.isFailure()) {
             LOG.error(addCompletedResult.getFailure());
@@ -323,11 +319,7 @@ public class MFAMethodsCreateHandler
         if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
             var updatePhoneNumberResult =
                     sendAuditEvent(
-                            AUTH_UPDATE_PHONE_NUMBER,
-                            input,
-                            userProfile,
-                            mfaMethodCreateRequest,
-                            backupMfaMethod);
+                            AUTH_UPDATE_PHONE_NUMBER, input, userProfile, mfaMethodCreateRequest);
 
             if (updatePhoneNumberResult.isFailure()) {
                 LOG.error(updatePhoneNumberResult.getFailure());
@@ -390,7 +382,6 @@ public class MFAMethodsCreateHandler
             AccountManagementAuditableEvent auditEvent,
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest,
-            MFAMethod mfaMethod,
             AuditContext baseAuditContext) {
         try {
             if (auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)) {
@@ -455,15 +446,6 @@ public class MFAMethodsCreateHandler
                     }
                 }
 
-                if (auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER) && mfaMethod != null) {
-                    // Always set mfa-method to DEFAULT for AUTH_UPDATE_PHONE_NUMBER events
-                    context =
-                            context.withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                            PriorityIdentifier.DEFAULT.name().toLowerCase()));
-                }
-
                 return Result.success(context);
             }
         } catch (Exception e) {
@@ -477,15 +459,6 @@ public class MFAMethodsCreateHandler
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
-        return sendAuditEvent(auditEvent, input, userProfile, mfaMethodCreateRequest, null);
-    }
-
-    private Result<ErrorResponse, Void> sendAuditEvent(
-            AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
-            MfaMethodCreateRequest mfaMethodCreateRequest,
-            MFAMethod mfaMethod) {
         var maybeAuditContext =
                 accountManagementAuditContext(
                                 configurationService, dynamoService, input, userProfile)
@@ -495,7 +468,6 @@ public class MFAMethodsCreateHandler
                                                 auditEvent,
                                                 userProfile,
                                                 mfaMethodCreateRequest,
-                                                mfaMethod,
                                                 baseContext));
         if (maybeAuditContext.isFailure()) {
             LOG.error(
