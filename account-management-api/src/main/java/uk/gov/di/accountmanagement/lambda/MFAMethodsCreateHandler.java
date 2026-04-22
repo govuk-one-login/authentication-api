@@ -388,7 +388,7 @@ public class MFAMethodsCreateHandler
         try {
             if (auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)) {
                 var baseContextResult =
-                        AuditHelper.buildAuditContext(
+                        AuditHelper.accountManagementAuditContext(
                                 configurationService, dynamoService, input, userProfile);
                 if (baseContextResult.isFailure()) {
                     return baseContextResult;

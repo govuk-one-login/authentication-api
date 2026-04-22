@@ -63,18 +63,13 @@ public class AuditHelper {
         }
     }
 
-    public static Result<ErrorResponse, AuditContext> buildAuditContext(
+    public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
             ConfigurationService configurationService,
             DynamoService dynamoService,
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile) {
         try {
-            var metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue())
-                    };
-
-            var context =
+            return Result.success(
                     new AuditContext(
                             input.getRequestContext()
                                     .getAuthorizer()
@@ -93,9 +88,10 @@ public class AuditHelper {
                             null,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             getTxmaAuditEncoded(input.getHeaders()),
-                            List.of(metadataPairs));
-
-            return Result.success(context);
+                            List.of(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                            ACCOUNT_MANAGEMENT.getValue()))));
         } catch (Exception e) {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
@@ -109,7 +105,8 @@ public class AuditHelper {
             MfaMethodCreateRequest mfaMethodCreateRequest,
             ConfigurationService configurationService,
             DynamoService dynamoService) {
-        return buildAuditContext(configurationService, dynamoService, input, userProfile)
+        return accountManagementAuditContext(
+                        configurationService, dynamoService, input, userProfile)
                 .map(
                         baseContext ->
                                 enrichAuditContextForMfaMethod(
@@ -122,7 +119,8 @@ public class AuditHelper {
             MFAMethod mfaMethod,
             ConfigurationService configurationService,
             DynamoService dynamoService) {
-        return buildAuditContext(configurationService, dynamoService, input, userProfile)
+        return accountManagementAuditContext(
+                        configurationService, dynamoService, input, userProfile)
                 .map(
                         baseContext -> {
                             var phoneNumber =

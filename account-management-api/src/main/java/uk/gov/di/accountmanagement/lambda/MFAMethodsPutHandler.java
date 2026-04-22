@@ -601,7 +601,7 @@ public class MFAMethodsPutHandler
         }
 
         var maybeAuditContext =
-                AuditHelper.buildAuditContext(
+                AuditHelper.accountManagementAuditContext(
                         configurationService, dynamoService, input, putRequest.userProfile);
 
         if (maybeAuditContext.isFailure()) {

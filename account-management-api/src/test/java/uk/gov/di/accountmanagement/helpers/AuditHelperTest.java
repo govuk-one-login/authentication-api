@@ -98,7 +98,7 @@ class AuditHelperTest {
             when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
 
             Result<ErrorResponse, AuditContext> result =
-                    AuditHelper.buildAuditContext(
+                    AuditHelper.accountManagementAuditContext(
                             configurationService, dynamoService, input, userProfile);
 
             assertTrue(result.isSuccess());
@@ -120,7 +120,7 @@ class AuditHelperTest {
             input = new APIGatewayProxyRequestEvent();
 
             Result<ErrorResponse, AuditContext> result =
-                    AuditHelper.buildAuditContext(
+                    AuditHelper.accountManagementAuditContext(
                             configurationService, dynamoService, input, userProfile);
 
             assertTrue(result.isFailure());
