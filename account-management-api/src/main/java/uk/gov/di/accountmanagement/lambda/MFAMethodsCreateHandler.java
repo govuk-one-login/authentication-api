@@ -391,10 +391,10 @@ public class MFAMethodsCreateHandler
                                         updateAuditContextForFailedMFACreation(
                                                 method, baseAuditContext));
             } else {
-                AuditContext context1 = baseAuditContext;
+                AuditContext context = baseAuditContext;
 
-                context1 =
-                        context1.withMetadataItem(
+                context =
+                        context.withMetadataItem(
                                         pair(
                                                 AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
                                                 mfaMethodCreateRequest
@@ -409,9 +409,9 @@ public class MFAMethodsCreateHandler
 
                 if (mfaMethodCreateRequest.mfaMethod().method()
                         instanceof RequestSmsMfaDetail requestSmsMfaDetail1) {
-                    context1 = context1.withPhoneNumber(requestSmsMfaDetail1.phoneNumber());
-                    context1 =
-                            context1.withMetadataItem(
+                    context = context.withPhoneNumber(requestSmsMfaDetail1.phoneNumber());
+                    context =
+                            context.withMetadataItem(
                                     pair(
                                             AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
                                             PhoneNumberHelper.getCountry(
@@ -419,8 +419,8 @@ public class MFAMethodsCreateHandler
 
                     if (auditEvent.equals(AUTH_CODE_VERIFIED)
                             && requestSmsMfaDetail1.otp() != null) {
-                        context1 =
-                                context1.withMetadataItem(
+                        context =
+                                context.withMetadataItem(
                                                 pair(
                                                         AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
                                                         requestSmsMfaDetail1.otp()))
@@ -432,12 +432,10 @@ public class MFAMethodsCreateHandler
                 }
 
                 if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-                    context1 =
-                            context1.withMetadataItem(
+                    context =
+                            context.withMetadataItem(
                                     pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
                 }
-
-                var context = context1;
 
                 return Result.success(context);
             }
