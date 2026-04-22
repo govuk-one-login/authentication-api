@@ -89,7 +89,7 @@ public class WellknownHandler
             oidcMetadata.setTokenEndpointURI(oidcApi.tokenURI());
             oidcMetadata.setUserInfoEndpointURI(oidcApi.userInfoURI());
             oidcMetadata.setAuthorizationEndpointURI(oidcApi.authorizeURI());
-            oidcMetadata.setRegistrationEndpointURI(oidcApi.registerationURI());
+            oidcMetadata.setRegistrationEndpointURI(oidcApi.registrationURI());
             oidcMetadata.setTokenEndpointAuthMethods(
                     List.of(
                             ClientAuthenticationMethod.PRIVATE_KEY_JWT,

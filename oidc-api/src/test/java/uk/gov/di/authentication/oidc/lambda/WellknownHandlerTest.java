@@ -86,7 +86,7 @@ class WellknownHandlerTest {
         when(oidcApi.authorizeURI()).thenReturn(URI.create("http://localhost:8080/authorize"));
         when(oidcApi.logoutURI()).thenReturn(URI.create("http://localhost:8080/logout"));
         when(oidcApi.userInfoURI()).thenReturn(URI.create("http://localhost:8080/userinfo"));
-        when(oidcApi.registerationURI())
+        when(oidcApi.registrationURI())
                 .thenReturn(URI.create("http://localhost:8080/connect/register"));
         when(oidcApi.wellKnownURI())
                 .thenReturn(URI.create("http://localhost:8080/.well-known/jwks.json"));
