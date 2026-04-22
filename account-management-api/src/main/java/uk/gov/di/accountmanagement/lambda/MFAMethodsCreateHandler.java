@@ -389,36 +389,18 @@ public class MFAMethodsCreateHandler
 
     private Result<ErrorResponse, AuditContext> buildAuditContext(
             AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest,
-            MFAMethod mfaMethod) {
+            MFAMethod mfaMethod,
+            AuditContext baseAuditContext) {
         try {
             if (auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)) {
-                var baseContextResult =
-                        accountManagementAuditContext(
-                                configurationService, dynamoService, input, userProfile);
-                if (baseContextResult.isFailure()) {
-                    return baseContextResult;
-                }
                 return updateAuditContextForFailedMFACreation(
-                        userProfile, baseContextResult.getSuccess(), mfaMethodsService);
+                        userProfile, baseAuditContext, mfaMethodsService);
             } else {
-                var baseContextResult =
-                        accountManagementAuditContext(
-                                        configurationService, dynamoService, input, userProfile)
-                                .map(
-                                        baseContext ->
-                                                enrichAuditContextForMfaMethod(
-                                                        auditEvent,
-                                                        baseContext,
-                                                        mfaMethodCreateRequest));
-
-                if (baseContextResult.isFailure()) {
-                    return baseContextResult;
-                }
-
-                var context = baseContextResult.getSuccess();
+                var context =
+                        enrichAuditContextForMfaMethod(
+                                auditEvent, baseAuditContext, mfaMethodCreateRequest);
 
                 if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)) {
                     context =
@@ -469,8 +451,16 @@ public class MFAMethodsCreateHandler
             MfaMethodCreateRequest mfaMethodCreateRequest,
             MFAMethod mfaMethod) {
         var maybeAuditContext =
-                buildAuditContext(
-                        auditEvent, input, userProfile, mfaMethodCreateRequest, mfaMethod);
+                accountManagementAuditContext(
+                                configurationService, dynamoService, input, userProfile)
+                        .flatMap(
+                                baseContext ->
+                                        buildAuditContext(
+                                                auditEvent,
+                                                userProfile,
+                                                mfaMethodCreateRequest,
+                                                mfaMethod,
+                                                baseContext));
         if (maybeAuditContext.isFailure()) {
             LOG.error(
                     "Error when building audit context for {} audit event with error code {}. No event raised",
