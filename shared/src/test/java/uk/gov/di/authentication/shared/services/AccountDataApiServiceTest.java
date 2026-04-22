@@ -14,6 +14,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -109,9 +110,7 @@ class AccountDataApiServiceTest {
             void shouldThrowWrappedExceptionIfHttpTimeoutExceptionEncountered()
                     throws IOException, InterruptedException {
                 // Arrange
-                doThrow(new java.net.http.HttpTimeoutException("timed out"))
-                        .when(httpClient)
-                        .send(any(), any());
+                doThrow(new HttpTimeoutException("timed out")).when(httpClient).send(any(), any());
 
                 // Act & Assert
                 var exception =
@@ -119,8 +118,7 @@ class AccountDataApiServiceTest {
                                 UnsuccessfulAccountDataApiResponseException.class,
                                 () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
                 assertThat(exception.getMessage(), containsString("timeout of " + TIMEOUT));
-                assertThat(
-                        exception.getCause(), instanceOf(java.net.http.HttpTimeoutException.class));
+                assertThat(exception.getCause(), instanceOf(HttpTimeoutException.class));
             }
 
             @Test
@@ -216,9 +214,7 @@ class AccountDataApiServiceTest {
             void shouldThrowWrappedExceptionIfHttpTimeoutExceptionEncountered()
                     throws IOException, InterruptedException {
                 // Arrange
-                doThrow(new java.net.http.HttpTimeoutException("timed out"))
-                        .when(httpClient)
-                        .send(any(), any());
+                doThrow(new HttpTimeoutException("timed out")).when(httpClient).send(any(), any());
 
                 // Act & Assert
                 var exception =
@@ -228,8 +224,7 @@ class AccountDataApiServiceTest {
                                         service.deletePasskey(
                                                 "testPublicSubjectId", "testPasskeyId", TOKEN));
                 assertThat(exception.getMessage(), containsString("timeout of " + TIMEOUT));
-                assertThat(
-                        exception.getCause(), instanceOf(java.net.http.HttpTimeoutException.class));
+                assertThat(exception.getCause(), instanceOf(HttpTimeoutException.class));
             }
 
             @Test
