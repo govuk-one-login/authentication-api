@@ -719,7 +719,10 @@ public class MFAMethodsPutHandler
                                 .withMetadataItem(
                                         pair(
                                                 AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                                requestedMethod.method().mfaMethodType()));
+                                                requestedMethod
+                                                        .method()
+                                                        .mfaMethodType()
+                                                        .toString()));
             }
 
             return Result.success(context);
