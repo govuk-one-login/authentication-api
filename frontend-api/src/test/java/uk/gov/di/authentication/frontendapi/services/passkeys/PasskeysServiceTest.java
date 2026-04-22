@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services.passkeys;
 
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -8,7 +9,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccountDataScope;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
+import uk.gov.di.authentication.frontendapi.services.AccessTokenConstructorService;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.io.IOException;
@@ -16,31 +21,57 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 
 class PasskeysServiceTest {
     ConfigurationService configurationService = mock(ConfigurationService.class);
     HttpClient httpClient = mock(HttpClient.class);
     HttpResponse httpResponse = mock(HttpResponse.class);
-    PasskeysService passkeysService = new PasskeysService(configurationService, httpClient);
+    AccessTokenConstructorService accessTokenConstructorService =
+            mock(AccessTokenConstructorService.class);
+
+    PasskeysService passkeysService =
+            new PasskeysService(configurationService, httpClient, accessTokenConstructorService);
 
     private static final String ACCOUNT_DATA_BASE_URI = "https://example.com";
     private static final String EXPECTED_REQUEST_URL =
             "%s/accounts/%s/authenticators/passkeys"
                     .formatted(ACCOUNT_DATA_BASE_URI, PUBLIC_SUBJECT_ID);
+    private static final BearerAccessToken ADAPI_BEARER_ACCESS_TOKEN =
+            new BearerAccessToken("adapi_bearer");
+    private static final String AUTH_ISSUER_CLAIM = "https://signin.account.gov.uk/";
+    private static final String AUTH_TO_ACCOUNT_DATA_AUDIENCE = "https://example.com/ADAPIAudience";
+    private static final String AMC_CLIENT_ID = "amc-client-id";
+    private static final String AUTH_TO_ACCOUNT_DATA_SIGNING_KEY =
+            "auth-to-account-data-signing-key";
 
     @BeforeEach
     void beforeEach() {
         when(configurationService.getAccountDataURI()).thenReturn(ACCOUNT_DATA_BASE_URI);
+        when(configurationService.getAuthToAccountDataApiAudience())
+                .thenReturn(AUTH_TO_ACCOUNT_DATA_AUDIENCE);
+        when(configurationService.getAuthIssuerClaim()).thenReturn(AUTH_ISSUER_CLAIM);
+        when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
+        when(configurationService.getAuthToAccountDataSigningKey())
+                .thenReturn(AUTH_TO_ACCOUNT_DATA_SIGNING_KEY);
+        when(accessTokenConstructorService.createSignedAccessToken(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(Result.success(ADAPI_BEARER_ACCESS_TOKEN));
     }
 
     @AfterEach
@@ -71,9 +102,32 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            var result =
+                    passkeysService.hasActivePasskey(
+                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isSuccess());
 
+            var expectedAuthorizationHeader =
+                    Optional.of(ADAPI_BEARER_ACCESS_TOKEN.toAuthorizationHeader());
+            verify(httpClient)
+                    .send(
+                            argThat(
+                                    request ->
+                                            request.headers()
+                                                    .firstValue("Authorization")
+                                                    .equals(expectedAuthorizationHeader)),
+                            any());
+            verify(accessTokenConstructorService)
+                    .createSignedAccessToken(
+                            eq(INTERNAL_COMMON_SUBJECT_ID),
+                            eq(AccountDataScope.PASSKEY_RETRIEVE),
+                            eq(SESSION_ID),
+                            any(),
+                            any(),
+                            eq(AUTH_TO_ACCOUNT_DATA_AUDIENCE),
+                            eq(AUTH_ISSUER_CLAIM),
+                            eq(AMC_CLIENT_ID),
+                            eq(AUTH_TO_ACCOUNT_DATA_SIGNING_KEY));
             var hasActivePasskey = result.getSuccess();
             assertEquals(expectedResult, hasActivePasskey);
         }
@@ -91,7 +145,9 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID);
+            var result =
+                    passkeysService.retrievePasskeys(
+                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isSuccess());
             assertEquals(1, result.getSuccess().passkeys().size());
             assertEquals("123456", result.getSuccess().passkeys().get(0).passkeyId());
@@ -111,7 +167,9 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            var result =
+                    passkeysService.hasActivePasskey(
+                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
@@ -132,7 +190,9 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            var result =
+                    passkeysService.hasActivePasskey(
+                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
@@ -160,7 +220,9 @@ class PasskeysServiceTest {
                             any()))
                     .thenThrow(e);
 
-            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID);
+            var result =
+                    passkeysService.hasActivePasskey(
+                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
@@ -177,10 +239,27 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID);
+            var result =
+                    passkeysService.retrievePasskeys(
+                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
             assertEquals(
                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, result.getFailure());
+        }
+
+        @Test
+        void retrievePasskeysShouldReturnFailureIfErrorCreatingAccessToken() {
+            when(accessTokenConstructorService.createSignedAccessToken(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
+
+            var result =
+                    passkeysService.hasActivePasskey(
+                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
+
+            assertTrue(result.isFailure());
+            assertEquals(PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN, result.getFailure());
+            verifyNoInteractions(httpClient);
         }
     }
 

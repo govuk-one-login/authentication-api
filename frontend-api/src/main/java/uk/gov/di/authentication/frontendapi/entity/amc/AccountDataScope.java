@@ -1,7 +1,8 @@
 package uk.gov.di.authentication.frontendapi.entity.amc;
 
 public enum AccountDataScope implements AccessTokenScope {
-    PASSKEY_CREATE("passkey-create");
+    PASSKEY_CREATE("passkey-create"),
+    PASSKEY_RETRIEVE("passkey-retrieve");
 
     private final String value;
 

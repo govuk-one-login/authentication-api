@@ -20,7 +20,6 @@ import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccountDataScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccountManagementScope;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -35,8 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_PAIRWISE_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 
@@ -56,22 +53,16 @@ class AccessTokenConstructorServiceTest {
     private final JwtService jwtService = mock(JwtService.class);
 
     private AccessTokenConstructorService accessTokenConstructorService;
-    private AuthSessionItem authSessionItem;
     private ECKey signingKey;
 
     @BeforeEach
     void setup() throws Exception {
         accessTokenConstructorService =
-                new AccessTokenConstructorService(jwtService, configurationService);
+                new AccessTokenConstructorService(configurationService, jwtService);
 
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         mockJwtSigning();
         signingKey = new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-        authSessionItem =
-                new AuthSessionItem()
-                        .withClientId(CLIENT_ID)
-                        .withSessionId(SESSION_ID)
-                        .withEmailAddress(EMAIL);
     }
 
     private static Stream<Arguments> validScopes() {
@@ -91,7 +82,7 @@ class AccessTokenConstructorServiceTest {
                 accessTokenConstructorService.createSignedAccessToken(
                         INTERNAL_PAIRWISE_ID,
                         accessTokenScope,
-                        authSessionItem,
+                        SESSION_ID,
                         NOW,
                         EXPIRY,
                         AUDIENCE,
@@ -128,7 +119,7 @@ class AccessTokenConstructorServiceTest {
                 accessTokenConstructorService.createSignedAccessToken(
                         INTERNAL_PAIRWISE_ID,
                         AccountDataScope.PASSKEY_CREATE,
-                        authSessionItem,
+                        SESSION_ID,
                         NOW,
                         EXPIRY,
                         AUDIENCE,

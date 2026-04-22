@@ -211,7 +211,7 @@ public class AMCService {
                             .createSignedAccessToken(
                                     internalPairwiseSubject,
                                     config.scope(),
-                                    authSessionItem,
+                                    authSessionItem.getSessionId(),
                                     issueTime,
                                     expiryDate,
                                     config.audience(),

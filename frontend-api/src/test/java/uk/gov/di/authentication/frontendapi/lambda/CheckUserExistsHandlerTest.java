@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -76,6 +77,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
@@ -106,11 +108,14 @@ class CheckUserExistsHandlerTest {
                     .withSessionId(SESSION_ID)
                     .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
                     .withClientId(CLIENT_ID)
-                    .withRpSectorIdentifierHost(SECTOR_HOST);
+                    .withRpSectorIdentifierHost(SECTOR_HOST)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
+    private static final BearerAccessToken ADAPI_BEARER_ACCESS_TOKEN =
+            new BearerAccessToken("adapi_bearer");
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -622,7 +627,8 @@ class CheckUserExistsHandlerTest {
             MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
-            when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID()))
+            when(passkeysService.hasActivePasskey(
+                            eq(userProfile.getPublicSubjectID()), any(), eq(SESSION_ID)))
                     .thenReturn(Result.success(hasActivePasskey));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
@@ -643,7 +649,9 @@ class CheckUserExistsHandlerTest {
             MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
-            when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID()))
+
+            when(passkeysService.hasActivePasskey(
+                            eq(userProfile.getPublicSubjectID()), any(), eq(SESSION_ID)))
                     .thenReturn(
                             Result.failure(
                                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));
