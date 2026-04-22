@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -203,9 +204,16 @@ class MFAMethodsCreateHandlerTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
-        reset(mfaMethodsService);
         when(mfaMethodsService.migrateMfaCredentialsForUser(any()))
                 .thenReturn(Result.success(false));
+    }
+
+    @AfterEach
+    void resetMocks() {
+        reset(configurationService);
+        reset(dynamoService);
+        reset(mfaMethodsService);
+        reset(codeStorageService);
     }
 
     @Nested
@@ -764,7 +772,7 @@ class MFAMethodsCreateHandlerTest {
                             eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
-            //Query: should this instead be reflecting the method that has failed to add? Ie sms
+            // Query: should this instead be reflecting the method that has failed to add? Ie sms
 
             containsMetadataPair(
                     capturedObject,
@@ -870,6 +878,7 @@ class MFAMethodsCreateHandlerTest {
                             TEST_INTERNAL_SUBJECT);
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
+            when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
             var defaultMfa =
