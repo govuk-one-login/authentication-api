@@ -4,11 +4,16 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -27,6 +32,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -128,6 +140,165 @@ class AuditHelperTest {
             assertThat(
                     logging.events(),
                     hasItem(withMessageContaining("Error building audit context")));
+        }
+    }
+
+    @Nested
+    class EnrichAuditContextForMfaMethodTests {
+
+        private final AuditContext baseContext = AuditContext.emptyAuditContext();
+
+        @Test
+        void shouldReturnUnmodifiedContextWhenRequestIsNull() {
+            var result =
+                    AuditHelper.enrichAuditContextForMfaMethod(
+                            AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED,
+                            baseContext,
+                            null);
+
+            assertEquals(baseContext, result);
+        }
+
+        @Test
+        void shouldAddMfaTypeAndMethodForAuthAppRequest() {
+            var request =
+                    MfaMethodCreateRequest.from(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail("some-credential"));
+
+            var result =
+                    AuditHelper.enrichAuditContextForMfaMethod(
+                            AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED,
+                            baseContext,
+                            request);
+
+            assertEquals(
+                    "AUTH_APP",
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).get().value());
+            assertEquals(
+                    "backup",
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_MFA_METHOD).get().value());
+            assertTrue(
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE)
+                            .isEmpty());
+        }
+
+        @Test
+        void shouldAddPhoneNumberAndCountryCodeForSmsRequest() {
+            var request =
+                    MfaMethodCreateRequest.from(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail("+447700900000", "123456"));
+
+            var result =
+                    AuditHelper.enrichAuditContextForMfaMethod(
+                            AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED,
+                            baseContext,
+                            request);
+
+            assertEquals("+447700900000", result.phoneNumber());
+            assertTrue(
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE)
+                            .isPresent());
+        }
+
+        @Test
+        void shouldAddOtpAndNotificationTypeForSmsCodeVerified() {
+            var request =
+                    MfaMethodCreateRequest.from(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail("+447700900000", "123456"));
+
+            var result =
+                    AuditHelper.enrichAuditContextForMfaMethod(
+                            AccountManagementAuditableEvent.AUTH_CODE_VERIFIED,
+                            baseContext,
+                            request);
+
+            assertEquals(
+                    "123456",
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED)
+                            .get()
+                            .value());
+            assertEquals(
+                    "MFA_SMS",
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE)
+                            .get()
+                            .value());
+        }
+
+        @Test
+        void shouldNotAddOtpFieldsWhenOtpIsNull() {
+            var request =
+                    MfaMethodCreateRequest.from(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail("+447700900000", null));
+
+            var result =
+                    AuditHelper.enrichAuditContextForMfaMethod(
+                            AccountManagementAuditableEvent.AUTH_CODE_VERIFIED,
+                            baseContext,
+                            request);
+
+            assertTrue(
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED).isEmpty());
+        }
+
+        @Test
+        void shouldAddAccountRecoveryAndJourneyTypeForCodeVerified() {
+            var request =
+                    MfaMethodCreateRequest.from(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail("some-credential"));
+
+            var result =
+                    AuditHelper.enrichAuditContextForMfaMethod(
+                            AccountManagementAuditableEvent.AUTH_CODE_VERIFIED,
+                            baseContext,
+                            request);
+
+            assertEquals(
+                    "false",
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY)
+                            .get()
+                            .value());
+            assertEquals(
+                    "ACCOUNT_MANAGEMENT",
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).get().value());
+        }
+
+        @Test
+        void shouldFormatPhoneNumberToE164ForAuditContext() {
+            var request =
+                    MfaMethodCreateRequest.from(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail("07700900000", "123456"));
+
+            var result =
+                    AuditHelper.enrichAuditContextForMfaMethod(
+                            AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED,
+                            baseContext,
+                            request);
+
+            assertEquals("+447700900000", result.phoneNumber());
+        }
+
+        @Test
+        void shouldNotAddAccountRecoveryFieldsForNonCodeVerifiedEvent() {
+            var request =
+                    MfaMethodCreateRequest.from(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail("some-credential"));
+
+            var result =
+                    AuditHelper.enrichAuditContextForMfaMethod(
+                            AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED,
+                            baseContext,
+                            request);
+
+            assertTrue(
+                    result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY).isEmpty());
+            assertTrue(result.getMetadataItemByKey(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).isEmpty());
         }
     }
 }

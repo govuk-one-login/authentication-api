@@ -193,7 +193,7 @@ public class AuditHelper {
         }
     }
 
-    private static AuditContext enrichAuditContextForMfaMethod(
+    static AuditContext enrichAuditContextForMfaMethod(
             AccountManagementAuditableEvent auditEvent,
             AuditContext context,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
@@ -215,7 +215,10 @@ public class AuditHelper {
 
             if (mfaMethodCreateRequest.mfaMethod().method()
                     instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-                context = context.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
+                context =
+                        context.withPhoneNumber(
+                                PhoneNumberHelper.formatPhoneNumber(
+                                        requestSmsMfaDetail.phoneNumber()));
                 context =
                         context.withMetadataItem(
                                 pair(
