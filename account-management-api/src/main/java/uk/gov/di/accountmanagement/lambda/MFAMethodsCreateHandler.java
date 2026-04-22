@@ -401,9 +401,57 @@ public class MFAMethodsCreateHandler
                                         updateAuditContextForFailedMFACreation(
                                                 method, baseAuditContext));
             } else {
-                var context =
-                        enrichAuditContextForMfaMethod(
-                                auditEvent, baseAuditContext, mfaMethodCreateRequest);
+                AuditContext context1 = baseAuditContext;
+
+                context1 =
+                        context1.withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                                mfaMethodCreateRequest
+                                                        .mfaMethod()
+                                                        .method()
+                                                        .mfaMethodType()
+                                                        .toString()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                PriorityIdentifier.BACKUP.name().toLowerCase()));
+
+                if (mfaMethodCreateRequest.mfaMethod().method()
+                        instanceof RequestSmsMfaDetail requestSmsMfaDetail1) {
+                    context1 = context1.withPhoneNumber(requestSmsMfaDetail1.phoneNumber());
+                    context1 =
+                            context1.withMetadataItem(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
+                                            PhoneNumberHelper.getCountry(
+                                                    requestSmsMfaDetail1.phoneNumber())));
+
+                    if (auditEvent.equals(AUTH_CODE_VERIFIED)
+                            && requestSmsMfaDetail1.otp() != null) {
+                        context1 =
+                                context1.withMetadataItem(
+                                                pair(
+                                                        AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
+                                                        requestSmsMfaDetail1.otp()))
+                                        .withMetadataItem(
+                                                pair(
+                                                        AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
+                                                        MFA_SMS.name()));
+                    }
+                }
+
+                if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
+                    context1 =
+                            context1.withMetadataItem(
+                                            pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
+                                    .withMetadataItem(
+                                            pair(
+                                                    AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                                    ACCOUNT_MANAGEMENT.name()));
+                }
+
+                var context = context1;
 
                 if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)) {
                     context =
@@ -525,61 +573,6 @@ public class MFAMethodsCreateHandler
                 .withPhoneNumber(phoneNumber)
                 .withMetadataItem(mfaTypeExtension)
                 .withMetadataItem(priorityExtension);
-    }
-
-    private static AuditContext enrichAuditContextForMfaMethod(
-            AccountManagementAuditableEvent auditEvent,
-            AuditContext context,
-            MfaMethodCreateRequest mfaMethodCreateRequest) {
-
-        context =
-                context.withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                        mfaMethodCreateRequest
-                                                .mfaMethod()
-                                                .method()
-                                                .mfaMethodType()
-                                                .toString()))
-                        .withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                        PriorityIdentifier.BACKUP.name().toLowerCase()));
-
-        if (mfaMethodCreateRequest.mfaMethod().method()
-                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            context = context.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
-            context =
-                    context.withMetadataItem(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
-                                    PhoneNumberHelper.getCountry(
-                                            requestSmsMfaDetail.phoneNumber())));
-
-            if (auditEvent.equals(AccountManagementAuditableEvent.AUTH_CODE_VERIFIED)
-                    && requestSmsMfaDetail.otp() != null) {
-                context =
-                        context.withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
-                                                requestSmsMfaDetail.otp()))
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
-                                                MFA_SMS.name()));
-            }
-        }
-
-        if (auditEvent.equals(AccountManagementAuditableEvent.AUTH_CODE_VERIFIED)) {
-            context =
-                    context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                            .withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                            ACCOUNT_MANAGEMENT.name()));
-        }
-
-        return context;
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
