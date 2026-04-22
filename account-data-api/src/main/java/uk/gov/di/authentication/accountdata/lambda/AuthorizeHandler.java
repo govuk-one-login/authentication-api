@@ -58,16 +58,16 @@ public class AuthorizeHandler
             var signedAccessToken = SignedJWT.parse(accessToken.getValue());
             var claimsSet = signedAccessToken.getJWTClaimsSet();
 
-            var maybeValidatedClaims =
+            var validatedClaimsResult =
                     validateAccessTokenExpiryTime(claimsSet)
                             .flatMap(success -> verifySignature(signedAccessToken))
                             .flatMap(success -> validateClaimsSet(claimsSet));
 
-            if (maybeValidatedClaims.isFailure()) {
-                throw maybeValidatedClaims.getFailure();
+            if (validatedClaimsResult.isFailure()) {
+                throw validatedClaimsResult.getFailure();
             }
 
-            var subject = maybeValidatedClaims.getSuccess().getSubject();
+            var subject = validatedClaimsResult.getSuccess().getSubject();
             var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
             return getAllowExecuteApiPolicyForSubject(subject, methodArn);
         } catch (ParseException | java.text.ParseException e) {
@@ -79,14 +79,14 @@ public class AuthorizeHandler
     private Result<UnauthorizedException, Void> verifySignature(SignedJWT signedJWT) {
         var failure = Result.<UnauthorizedException, Void>failure(new UnauthorizedException());
         try {
-            var maybeJwk =
+            var jwkResult =
                     jwksService.retrieveJwkFromURLWithKeyId(signedJWT.getHeader().getKeyID());
 
-            if (maybeJwk.isFailure()) {
-                LOG.warn("Error retrieving jwks key: {}", maybeJwk.getFailure());
+            if (jwkResult.isFailure()) {
+                LOG.warn("Error retrieving jwks key: {}", jwkResult.getFailure());
                 return failure;
             }
-            var jwk = maybeJwk.getSuccess();
+            var jwk = jwkResult.getSuccess();
             var algorithm = signedJWT.getHeader().getAlgorithm();
 
             JWSVerifier verifier;
