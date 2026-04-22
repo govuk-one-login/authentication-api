@@ -50,7 +50,6 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
@@ -444,11 +443,7 @@ public class MFAMethodsCreateHandler
                 if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
                     context1 =
                             context1.withMetadataItem(
-                                            pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                                    .withMetadataItem(
-                                            pair(
-                                                    AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                                    ACCOUNT_MANAGEMENT.name()));
+                                    pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
                 }
 
                 var context = context1;

@@ -290,10 +290,7 @@ class MFAMethodsCreateHandlerTest {
                             .withMetadataItem(pair("phone_number_country_code", "44"))
                             .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                             .withMetadataItem(pair("notification-type", MFA_SMS.name()))
-                            .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
-            // TODO: journey type  is being added twice in the code (is in base audit context too),
-            //  when this fixed can remove this
+                            .withMetadataItem(pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -404,8 +401,7 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(null)
                             .withMetadataItem(pair("mfa-type", AUTH_APP.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+                            .withMetadataItem(pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -488,8 +484,7 @@ class MFAMethodsCreateHandlerTest {
                             .withMetadataItem(pair("phone_number_country_code", "44"))
                             .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                             .withMetadataItem(pair("notification-type", MFA_SMS.name()))
-                            .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+                            .withMetadataItem(pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
