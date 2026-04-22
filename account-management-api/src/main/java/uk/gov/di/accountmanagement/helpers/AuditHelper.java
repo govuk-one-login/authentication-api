@@ -6,10 +6,8 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -18,7 +16,6 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.List;
 import java.util.Map;
@@ -26,8 +23,6 @@ import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
@@ -87,52 +82,6 @@ public class AuditHelper {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
-    }
-
-    public static Result<ErrorResponse, AuditContext> updateAuditContextForFailedMFACreation(
-            UserProfile userProfile,
-            AuditContext auditContext,
-            MFAMethodsService mfaMethodsService,
-            Logger logger) {
-
-        var maybeMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
-
-        if (maybeMfaMethods.isFailure()) {
-            logger.error("No MFA methods found for user");
-            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
-        }
-
-        var mfaMethods = maybeMfaMethods.getSuccess();
-
-        var defaultMfaMethod =
-                mfaMethods.stream()
-                        .filter(
-                                method ->
-                                        method.getPriority()
-                                                .equalsIgnoreCase(
-                                                        PriorityIdentifier.DEFAULT.name()))
-                        .findFirst();
-
-        if (defaultMfaMethod.isEmpty()) {
-            logger.error("No default MFA method found for user");
-            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
-        }
-
-        if (defaultMfaMethod.get().getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
-            auditContext = auditContext.withPhoneNumber(defaultMfaMethod.get().getDestination());
-        }
-
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(
-                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                defaultMfaMethod.get().getMfaMethodType()));
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(
-                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                PriorityIdentifier.DEFAULT.name().toLowerCase()));
-        return Result.success(auditContext);
     }
 
     public static Result<ErrorResponse, Void> sendAuditEvent(

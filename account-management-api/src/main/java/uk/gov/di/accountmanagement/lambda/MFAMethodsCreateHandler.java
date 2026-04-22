@@ -401,8 +401,8 @@ public class MFAMethodsCreateHandler
                 if (baseContextResult.isFailure()) {
                     return baseContextResult;
                 }
-                return AuditHelper.updateAuditContextForFailedMFACreation(
-                        userProfile, baseContextResult.getSuccess(), mfaMethodsService, LOG);
+                return updateAuditContextForFailedMFACreation(
+                        userProfile, baseContextResult.getSuccess(), mfaMethodsService);
             } else {
                 var baseContextResult =
                         accountManagementAuditContext(
@@ -489,6 +489,51 @@ public class MFAMethodsCreateHandler
 
         LOG.info("Successfully submitted audit event: {}", auditEvent.name());
         return Result.success(null);
+    }
+
+    private static Result<ErrorResponse, AuditContext> updateAuditContextForFailedMFACreation(
+            UserProfile userProfile,
+            AuditContext auditContext,
+            MFAMethodsService mfaMethodsService) {
+
+        var maybeMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
+
+        if (maybeMfaMethods.isFailure()) {
+            LOG.error("No MFA methods found for user");
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
+        }
+
+        var mfaMethods = maybeMfaMethods.getSuccess();
+
+        var defaultMfaMethod =
+                mfaMethods.stream()
+                        .filter(
+                                method ->
+                                        method.getPriority()
+                                                .equalsIgnoreCase(
+                                                        PriorityIdentifier.DEFAULT.name()))
+                        .findFirst();
+
+        if (defaultMfaMethod.isEmpty()) {
+            LOG.error("No default MFA method found for user");
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
+        }
+
+        if (defaultMfaMethod.get().getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
+            auditContext = auditContext.withPhoneNumber(defaultMfaMethod.get().getDestination());
+        }
+
+        auditContext =
+                auditContext.withMetadataItem(
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                defaultMfaMethod.get().getMfaMethodType()));
+        auditContext =
+                auditContext.withMetadataItem(
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                PriorityIdentifier.DEFAULT.name().toLowerCase()));
+        return Result.success(auditContext);
     }
 
     private static AuditContext enrichAuditContextForMfaMethod(
