@@ -449,16 +449,6 @@ public class MFAMethodsCreateHandler
                 var context = context1;
 
                 if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)) {
-                    context =
-                            context.withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                            mfaMethodCreateRequest
-                                                    .mfaMethod()
-                                                    .method()
-                                                    .mfaMethodType()
-                                                    .toString()));
-
                     if (mfaMethodCreateRequest.mfaMethod().method()
                             instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
                         context = context.withPhoneNumber(requestSmsMfaDetail.phoneNumber());

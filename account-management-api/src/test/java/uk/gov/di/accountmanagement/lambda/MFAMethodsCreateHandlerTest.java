@@ -303,9 +303,7 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(TEST_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"))
-                            .withMetadataItem(pair("mfa-type", SMS.name()));
-            // TODO: mfa type also being added twice in the code, when this fixed can remove this
+                            .withMetadataItem(pair("phone_number_country_code", "44"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -413,9 +411,7 @@ class MFAMethodsCreateHandlerTest {
                     BASE_AUDIT_CONTEXT
                             .withPhoneNumber(null)
                             .withMetadataItem(pair("mfa-type", AUTH_APP.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.name()));
-            // TODO another duplicate here
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
