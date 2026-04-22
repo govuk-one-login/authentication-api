@@ -403,8 +403,7 @@ public class MFAMethodsCreateHandler
                                 userProfile,
                                 mfaMethodCreateRequest,
                                 configurationService,
-                                dynamoService,
-                                LOG);
+                                dynamoService);
 
                 if (baseContextResult.isFailure()) {
                     return baseContextResult;

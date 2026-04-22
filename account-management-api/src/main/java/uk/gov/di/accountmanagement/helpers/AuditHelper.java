@@ -108,42 +108,12 @@ public class AuditHelper {
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest,
             ConfigurationService configurationService,
-            DynamoService dynamoService,
-            Logger logger) {
-        try {
-            var initialMetadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue())
-                    };
-
-            var context =
-                    new AuditContext(
-                            input.getRequestContext()
-                                    .getAuthorizer()
-                                    .getOrDefault(ATTRIBUTE_CLIENT_ID, AuditService.UNKNOWN)
-                                    .toString(),
-                            ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                            RequestHeaderHelper.getHeaderValueOrElse(
-                                    input.getHeaders(), SESSION_ID_HEADER, ""),
-                            ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                            userProfile,
-                                            configurationService.getInternalSectorUri(),
-                                            dynamoService)
-                                    .getValue(),
-                            userProfile.getEmail(),
-                            IpAddressHelper.extractIpAddress(input),
-                            null,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            getTxmaAuditEncoded(input.getHeaders()),
-                            List.of(initialMetadataPairs));
-
-            context = enrichAuditContextForMfaMethod(auditEvent, context, mfaMethodCreateRequest);
-
-            return Result.success(context);
-        } catch (Exception e) {
-            logger.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
-            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
-        }
+            DynamoService dynamoService) {
+        return buildAuditContext(configurationService, dynamoService, input, userProfile)
+                .map(
+                        baseContext ->
+                                enrichAuditContextForMfaMethod(
+                                        auditEvent, baseContext, mfaMethodCreateRequest));
     }
 
     public static Result<ErrorResponse, AuditContext> buildAuditContextForMfaMethod(
@@ -151,46 +121,21 @@ public class AuditHelper {
             UserProfile userProfile,
             MFAMethod mfaMethod,
             ConfigurationService configurationService,
-            DynamoService dynamoService,
-            Logger logger) {
-        try {
-            var phoneNumber =
-                    mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.name())
-                            ? mfaMethod.getDestination()
-                            : AuditService.UNKNOWN;
-
-            var metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue()),
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType())
-                    };
-
-            var context =
-                    new AuditContext(
-                            input.getRequestContext()
-                                    .getAuthorizer()
-                                    .getOrDefault(ATTRIBUTE_CLIENT_ID, AuditService.UNKNOWN)
-                                    .toString(),
-                            ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                            RequestHeaderHelper.getHeaderValueOrElse(
-                                    input.getHeaders(), SESSION_ID_HEADER, ""),
-                            ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                            userProfile,
-                                            configurationService.getInternalSectorUri(),
-                                            dynamoService)
-                                    .getValue(),
-                            userProfile.getEmail(),
-                            IpAddressHelper.extractIpAddress(input),
-                            phoneNumber,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            getTxmaAuditEncoded(input.getHeaders()),
-                            List.of(metadataPairs));
-
-            return Result.success(context);
-        } catch (Exception e) {
-            logger.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
-            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
-        }
+            DynamoService dynamoService) {
+        return buildAuditContext(configurationService, dynamoService, input, userProfile)
+                .map(
+                        baseContext -> {
+                            var phoneNumber =
+                                    mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.name())
+                                            ? mfaMethod.getDestination()
+                                            : AuditService.UNKNOWN;
+                            return baseContext
+                                    .withPhoneNumber(phoneNumber)
+                                    .withMetadataItem(
+                                            pair(
+                                                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                                    mfaMethod.getMfaMethodType()));
+                        });
     }
 
     private static AuditContext enrichAuditContextForMfaMethod(
