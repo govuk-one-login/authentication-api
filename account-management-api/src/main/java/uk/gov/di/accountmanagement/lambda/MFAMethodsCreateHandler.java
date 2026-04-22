@@ -46,6 +46,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
@@ -388,7 +389,7 @@ public class MFAMethodsCreateHandler
         try {
             if (auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)) {
                 var baseContextResult =
-                        AuditHelper.accountManagementAuditContext(
+                        accountManagementAuditContext(
                                 configurationService, dynamoService, input, userProfile);
                 if (baseContextResult.isFailure()) {
                     return baseContextResult;
@@ -397,13 +398,14 @@ public class MFAMethodsCreateHandler
                         userProfile, baseContextResult.getSuccess(), mfaMethodsService, LOG);
             } else {
                 var baseContextResult =
-                        AuditHelper.buildAuditContextForMfa(
-                                auditEvent,
-                                input,
-                                userProfile,
-                                mfaMethodCreateRequest,
-                                configurationService,
-                                dynamoService);
+                        accountManagementAuditContext(
+                                        configurationService, dynamoService, input, userProfile)
+                                .map(
+                                        baseContext ->
+                                                AuditHelper.enrichAuditContextForMfaMethod(
+                                                        auditEvent,
+                                                        baseContext,
+                                                        mfaMethodCreateRequest));
 
                 if (baseContextResult.isFailure()) {
                     return baseContextResult;

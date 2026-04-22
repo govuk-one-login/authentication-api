@@ -98,21 +98,6 @@ public class AuditHelper {
         }
     }
 
-    public static Result<ErrorResponse, AuditContext> buildAuditContextForMfa(
-            AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
-            MfaMethodCreateRequest mfaMethodCreateRequest,
-            ConfigurationService configurationService,
-            DynamoService dynamoService) {
-        return accountManagementAuditContext(
-                        configurationService, dynamoService, input, userProfile)
-                .map(
-                        baseContext ->
-                                enrichAuditContextForMfaMethod(
-                                        auditEvent, baseContext, mfaMethodCreateRequest));
-    }
-
     public static Result<ErrorResponse, AuditContext> buildAuditContextForMfaMethod(
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile,
@@ -136,7 +121,7 @@ public class AuditHelper {
                         });
     }
 
-    private static AuditContext enrichAuditContextForMfaMethod(
+    public static AuditContext enrichAuditContextForMfaMethod(
             AccountManagementAuditableEvent auditEvent,
             AuditContext context,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
