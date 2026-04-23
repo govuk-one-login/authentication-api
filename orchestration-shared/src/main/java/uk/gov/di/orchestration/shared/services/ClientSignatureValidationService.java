@@ -180,7 +180,8 @@ public class ClientSignatureValidationService {
         return kf.generatePublic(keySpec);
     }
 
-    private JWK fetchJwks(String jwksUrl, String kid) throws JwksException, ParseException, Json.JsonException {
+    private JWK fetchJwks(String jwksUrl, String kid)
+            throws JwksException, ParseException, Json.JsonException {
         if ("local".equals(configurationService.getEnvironment())) {
             // The local environment cannot invoke lambdas, so we fetch JWKS directly
             // In production the VPC rules will block the request
@@ -201,7 +202,8 @@ public class ClientSignatureValidationService {
         return JWK.parse(unescapedPayload);
     }
 
-    private InvokeResponse invokeFetchJwksFunction(String jwksUrl, String kid) throws JwksException {
+    private InvokeResponse invokeFetchJwksFunction(String jwksUrl, String kid)
+            throws JwksException {
         try {
             JSONObject jsonObj = new JSONObject();
             jsonObj.put("url", jwksUrl);
@@ -247,7 +249,8 @@ public class ClientSignatureValidationService {
         try {
             return JwksUtils.retrieveJwkFromURLWithKeyId(new URL(jwksUrl), kid);
         } catch (KeySourceException e) {
-            throw new JwksException("Failed to fetch JWKS: could not find key in JWKS that matches provided keyId");
+            throw new JwksException(
+                    "Failed to fetch JWKS: could not find key in JWKS that matches provided keyId");
         } catch (MalformedURLException e) {
             throw new JwksException("Failed to fetch JWKS: URL is malformed");
         } catch (IllegalArgumentException e) {

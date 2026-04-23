@@ -32,12 +32,13 @@ public class SqsPoller extends Thread {
         var configurationService = ConfigurationService.getInstance();
         this.queueUrl = queueUrl;
         this.handler = handler;
-        var sqsClientBuilder = SqsClient.builder()
-                .region(Region.of(configurationService.getAwsRegion()))
-                .credentialsProvider(DefaultCredentialsProvider.builder().build());
+        var sqsClientBuilder =
+                SqsClient.builder()
+                        .region(Region.of(configurationService.getAwsRegion()))
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build());
         if (configurationService.getSqsEndpointURI().isPresent()) {
-            sqsClientBuilder
-                    .endpointOverride(URI.create(configurationService.getSqsEndpointURI().get()));
+            sqsClientBuilder.endpointOverride(
+                    URI.create(configurationService.getSqsEndpointURI().get()));
         }
         this.sqsClient = sqsClientBuilder.build();
     }
@@ -58,19 +59,18 @@ public class SqsPoller extends Thread {
 
     private void poll() throws InterruptedException {
         try {
-            var response = sqsClient.receiveMessage((builder) ->
-                    builder
-                        .queueUrl(queueUrl)
-                        .waitTimeSeconds(5));
+            var response =
+                    sqsClient.receiveMessage(
+                            (builder) -> builder.queueUrl(queueUrl).waitTimeSeconds(5));
 
             if (response.hasMessages()) {
                 handler.handleRequest(mapToSQSEvent(response), LAMBDA_CONTEXT);
 
                 for (var message : response.messages()) {
-                    sqsClient.deleteMessage((builder) ->
-                            builder
-                                    .queueUrl(queueUrl)
-                                    .receiptHandle(message.receiptHandle()));
+                    sqsClient.deleteMessage(
+                            (builder) ->
+                                    builder.queueUrl(queueUrl)
+                                            .receiptHandle(message.receiptHandle()));
                 }
             }
         } catch (SdkClientException e) {

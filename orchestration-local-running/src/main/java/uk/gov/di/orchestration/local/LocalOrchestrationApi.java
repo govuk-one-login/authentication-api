@@ -31,7 +31,8 @@ public class LocalOrchestrationApi {
         var app =
                 Javalin.create(
                         config -> {
-                            config.routes.get("/", (ctx) -> ctx.result("Orchestration local running"));
+                            config.routes.get(
+                                    "/", (ctx) -> ctx.result("Orchestration local running"));
 
                             // OIDC API
                             config.routes.get(
@@ -80,8 +81,11 @@ public class LocalOrchestrationApi {
         app.start(getPort());
 
         // SQS pollers
-        SqsPoller.startAsyncPoll(System.getenv("SPOT_RESPONSE_QUEUE_URL"), new SPOTResponseHandler());
-        SqsPoller.startAsyncPoll(System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI"), new BackChannelLogoutRequestHandler());
+        SqsPoller.startAsyncPoll(
+                System.getenv("SPOT_RESPONSE_QUEUE_URL"), new SPOTResponseHandler());
+        SqsPoller.startAsyncPoll(
+                System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI"),
+                new BackChannelLogoutRequestHandler());
     }
 
     private int getPort() {
