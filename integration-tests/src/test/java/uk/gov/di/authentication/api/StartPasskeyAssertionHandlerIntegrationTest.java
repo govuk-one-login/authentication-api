@@ -100,7 +100,7 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
             assertThat(allowCredentials.size(), equalTo(1));
             assertThat(
                     allowCredentials.get(0).getAsJsonObject().get("id").getAsString(),
-                    equalTo(FIRST_PASSKEY_ID));
+                    equalTo("some string to cause failure"));
         }
 
         @Test
