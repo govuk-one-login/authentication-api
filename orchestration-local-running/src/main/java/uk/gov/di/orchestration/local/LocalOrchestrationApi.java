@@ -6,10 +6,12 @@ import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.ipv.lambda.IpvJwksHandler;
+import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
 import uk.gov.di.authentication.oidc.lambda.AuthJwksHandler;
 import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
+import uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler;
 import uk.gov.di.authentication.oidc.lambda.JwksHandler;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler;
@@ -17,6 +19,7 @@ import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.authentication.oidc.lambda.TrustMarkHandler;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.oidc.lambda.WellknownHandler;
+import uk.gov.di.orchestration.local.handlers.SqsPoller;
 
 import static uk.gov.di.orchestration.local.handlers.ApiGatewayLambdaHandler.handlerFor;
 
@@ -28,6 +31,7 @@ public class LocalOrchestrationApi {
         var app =
                 Javalin.create(
                         config -> {
+                            config.routes.get("/", (ctx) -> ctx.result("Orchestration local running"));
 
                             // OIDC API
                             config.routes.get(
@@ -44,7 +48,6 @@ public class LocalOrchestrationApi {
                             config.routes.get("/userinfo", handlerFor(new UserInfoHandler()));
                             config.routes.get("/logout", handlerFor(new LogoutHandler()));
                             config.routes.get("/trustmark", handlerFor(new TrustMarkHandler()));
-                            // TODO: backchannel logout - set up queue poll
 
                             // Auth API
                             config.routes.get(
@@ -59,9 +62,6 @@ public class LocalOrchestrationApi {
                                     "/.well-known/ipv-jwks.json", handlerFor(new IpvJwksHandler()));
                             config.routes.get(
                                     "/ipv-callback", handlerFor(new IPVCallbackHandler()));
-                            // TODO: IPV Capacity (deprecated)
-                            // TODO: Identity progress and processing identity (deprecated?)
-                            // TODO: SPOT response processing - set up queue poll
 
                             // Doc checking app API
                             config.routes.get(
@@ -78,6 +78,10 @@ public class LocalOrchestrationApi {
 
         // Start app
         app.start(getPort());
+
+        // SQS pollers
+        SqsPoller.startAsyncPoll(System.getenv("SPOT_RESPONSE_QUEUE_URL"), new SPOTResponseHandler());
+        SqsPoller.startAsyncPoll(System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI"), new BackChannelLogoutRequestHandler());
     }
 
     private int getPort() {

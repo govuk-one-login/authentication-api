@@ -50,7 +50,8 @@ public class App {
         // and could be replaced with a stub implementation
         var sqsInitialiser = new SqsInitialiser();
         sqsInitialiser.createQueue("local-backchannel-logout-queue");
-        sqsInitialiser.createQueue("local-spot-queue");
+        sqsInitialiser.createQueue("local-spot-request-queue");
+        sqsInitialiser.createQueue("local-spot-response-queue");
         sqsInitialiser.createQueue("local-txma-audit-queue");
 
         // Set up data in the DynamoDB tables

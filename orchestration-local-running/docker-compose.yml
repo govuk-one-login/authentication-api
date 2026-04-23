@@ -18,6 +18,10 @@ services:
       dynamodb:
         condition: service_healthy
     env_file: ./.env.local
+    healthcheck:
+      test: curl http://localhost:4400
+      interval: 5s
+      timeout: 1m
     ports:
       - "4400:4400"
       - "5400:5400"
@@ -34,6 +38,8 @@ services:
       aws:
         condition: service_healthy
       dynamodb:
+        condition: service_healthy
+      orchestration-api:
         condition: service_healthy
     env_file: ../../orch-stubs/.env.local
     environment:
