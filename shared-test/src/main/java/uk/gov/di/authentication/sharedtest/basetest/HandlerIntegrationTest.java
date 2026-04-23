@@ -21,7 +21,6 @@ import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -270,20 +269,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 }
             };
 
-    protected static final ConfigurationService BULK_DELETION_TXMA_ENABLED_CONFIGUARION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    notificationsQueue, tokenSigner, configurationParameters) {
-                @Override
-                public String getTxmaAuditQueueUrl() {
-                    return txmaAuditQueue.getQueueUrl();
-                }
-
-                @Override
-                public String getLegacyAccountDeletionTopicArn() {
-                    return snsTopicExtension.getTopicArn();
-                }
-            };
-
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final Context context = mock(Context.class);
@@ -305,10 +290,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final CommonPasswordsExtension commonPasswords =
             new CommonPasswordsExtension();
-
-    @RegisterExtension
-    protected static final SnsTopicExtension snsTopicExtension =
-            new SnsTopicExtension("test-topic");
 
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();

@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.api;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
@@ -10,7 +11,9 @@ import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.lambda.BulkRemoveAccountHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
@@ -34,6 +37,24 @@ class BulkRemoveAccountHandlerIntegrationTest
     private static final String EMAIL_4 = "user4@example.com";
     private static final String EMAIL_5 = "user5@example.com";
     private static final String PASSWORD = "password123";
+
+    @RegisterExtension
+    protected static final SnsTopicExtension snsTopicExtension =
+            new SnsTopicExtension("test-topic");
+
+    protected static final ConfigurationService BULK_DELETION_TXMA_ENABLED_CONFIGUARION_SERVICE =
+            new IntegrationTestConfigurationService(
+                    notificationsQueue, tokenSigner, configurationParameters) {
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+
+                @Override
+                public String getLegacyAccountDeletionTopicArn() {
+                    return snsTopicExtension.getTopicArn();
+                }
+            };
 
     @BeforeEach
     void setup() {
