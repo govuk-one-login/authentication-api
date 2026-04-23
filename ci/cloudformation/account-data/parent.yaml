@@ -106,12 +106,15 @@ Mappings:
     authdev1:
       cloudwatchLogRetentionInDays: 1
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d41a1b95-0291-4477-93f7-f1428ceef646
+      accountDataJwksUrl: https://5fgwu5kpd2.execute-api.eu-west-2.amazonaws.com/authdev1/.well-known/ad-jwks.json
     authdev2:
       cloudwatchLogRetentionInDays: 1
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/88707a9b-53c9-4ad6-ab54-b03b1bf21321
+      accountDataJwksUrl: https://nw0dah7bxk.execute-api.eu-west-2.amazonaws.com/authdev2/.well-known/ad-jwks.json
     authdev3:
       cloudwatchLogRetentionInDays: 1
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3a47bbdd-4144-4d1a-959f-56b928fcfe3c
+      accountDataJwksUrl: https://y3s69ubaz5.execute-api.eu-west-2.amazonaws.com/authdev3/.well-known/amc-jwks.json
     dev:
       cloudwatchLogRetentionInDays: 1
       IsSplunkEnabled: "No"
@@ -119,6 +122,7 @@ Mappings:
       UseAlarmActions: "No"
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c6a2fb5e-c92b-4129-bc0c-d75b2b72bae8
       dataStoreAccountId: 653994557586
+      accountDataJwksUrl: https://tze402cnbk.execute-api.eu-west-2.amazonaws.com/dev/.well-known/ad-jwks.json
     build:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
@@ -126,6 +130,7 @@ Mappings:
       UseAlarmActions: "Yes"
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3c2113fe-9f53-4bed-a46f-c53f02f6c117
       dataStoreAccountId: 761723964695
+      accountDataJwksUrl: https://7ecg8e1o73.execute-api.eu-west-2.amazonaws.com/build/.well-known/ad-jwks.json
     staging:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
@@ -134,6 +139,7 @@ Mappings:
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed6c6a2d-866f-4e2e-9ebd-c499ce9513c6
       dataStoreAccountId: 758531536632
       accountComponentsVpcEndpointId: vpce-0fed7b2d44a0bde33
+      accountDataJwksUrl: https://z02rnzbqw8.execute-api.eu-west-2.amazonaws.com/staging/.well-known/ad-jwks.json
     integration:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
@@ -142,6 +148,7 @@ Mappings:
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/743b2818-03fd-4414-bfaf-6aa8a4bb4e45
       dataStoreAccountId: 761723964695
       accountComponentsVpcEndpointId: vpce-00865f4c00dcdbb83
+      accountDataJwksUrl: https://db10ia9pr6.execute-api.eu-west-2.amazonaws.com/integration/.well-known/ad-jwks.json
     production:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
@@ -150,6 +157,7 @@ Mappings:
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/b380ea74-d240-4500-b02b-f5c3d414e34e
       dataStoreAccountId: 172348255554
       accountComponentsVpcEndpointId: vpce-08bfce415b33dc8f6
+      accountDataJwksUrl: https://86n9innl95.execute-api.eu-west-2.amazonaws.com/production/.well-known/ad-jwks.json
   LambdaConfiguration:
     passkeys-create:
       RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
@@ -246,6 +254,34 @@ Resources:
                 - codedeploy.amazonaws.com
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda
+      PermissionsBoundary:
+        !If [
+          UsePermissionsBoundary,
+          !Ref PermissionsBoundary,
+          !Ref AWS::NoValue,
+        ]
+
+  ApiGatewayAuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - ${AWS::StackName}-${Env}-api-gateway-auth-role
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: default
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Ref AuthorizerFunction.Alias
       PermissionsBoundary:
         !If [
           UsePermissionsBoundary,

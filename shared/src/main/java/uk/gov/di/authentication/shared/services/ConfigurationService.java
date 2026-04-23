@@ -442,6 +442,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
+    public URL getAccountDataJwksUrl() throws MalformedURLException {
+        return new URL(System.getenv().getOrDefault("ACCOUNT_DATA_JWKS_URL", ""));
+    }
+
     public String getTokenSigningKeyRsaAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
