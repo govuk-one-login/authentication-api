@@ -16,13 +16,11 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -86,19 +84,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new SqsQueueExtension("pending-email-check-queue");
 
     @RegisterExtension
-    protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
-
-    @RegisterExtension
-    protected static final SqsQueueExtension spotRequestQueue =
-            new SqsQueueExtension("spot-request-queue");
-
-    @RegisterExtension
     protected static final SqsQueueExtension txmaAuditQueue =
             new SqsQueueExtension("txma-audit-queue");
-
-    @RegisterExtension
-    protected static final AuditSnsTopicExtension auditTopic =
-            new AuditSnsTopicExtension("local-events");
 
     @RegisterExtension
     protected static final KmsKeyExtension auditSigningKey =
@@ -114,10 +101,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final TokenSigningExtension ipvPrivateKeyJwtSigner =
             new TokenSigningExtension("ipv-token-auth-key");
-
-    @RegisterExtension
-    protected static final TokenSigningExtension docAppPrivateKeyJwtSigner =
-            new TokenSigningExtension("doc-app-token-auth-key");
 
     @RegisterExtension
     protected static final TokenSigningExtension orchestrationPrivateKeyJwtSigner =
@@ -153,17 +136,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final IntegrationTestConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+                    notificationsQueue, tokenSigner, configurationParameters);
 
     protected static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+                    notificationsQueue, tokenSigner, configurationParameters) {
 
                 @Override
                 public String getTxmaAuditQueueUrl() {
@@ -174,10 +151,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static ConfigurationService supportPasskeysAndTxmaEnabledConfigurationService(
             String accountDataBaseUri) {
         return new IntegrationTestConfigurationService(
-                notificationsQueue,
-                tokenSigner,
-                docAppPrivateKeyJwtSigner,
-                configurationParameters) {
+                notificationsQueue, tokenSigner, configurationParameters) {
 
             @Override
             public String getTxmaAuditQueueUrl() {
@@ -199,10 +173,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final ConfigurationService
             REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE =
                     new IntegrationTestConfigurationService(
-                            notificationsQueue,
-                            tokenSigner,
-                            docAppPrivateKeyJwtSigner,
-                            configurationParameters) {
+                            notificationsQueue, tokenSigner, configurationParameters) {
                         @Override
                         public String getTxmaAuditQueueUrl() {
                             return txmaAuditQueue.getQueueUrl();
@@ -221,10 +192,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService EMAIL_CHECK_AND_TXMA_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+                    notificationsQueue, tokenSigner, configurationParameters) {
 
                 @Override
                 public String getTxmaAuditQueueUrl() {
@@ -235,10 +203,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final ConfigurationService
             ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE =
                     new IntegrationTestConfigurationService(
-                            notificationsQueue,
-                            tokenSigner,
-                            docAppPrivateKeyJwtSigner,
-                            configurationParameters) {
+                            notificationsQueue, tokenSigner, configurationParameters) {
                         @Override
                         public String getTxmaAuditQueueUrl() {
                             return txmaAuditQueue.getQueueUrl();
@@ -253,10 +218,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final ConfigurationService
             ACCOUNT_MANAGEMENT_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE =
                     new IntegrationTestConfigurationService(
-                            notificationsQueue,
-                            tokenSigner,
-                            docAppPrivateKeyJwtSigner,
-                            configurationParameters) {
+                            notificationsQueue, tokenSigner, configurationParameters) {
                         @Override
                         public String getTxmaAuditQueueUrl() {
                             return txmaAuditQueue.getQueueUrl();
@@ -276,10 +238,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final ConfigurationService
             INTERNAL_API_INT_SMS_DISABLED_TXMA_ENABLED_CONFIGUARION_SERVICE =
                     new IntegrationTestConfigurationService(
-                            notificationsQueue,
-                            tokenSigner,
-                            docAppPrivateKeyJwtSigner,
-                            configurationParameters) {
+                            notificationsQueue, tokenSigner, configurationParameters) {
                         @Override
                         public String getTxmaAuditQueueUrl() {
                             return txmaAuditQueue.getQueueUrl();
@@ -298,10 +257,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService INT_SMS_SENDING_DISABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+                    notificationsQueue, tokenSigner, configurationParameters) {
                 @Override
                 public String getTxmaAuditQueueUrl() {
                     return txmaAuditQueue.getQueueUrl();
@@ -310,23 +266,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 @Override
                 public boolean isInternationalSmsSendingEnabled() {
                     return false;
-                }
-            };
-
-    protected static final ConfigurationService BULK_DELETION_TXMA_ENABLED_CONFIGUARION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
-                @Override
-                public String getTxmaAuditQueueUrl() {
-                    return txmaAuditQueue.getQueueUrl();
-                }
-
-                @Override
-                public String getLegacyAccountDeletionTopicArn() {
-                    return snsTopicExtension.getTopicArn();
                 }
             };
 
@@ -351,16 +290,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final CommonPasswordsExtension commonPasswords =
             new CommonPasswordsExtension();
-
-    @RegisterExtension
-    protected static final SnsTopicExtension snsTopicExtension =
-            new SnsTopicExtension("test-topic");
-
-    protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
-        final Map<String, String> headers = new HashMap<>();
-        cookie.ifPresent(c -> headers.put("Cookie", c.toString()));
-        return headers;
-    }
 
     protected Map<String, String> constructFrontendHeaders(String sessionId) {
         return constructFrontendHeaders(sessionId, Optional.empty(), Optional.empty());
@@ -399,29 +328,24 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
         private final SqsQueueExtension notificationQueue;
         private final TokenSigningExtension tokenSigningKey;
-        private final TokenSigningExtension docAppPrivateKeyJwtSigner;
 
         public IntegrationTestConfigurationService(
                 SqsQueueExtension notificationQueue,
                 TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension) {
             super(parameterStoreExtension.getClient());
             this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
-            this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
         }
 
         public IntegrationTestConfigurationService(
                 SqsQueueExtension notificationQueue,
                 TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension,
                 SystemService systemService) {
             super(parameterStoreExtension.getClient());
             this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
-            this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
             super.systemService = systemService;
         }
 

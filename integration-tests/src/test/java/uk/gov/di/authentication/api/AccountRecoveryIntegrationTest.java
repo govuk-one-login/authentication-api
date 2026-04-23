@@ -91,11 +91,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
             extends IntegrationTestConfigurationService {
 
         public AccountRecoveryTestConfigurationService() {
-            super(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            super(notificationsQueue, tokenSigner, configurationParameters);
         }
 
         @Override

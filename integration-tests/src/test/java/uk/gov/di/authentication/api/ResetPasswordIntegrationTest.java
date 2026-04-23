@@ -422,11 +422,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
             extends IntegrationTestConfigurationService {
 
         public ResetPasswordTestConfigurationService() {
-            super(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            super(notificationsQueue, tokenSigner, configurationParameters);
         }
 
         @Override

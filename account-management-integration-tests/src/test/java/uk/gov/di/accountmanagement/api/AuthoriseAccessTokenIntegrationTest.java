@@ -176,10 +176,7 @@ class AuthoriseAccessTokenIntegrationTest
     void shouldValidateTokenSignedWithTestKey() throws JOSEException {
         var configServiceWithTestToken =
                 new IntegrationTestConfigurationService(
-                        notificationsQueue,
-                        tokenSigner,
-                        docAppPrivateKeyJwtSigner,
-                        configurationParameters) {
+                        notificationsQueue, tokenSigner, configurationParameters) {
                     @Override
                     public String getTestTokenSigningKeyAlias() {
                         return testTokenSigner.getKeyAlias();

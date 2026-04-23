@@ -57,7 +57,6 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                 new IntegrationTestConfigurationService(
                         notificationsQueue,
                         tokenSigner,
-                        docAppPrivateKeyJwtSigner,
                         configurationParameters,
                         new SystemService()) {
 

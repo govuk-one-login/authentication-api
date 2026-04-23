@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.queuehandlers;
+package uk.gov.di.orchestration.ipv.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;

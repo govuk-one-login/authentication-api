@@ -293,10 +293,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler =
                     new CheckUserExistsHandler(
                             new IntegrationTestConfigurationService(
-                                    notificationsQueue,
-                                    tokenSigner,
-                                    docAppPrivateKeyJwtSigner,
-                                    configurationParameters) {
+                                    notificationsQueue, tokenSigner, configurationParameters) {
                                 @Override
                                 public String getTxmaAuditQueueUrl() {
                                     return txmaAuditQueue.getQueueUrl();
@@ -334,10 +331,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler =
                     new CheckUserExistsHandler(
                             new IntegrationTestConfigurationService(
-                                    notificationsQueue,
-                                    tokenSigner,
-                                    docAppPrivateKeyJwtSigner,
-                                    configurationParameters) {
+                                    notificationsQueue, tokenSigner, configurationParameters) {
                                 @Override
                                 public String getTxmaAuditQueueUrl() {
                                     return txmaAuditQueue.getQueueUrl();
@@ -375,10 +369,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler =
                     new CheckUserExistsHandler(
                             new IntegrationTestConfigurationService(
-                                    notificationsQueue,
-                                    tokenSigner,
-                                    docAppPrivateKeyJwtSigner,
-                                    configurationParameters) {
+                                    notificationsQueue, tokenSigner, configurationParameters) {
                                 @Override
                                 public String getTxmaAuditQueueUrl() {
                                     return txmaAuditQueue.getQueueUrl();
@@ -417,10 +408,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler =
                     new CheckUserExistsHandler(
                             new IntegrationTestConfigurationService(
-                                    notificationsQueue,
-                                    tokenSigner,
-                                    docAppPrivateKeyJwtSigner,
-                                    configurationParameters) {
+                                    notificationsQueue, tokenSigner, configurationParameters) {
                                 @Override
                                 public String getTxmaAuditQueueUrl() {
                                     return txmaAuditQueue.getQueueUrl();
@@ -460,10 +448,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler =
                     new CheckUserExistsHandler(
                             new IntegrationTestConfigurationService(
-                                    notificationsQueue,
-                                    tokenSigner,
-                                    docAppPrivateKeyJwtSigner,
-                                    configurationParameters) {
+                                    notificationsQueue, tokenSigner, configurationParameters) {
                                 @Override
                                 public String getTxmaAuditQueueUrl() {
                                     return txmaAuditQueue.getQueueUrl();
@@ -503,10 +488,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler =
                     new CheckUserExistsHandler(
                             new IntegrationTestConfigurationService(
-                                    notificationsQueue,
-                                    tokenSigner,
-                                    docAppPrivateKeyJwtSigner,
-                                    configurationParameters) {
+                                    notificationsQueue, tokenSigner, configurationParameters) {
                                 @Override
                                 public String getTxmaAuditQueueUrl() {
                                     return txmaAuditQueue.getQueueUrl();
@@ -545,10 +527,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler =
                     new CheckUserExistsHandler(
                             new IntegrationTestConfigurationService(
-                                    notificationsQueue,
-                                    tokenSigner,
-                                    docAppPrivateKeyJwtSigner,
-                                    configurationParameters) {
+                                    notificationsQueue, tokenSigner, configurationParameters) {
                                 @Override
                                 public String getTxmaAuditQueueUrl() {
                                     return txmaAuditQueue.getQueueUrl();

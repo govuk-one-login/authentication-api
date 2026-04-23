@@ -430,10 +430,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     class InternationalSmsSendLimitTests {
         private static final ConfigurationService TXMA_WITH_INT_SMS_LIMIT_CONFIG =
                 new IntegrationTestConfigurationService(
-                        notificationsQueue,
-                        tokenSigner,
-                        docAppPrivateKeyJwtSigner,
-                        configurationParameters) {
+                        notificationsQueue, tokenSigner, configurationParameters) {
                     @Override
                     public String getTxmaAuditQueueUrl() {
                         return txmaAuditQueue.getQueueUrl();
