@@ -42,9 +42,9 @@ public class ApiGatewayLambdaHandler {
             // N.B. this will only take the first query param value
             apiGatewayProxyRequestEvent.setQueryStringParameters(
                     ctx.queryParamMap().entrySet().stream()
-                            .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    (e) -> e.getValue().get(0))));
+                            .collect(
+                                    Collectors.toMap(
+                                            Map.Entry::getKey, (e) -> e.getValue().get(0))));
 
             APIGatewayProxyResponseEvent responseEvent =
                     lambdaHandler.handleRequest(apiGatewayProxyRequestEvent, LAMBDA_CONTEXT);

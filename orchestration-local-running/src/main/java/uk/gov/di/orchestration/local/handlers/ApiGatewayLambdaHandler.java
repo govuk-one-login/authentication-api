@@ -42,21 +42,23 @@ public class ApiGatewayLambdaHandler {
             // N.B. this will only take the first query param value
             apiGatewayProxyRequestEvent.setQueryStringParameters(
                     ctx.queryParamMap().entrySet().stream()
-                            .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    (e) -> e.getValue().get(0))));
+                            .collect(
+                                    Collectors.toMap(
+                                            Map.Entry::getKey, (e) -> e.getValue().get(0))));
 
             APIGatewayProxyResponseEvent responseEvent =
                     lambdaHandler.handleRequest(apiGatewayProxyRequestEvent, LAMBDA_CONTEXT);
 
-            ctx.status(responseEvent.getStatusCode())
-                    .json(responseEvent.getBody());
+            ctx.status(responseEvent.getStatusCode()).json(responseEvent.getBody());
 
             responseEvent.getHeaders().forEach(ctx::header);
             if (responseEvent.getMultiValueHeaders() != null) {
-                responseEvent.getMultiValueHeaders().forEach((key, values) -> {
-                    values.forEach((value) -> ctx.res().addHeader(key, value));
-                });
+                responseEvent
+                        .getMultiValueHeaders()
+                        .forEach(
+                                (key, values) -> {
+                                    values.forEach((value) -> ctx.res().addHeader(key, value));
+                                });
             }
         } catch (RuntimeException e) {
             LOG.error("Runtime exception thrown by handler", e);

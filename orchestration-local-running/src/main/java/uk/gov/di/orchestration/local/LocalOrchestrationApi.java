@@ -25,38 +25,56 @@ public class LocalOrchestrationApi {
 
     // These path mappings must match those in the infrastructure-as-code configuration
     public LocalOrchestrationApi() {
-        var app = Javalin.create(config -> {
+        var app =
+                Javalin.create(
+                        config -> {
 
-                    // OIDC API
-                    config.routes.get("/.well-known/jwks.json", handlerFor(new JwksHandler()));
-                    config.routes.get("/.well-known/openid-configuration", handlerFor(new WellknownHandler()));
-                    config.routes.get("/.well-known/storage-token-jwk.json", handlerFor(new StorageTokenJwkHandler()));
-                    config.routes.get("/authorize", handlerFor(new AuthorisationHandler()));
-                    config.routes.get("/auth-code", handlerFor(new AuthCodeHandler()));
-                    config.routes.post("/token", handlerFor(new TokenHandler()));
-                    config.routes.get("/userinfo", handlerFor(new UserInfoHandler()));
-                    config.routes.get("/logout", handlerFor(new LogoutHandler()));
-                    config.routes.get("/trustmark", handlerFor(new TrustMarkHandler()));
-                    // TODO: backchannel logout - set up queue poll
+                            // OIDC API
+                            config.routes.get(
+                                    "/.well-known/jwks.json", handlerFor(new JwksHandler()));
+                            config.routes.get(
+                                    "/.well-known/openid-configuration",
+                                    handlerFor(new WellknownHandler()));
+                            config.routes.get(
+                                    "/.well-known/storage-token-jwk.json",
+                                    handlerFor(new StorageTokenJwkHandler()));
+                            config.routes.get("/authorize", handlerFor(new AuthorisationHandler()));
+                            config.routes.get("/auth-code", handlerFor(new AuthCodeHandler()));
+                            config.routes.post("/token", handlerFor(new TokenHandler()));
+                            config.routes.get("/userinfo", handlerFor(new UserInfoHandler()));
+                            config.routes.get("/logout", handlerFor(new LogoutHandler()));
+                            config.routes.get("/trustmark", handlerFor(new TrustMarkHandler()));
+                            // TODO: backchannel logout - set up queue poll
 
-                    // Auth API
-                    config.routes.get("/.well-known/auth-jwks.json", handlerFor(new AuthJwksHandler()));
-                    config.routes.get("/orchestration-redirect", handlerFor(new AuthenticationCallbackHandler()));
+                            // Auth API
+                            config.routes.get(
+                                    "/.well-known/auth-jwks.json",
+                                    handlerFor(new AuthJwksHandler()));
+                            config.routes.get(
+                                    "/orchestration-redirect",
+                                    handlerFor(new AuthenticationCallbackHandler()));
 
-                    // IPV API
-                    config.routes.get("/.well-known/ipv-jwks.json", handlerFor(new IpvJwksHandler()));
-                    config.routes.get("/ipv-callback", handlerFor(new IPVCallbackHandler()));
-                    // TODO: IPV Capacity (deprecated)
-                    // TODO: Identity progress and processing identity (deprecated?)
-                    // TODO: SPOT response processing - set up queue poll
+                            // IPV API
+                            config.routes.get(
+                                    "/.well-known/ipv-jwks.json", handlerFor(new IpvJwksHandler()));
+                            config.routes.get(
+                                    "/ipv-callback", handlerFor(new IPVCallbackHandler()));
+                            // TODO: IPV Capacity (deprecated)
+                            // TODO: Identity progress and processing identity (deprecated?)
+                            // TODO: SPOT response processing - set up queue poll
 
-                    // Doc checking app API
-                    config.routes.get("/doc-app-callback", handlerFor(new DocAppCallbackHandler()));
+                            // Doc checking app API
+                            config.routes.get(
+                                    "/doc-app-callback", handlerFor(new DocAppCallbackHandler()));
 
-                    // Client Registry API
-                    config.routes.post("/connect/register", handlerFor(new ClientRegistrationHandler()));
-                    config.routes.put("/connect/register/{clientId}", handlerFor(new UpdateClientConfigHandler()));
-                });
+                            // Client Registry API
+                            config.routes.post(
+                                    "/connect/register",
+                                    handlerFor(new ClientRegistrationHandler()));
+                            config.routes.put(
+                                    "/connect/register/{clientId}",
+                                    handlerFor(new UpdateClientConfigHandler()));
+                        });
 
         // Start app
         app.start(getPort());

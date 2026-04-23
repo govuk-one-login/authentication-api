@@ -28,7 +28,9 @@ public class App {
         // Set up localstack SSM parameters
         // Remove this once using JWKS for auth
         var parameterInitialiser = new ParameterInitialiser();
-        parameterInitialiser.setParam("local-auth-public-encryption-key", System.getenv("ORCH_TO_AUTH_ENCRYPTION_PUBLIC_KEY"));
+        parameterInitialiser.setParam(
+                "local-auth-public-encryption-key",
+                System.getenv("ORCH_TO_AUTH_ENCRYPTION_PUBLIC_KEY"));
         parameterInitialiser.setParam("local-ipv-capacity", "1");
 
         // Set up localstack KMS keys
@@ -37,7 +39,8 @@ public class App {
         var kmsInitialiser = new KmsInitialiser();
         kmsInitialiser.createKey("alias/local-auth-token-signing-key", KeyUsageType.SIGN_VERIFY);
         kmsInitialiser.createKey("alias/local-doc-app-token-signing-key", KeyUsageType.SIGN_VERIFY);
-        kmsInitialiser.createKey("alias/local-external-token-signing-key", KeyUsageType.SIGN_VERIFY);
+        kmsInitialiser.createKey(
+                "alias/local-external-token-signing-key", KeyUsageType.SIGN_VERIFY);
         kmsInitialiser.createKey("alias/local-ipv-token-signing-key", KeyUsageType.SIGN_VERIFY);
         kmsInitialiser.createKey("alias/local-storage-token-signing-key", KeyUsageType.SIGN_VERIFY);
 
@@ -62,13 +65,23 @@ public class App {
                         new ClientRegistry()
                                 .withClientID("local-rp-stub")
                                 .withClientName("Local RP stub")
-                                .withRedirectUrls(List.of("http://localhost:4000/oidc/authorization-code/callback"))
-                                .withScopes(List.of("openid", "email", "phone", "wallet-subject-id", "am"))
+                                .withRedirectUrls(
+                                        List.of(
+                                                "http://localhost:4000/oidc/authorization-code/callback"))
+                                .withScopes(
+                                        List.of(
+                                                "openid",
+                                                "email",
+                                                "phone",
+                                                "wallet-subject-id",
+                                                "am"))
                                 .withClaims(ValidClaims.getAllValidClaims().stream().toList())
                                 .withTokenAuthMethod("client_secret_post")
-                                .withClientSecret(Argon2EncoderHelper.argon2Hash("local-client-secret"))
+                                .withClientSecret(
+                                        Argon2EncoderHelper.argon2Hash("local-client-secret"))
                                 .withPublicKeySource("JWKS")
-                                .withJwksUrl("http://localhost:4000/local-rp-stub/.well-known/jwks.json")
+                                .withJwksUrl(
+                                        "http://localhost:4000/local-rp-stub/.well-known/jwks.json")
                                 .withServiceType(ServiceType.MANDATORY.name())
                                 .withSubjectType("public")
                                 .withClientType(ClientType.WEB.name())
@@ -77,10 +90,13 @@ public class App {
                         new ClientRegistry()
                                 .withClientID("oidc-conformance-test")
                                 .withClientName("OIDC conformance test suite")
-                                .withRedirectUrls(List.of("https://localhost:8443/test/a/local-test/callback"))
+                                .withRedirectUrls(
+                                        List.of(
+                                                "https://localhost:8443/test/a/local-test/callback"))
                                 .withScopes(List.of("openid", "email", "phone", "offline_access"))
                                 .withTokenAuthMethod("client_secret_post")
-                                .withClientSecret(Argon2EncoderHelper.argon2Hash("conformance-test-secret"))
+                                .withClientSecret(
+                                        Argon2EncoderHelper.argon2Hash("conformance-test-secret"))
                                 .withServiceType(ServiceType.MANDATORY.name())
                                 .withSubjectType("pairwise")
                                 .withClientType(ClientType.WEB.name())
@@ -89,15 +105,17 @@ public class App {
                         new ClientRegistry()
                                 .withClientID("oidc-conformance-test-2")
                                 .withClientName("OIDC conformance test suite")
-                                .withRedirectUrls(List.of("https://localhost:8443/test/a/local-test/callback"))
+                                .withRedirectUrls(
+                                        List.of(
+                                                "https://localhost:8443/test/a/local-test/callback"))
                                 .withScopes(List.of("openid", "email", "phone", "offline_access"))
                                 .withTokenAuthMethod("client_secret_post")
-                                .withClientSecret(Argon2EncoderHelper.argon2Hash("conformance-test-secret-2"))
+                                .withClientSecret(
+                                        Argon2EncoderHelper.argon2Hash("conformance-test-secret-2"))
                                 .withServiceType(ServiceType.MANDATORY.name())
                                 .withSubjectType("pairwise")
                                 .withClientType(ClientType.WEB.name())
                                 .withIdentityVerificationSupported(true)
-                                .withPermitMissingNonce(true)
-                ));
+                                .withPermitMissingNonce(true)));
     }
 }
