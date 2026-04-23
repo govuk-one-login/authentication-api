@@ -291,12 +291,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final CommonPasswordsExtension commonPasswords =
             new CommonPasswordsExtension();
 
-    protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
-        final Map<String, String> headers = new HashMap<>();
-        cookie.ifPresent(c -> headers.put("Cookie", c.toString()));
-        return headers;
-    }
-
     protected Map<String, String> constructFrontendHeaders(String sessionId) {
         return constructFrontendHeaders(sessionId, Optional.empty(), Optional.empty());
     }
