@@ -29,6 +29,7 @@ public class App {
         // Remove this once using JWKS for auth
         var parameterInitialiser = new ParameterInitialiser();
         parameterInitialiser.setParam("local-auth-public-encryption-key", System.getenv("ORCH_TO_AUTH_ENCRYPTION_PUBLIC_KEY"));
+        parameterInitialiser.setParam("local-ipv-capacity", "1");
 
         // Set up localstack KMS keys
         //

@@ -40,11 +40,11 @@ public class LocalOrchestrationApi {
                     // TODO: backchannel logout - set up queue poll
 
                     // Auth API
-                    config.routes.get(".well-known/auth-jwks.json", handlerFor(new AuthJwksHandler()));
+                    config.routes.get("/.well-known/auth-jwks.json", handlerFor(new AuthJwksHandler()));
                     config.routes.get("/orchestration-redirect", handlerFor(new AuthenticationCallbackHandler()));
 
                     // IPV API
-                    config.routes.get("./well-known/ipv-jwks.json", handlerFor(new IpvJwksHandler()));
+                    config.routes.get("/.well-known/ipv-jwks.json", handlerFor(new IpvJwksHandler()));
                     config.routes.get("/ipv-callback", handlerFor(new IPVCallbackHandler()));
                     // TODO: IPV Capacity (deprecated)
                     // TODO: Identity progress and processing identity (deprecated?)

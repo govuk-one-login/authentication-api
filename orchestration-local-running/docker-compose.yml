@@ -40,7 +40,6 @@ services:
       FRONTEND_API_BASE_URL: http://host.docker.internal:4401/
     ports:
       - "4401:4401"
-      - "5401:5401"
     networks:
       - di-authentication-api-net
 

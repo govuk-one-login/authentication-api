@@ -28,7 +28,7 @@ java {
 application {
     mainClass = "uk.gov.di.orchestration.local.App"
     applicationDefaultJvmArgs = [
-        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5402"
+        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5400"
     ]
 }
 
