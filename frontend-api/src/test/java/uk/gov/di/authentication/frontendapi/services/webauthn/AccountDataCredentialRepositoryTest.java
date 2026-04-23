@@ -61,7 +61,7 @@ class AccountDataCredentialRepositoryTest {
         @Test
         void returnsCredentialIdsWhenPasskeysExist() {
             setupUserProfile();
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(
                             Result.success(
                                     new PasskeysRetrieveResponse(
@@ -80,7 +80,7 @@ class AccountDataCredentialRepositoryTest {
         @Test
         void returnsEmptySetWhenNoPasskeys() {
             setupUserProfile();
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(Result.success(new PasskeysRetrieveResponse(List.of())));
 
             var result = repository.getCredentialIdsForUsername(EMAIL);
@@ -101,7 +101,7 @@ class AccountDataCredentialRepositoryTest {
         @Test
         void returnsEmptySetWhenApiCallFails() {
             setupUserProfile();
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(
                             Result.failure(
                                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));
@@ -174,7 +174,7 @@ class AccountDataCredentialRepositoryTest {
 
         @Test
         void returnsRegisteredCredentialWhenFound() {
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(
                             Result.success(
                                     new PasskeysRetrieveResponse(
@@ -192,7 +192,7 @@ class AccountDataCredentialRepositoryTest {
 
         @Test
         void returnsEmptyWhenCredentialNotFound() {
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(Result.success(new PasskeysRetrieveResponse(List.of())));
             var credentialId = new ByteArray(Base64.getUrlDecoder().decode(PASSKEY_ID_BASE64URL));
 
@@ -203,7 +203,7 @@ class AccountDataCredentialRepositoryTest {
 
         @Test
         void returnsEmptyWhenApiCallFails() {
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(
                             Result.failure(
                                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));

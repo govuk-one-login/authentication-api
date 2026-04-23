@@ -628,7 +628,7 @@ class CheckUserExistsHandlerTest {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
             when(passkeysService.hasActivePasskey(
-                            eq(userProfile.getPublicSubjectID()), any(), eq(SESSION_ID)))
+                            eq(userProfile.getPublicSubjectID()), eq(SESSION_ID)))
                     .thenReturn(Result.success(hasActivePasskey));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
@@ -651,7 +651,7 @@ class CheckUserExistsHandlerTest {
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
 
             when(passkeysService.hasActivePasskey(
-                            eq(userProfile.getPublicSubjectID()), any(), eq(SESSION_ID)))
+                            eq(userProfile.getPublicSubjectID()), eq(SESSION_ID)))
                     .thenReturn(
                             Result.failure(
                                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));

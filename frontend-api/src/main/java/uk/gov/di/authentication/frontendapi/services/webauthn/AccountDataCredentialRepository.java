@@ -11,7 +11,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -145,29 +144,12 @@ public class AccountDataCredentialRepository implements CredentialRepository {
     private Optional<List<PasskeysRetrieveResponse.PasskeyResponse>>
             retrievePasskeysForPublicSubjectId(String publicSubjectId) {
         return passkeysService
-                .retrievePasskeys(publicSubjectId, getInternalCommonSubjectId(publicSubjectId), "")
+                .retrievePasskeys(publicSubjectId, "")
                 .fold(
                         failure -> {
                             LOG.warn("Failed to retrieve passkeys: {}", failure);
                             return Optional.empty();
                         },
                         success -> Optional.of(success.passkeys()));
-    }
-
-    private String getInternalCommonSubjectId(String publicSubjectId) {
-        return authenticationService
-                .getOptionalUserProfileFromPublicSubject(publicSubjectId)
-                .map(
-                        userProfile ->
-                                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                                userProfile,
-                                                configurationService.getInternalSectorUri(),
-                                                authenticationService)
-                                        .getValue())
-                .orElseGet(
-                        () -> {
-                            LOG.warn("Error retrieving internal common subject ID");
-                            return "";
-                        });
     }
 }
