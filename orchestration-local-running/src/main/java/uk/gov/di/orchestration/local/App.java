@@ -77,7 +77,7 @@ public class App {
                                                 "wallet-subject-id",
                                                 "am"))
                                 .withClaims(ValidClaims.getAllValidClaims().stream().toList())
-                                .withTokenAuthMethod("client_secret_post")
+                                .withTokenAuthMethod("private_key_jwt")
                                 .withClientSecret(
                                         Argon2EncoderHelper.argon2Hash("local-client-secret"))
                                 .withPublicKeySource("JWKS")
