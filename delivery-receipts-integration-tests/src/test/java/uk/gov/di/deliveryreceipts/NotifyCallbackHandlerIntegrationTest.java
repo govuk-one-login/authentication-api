@@ -42,11 +42,7 @@ class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     private static final IntegrationTestConfigurationService CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters,
-                    new SystemService()) {
+                    notificationsQueue, tokenSigner, configurationParameters, new SystemService()) {
                 @Override
                 public boolean isBulkUserEmailEnabled() {
                     return true;

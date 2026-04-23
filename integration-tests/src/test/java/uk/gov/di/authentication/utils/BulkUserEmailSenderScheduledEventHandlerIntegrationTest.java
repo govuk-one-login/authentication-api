@@ -124,10 +124,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
             String sendMode, String senderType, int batchSize) {
         SecureRandom secureRandom = new SecureRandom();
         return new IntegrationTestConfigurationService(
-                notificationsQueue,
-                tokenSigner,
-                docAppPrivateKeyJwtSigner,
-                configurationParameters) {
+                notificationsQueue, tokenSigner, configurationParameters) {
 
             @Override
             public String getTxmaAuditQueueUrl() {

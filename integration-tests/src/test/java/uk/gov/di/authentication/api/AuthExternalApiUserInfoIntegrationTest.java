@@ -62,10 +62,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     void setup() throws Json.JsonException {
         var configurationService =
                 new IntegrationTestConfigurationService(
-                        notificationsQueue,
-                        tokenSigner,
-                        docAppPrivateKeyJwtSigner,
-                        configurationParameters) {
+                        notificationsQueue, tokenSigner, configurationParameters) {
 
                     @Override
                     public String getTxmaAuditQueueUrl() {

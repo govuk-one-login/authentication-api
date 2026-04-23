@@ -85,10 +85,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     private static final IntegrationTestConfigurationService CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+                    notificationsQueue, tokenSigner, configurationParameters) {
 
                 @Override
                 public String getTxmaAuditQueueUrl() {

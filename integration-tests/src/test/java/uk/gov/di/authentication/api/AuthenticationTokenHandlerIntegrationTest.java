@@ -98,7 +98,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     void setup() throws JOSEException {
         var configurationService =
                 new AuthenticationTokenHandlerIntegrationTest.TestConfigurationService(
-                        notificationsQueue, tokenSigner, docAppPrivateKeyJwtSigner);
+                        notificationsQueue, tokenSigner);
 
         handler = new TokenHandler(configurationService);
 
@@ -132,7 +132,6 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                 new AuthenticationTokenHandlerIntegrationTest.TestConfigurationService(
                         notificationsQueue,
                         tokenSigner,
-                        docAppPrivateKeyJwtSigner,
                         signWithOrchStubKey ? Optional.of(STUB_PUBLIC_KEY) : Optional.empty());
         handler = new TokenHandler(configurationService);
 
@@ -181,10 +180,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         authJwksExtension.init(new JWKSet());
         var configurationService =
                 new AuthenticationTokenHandlerIntegrationTest.TestConfigurationService(
-                        notificationsQueue,
-                        tokenSigner,
-                        docAppPrivateKeyJwtSigner,
-                        Optional.of(STUB_PUBLIC_KEY));
+                        notificationsQueue, tokenSigner, Optional.of(STUB_PUBLIC_KEY));
         handler = new TokenHandler(configurationService);
 
         Map<String, List<String>> baseParams =
@@ -304,26 +300,15 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         private final Optional<String> orchStubPublicSigningKeyOpt;
 
         public TestConfigurationService(
-                SqsQueueExtension notificationQueue,
-                TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension docAppPrivateKeyJwtSigner) {
-            this(
-                    notificationQueue,
-                    tokenSigningKey,
-                    docAppPrivateKeyJwtSigner,
-                    Optional.of(STUB_PUBLIC_KEY));
+                SqsQueueExtension notificationQueue, TokenSigningExtension tokenSigningKey) {
+            this(notificationQueue, tokenSigningKey, Optional.of(STUB_PUBLIC_KEY));
         }
 
         public TestConfigurationService(
                 SqsQueueExtension notificationQueue,
                 TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
                 Optional<String> orchStubPublicSigningKeyOpt) {
-            super(
-                    notificationQueue,
-                    tokenSigningKey,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            super(notificationQueue, tokenSigningKey, configurationParameters);
             this.orchStubPublicSigningKeyOpt = orchStubPublicSigningKeyOpt;
         }
 

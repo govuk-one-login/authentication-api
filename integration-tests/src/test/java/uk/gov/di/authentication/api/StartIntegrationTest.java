@@ -587,11 +587,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         public TestConfigurationService() {
-            super(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            super(notificationsQueue, tokenSigner, configurationParameters);
         }
     }
 }

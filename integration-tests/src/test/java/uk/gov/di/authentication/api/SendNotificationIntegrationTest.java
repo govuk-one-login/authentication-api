@@ -54,10 +54,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final ConfigurationService CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    notificationsQueue,
-                    tokenSigner,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+                    notificationsQueue, tokenSigner, configurationParameters) {
                 @Override
                 public String getTxmaAuditQueueUrl() {
                     return txmaAuditQueue.getQueueUrl();

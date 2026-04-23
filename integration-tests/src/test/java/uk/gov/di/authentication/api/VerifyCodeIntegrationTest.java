@@ -587,10 +587,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     private ConfigurationService forcedMfaResetEnabledConfigurationService() {
         return new IntegrationTestConfigurationService(
-                notificationsQueue,
-                tokenSigner,
-                docAppPrivateKeyJwtSigner,
-                configurationParameters) {
+                notificationsQueue, tokenSigner, configurationParameters) {
             @Override
             public String getTxmaAuditQueueUrl() {
                 return txmaAuditQueue.getQueueUrl();
