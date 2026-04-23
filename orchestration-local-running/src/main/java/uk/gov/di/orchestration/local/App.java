@@ -82,10 +82,10 @@ public class App {
                                         Argon2EncoderHelper.argon2Hash("local-client-secret"))
                                 .withPublicKeySource("JWKS")
                                 .withJwksUrl(
-                                        "http://localhost:4000/local-rp-stub/.well-known/jwks.json")
+                                        "http://host.docker.internal:4000/local-rp-stub/.well-known/jwks.json")
                                 .withServiceType(ServiceType.MANDATORY.name())
                                 .withSubjectType("public")
-                                .withClientType(ClientType.WEB.name())
+                                .withClientType(ClientType.WEB.getValue())
                                 .withIdentityVerificationSupported(true),
                         // Clients for the OIDC conformance test suite
                         new ClientRegistry()
@@ -100,7 +100,7 @@ public class App {
                                         Argon2EncoderHelper.argon2Hash("conformance-test-secret"))
                                 .withServiceType(ServiceType.MANDATORY.name())
                                 .withSubjectType("pairwise")
-                                .withClientType(ClientType.WEB.name())
+                                .withClientType(ClientType.WEB.getValue())
                                 .withIdentityVerificationSupported(true)
                                 .withPermitMissingNonce(true),
                         new ClientRegistry()
@@ -115,7 +115,7 @@ public class App {
                                         Argon2EncoderHelper.argon2Hash("conformance-test-secret-2"))
                                 .withServiceType(ServiceType.MANDATORY.name())
                                 .withSubjectType("pairwise")
-                                .withClientType(ClientType.WEB.name())
+                                .withClientType(ClientType.WEB.getValue())
                                 .withIdentityVerificationSupported(true)
                                 .withPermitMissingNonce(true)));
     }

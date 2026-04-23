@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyType;
@@ -28,8 +29,11 @@ import uk.gov.di.orchestration.shared.entity.RpPublicKeyCache;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.utils.JwksUtils;
 import uk.gov.di.orchestration.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -156,17 +160,7 @@ public class ClientSignatureValidationService {
                 return JWK.parse(cache.get().getPublicKey()).toRSAKey().toPublicKey();
             }
             LOG.info("Fetching JWKS with key ID {} from {}", kid, jwksUrl);
-            InvokeResponse response = invokeFetchJwksFunction(lambdaClient, jwksUrl, kid);
-            String unescapedPayload =
-                    objectMapper.readValue(response.payload().asUtf8String(), String.class);
-
-            if (unescapedPayload.equals("error")) {
-                String error = "Returned error from FetchJwksHandler";
-                LOG.error(error);
-                throw new JwksException(error);
-            }
-
-            JWK jwk = JWK.parse(unescapedPayload);
+            var jwk = fetchJwks(jwksUrl, kid);
             LOG.info("Caching RP public signing key with key ID {}", kid);
             rpPublicKeyCacheService.addRpPublicKeyCacheData(
                     clientId, jwk.getKeyID(), jwk.toJSONString());
@@ -186,8 +180,28 @@ public class ClientSignatureValidationService {
         return kf.generatePublic(keySpec);
     }
 
-    private InvokeResponse invokeFetchJwksFunction(
-            LambdaClient awsLambda, String jwksUrl, String kid) throws JwksException {
+    private JWK fetchJwks(String jwksUrl, String kid) throws JwksException, ParseException, Json.JsonException {
+        if ("local".equals(configurationService.getEnvironment())) {
+            // The local environment cannot invoke lambdas, so we fetch JWKS directly
+            // In production the VPC rules will block the request
+            return fetchJwksDirect(jwksUrl, kid);
+        }
+
+        var response = invokeFetchJwksFunction(jwksUrl, kid);
+
+        var unescapedPayload =
+                objectMapper.readValue(response.payload().asUtf8String(), String.class);
+
+        if (unescapedPayload.equals("error")) {
+            String error = "Returned error from FetchJwksHandler";
+            LOG.error(error);
+            throw new JwksException(error);
+        }
+
+        return JWK.parse(unescapedPayload);
+    }
+
+    private InvokeResponse invokeFetchJwksFunction(String jwksUrl, String kid) throws JwksException {
         try {
             JSONObject jsonObj = new JSONObject();
             jsonObj.put("url", jwksUrl);
@@ -202,7 +216,7 @@ public class ClientSignatureValidationService {
                                             + "-FetchJwksFunction:latest")
                             .payload(payload)
                             .build();
-            return awsLambda.invoke(request);
+            return lambdaClient.invoke(request);
         } catch (LambdaException e) {
             var errorMessage =
                     Optional.ofNullable(e.awsErrorDetails())
@@ -225,6 +239,19 @@ public class ClientSignatureValidationService {
         } catch (Exception e) {
             LOG.error("Exception thrown while invoking FetchJwksFunction: ", e);
             throw new JwksException(e.getMessage());
+        }
+    }
+
+    private JWK fetchJwksDirect(String jwksUrl, String kid) throws JwksException {
+        LOG.warn("Fetching JWKS directly in local environment");
+        try {
+            return JwksUtils.retrieveJwkFromURLWithKeyId(new URL(jwksUrl), kid);
+        } catch (KeySourceException e) {
+            throw new JwksException("Failed to fetch JWKS: could not find key in JWKS that matches provided keyId");
+        } catch (MalformedURLException e) {
+            throw new JwksException("Failed to fetch JWKS: URL is malformed");
+        } catch (IllegalArgumentException e) {
+            throw new JwksException("Failed to fetch JWKS: url and/or keyId parameter not present");
         }
     }
 }
