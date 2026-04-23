@@ -9,6 +9,7 @@ public class CommonTestVariables {
     public static final String PERSISTENT_ID = "some-persistent-session-id";
     public static final String SESSION_ID = "some-session-id";
     public static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
+    public static final String IP_ADDRESS = "192.0.2.0/24";
     public static final Map<String, String> VALID_HEADERS =
             Map.of(
                     PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,

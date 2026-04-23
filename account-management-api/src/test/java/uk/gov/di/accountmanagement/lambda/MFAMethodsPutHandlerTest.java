@@ -11,7 +11,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -67,16 +66,15 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.TXMA_ENCODED_HEADER_VALUE;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.containsMetadataPair;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
@@ -115,6 +113,16 @@ class MFAMethodsPutHandlerTest {
     private static final String MFA_IDENTIFIER = "some-mfa-identifier";
     public static final String TEST_OTP = "123456";
     public static final String INCORRECT_OTP = "111111";
+    private static final AuditContext BASE_AUDIT_CONTEXT =
+            AuditContext.emptyAuditContext()
+                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                    .withEmail(EMAIL)
+                    .withClientSessionId(SESSION_ID)
+                    .withSubjectId(TEST_INTERNAL_SUBJECT)
+                    .withIpAddress(IP_ADDRESS)
+                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                    .withPersistentSessionId(PERSISTENT_ID)
+                    .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
 
     private MFAMethodsPutHandler handler;
 
@@ -430,20 +438,16 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        var expectedAuditContext =
+                BASE_AUDIT_CONTEXT
+                        .withPhoneNumber(UK_MOBILE_NUMBER)
+                        .withMetadataItem(pair("mfa-type", defaultMfaMethod.getMfaMethodType()));
+
         verify(auditService)
                 .submitAuditEvent(
-                        eq(AUTH_MFA_METHOD_SWITCH_COMPLETED),
-                        captor.capture(),
-                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-        AuditContext capturedObject = captor.getValue();
-
-        containsMetadataPair(
-                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
-        containsMetadataPair(
-                capturedObject,
-                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                defaultMfaMethod.getMfaMethodType());
+                        AUTH_MFA_METHOD_SWITCH_COMPLETED,
+                        expectedAuditContext,
+                        AUDIT_EVENT_COMPONENT_ID_HOME);
     }
 
     private static Stream<MFAMethodUpdateIdentifier> phoneNumberUpdateTypeIdentifiers() {
@@ -496,20 +500,17 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        var expectedAuditContext =
+                BASE_AUDIT_CONTEXT
+                        .withPhoneNumber(UK_MOBILE_NUMBER)
+                        .withMetadataItem(
+                                pair("mfa-method", defaultMfaMethod.getPriority().toLowerCase()));
+
         verify(auditService)
                 .submitAuditEvent(
-                        eq(AUTH_UPDATE_PHONE_NUMBER),
-                        captor.capture(),
-                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-        AuditContext capturedObject = captor.getValue();
-
-        containsMetadataPair(
-                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
-        containsMetadataPair(
-                capturedObject,
-                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                defaultMfaMethod.getPriority().toLowerCase());
+                        AUTH_UPDATE_PHONE_NUMBER,
+                        expectedAuditContext,
+                        AUDIT_EVENT_COMPONENT_ID_HOME);
     }
 
     @Test
@@ -560,23 +561,17 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        ArgumentCaptor<AuditContext> switchCompletedCaptor =
-                ArgumentCaptor.forClass(AuditContext.class);
+        var expectedAuditContext =
+                BASE_AUDIT_CONTEXT
+                        .withPhoneNumber(UK_MOBILE_NUMBER)
+                        .withMetadataItem(pair("mfa-type", defaultMfaMethod.getMfaMethodType()));
+        // Query: This event contains the number switched from, not the new number.
+
         verify(auditService)
                 .submitAuditEvent(
-                        eq(AUTH_MFA_METHOD_SWITCH_COMPLETED),
-                        switchCompletedCaptor.capture(),
-                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-        AuditContext switchCompletedContext = switchCompletedCaptor.getValue();
-
-        containsMetadataPair(
-                switchCompletedContext,
-                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                ACCOUNT_MANAGEMENT.name());
-        containsMetadataPair(
-                switchCompletedContext,
-                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                defaultMfaMethod.getMfaMethodType());
+                        AUTH_MFA_METHOD_SWITCH_COMPLETED,
+                        expectedAuditContext,
+                        AUDIT_EVENT_COMPONENT_ID_HOME);
 
         verify(auditService, never()).submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(), any());
     }
@@ -658,27 +653,23 @@ class MFAMethodsPutHandlerTest {
 
         handler.handleRequest(eventWithUpdateRequest, context);
 
-        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        var expectedAuditContext =
+                BASE_AUDIT_CONTEXT
+                        .withPhoneNumber(UK_MOBILE_NUMBER)
+                        .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()))
+                        .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
+                        .withMetadataItem(pair("notification-type", "MFA_SMS"))
+                        .withMetadataItem(pair("account-recovery", "false"))
+                        .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()))
+                        .withMetadataItem(
+                                pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()))
+                        .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()));
+        // journey type repeated here (also in base context)- to fix
+        // mfa type also repeated - to fix
+
         verify(auditService)
                 .submitAuditEvent(
-                        eq(AUTH_CODE_VERIFIED),
-                        captor.capture(),
-                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-        AuditContext capturedObject = captor.getValue();
-
-        containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, TEST_OTP);
-        containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
-        containsMetadataPair(
-                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
-        containsMetadataPair(
-                capturedObject,
-                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                DEFAULT_SMS_METHOD.getPriority().toLowerCase());
-        containsMetadataPair(
-                capturedObject,
-                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                DEFAULT_SMS_METHOD.getMfaMethodType());
-        containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, "MFA_SMS");
+                        AUTH_CODE_VERIFIED, expectedAuditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
     }
 
     @Test
@@ -926,24 +917,17 @@ class MFAMethodsPutHandlerTest {
 
         handler.handleRequest(eventWithUpdateRequest, context);
 
-        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        var expectedAuditContext =
+                BASE_AUDIT_CONTEXT
+                        .withPhoneNumber(UK_MOBILE_NUMBER)
+                        .withMetadataItem(pair("mfa-type", BACKUP_SMS_METHOD.getMfaMethodType()))
+                        .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
+
         verify(auditService)
                 .submitAuditEvent(
-                        eq(AUTH_MFA_METHOD_SWITCH_FAILED),
-                        captor.capture(),
-                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-        AuditContext capturedObject = captor.getValue();
-
-        containsMetadataPair(
-                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
-        containsMetadataPair(
-                capturedObject,
-                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                BACKUP_SMS_METHOD.getMfaMethodType());
-        containsMetadataPair(
-                capturedObject,
-                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                PriorityIdentifier.BACKUP.name().toLowerCase());
+                        AUTH_MFA_METHOD_SWITCH_FAILED,
+                        expectedAuditContext,
+                        AUDIT_EVENT_COMPONENT_ID_HOME);
     }
 
     @Test
@@ -1222,13 +1206,13 @@ class MFAMethodsPutHandlerTest {
     void shouldReturn200WhenValidRequestWithNullMethodForSwitching() {
         var requestBody =
                 """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": null
-          }
-        }
-        """;
+                        {
+                          "mfaMethod": {
+                            "priorityIdentifier": "DEFAULT",
+                            "method": null
+                          }
+                        }
+                        """;
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
 
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
@@ -1354,17 +1338,17 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.INVALID_OTP));
 
-        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        var expectedAuditContext =
+                BASE_AUDIT_CONTEXT
+                        .withPhoneNumber(phoneNumber)
+                        .withMetadataItem(pair("mfa-type", "SMS"))
+                        .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
+
         verify(auditService)
                 .submitAuditEvent(
-                        eq(AUTH_INVALID_CODE_SENT),
-                        captor.capture(),
-                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-        AuditContext capturedObject = captor.getValue();
-        containsMetadataPair(
-                capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
-        containsMetadataPair(
-                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+                        AUTH_INVALID_CODE_SENT,
+                        expectedAuditContext,
+                        AUDIT_EVENT_COMPONENT_ID_HOME);
 
         verify(sqsClient, never()).send(any());
     }
@@ -1401,18 +1385,19 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        var expectedContext =
+                BASE_AUDIT_CONTEXT
+                        .withPhoneNumber(null)
+                        .withMetadataItem(pair("mfa-type", "AUTH_APP"))
+                        .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()))
+                        .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+        // Journey type duplicated here - in base context
+
         verify(auditService)
                 .submitAuditEvent(
-                        eq(AUTH_UPDATE_PROFILE_AUTH_APP),
-                        captor.capture(),
-                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-
-        AuditContext capturedContext = captor.getValue();
-        containsMetadataPair(capturedContext, AUDIT_EVENT_EXTENSIONS_MFA_TYPE, "AUTH_APP");
-        containsMetadataPair(capturedContext, AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default");
-        containsMetadataPair(
-                capturedContext, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, "ACCOUNT_MANAGEMENT");
+                        AUTH_UPDATE_PROFILE_AUTH_APP,
+                        expectedContext,
+                        AUDIT_EVENT_COMPONENT_ID_HOME);
     }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
@@ -1422,7 +1407,7 @@ class MFAMethodsPutHandlerTest {
         authorizerParams.put("principalId", principal);
         authorizerParams.put("clientId", TEST_CLIENT);
         proxyRequestContext.setAuthorizer(authorizerParams);
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp(IP_ADDRESS));
 
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(
@@ -1436,33 +1421,33 @@ class MFAMethodsPutHandlerTest {
     private String updateSmsRequest(String phoneNumber, String otp) {
         return format(
                 """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": {
-                "mfaMethodType": "SMS",
-                "phoneNumber": "%s",
-                "otp": "%s"
-            }
-          }
-        }
-        """,
+                        {
+                          "mfaMethod": {
+                            "priorityIdentifier": "DEFAULT",
+                            "method": {
+                                "mfaMethodType": "SMS",
+                                "phoneNumber": "%s",
+                                "otp": "%s"
+                            }
+                          }
+                        }
+                        """,
                 phoneNumber, otp);
     }
 
     private String updateAuthAppRequest(String credential) {
         return format(
                 """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": {
-                "mfaMethodType": "AUTH_APP",
-                "credential": "%s"
-            }
-          }
-        }
-        """,
+                        {
+                          "mfaMethod": {
+                            "priorityIdentifier": "DEFAULT",
+                            "method": {
+                                "mfaMethodType": "AUTH_APP",
+                                "credential": "%s"
+                            }
+                          }
+                        }
+                        """,
                 credential);
     }
 }

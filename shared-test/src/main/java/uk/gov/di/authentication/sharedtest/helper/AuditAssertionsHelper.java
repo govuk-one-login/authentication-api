@@ -1,9 +1,7 @@
 package uk.gov.di.authentication.sharedtest.helper;
 
 import com.google.gson.JsonElement;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 
 import java.time.Duration;
@@ -15,10 +13,8 @@ import java.util.Objects;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 
 public class AuditAssertionsHelper {
@@ -158,18 +154,6 @@ public class AuditAssertionsHelper {
                         .get("restricted")
                         .getAsJsonObject()
                         .get("device_information"));
-    }
-
-    public static void containsMetadataPair(
-            AuditContext capturedObject, String field, String value) {
-        capturedObject
-                .getMetadataItemByKey(field)
-                .ifPresentOrElse(
-                        actualMetadataPairForMfaMethod ->
-                                assertEquals(
-                                        AuditService.MetadataPair.pair(field, value),
-                                        actualMetadataPairForMfaMethod),
-                        () -> fail("Missing metadata key: " + field));
     }
 
     public static void assertAuditEventExpectations(
