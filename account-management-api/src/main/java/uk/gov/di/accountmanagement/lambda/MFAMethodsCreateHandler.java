@@ -398,26 +398,8 @@ public class MFAMethodsCreateHandler
                             .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority));
 
             if (mfaMethodCreateRequest.mfaMethod().method()
-                    instanceof RequestSmsMfaDetail requestSmsMfaDetail1) {
-                context =
-                        context.withPhoneNumber(requestSmsMfaDetail1.phoneNumber())
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
-                                                PhoneNumberHelper.getCountry(
-                                                        requestSmsMfaDetail1.phoneNumber())));
-
-                if (auditEvent.equals(AUTH_CODE_VERIFIED) && requestSmsMfaDetail1.otp() != null) {
-                    var mfaCodeEnteredPair =
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
-                                    requestSmsMfaDetail1.otp());
-                    var notificationTypePair =
-                            pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
-                    context =
-                            context.withMetadataItem(mfaCodeEnteredPair)
-                                    .withMetadataItem(notificationTypePair);
-                }
+                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+                context = enrichWithSmsDetails(context, auditEvent, requestSmsMfaDetail);
             }
 
             if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
@@ -428,6 +410,28 @@ public class MFAMethodsCreateHandler
 
             return Result.success(context);
         }
+    }
+
+    private AuditContext enrichWithSmsDetails(
+            AuditContext context,
+            AccountManagementAuditableEvent auditEvent,
+            RequestSmsMfaDetail smsDetail) {
+        var updatedContext =
+                context.withPhoneNumber(smsDetail.phoneNumber())
+                        .withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
+                                        PhoneNumberHelper.getCountry(smsDetail.phoneNumber())));
+
+        if (auditEvent.equals(AUTH_CODE_VERIFIED) && smsDetail.otp() != null) {
+            return updatedContext
+                    .withMetadataItem(
+                            pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, smsDetail.otp()))
+                    .withMetadataItem(
+                            pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name()));
+        }
+
+        return updatedContext;
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(
