@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  PendingPhoneCheckQueueEncryptionKey:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for encrypting Experian phone check queue
+      EnableKeyRotation: true
+      PendingWindowInDays: 30
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: key-policy-sqs
+        Statement:
+          - Sid: DefaultAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowAuthExperianAcctAccessToPendingphoneCheckKmsKey
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AccountID}:root
+                - AccountID: !If
+                    - UseSubEnvironment
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref SubEnvironment,
+                        AuthExpAccountId,
+                      ]
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        AuthExpAccountId,
+                      ]
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource: "*"
+
+  PendingPhoneCheckQueueEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - alias/${Env}-experian-phone-check-sqs-kms-alias
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref PendingPhoneCheckQueueEncryptionKey
+
+  PendingPhoneCheckDlQueueEncryptionKey:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for encrypting Experian phone check queue
+      EnableKeyRotation: true
+      PendingWindowInDays: 30
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: key-policy-sqs
+        Statement:
+          - Sid: DefaultAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowAuthExpAcctAccessToPendingphoneCheckKmsKey
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AccountID}:root
+                - AccountID: !If
+                    - UseSubEnvironment
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref SubEnvironment,
+                        AuthExpAccountId,
+                      ]
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        AuthExpAccountId,
+                      ]
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource: "*"
+
+  PendingPhoneCheckDlQueueEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - alias/${Env}-experian-phone-check-dl-sqs-kms-alias
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref PendingPhoneCheckDlQueueEncryptionKey
+
+  # ── SQS Queues ────────────────────────────────────────────────────────────────
+  ExperianPhoneCheckDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-experian-phone-check-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      DelaySeconds: 300
+      VisibilityTimeout: 900
+      MessageRetentionPeriod: 604800
+      KmsMasterKeyId: !GetAtt PendingPhoneCheckDlQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+
+  ExperianPhoneCheckQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-experian-phone-check-queue
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      MaximumMessageSize: 2048
+      MessageRetentionPeriod: 1209600
+      VisibilityTimeout: 900
+      KmsMasterKeyId: !GetAtt PendingPhoneCheckQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ExperianPhoneCheckDeadLetterQueue.Arn
+        maxReceiveCount: 3
+
+  ExperianPhoneCheckQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ExperianPhoneCheckQueue
+      PolicyDocument:
+        Statement:
+          - Sid: AllowAuthExperianAcctCrossAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AccountID}:root
+                - AccountID: !If
+                    - UseSubEnvironment
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref SubEnvironment,
+                        AuthExpAccountId,
+                      ]
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        AuthExpAccountId,
+                      ]
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt ExperianPhoneCheckQueue.Arn
+
+  ExperianPhoneCheckDlQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ExperianPhoneCheckDeadLetterQueue
+      PolicyDocument:
+        Statement:
+          - Sid: AllowAuthExperianAcctCrossAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AccountID}:root
+                - AccountID: !If
+                    - UseSubEnvironment
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref SubEnvironment,
+                        AuthExpAccountId,
+                      ]
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        AuthExpAccountId,
+                      ]
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt ExperianPhoneCheckDeadLetterQueue.Arn
