@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
@@ -31,6 +32,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
+import uk.gov.di.orchestration.shared.utils.JwksUtils;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -48,7 +50,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withLevelAndMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
@@ -182,7 +186,7 @@ class ClientSignatureValidationServiceTest {
         @Test
         void shouldSuccessfullyReturnWhenValidatingValidSignedJWT() {
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair.getPublic());
-            when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
+            when(lambdaClient.invoke((InvokeRequest) any())).thenReturn(response);
             var signedJWT = generateSignedJWT(keyPair.getPrivate());
 
             assertDoesNotThrow(() -> clientSignatureValidationService.validate(signedJWT, client));
@@ -191,7 +195,7 @@ class ClientSignatureValidationServiceTest {
         @Test
         void shouldThrowExceptionWhenFetchJwksHandlerReturnsError() {
             InvokeResponse response = generateFetchJwksLambdaErrorResponse();
-            when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
+            when(lambdaClient.invoke((InvokeRequest) any())).thenReturn(response);
             var signedJWT = generateSignedJWT(keyPair.getPrivate());
 
             assertThrows(
@@ -238,7 +242,7 @@ class ClientSignatureValidationServiceTest {
         @Test
         void shouldSuccessfullyReturnWhenValidatingValidPrivateKeyJWT() {
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair.getPublic());
-            when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
+            when(lambdaClient.invoke((InvokeRequest) any())).thenReturn(response);
             var privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
 
             assertDoesNotThrow(
@@ -251,7 +255,7 @@ class ClientSignatureValidationServiceTest {
         void shouldThrowExceptionWhenValidatingInvalidSignedJWT() {
             var keyPair2 = generateRsaKeyPair();
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair2.getPublic());
-            when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
+            when(lambdaClient.invoke((InvokeRequest) any())).thenReturn(response);
             var signedJWT = generateSignedJWT(keyPair.getPrivate());
 
             assertThrows(
@@ -263,7 +267,7 @@ class ClientSignatureValidationServiceTest {
         void shouldThrowExceptionWhenValidatingInvalidPrivateKeyJWT() {
             var keyPair2 = generateRsaKeyPair();
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair2.getPublic());
-            when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
+            when(lambdaClient.invoke((InvokeRequest) any())).thenReturn(response);
             var privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
 
             assertThrows(
@@ -271,6 +275,42 @@ class ClientSignatureValidationServiceTest {
                     () ->
                             clientSignatureValidationService.validateTokenClientAssertion(
                                     privateKeyJWT, client));
+        }
+
+        @Test
+        void shouldSuccessfullyReturnWhenValidatingValidSignedJWTLocally() {
+            when(configurationService.getEnvironment()).thenReturn("local");
+            try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
+                mockJwksUtils
+                        .when(() -> JwksUtils.retrieveJwkFromURLWithKeyId(any(), any()))
+                        .thenReturn(
+                                new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                                        .keyID("12345")
+                                        .keyUse(KeyUse.SIGNATURE)
+                                        .algorithm(RS256)
+                                        .build());
+
+                var signedJWT = generateSignedJWT(keyPair.getPrivate());
+
+                assertDoesNotThrow(
+                        () -> clientSignatureValidationService.validate(signedJWT, client));
+            }
+        }
+
+        @Test
+        void shouldThrowExceptionWhenJWKSReturnsErrorLocally() {
+            when(configurationService.getEnvironment()).thenReturn("local");
+            try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
+                mockJwksUtils
+                        .when(() -> JwksUtils.retrieveJwkFromURLWithKeyId(any(), any()))
+                        .thenThrow(KeySourceException.class);
+
+                var signedJWT = generateSignedJWT(keyPair.getPrivate());
+
+                assertThrows(
+                        JwksException.class,
+                        () -> clientSignatureValidationService.validate(signedJWT, client));
+            }
         }
     }
 

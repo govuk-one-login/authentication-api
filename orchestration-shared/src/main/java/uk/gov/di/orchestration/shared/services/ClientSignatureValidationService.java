@@ -248,13 +248,9 @@ public class ClientSignatureValidationService {
         LOG.warn("Fetching JWKS directly in local environment");
         try {
             return JwksUtils.retrieveJwkFromURLWithKeyId(new URL(jwksUrl), kid);
-        } catch (KeySourceException e) {
-            throw new JwksException(
-                    "Failed to fetch JWKS: could not find key in JWKS that matches provided keyId");
-        } catch (MalformedURLException e) {
-            throw new JwksException("Failed to fetch JWKS: URL is malformed");
-        } catch (IllegalArgumentException e) {
-            throw new JwksException("Failed to fetch JWKS: url and/or keyId parameter not present");
+        } catch (KeySourceException | MalformedURLException | IllegalArgumentException e) {
+            LOG.error("Failed to fetch JWKS directly", e);
+            throw new JwksException("Failed to fetch JWKS directly");
         }
     }
 }

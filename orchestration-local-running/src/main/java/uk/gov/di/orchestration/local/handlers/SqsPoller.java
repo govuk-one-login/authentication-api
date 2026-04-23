@@ -36,10 +36,9 @@ public class SqsPoller extends Thread {
                 SqsClient.builder()
                         .region(Region.of(configurationService.getAwsRegion()))
                         .credentialsProvider(DefaultCredentialsProvider.builder().build());
-        if (configurationService.getSqsEndpointURI().isPresent()) {
-            sqsClientBuilder.endpointOverride(
-                    URI.create(configurationService.getSqsEndpointURI().get()));
-        }
+        configurationService
+                .getSqsEndpointURI()
+                .ifPresent(s -> sqsClientBuilder.endpointOverride(URI.create(s)));
         this.sqsClient = sqsClientBuilder.build();
     }
 
