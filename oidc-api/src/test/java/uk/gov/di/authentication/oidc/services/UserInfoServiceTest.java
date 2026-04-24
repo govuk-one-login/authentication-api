@@ -1,13 +1,11 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.google.gson.internal.LinkedTreeMap;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
-import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -255,15 +253,16 @@ class UserInfoServiceTest {
             assertThat(
                     userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                     equalTo(coreIdentityJWT));
-            var addressClaim = (JSONArray) userInfo.getClaim(ValidClaims.ADDRESS.getValue());
-            var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
+            var addressClaim = userInfo.getJSONArrayClaim(ValidClaims.ADDRESS.getValue());
+            var passportClaim = userInfo.getJSONArrayClaim(ValidClaims.PASSPORT.getValue());
             var drivingPermitClaim =
-                    (JSONArray) userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
-            var returnCodeClaim = (JSONArray) userInfo.getClaim(ValidClaims.RETURN_CODE.getValue());
-            assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
-            assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
-            assertThat(((LinkedTreeMap) drivingPermitClaim.get(0)).size(), equalTo(6));
-            assertThat(((LinkedTreeMap) returnCodeClaim.get(0)).size(), equalTo(1));
+                    userInfo.getJSONArrayClaim(ValidClaims.DRIVING_PERMIT.getValue());
+            var returnCodeClaim = userInfo.getJSONArrayClaim(ValidClaims.RETURN_CODE.getValue());
+
+            assertThat(addressClaim.toJSONString(), equalTo(ADDRESS_CLAIM));
+            assertThat(passportClaim.toJSONString(), equalTo(PASSPORT_CLAIM));
+            assertThat(drivingPermitClaim.toJSONString(), equalTo(DRIVING_PERMIT));
+            assertThat(returnCodeClaim.toJSONString(), equalTo(RETURN_CODE));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/address");

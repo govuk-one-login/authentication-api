@@ -4,7 +4,7 @@ public final class IdentityTestData {
     private IdentityTestData() {}
 
     public static final String ADDRESS_CLAIM =
-            "[{\"buildingNumber\":\"10\",\"streetName\":\"DowningStreet\",\"dependentAddressLocality\":\"Westminster\",\"addressLocality\":\"London\",\"postalCode\":\"SW1A2AA\",\"addressCountry\":\"GB\",\"validFrom\":\"2019-07-24\"}]";
+            "[{\"uprn\":10022812929,\"buildingNumber\":\"10\",\"streetName\":\"DowningStreet\",\"dependentAddressLocality\":\"Westminster\",\"addressLocality\":\"London\",\"postalCode\":\"SW1A2AA\",\"addressCountry\":\"GB\",\"validFrom\":\"2019-07-24\"}]";
 
     public static final String PASSPORT_CLAIM =
             "[{\"documentNumber\":\"12345678\",\"expiryDate\":\"2022-02-01\"}]";
