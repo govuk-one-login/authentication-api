@@ -674,23 +674,14 @@ public class MFAMethodsPutHandler
                                                     AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
                                                     MFA_SMS.name()));
                 }
+                var priorityPair =
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                requestedMethod.priorityIdentifier().name().toLowerCase());
                 context =
                         context.withMetadataItem(
                                         pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                                requestedMethod
-                                                        .priorityIdentifier()
-                                                        .name()
-                                                        .toLowerCase()))
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                                requestedMethod
-                                                        .method()
-                                                        .mfaMethodType()
-                                                        .toString()));
+                                .withMetadataItem(priorityPair);
             }
 
             return Result.success(context);

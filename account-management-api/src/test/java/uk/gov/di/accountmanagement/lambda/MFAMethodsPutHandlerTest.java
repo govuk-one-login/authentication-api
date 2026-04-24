@@ -661,9 +661,7 @@ class MFAMethodsPutHandlerTest {
                         .withMetadataItem(pair("notification-type", "MFA_SMS"))
                         .withMetadataItem(pair("account-recovery", "false"))
                         .withMetadataItem(
-                                pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()))
-                        .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()));
-        // mfa type repeated - to fix
+                                pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()));
 
         verify(auditService)
                 .submitAuditEvent(
