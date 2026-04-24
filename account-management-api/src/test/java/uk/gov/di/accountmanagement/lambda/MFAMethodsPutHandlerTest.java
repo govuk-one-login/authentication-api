@@ -1389,9 +1389,7 @@ class MFAMethodsPutHandlerTest {
                 BASE_AUDIT_CONTEXT
                         .withPhoneNumber(null)
                         .withMetadataItem(pair("mfa-type", "AUTH_APP"))
-                        .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()))
-                        .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
-        // Journey type duplicated here - in base context
+                        .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
 
         verify(auditService)
                 .submitAuditEvent(

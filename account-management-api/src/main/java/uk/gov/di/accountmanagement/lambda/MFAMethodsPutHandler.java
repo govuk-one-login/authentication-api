@@ -609,21 +609,17 @@ public class MFAMethodsPutHandler
                     generateApiGatewayProxyErrorResponse(401, maybeAuditContext.getFailure()));
         }
 
+        var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.getValue());
+        var mfaMethodPair =
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                        PriorityIdentifier.DEFAULT.name().toLowerCase());
+
         var auditContext =
                 maybeAuditContext
                         .getSuccess()
-                        .withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                        MFAMethodType.AUTH_APP.getValue()))
-                        .withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                        PriorityIdentifier.DEFAULT.name().toLowerCase()))
-                        .withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                        JourneyType.ACCOUNT_MANAGEMENT.getValue()));
+                        .withMetadataItem(mfaTypePair)
+                        .withMetadataItem(mfaMethodPair);
 
         auditService.submitAuditEvent(
                 AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
