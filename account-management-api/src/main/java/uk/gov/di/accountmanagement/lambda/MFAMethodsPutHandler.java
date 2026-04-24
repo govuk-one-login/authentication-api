@@ -642,8 +642,7 @@ public class MFAMethodsPutHandler
 
         if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
             MfaMethodUpdateRequest.MfaMethod requestedMethod = putRequest.request.mfaMethod();
-            if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
-                    && requestSmsMfaDetail.otp() != null) {
+            if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
                 context = addMetadataForSmsAuthCodeVerified(context, requestSmsMfaDetail.otp());
             }
             context =

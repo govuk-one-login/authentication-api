@@ -421,7 +421,7 @@ public class MFAMethodsCreateHandler
                                         AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
                                         PhoneNumberHelper.getCountry(smsDetail.phoneNumber())));
 
-        if (auditEvent.equals(AUTH_CODE_VERIFIED) && smsDetail.otp() != null) {
+        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
             return addMetadataForSmsAuthCodeVerified(updatedContext, smsDetail.otp());
         }
 
