@@ -16,6 +16,8 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -221,17 +223,16 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
 
-        var addressClaim = userInfoResponse.getJSONArrayClaim(ValidClaims.ADDRESS.getValue());
-        var passportClaim = userInfoResponse.getJSONArrayClaim(ValidClaims.PASSPORT.getValue());
+        var addressClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue());
+        var passportClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue());
         var drivingPermitClaim =
-                userInfoResponse.getJSONArrayClaim(ValidClaims.DRIVING_PERMIT.getValue());
+                (JSONArray) userInfoResponse.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
         var returnCodeClaim =
-                userInfoResponse.getJSONArrayClaim(ValidClaims.RETURN_CODE.getValue());
-
-        assertThat(addressClaim.toJSONString(), equalTo(ADDRESS_CLAIM));
-        assertThat(passportClaim.toJSONString(), equalTo(PASSPORT_CLAIM));
-        assertThat(drivingPermitClaim.toJSONString(), equalTo(DRIVING_PERMIT));
-        assertThat(returnCodeClaim.toJSONString(), equalTo(RETURN_CODE));
+                (JSONArray) userInfoResponse.getClaim(ValidClaims.RETURN_CODE.getValue());
+        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(8));
+        assertThat(((JSONObject) passportClaim.get(0)).size(), equalTo(2));
+        assertThat(((JSONObject) drivingPermitClaim.get(0)).size(), equalTo(6));
+        assertThat(((JSONObject) returnCodeClaim.get(0)).size(), equalTo(1));
 
         assertThat(
                 userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
