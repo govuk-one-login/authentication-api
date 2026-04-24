@@ -25,6 +25,7 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -160,14 +161,20 @@ public class PermissionDecisionManager implements PermissionDecisions {
         if (getCodeStorageService()
                 .isBlockedForEmail(
                         permissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
+            int attemptCount =
+                    getCodeStorageService()
+                            .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
             return Result.success(
                     createTemporarilyLockedOut(
                             ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
-                            0,
+                            attemptCount,
                             false));
         }
 
-        return Result.success(new Decision.Permitted(0));
+        int attemptCount =
+                getCodeStorageService()
+                        .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        return Result.success(new Decision.Permitted(attemptCount));
     }
 
     @Override
@@ -235,11 +242,13 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 && lockoutStateHolder.isReauthSmsOtpLimitExceeded()) {
             LOG.info("Reauth user exceeded SMS OTP limit (from InMemoryLockoutStateHolder)");
             return Result.success(
-                    new Decision.TemporarilyLockedOut(
+                    new Decision.ReauthLockedOut(
                             ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
                             configurationService.getCodeMaxRetries(),
                             Instant.now(),
-                            false));
+                            false,
+                            Map.of(),
+                            List.of()));
         }
 
         try {
@@ -286,6 +295,21 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canVerifyMfaOtp(
             JourneyType journeyType, PermissionContext permissionContext) {
+        if (permissionContext == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            if (permissionContext.internalSubjectIds() == null
+                    || permissionContext.rpPairwiseId() == null) {
+                return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+            }
+            return this.checkForAnyReauthLockout(
+                    permissionContext.internalSubjectIds(),
+                    permissionContext.rpPairwiseId(),
+                    CountType.ENTER_MFA_CODE);
+        }
+
         if (permissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
@@ -301,15 +325,27 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                     CODE_BLOCKED_KEY_PREFIX + codeRequestType);
 
             // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-            var deprecatedCodeRequestType =
+            var deprecatedSmsCodeRequestType =
                     CodeRequestType.getDeprecatedCodeRequestTypeString(
                             MFAMethodType.SMS, journeyType);
-            if (deprecatedCodeRequestType != null) {
+            if (deprecatedSmsCodeRequestType != null) {
                 long deprecatedTtl =
                         getCodeStorageService()
                                 .getTTL(
                                         permissionContext.emailAddress(),
-                                        CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
+                                        CODE_BLOCKED_KEY_PREFIX + deprecatedSmsCodeRequestType);
+                ttl = Math.max(ttl, deprecatedTtl);
+            }
+
+            var deprecatedAuthAppCodeRequestType =
+                    CodeRequestType.getDeprecatedCodeRequestTypeString(
+                            MFAMethodType.AUTH_APP, journeyType);
+            if (deprecatedAuthAppCodeRequestType != null) {
+                long deprecatedTtl =
+                        getCodeStorageService()
+                                .getTTL(
+                                        permissionContext.emailAddress(),
+                                        CODE_BLOCKED_KEY_PREFIX + deprecatedAuthAppCodeRequestType);
                 ttl = Math.max(ttl, deprecatedTtl);
             }
 
@@ -323,7 +359,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 false));
             }
 
-            return Result.success(new Decision.Permitted(0));
+            int attemptCount =
+                    getCodeStorageService()
+                            .getIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+            return Result.success(new Decision.Permitted(attemptCount));
         } catch (RuntimeException e) {
             LOG.error("Could not retrieve MFA code block details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);

@@ -150,6 +150,8 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
             authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
+            authSessionStore.addRpSectorIdentifierHostToSession(
+                    authenticatedSessionId, "test.account.gov.uk");
 
             var response =
                     makeRequest(
@@ -197,6 +199,8 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
             authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
+            authSessionStore.addRpSectorIdentifierHostToSession(
+                    authenticatedSessionId, "test.account.gov.uk");
 
             aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 
@@ -354,6 +358,8 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
             authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
+            authSessionStore.addRpSectorIdentifierHostToSession(
+                    authenticatedSessionId, "test.account.gov.uk");
 
             var response =
                     makeRequest(
@@ -401,6 +407,8 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var authenticatedSessionId = IdGenerator.generate();
             authSessionStore.addSession(authenticatedSessionId);
             authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
+            authSessionStore.addRpSectorIdentifierHostToSession(
+                    authenticatedSessionId, "test.account.gov.uk");
 
             aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 

@@ -16,6 +16,13 @@ public interface AuditTestConstants {
     String EXTENSIONS_JOURNEY_TYPE = "extensions.journey-type";
     String EXTENSIONS_MFA_TYPE = "extensions.mfa-type";
     String EXTENSIONS_MFA_METHOD = "extensions.mfa-method";
+    String EXTENSIONS_ACCOUNT_RECOVERY = "extensions.account-recovery";
+    String EXTENSIONS_LOGIN_FAILURE_COUNT = "extensions.loginFailureCount";
+    String EXTENSIONS_NOTIFICATION_TYPE = "extensions.notification-type";
+    String EXTENSIONS_MFA_CODE_ENTERED = "extensions.MFACodeEntered";
+    String EXTENSIONS_MAX_SMS_COUNT = "extensions.MaxSmsCount";
     String USER_EMAIL_FIELD = "user.email";
+    String EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE = "extensions.phone_number_country_code";
+    String EXTENSIONS_MFA_RESET_TYPE = "extensions.mfaResetType";
     String USER_PHONE = "user.phone";
 }
