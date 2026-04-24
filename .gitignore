@@ -50,3 +50,6 @@ specs-and-prompts/
 
 # Kiro files
 .kiro/
+
+# Detect secrets
+.secrets.baseline
