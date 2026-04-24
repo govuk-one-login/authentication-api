@@ -50,14 +50,12 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.addMetadataForSmsAuthCodeVerified;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -550,10 +548,7 @@ public class MFAMethodsPutHandler
                         .orElseThrow();
 
         return sendAuditEvent(
-                        AUTH_MFA_METHOD_SWITCH_COMPLETED,
-                        input,
-                        putRequest,
-                        postUpdateDefaultMfaMethod);
+                AUTH_MFA_METHOD_SWITCH_COMPLETED, input, putRequest, postUpdateDefaultMfaMethod);
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
@@ -651,15 +646,7 @@ public class MFAMethodsPutHandler
             MfaMethodUpdateRequest.MfaMethod requestedMethod = putRequest.request.mfaMethod();
             if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
                     && requestSmsMfaDetail.otp() != null) {
-                context =
-                        context.withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
-                                                requestSmsMfaDetail.otp()))
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
-                                                MFA_SMS.name()));
+                context = addMetadataForSmsAuthCodeVerified(context, requestSmsMfaDetail.otp());
             }
             var priorityPair =
                     pair(

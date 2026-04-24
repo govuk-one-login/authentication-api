@@ -23,10 +23,13 @@ import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuditHelper {
@@ -97,5 +100,12 @@ public class AuditHelper {
         }
 
         return Result.success(null);
+    }
+
+    public static AuditContext addMetadataForSmsAuthCodeVerified(
+            AuditContext baseAuditContext, String otpEntered) {
+        return baseAuditContext
+                .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, otpEntered))
+                .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name()));
     }
 }
