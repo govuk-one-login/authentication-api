@@ -63,7 +63,6 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
-import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -701,10 +700,6 @@ public class MFAMethodsPutHandler
                 context =
                         context.withMetadataItem(
                                         pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                                ACCOUNT_MANAGEMENT.name()))
                                 .withMetadataItem(
                                         pair(
                                                 AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
