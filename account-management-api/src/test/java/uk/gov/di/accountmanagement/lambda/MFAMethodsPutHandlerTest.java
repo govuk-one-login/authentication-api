@@ -565,7 +565,6 @@ class MFAMethodsPutHandlerTest {
                 BASE_AUDIT_CONTEXT
                         .withPhoneNumber(UK_MOBILE_NUMBER)
                         .withMetadataItem(pair("mfa-type", defaultMfaMethod.getMfaMethodType()));
-        // Query: This event contains the number switched from, not the new number.
 
         verify(auditService)
                 .submitAuditEvent(
