@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -46,15 +47,21 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_OTP;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -297,11 +304,7 @@ public class MFAMethodsCreateHandler
 
         var addCompletedResult =
                 sendAuditEvent(
-                        AUTH_MFA_METHOD_ADD_COMPLETED,
-                        input,
-                        userProfile,
-                        mfaMethodCreateRequest,
-                        backupMfaMethod);
+                        AUTH_MFA_METHOD_ADD_COMPLETED, input, userProfile, mfaMethodCreateRequest);
 
         if (addCompletedResult.isFailure()) {
             LOG.error(addCompletedResult.getFailure());
@@ -316,11 +319,7 @@ public class MFAMethodsCreateHandler
         if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
             var updatePhoneNumberResult =
                     sendAuditEvent(
-                            AUTH_UPDATE_PHONE_NUMBER,
-                            input,
-                            userProfile,
-                            mfaMethodCreateRequest,
-                            backupMfaMethod);
+                            AUTH_UPDATE_PHONE_NUMBER, input, userProfile, mfaMethodCreateRequest);
 
             if (updatePhoneNumberResult.isFailure()) {
                 LOG.error(updatePhoneNumberResult.getFailure());
@@ -381,69 +380,58 @@ public class MFAMethodsCreateHandler
 
     private Result<ErrorResponse, AuditContext> buildAuditContext(
             AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest,
-            MFAMethod mfaMethod) {
-        try {
-            if (auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)) {
-                var baseContextResult =
-                        AuditHelper.buildAuditContext(
-                                configurationService, dynamoService, input, userProfile);
-                if (baseContextResult.isFailure()) {
-                    return baseContextResult;
-                }
-                return AuditHelper.updateAuditContextForFailedMFACreation(
-                        userProfile, baseContextResult.getSuccess(), mfaMethodsService, LOG);
-            } else {
-                var baseContextResult =
-                        AuditHelper.buildAuditContextForMfa(
-                                auditEvent,
-                                input,
-                                userProfile,
-                                mfaMethodCreateRequest,
-                                configurationService,
-                                dynamoService,
-                                LOG);
+            AuditContext baseAuditContext) {
+        if (auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)) {
+            return getDefaultMethod(userProfile)
+                    .map(
+                            method ->
+                                    updateAuditContextForFailedMFACreation(
+                                            method, baseAuditContext));
+        } else {
+            AuditContext context = baseAuditContext;
+            var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
+            var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
+            context =
+                    context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType))
+                            .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority));
 
-                if (baseContextResult.isFailure()) {
-                    return baseContextResult;
-                }
-
-                var context = baseContextResult.getSuccess();
-
-                if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)) {
-                    context =
-                            context.withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                            mfaMethodCreateRequest
-                                                    .mfaMethod()
-                                                    .method()
-                                                    .mfaMethodType()
-                                                    .toString()));
-
-                    if (mfaMethodCreateRequest.mfaMethod().method()
-                            instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-                        context = context.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
-                    }
-                }
-
-                if (auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER) && mfaMethod != null) {
-                    // Always set mfa-method to DEFAULT for AUTH_UPDATE_PHONE_NUMBER events
-                    context =
-                            context.withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                            PriorityIdentifier.DEFAULT.name().toLowerCase()));
-                }
-
-                return Result.success(context);
+            if (mfaMethodCreateRequest.mfaMethod().method()
+                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+                context = enrichWithSmsDetails(context, auditEvent, requestSmsMfaDetail);
             }
-        } catch (Exception e) {
-            LOG.error("Error building audit context", e);
-            return Result.failure(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
+
+            if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
+                context =
+                        context.withMetadataItem(
+                                pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
+            }
+
+            return Result.success(context);
         }
+    }
+
+    private AuditContext enrichWithSmsDetails(
+            AuditContext context,
+            AccountManagementAuditableEvent auditEvent,
+            RequestSmsMfaDetail smsDetail) {
+        var updatedContext =
+                context.withPhoneNumber(smsDetail.phoneNumber())
+                        .withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
+                                        PhoneNumberHelper.getCountry(smsDetail.phoneNumber())));
+
+        if (auditEvent.equals(AUTH_CODE_VERIFIED) && smsDetail.otp() != null) {
+            return updatedContext
+                    .withMetadataItem(
+                            pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, smsDetail.otp()))
+                    .withMetadataItem(
+                            pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name()));
+        }
+
+        return updatedContext;
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(
@@ -451,18 +439,16 @@ public class MFAMethodsCreateHandler
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
-        return sendAuditEvent(auditEvent, input, userProfile, mfaMethodCreateRequest, null);
-    }
-
-    private Result<ErrorResponse, Void> sendAuditEvent(
-            AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
-            MfaMethodCreateRequest mfaMethodCreateRequest,
-            MFAMethod mfaMethod) {
         var maybeAuditContext =
-                buildAuditContext(
-                        auditEvent, input, userProfile, mfaMethodCreateRequest, mfaMethod);
+                accountManagementAuditContext(
+                                configurationService, dynamoService, input, userProfile)
+                        .flatMap(
+                                baseContext ->
+                                        buildAuditContext(
+                                                auditEvent,
+                                                userProfile,
+                                                mfaMethodCreateRequest,
+                                                baseContext));
         if (maybeAuditContext.isFailure()) {
             LOG.error(
                     "Error when building audit context for {} audit event with error code {}. No event raised",
@@ -481,6 +467,49 @@ public class MFAMethodsCreateHandler
 
         LOG.info("Successfully submitted audit event: {}", auditEvent.name());
         return Result.success(null);
+    }
+
+    private Result<ErrorResponse, MFAMethod> getDefaultMethod(UserProfile userProfile) {
+        var maybeMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
+
+        if (maybeMfaMethods.isFailure()) {
+            LOG.error("No MFA methods found for user");
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
+        }
+
+        var mfaMethods = maybeMfaMethods.getSuccess();
+
+        var defaultMfaMethod =
+                mfaMethods.stream()
+                        .filter(
+                                method ->
+                                        method.getPriority()
+                                                .equalsIgnoreCase(
+                                                        PriorityIdentifier.DEFAULT.name()))
+                        .findFirst();
+
+        if (defaultMfaMethod.isEmpty()) {
+            LOG.error("No default MFA method found for user");
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
+        } else return Result.success(defaultMfaMethod.get());
+    }
+
+    private static AuditContext updateAuditContextForFailedMFACreation(
+            MFAMethod defaultMethod, AuditContext auditContext) {
+        var phoneNumber =
+                defaultMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())
+                        ? defaultMethod.getDestination()
+                        : null;
+        var mfaTypeExtension =
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, defaultMethod.getMfaMethodType());
+        var priorityExtension =
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                        PriorityIdentifier.DEFAULT.name().toLowerCase());
+        return auditContext
+                .withPhoneNumber(phoneNumber)
+                .withMetadataItem(mfaTypeExtension)
+                .withMetadataItem(priorityExtension);
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {

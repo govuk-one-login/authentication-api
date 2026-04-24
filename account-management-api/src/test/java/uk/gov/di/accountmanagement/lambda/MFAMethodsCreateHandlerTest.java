@@ -290,10 +290,7 @@ class MFAMethodsCreateHandlerTest {
                             .withMetadataItem(pair("phone_number_country_code", "44"))
                             .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                             .withMetadataItem(pair("notification-type", MFA_SMS.name()))
-                            .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
-            // TODO: journey type  is being added twice in the code (is in base audit context too),
-            //  when this fixed can remove this
+                            .withMetadataItem(pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -306,9 +303,7 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(TEST_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"))
-                            .withMetadataItem(pair("mfa-type", SMS.name()));
-            // TODO: mfa type also being added twice in the code, when this fixed can remove this
+                            .withMetadataItem(pair("phone_number_country_code", "44"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -321,11 +316,7 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(TEST_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
-            // TODO: AUDIT_EVENT_EXTENSIONS_MFA_METHOD added twice and conflicts with the already
-            // added mfa method, can
-            //  be updated when production code fixed
+                            .withMetadataItem(pair("phone_number_country_code", "44"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -404,8 +395,7 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(null)
                             .withMetadataItem(pair("mfa-type", AUTH_APP.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+                            .withMetadataItem(pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -417,9 +407,7 @@ class MFAMethodsCreateHandlerTest {
                     BASE_AUDIT_CONTEXT
                             .withPhoneNumber(null)
                             .withMetadataItem(pair("mfa-type", AUTH_APP.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.name()));
-            // TODO another duplicate here
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -488,8 +476,7 @@ class MFAMethodsCreateHandlerTest {
                             .withMetadataItem(pair("phone_number_country_code", "44"))
                             .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                             .withMetadataItem(pair("notification-type", MFA_SMS.name()))
-                            .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+                            .withMetadataItem(pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -562,6 +549,7 @@ class MFAMethodsCreateHandlerTest {
         void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
             when(configurationService.isAccountManagementInternationalSmsEnabled())
                     .thenReturn(false);
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL)).thenReturn(Result.success(List.of()));
 
             var event =
                     generateApiGatewayEvent(
