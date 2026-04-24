@@ -121,4 +121,24 @@ public class AuditHelper {
 
         return Result.success(null);
     }
+
+    public static Result<ErrorResponse, Void> sendAuditEvent(
+            AccountManagementAuditableEvent auditEvent,
+            AuditContext auditContext,
+            AuditService auditService,
+            Logger logger,
+            List<AuditService.MetadataPair> metadataPairs) {
+        try {
+            auditService.submitAuditEvent(
+                    auditEvent,
+                    auditContext,
+                    AUDIT_EVENT_COMPONENT_ID_HOME,
+                    metadataPairs.toArray(new AuditService.MetadataPair[0]));
+        } catch (Exception e) {
+            logger.error("Error submitting audit event", e);
+            return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
+        }
+
+        return Result.success(null);
+    }
 }

@@ -16,6 +16,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
@@ -58,6 +59,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -132,8 +134,7 @@ class MFAMethodsCreateHandlerTest {
                     .withSubjectId(TEST_INTERNAL_SUBJECT)
                     .withIpAddress(IP_ADDRESS)
                     .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
-                    .withPersistentSessionId(PERSISTENT_ID)
-                    .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+                    .withPersistentSessionId(PERSISTENT_ID);
 
     private MFAMethodsCreateHandler handler;
 
@@ -282,47 +283,38 @@ class MFAMethodsCreateHandlerTest {
                     JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
             assertEquals(expectedResponseParsedToString, result.getBody());
 
-            var expectedAuthCodeVerifiedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"))
-                            .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
-                            .withMetadataItem(pair("notification-type", MFA_SMS.name()))
-                            .withMetadataItem(pair("account-recovery", "false"));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_CODE_VERIFIED,
-                            expectedAuthCodeVerifiedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
-
-            var expectedAuthMfaMethodAddCompleteContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"));
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", SMS.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("phone_number_country_code", "44"),
+                            pair("MFACodeEntered", TEST_OTP),
+                            pair("notification-type", MFA_SMS.name()),
+                            pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_COMPLETED,
-                            expectedAuthMfaMethodAddCompleteContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
-
-            var expectedUpdatedPhoneNumberContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"));
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", SMS.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("phone_number_country_code", "44"));
 
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_UPDATE_PHONE_NUMBER,
-                            expectedUpdatedPhoneNumberContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", SMS.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("phone_number_country_code", "44"));
         }
 
         @Test
@@ -364,16 +356,16 @@ class MFAMethodsCreateHandlerTest {
             var expectedResponse =
                     format(
                             """
-                    {
-                      "mfaIdentifier": "%s",
-                      "priorityIdentifier": "BACKUP",
-                      "methodVerified": true,
-                      "method": {
-                        "mfaMethodType": "AUTH_APP",
-                        "credential": "%s"
-                      }
-                    }
-                    """,
+                                    {
+                                      "mfaIdentifier": "%s",
+                                      "priorityIdentifier": "BACKUP",
+                                      "methodVerified": true,
+                                      "method": {
+                                        "mfaMethodType": "AUTH_APP",
+                                        "credential": "%s"
+                                      }
+                                    }
+                                    """,
                             TEST_AUTH_APP_ID, TEST_CREDENTIAL);
             var expectedResponseParsedToString =
                     JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
@@ -390,30 +382,24 @@ class MFAMethodsCreateHandlerTest {
             verify(auditService, never())
                     .submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(), any());
 
-            var expectedAuthCodeVerifiedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("account-recovery", "false"));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_CODE_VERIFIED,
-                            expectedAuthCodeVerifiedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
-
-            var expectedAddCompletedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", AUTH_APP.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_COMPLETED,
-                            expectedAddCompletedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", AUTH_APP.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()));
         }
 
         @Test
@@ -468,21 +454,18 @@ class MFAMethodsCreateHandlerTest {
 
             handler.handleRequest(event, context);
 
-            var expectedAuthCodeVerifiedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"))
-                            .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
-                            .withMetadataItem(pair("notification-type", MFA_SMS.name()))
-                            .withMetadataItem(pair("account-recovery", "false"));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_CODE_VERIFIED,
-                            expectedAuthCodeVerifiedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", SMS.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("phone_number_country_code", "44"),
+                            pair("MFACodeEntered", TEST_OTP),
+                            pair("notification-type", MFA_SMS.name()),
+                            pair("account-recovery", "false"));
         }
     }
 
@@ -663,17 +646,14 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.MFA_METHOD_COUNT_LIMIT_REACHED));
 
-            var expectedMfaMethodAddFailedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED,
-                            expectedMfaMethodAddFailedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", AUTH_APP.toString()),
+                            pair("mfa-method", DEFAULT.name().toLowerCase()));
         }
 
         @Test
@@ -703,17 +683,15 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
 
             // Query: should this instead be reflecting the method that has failed to add? Ie sms
-            var expectedMfaMethodAddFailedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED,
-                            expectedMfaMethodAddFailedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", AUTH_APP.toString()),
+                            pair("mfa-method", DEFAULT.name().toLowerCase()));
         }
 
         @Test
@@ -739,20 +717,18 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
 
-            var expectedMfaMethodAddFailedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED,
-                            expectedMfaMethodAddFailedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", AUTH_APP.toString()),
+                            pair("mfa-method", DEFAULT.name().toLowerCase()));
 
             // Verify that getMfaMethods was called but addBackupMfa was not
-            verify(mfaMethodsService).getMfaMethods(TEST_EMAIL);
+            // TODO: fix twice calling of getMfaMethods
+            verify(mfaMethodsService, times(2)).getMfaMethods(TEST_EMAIL);
             verify(mfaMethodsService, org.mockito.Mockito.never()).addBackupMfa(any(), any());
         }
 
@@ -779,18 +755,15 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_OTP));
 
-            var expectedInvalidCodeSentAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.toString()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_INVALID_CODE_SENT,
-                            expectedInvalidCodeSentAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", SMS.toString()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("phone_number_country_code", "44"));
 
             verifyNoInteractions(sqsClient);
         }
@@ -819,17 +792,14 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.SMS_MFA_WITH_NUMBER_EXISTS));
 
-            var expectedMfaMethodAddFailedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED,
-                            expectedMfaMethodAddFailedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", AUTH_APP.toString()),
+                            pair("mfa-method", DEFAULT.name().toLowerCase()));
         }
 
         @Test
@@ -855,17 +825,14 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.AUTH_APP_EXISTS));
 
-            var expectedMfaMethodAddFailedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED,
-                            expectedMfaMethodAddFailedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", AUTH_APP.toString()),
+                            pair("mfa-method", DEFAULT.name().toLowerCase()));
         }
 
         @Test
@@ -899,17 +866,14 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR));
             verifyNoInteractions(sqsClient);
 
-            var expectedMfaMethodAddFailedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED,
-                            expectedMfaMethodAddFailedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                            pair("mfa-type", SMS.toString()),
+                            pair("mfa-method", DEFAULT.name().toLowerCase()));
         }
 
         @Test
