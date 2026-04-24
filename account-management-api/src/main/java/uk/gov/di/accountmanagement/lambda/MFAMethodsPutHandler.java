@@ -556,16 +556,25 @@ public class MFAMethodsPutHandler
             APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
             MFAMethod mfaMethod) {
-        var maybeAuditContext = buildAuditContext(auditEvent, input, putRequest, mfaMethod);
+        var auditContextResult =
+                accountManagementAuditContext(
+                                configurationService,
+                                authenticationService,
+                                input,
+                                putRequest.userProfile)
+                        .map(
+                                context ->
+                                        enrichAuditContextForEvent(
+                                                auditEvent, putRequest, mfaMethod, context));
 
-        if (maybeAuditContext.isFailure()) {
+        if (auditContextResult.isFailure()) {
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(500, maybeAuditContext.getFailure()));
+                    generateApiGatewayProxyErrorResponse(500, auditContextResult.getFailure()));
         }
 
         var result =
                 AuditHelper.sendAuditEvent(
-                        auditEvent, maybeAuditContext.getSuccess(), auditService, LOG);
+                        auditEvent, auditContextResult.getSuccess(), auditService, LOG);
 
         if (result.isFailure()) {
             return Result.failure(generateApiGatewayProxyErrorResponse(500, result.getFailure()));
@@ -608,23 +617,17 @@ public class MFAMethodsPutHandler
         return Result.success(null);
     }
 
-    private Result<ErrorResponse, AuditContext> buildAuditContext(
+    private AuditContext enrichAuditContextForEvent(
             AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
-            MFAMethod mfaMethod) {
+            MFAMethod mfaMethod,
+            AuditContext baseContext) {
         var phoneNumber =
                 mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
                         ? mfaMethod.getDestination()
                         : AuditService.UNKNOWN;
 
-        var auditContextResult =
-                accountManagementAuditContext(
-                        configurationService, authenticationService, input, putRequest.userProfile);
-        if (auditContextResult.isFailure()) {
-            return Result.failure(auditContextResult.getFailure());
-        }
-        var context = auditContextResult.getSuccess().withPhoneNumber(phoneNumber);
+        var context = baseContext.withPhoneNumber(phoneNumber);
 
         if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
             context =
@@ -657,6 +660,6 @@ public class MFAMethodsPutHandler
                             .withMetadataItem(priorityPair);
         }
 
-        return Result.success(context);
+        return context;
     }
 }
