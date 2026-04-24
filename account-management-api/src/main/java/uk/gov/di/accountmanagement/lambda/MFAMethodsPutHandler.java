@@ -628,19 +628,16 @@ public class MFAMethodsPutHandler
         var context = baseContext.withPhoneNumber(phoneNumber);
 
         if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
-            context =
-                    context.withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType()));
+            var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType());
+            context = context.withMetadataItem(mfaTypePair);
         }
 
         if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
                 || auditEvent.equals(AUTH_INVALID_CODE_SENT)
-                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
-            context =
-                    context.withMetadataItem(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                    mfaMethod.getPriority().toLowerCase()));
+                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
+                || auditEvent.equals(AUTH_CODE_VERIFIED)) {
+            var priority = mfaMethod.getPriority().toLowerCase();
+            context = context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority));
         }
 
         if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
@@ -649,13 +646,9 @@ public class MFAMethodsPutHandler
                     && requestSmsMfaDetail.otp() != null) {
                 context = addMetadataForSmsAuthCodeVerified(context, requestSmsMfaDetail.otp());
             }
-            var priorityPair =
-                    pair(
-                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                            requestedMethod.priorityIdentifier().name().toLowerCase());
             context =
-                    context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                            .withMetadataItem(priorityPair);
+                    context.withMetadataItem(
+                            pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
         }
 
         return context;

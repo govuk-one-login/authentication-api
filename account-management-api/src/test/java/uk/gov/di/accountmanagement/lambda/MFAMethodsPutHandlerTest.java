@@ -656,11 +656,11 @@ class MFAMethodsPutHandlerTest {
                 BASE_AUDIT_CONTEXT
                         .withPhoneNumber(UK_MOBILE_NUMBER)
                         .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()))
+                        .withMetadataItem(
+                                pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()))
                         .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                         .withMetadataItem(pair("notification-type", "MFA_SMS"))
-                        .withMetadataItem(pair("account-recovery", "false"))
-                        .withMetadataItem(
-                                pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()));
+                        .withMetadataItem(pair("account-recovery", "false"));
 
         verify(auditService)
                 .submitAuditEvent(
