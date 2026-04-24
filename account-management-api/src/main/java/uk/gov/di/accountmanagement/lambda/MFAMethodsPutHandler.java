@@ -17,7 +17,6 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -27,11 +26,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -54,15 +49,14 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -600,7 +594,7 @@ public class MFAMethodsPutHandler
         }
 
         var maybeAuditContext =
-                AuditHelper.accountManagementAuditContext(
+                accountManagementAuditContext(
                         configurationService, dynamoService, input, putRequest.userProfile);
 
         if (maybeAuditContext.isFailure()) {
@@ -637,33 +631,16 @@ public class MFAMethodsPutHandler
                             ? mfaMethod.getDestination()
                             : AuditService.UNKNOWN;
 
-            var initialMetadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair(
-                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                JourneyType.ACCOUNT_MANAGEMENT.getValue()),
-                    };
-
-            var context =
-                    new AuditContext(
-                            input.getRequestContext()
-                                    .getAuthorizer()
-                                    .getOrDefault(ATTRIBUTE_CLIENT_ID, AuditService.UNKNOWN)
-                                    .toString(),
-                            ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                            RequestHeaderHelper.getHeaderValueOrElse(
-                                    input.getHeaders(), SESSION_ID_HEADER, ""),
-                            ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                            putRequest.userProfile,
-                                            configurationService.getInternalSectorUri(),
-                                            authenticationService)
-                                    .getValue(),
-                            putRequest.userProfile.getEmail(),
-                            IpAddressHelper.extractIpAddress(input),
-                            phoneNumber,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
-                            List.of(initialMetadataPairs));
+            var auditContextResult =
+                    accountManagementAuditContext(
+                            configurationService,
+                            authenticationService,
+                            input,
+                            putRequest.userProfile);
+            if (auditContextResult.isFailure()) {
+                return Result.failure(auditContextResult.getFailure());
+            }
+            var context = auditContextResult.getSuccess().withPhoneNumber(phoneNumber);
 
             if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
                 context =

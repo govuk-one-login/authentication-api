@@ -14,8 +14,8 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.List;
 import java.util.Map;
@@ -51,7 +51,7 @@ public class AuditHelper {
 
     public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
             ConfigurationService configurationService,
-            DynamoService dynamoService,
+            AuthenticationService authenticationService,
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile) {
         try {
@@ -67,7 +67,7 @@ public class AuditHelper {
                             ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                             userProfile,
                                             configurationService.getInternalSectorUri(),
-                                            dynamoService)
+                                            authenticationService)
                                     .getValue(),
                             userProfile.getEmail(),
                             IpAddressHelper.extractIpAddress(input),
