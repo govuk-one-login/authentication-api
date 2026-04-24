@@ -625,69 +625,58 @@ public class MFAMethodsPutHandler
             APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
             MFAMethod mfaMethod) {
-        try {
-            var phoneNumber =
-                    mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
-                            ? mfaMethod.getDestination()
-                            : AuditService.UNKNOWN;
+        var phoneNumber =
+                mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
+                        ? mfaMethod.getDestination()
+                        : AuditService.UNKNOWN;
 
-            var auditContextResult =
-                    accountManagementAuditContext(
-                            configurationService,
-                            authenticationService,
-                            input,
-                            putRequest.userProfile);
-            if (auditContextResult.isFailure()) {
-                return Result.failure(auditContextResult.getFailure());
-            }
-            var context = auditContextResult.getSuccess().withPhoneNumber(phoneNumber);
-
-            if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
-                context =
-                        context.withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                        mfaMethod.getMfaMethodType()));
-            }
-
-            if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
-                    || auditEvent.equals(AUTH_INVALID_CODE_SENT)
-                    || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
-                context =
-                        context.withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                        mfaMethod.getPriority().toLowerCase()));
-            }
-
-            if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-                MfaMethodUpdateRequest.MfaMethod requestedMethod = putRequest.request.mfaMethod();
-                if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
-                        && requestSmsMfaDetail.otp() != null) {
-                    context =
-                            context.withMetadataItem(
-                                            pair(
-                                                    AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
-                                                    requestSmsMfaDetail.otp()))
-                                    .withMetadataItem(
-                                            pair(
-                                                    AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
-                                                    MFA_SMS.name()));
-                }
-                var priorityPair =
-                        pair(
-                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                requestedMethod.priorityIdentifier().name().toLowerCase());
-                context =
-                        context.withMetadataItem(
-                                        pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                                .withMetadataItem(priorityPair);
-            }
-
-            return Result.success(context);
-        } catch (Exception e) {
-            LOG.error("Error building audit context", e);
-            return Result.failure(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
+        var auditContextResult =
+                accountManagementAuditContext(
+                        configurationService, authenticationService, input, putRequest.userProfile);
+        if (auditContextResult.isFailure()) {
+            return Result.failure(auditContextResult.getFailure());
         }
+        var context = auditContextResult.getSuccess().withPhoneNumber(phoneNumber);
+
+        if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
+            context =
+                    context.withMetadataItem(
+                            pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType()));
+        }
+
+        if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
+                || auditEvent.equals(AUTH_INVALID_CODE_SENT)
+                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
+            context =
+                    context.withMetadataItem(
+                            pair(
+                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                    mfaMethod.getPriority().toLowerCase()));
+        }
+
+        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
+            MfaMethodUpdateRequest.MfaMethod requestedMethod = putRequest.request.mfaMethod();
+            if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
+                    && requestSmsMfaDetail.otp() != null) {
+                context =
+                        context.withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
+                                                requestSmsMfaDetail.otp()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
+                                                MFA_SMS.name()));
+            }
+            var priorityPair =
+                    pair(
+                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                            requestedMethod.priorityIdentifier().name().toLowerCase());
+            context =
+                    context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
+                            .withMetadataItem(priorityPair);
+        }
+
+        return Result.success(context);
     }
 }
