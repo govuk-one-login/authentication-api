@@ -34,6 +34,7 @@ dependencies {
             project(":shared-test"),
             libs.bundles.awsLambda,
             libs.awsSqs,
+            libs.awsSns,
             libs.awsS3,
             libs.bundles.awsDynamoDb
 
