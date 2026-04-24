@@ -139,15 +139,15 @@ class MFAMethodsDeleteHandlerTest {
                             .withSubjectId(TEST_INTERNAL_SUBJECT)
                             .withIpAddress(IP_ADDRESS)
                             .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
-                            .withPersistentSessionId(PERSISTENT_ID)
-                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()))
-                            .withMetadataItem(pair("mfa-type", SMS.getValue(), false));
+                            .withPersistentSessionId(PERSISTENT_ID);
 
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_DELETE_COMPLETED,
                             expectedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
+                            pair("mfa-type", SMS.getValue(), false));
         }
 
         @Test

@@ -47,7 +47,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
-import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContextWithMetadata;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
@@ -440,7 +440,7 @@ public class MFAMethodsCreateHandler
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
         var maybeAuditContext =
-                accountManagementAuditContext(
+                accountManagementAuditContextWithMetadata(
                                 configurationService, dynamoService, input, userProfile)
                         .flatMap(
                                 baseContext ->
