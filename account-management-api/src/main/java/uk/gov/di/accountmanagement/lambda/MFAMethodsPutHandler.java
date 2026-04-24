@@ -572,16 +572,14 @@ public class MFAMethodsPutHandler
                     generateApiGatewayProxyErrorResponse(500, auditContextResult.getFailure()));
         }
 
-        var result =
-                AuditHelper.sendAuditEvent(
-                        auditEvent, auditContextResult.getSuccess(), auditService, LOG);
-
-        if (result.isFailure()) {
-            return Result.failure(generateApiGatewayProxyErrorResponse(500, result.getFailure()));
-        }
-
-        LOG.info("Successfully submitted audit event: {}", auditEvent.name());
-        return Result.success(null);
+        return AuditHelper.sendAuditEvent(
+                        auditEvent, auditContextResult.getSuccess(), auditService, LOG)
+                .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
+                .map(
+                        success -> {
+                            LOG.info("Successfully submitted audit event: {}", auditEvent.name());
+                            return success;
+                        });
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> emitAuditEventForAuthAppUpdate(
