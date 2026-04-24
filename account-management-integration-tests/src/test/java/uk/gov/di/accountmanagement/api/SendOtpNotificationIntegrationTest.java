@@ -164,7 +164,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         {
                             "email": "%s",
                             "notificationType": "VERIFY_PHONE_NUMBER",
-                            "phoneNumber": "%s"
+                            "phoneNumber": "%s",
+                            "priorityIdentifier": "DEFAULT"
                         }
                         """
                     .formatted(email, phoneNumber);

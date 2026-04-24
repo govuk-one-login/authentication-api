@@ -20,7 +20,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -155,14 +154,20 @@ public class SendOtpNotificationHandler
 
     private Result<APIGatewayProxyResponseEvent, SendNotificationRequest> checkRequestFormat(
             APIGatewayProxyRequestEvent input) {
+        var requestMissingParamsResponse =
+                generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS);
         try {
             var sendNotificationRequest =
                     objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
+            if (sendNotificationRequest.notificationType() == NotificationType.VERIFY_PHONE_NUMBER
+                    && Objects.isNull(sendNotificationRequest.priorityIdentifier())) {
+                LOG.error("Verify phone number notification is missing priority identifier");
+                return Result.failure(requestMissingParamsResponse);
+            }
             return Result.success(sendNotificationRequest);
         } catch (JsonException e) {
             LOG.error("Error parsing sendNotificationRequest", e);
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS));
+            return Result.failure(requestMissingParamsResponse);
         }
     }
 
@@ -410,14 +415,7 @@ public class SendOtpNotificationHandler
                 pair("test-user", isTestUserRequest));
 
         if (notificationType == NotificationType.VERIFY_PHONE_NUMBER) {
-            PriorityIdentifier priorityIdentifier;
-            if (Objects.isNull(sendNotificationRequest.priorityIdentifier())) {
-                LOG.warn(
-                        "Priority identifier not sent in request, this behaviour will soon be disallowed");
-                priorityIdentifier = PriorityIdentifier.DEFAULT;
-            } else {
-                priorityIdentifier = sendNotificationRequest.priorityIdentifier();
-            }
+            var priorityIdentifier = sendNotificationRequest.priorityIdentifier();
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
                     auditContext,
