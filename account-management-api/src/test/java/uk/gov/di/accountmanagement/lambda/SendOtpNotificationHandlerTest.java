@@ -311,10 +311,6 @@ class SendOtpNotificationHandlerTest {
     }
 
     private static Stream<Arguments> validPhoneRequests() {
-        var eventWithoutPriorityIdentifier =
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER);
         var verifyPhoneNumberForDefaultMethod =
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"%s\"  }",
@@ -324,7 +320,6 @@ class SendOtpNotificationHandlerTest {
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"%s\"  }",
                         TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER, "BACKUP");
         return Stream.of(
-                Arguments.of(eventWithoutPriorityIdentifier, "default"),
                 Arguments.of(verifyPhoneNumberForDefaultMethod, "default"),
                 Arguments.of(verifyPhoneNumberForBackupMethod, "backup"));
     }
@@ -398,7 +393,7 @@ class SendOtpNotificationHandlerTest {
         var event = createEmptyEvent();
         event.setBody(
                 format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\" }",
                         TEST_TEST_USER_EMAIL_ADDRESS,
                         VERIFY_PHONE_NUMBER,
                         INTERNATIONAL_MOBILE_NUMBER));
@@ -457,7 +452,7 @@ class SendOtpNotificationHandlerTest {
             var event = createEmptyEvent();
             event.setBody(
                     format(
-                            "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"priorityIdentifier\": \"DEFAULT\"  }",
                             TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
 
             var result = handler.handleRequest(event, context);
@@ -477,6 +472,23 @@ class SendOtpNotificationHandlerTest {
             @Test
             void shouldReturn400IfRequestIsMissingEmail() {
                 var event = createEmptyEvent();
+
+                var result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+
+                verifyNoInteractions(auditService);
+            }
+
+            @Test
+            void shouldReturn400AndNotPutMessageOnQueueForPhoneRequestWithoutPriorityIdentifier() {
+                var eventWithoutPriorityIdentifier =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"}",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER);
+
+                var event = createEmptyEvent().withBody(eventWithoutPriorityIdentifier);
 
                 var result = handler.handleRequest(event, context);
 
@@ -510,7 +522,7 @@ class SendOtpNotificationHandlerTest {
                 var event = createEmptyEvent();
                 event.setBody(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\"  }",
                                 TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "12345"));
 
                 var result = handler.handleRequest(event, context);
@@ -530,7 +542,7 @@ class SendOtpNotificationHandlerTest {
                 var event = createEmptyEvent();
                 event.setBody(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\"  }",
                                 TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
                 var result = handler.handleRequest(event, context);
@@ -549,7 +561,7 @@ class SendOtpNotificationHandlerTest {
                 var event = createEmptyEvent();
                 event.setBody(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\"  }",
                                 TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
                 var result = handler.handleRequest(event, context);
@@ -567,7 +579,7 @@ class SendOtpNotificationHandlerTest {
                 var event = createEmptyEvent();
                 event.setBody(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\"  }",
                                 TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "not-a phone number"));
 
                 var result = handler.handleRequest(event, context);
@@ -627,7 +639,7 @@ class SendOtpNotificationHandlerTest {
                 var event = createEmptyEvent();
                 event.setBody(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\"  }",
                                 TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
                 var result = handler.handleRequest(event, context);
@@ -646,7 +658,7 @@ class SendOtpNotificationHandlerTest {
                 var event = createEmptyEvent();
                 event.setBody(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\"  }",
                                 TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
                 var result = handler.handleRequest(event, context);
@@ -664,7 +676,7 @@ class SendOtpNotificationHandlerTest {
                 var event = createEmptyEvent();
                 event.setBody(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\"  }",
                                 TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "not a phone-num"));
 
                 var result = handler.handleRequest(event, context);
@@ -731,7 +743,7 @@ class SendOtpNotificationHandlerTest {
             var event = createEmptyEvent();
             event.setBody(
                     format(
-                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"priorityIdentifier\": \"DEFAULT\" }",
                             TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
             var result = handler.handleRequest(event, context);
