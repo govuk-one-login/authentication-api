@@ -142,7 +142,8 @@ class MFAMethodsPutHandlerTest {
         when(configurationService.isAccountManagementInternationalSmsEnabled()).thenReturn(true);
         when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
-        when(authenticationService.getOrGenerateSalt(any())).thenReturn(TEST_SALT);
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         handler =
                 new MFAMethodsPutHandler(
                         configurationService,
@@ -335,7 +336,6 @@ class MFAMethodsPutHandlerTest {
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
 
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
@@ -405,7 +405,6 @@ class MFAMethodsPutHandlerTest {
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
 
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
@@ -469,7 +468,6 @@ class MFAMethodsPutHandlerTest {
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
 
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
@@ -528,7 +526,6 @@ class MFAMethodsPutHandlerTest {
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
 
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
@@ -585,10 +582,8 @@ class MFAMethodsPutHandlerTest {
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateAuthAppRequest(credential));
 
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
 
         var defaultMfaMethod =
                 MFAMethod.authAppMfaMethod(
@@ -923,7 +918,6 @@ class MFAMethodsPutHandlerTest {
     void shouldReturn500WhenConversionToMfaMethodResponseFails() {
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
 
         var credential = "some credential";
         var mfaWithInvalidType =
@@ -1311,7 +1305,6 @@ class MFAMethodsPutHandlerTest {
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
                         Result.success(
@@ -1353,7 +1346,6 @@ class MFAMethodsPutHandlerTest {
 
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
 
         var updatedMfaMethod =
                 MFAMethod.authAppMfaMethod(
