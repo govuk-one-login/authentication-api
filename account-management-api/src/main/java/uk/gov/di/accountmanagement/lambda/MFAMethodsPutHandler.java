@@ -618,17 +618,17 @@ public class MFAMethodsPutHandler
     private AuditContext buildAuditContext(
             AccountManagementAuditableEvent auditEvent,
             ValidPutRequest putRequest,
-            MFAMethod mfaMethod,
+            MFAMethod retrievedMfaMethod,
             AuditContext baseContext) {
         var phoneNumber =
-                mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
-                        ? mfaMethod.getDestination()
+                retrievedMfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
+                        ? retrievedMfaMethod.getDestination()
                         : AuditService.UNKNOWN;
         var context = baseContext.withPhoneNumber(phoneNumber);
 
         if (!(auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
                 || auditEvent.equals(AUTH_CODE_VERIFIED))) {
-            var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType());
+            var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, retrievedMfaMethod.getMfaMethodType());
             context = context.withMetadataItem(mfaTypePair);
         }
 
@@ -636,7 +636,7 @@ public class MFAMethodsPutHandler
                 || auditEvent.equals(AUTH_INVALID_CODE_SENT)
                 || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
             var priorityPair =
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaMethod.getPriority().toLowerCase());
+                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, retrievedMfaMethod.getPriority().toLowerCase());
             context = context.withMetadataItem(priorityPair);
         }
 
