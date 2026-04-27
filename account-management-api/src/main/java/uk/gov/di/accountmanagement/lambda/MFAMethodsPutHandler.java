@@ -628,7 +628,8 @@ public class MFAMethodsPutHandler
 
         if (!(auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
                 || auditEvent.equals(AUTH_CODE_VERIFIED))) {
-            var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, retrievedMfaMethod.getMfaMethodType());
+            var mfaTypePair =
+                    pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, retrievedMfaMethod.getMfaMethodType());
             context = context.withMetadataItem(mfaTypePair);
         }
 
@@ -636,7 +637,9 @@ public class MFAMethodsPutHandler
                 || auditEvent.equals(AUTH_INVALID_CODE_SENT)
                 || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
             var priorityPair =
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, retrievedMfaMethod.getPriority().toLowerCase());
+                    pair(
+                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                            retrievedMfaMethod.getPriority().toLowerCase());
             context = context.withMetadataItem(priorityPair);
         }
 
