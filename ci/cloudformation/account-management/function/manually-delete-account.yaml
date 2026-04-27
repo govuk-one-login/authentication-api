@@ -40,7 +40,7 @@ Resources:
             - "https://identity.account.gov.uk"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           LEGACY_ACCOUNT_DELETION_TOPIC_ARN: !If
-            - IsProduction
+            - IsHigherEnv
             - !FindInMap [
                 EnvironmentConfiguration,
                 !Ref Environment,

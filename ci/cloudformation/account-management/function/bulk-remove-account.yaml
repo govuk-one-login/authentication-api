@@ -33,7 +33,7 @@ Resources:
             - "https://identity.account.gov.uk"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           LEGACY_ACCOUNT_DELETION_TOPIC_ARN: !If
-            - IsProduction
+            - IsHigherEnv
             - !FindInMap [
                 EnvironmentConfiguration,
                 !Ref Environment,
@@ -248,12 +248,13 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Effect: Allow
+          - Sid: AllowAccessToSNS
+            Effect: Allow
             Action:
               - sns:Publish
             Resource:
               - !If
-                - IsProduction
+                - IsHigherEnv
                 - !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
@@ -261,6 +262,28 @@ Resources:
                     DefaultValue: "",
                   ]
                 - !Ref MockAccountDeletionTopic
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !GetAtt MainKmsKey.Arn
+          - !If
+            - IsHigherEnv
+            - Sid: AllowDecryptionHomeSnsTopicKmsKey
+              Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource:
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    legacyAccountDeletionTopicKmsKeyArn,
+                    DefaultValue: "",
+                  ]
+            - !Ref AWS::NoValue
 
   BulkRemoveAccountInvokePolicy:
     Type: AWS::IAM::ManagedPolicy
