@@ -626,7 +626,8 @@ public class MFAMethodsPutHandler
                         : AuditService.UNKNOWN;
         var context = baseContext.withPhoneNumber(phoneNumber);
 
-        if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
+        if (!(auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
+                || auditEvent.equals(AUTH_CODE_VERIFIED))) {
             var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType());
             context = context.withMetadataItem(mfaTypePair);
         }

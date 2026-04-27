@@ -635,14 +635,12 @@ class MFAMethodsPutHandlerTest {
         var expectedAuditContext =
                 BASE_AUDIT_CONTEXT
                         .withPhoneNumber(UK_MOBILE_NUMBER)
-                        .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()))
                         .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                         .withMetadataItem(pair("notification-type", "MFA_SMS"))
                         .withMetadataItem(pair("account-recovery", "false"))
                         .withMetadataItem(
                                 pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()))
                         .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()));
-        // mfa type also repeated - to fix
 
         verify(auditService)
                 .submitAuditEvent(
