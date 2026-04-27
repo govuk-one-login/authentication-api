@@ -498,25 +498,12 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldRaiseOnlySwitchCompletedAuditEventWhenSwitchingBetweenSmsMethodsSuccessful() {
-        var firstPhoneNumber = UK_MOBILE_NUMBER;
-        var secondPhoneNumber = "+447316763843";
+        var existingBackupNumber = UK_MOBILE_NUMBER;
+        var existingDefaultNumber = "+447316763843";
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-        var eventWithUpdateRequest = event.withBody(updateSmsRequest(firstPhoneNumber, TEST_OTP));
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(existingBackupNumber, TEST_OTP));
         setupValidOtpForEmail(TEST_OTP, EMAIL);
-
-        var defaultMfaMethod =
-                MFAMethod.smsMfaMethod(
-                        true, true, firstPhoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
-        var backupMfaMethod =
-                MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        secondPhoneNumber,
-                        PriorityIdentifier.BACKUP,
-                        "sms-identifier-2");
-
-        var postUpdateMfaMethods = List.of(defaultMfaMethod, backupMfaMethod);
 
         when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
@@ -526,13 +513,24 @@ class MFAMethodsPutHandlerTest {
         var expectedDatabaseUpdateRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT,
-                        new RequestSmsMfaDetail(firstPhoneNumber, TEST_OTP));
+                        new RequestSmsMfaDetail(existingBackupNumber, TEST_OTP));
+        var defaultMethodAfterSwitch =
+                MFAMethod.smsMfaMethod(
+                        true, true, existingBackupNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
+        var backupMethodAfterSwitch =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        existingDefaultNumber,
+                        PriorityIdentifier.BACKUP,
+                        "sms-identifier-2");
+
         when(mfaMethodsService.updateMfaMethod(
                         eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
-                                        postUpdateMfaMethods,
+                                        List.of(defaultMethodAfterSwitch, backupMethodAfterSwitch),
                                         MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS)));
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
@@ -541,9 +539,8 @@ class MFAMethodsPutHandlerTest {
 
         var expectedAuditContext =
                 BASE_AUDIT_CONTEXT
-                        .withPhoneNumber(UK_MOBILE_NUMBER)
-                        .withMetadataItem(pair("mfa-type", defaultMfaMethod.getMfaMethodType()));
-        // Query: This event contains the number switched from, not the new number.
+                        .withPhoneNumber(existingBackupNumber)
+                        .withMetadataItem(pair("mfa-type", defaultMethodAfterSwitch.getMfaMethodType()));
 
         verify(auditService)
                 .submitAuditEvent(
