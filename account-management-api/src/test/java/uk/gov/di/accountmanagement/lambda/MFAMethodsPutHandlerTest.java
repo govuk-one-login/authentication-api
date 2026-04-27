@@ -124,6 +124,12 @@ class MFAMethodsPutHandlerTest {
                     .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
                     .withPersistentSessionId(PERSISTENT_ID)
                     .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+    private static final String NON_MIGRATED_EMAIL = "non-migrated-email@example.com";
+    private static final UserProfile NON_MIGRATED_USER =
+            new UserProfile()
+                    .withMfaMethodsMigrated(false)
+                    .withEmail(NON_MIGRATED_EMAIL)
+                    .withSubjectID(TEST_PUBLIC_SUBJECT);
 
     private MFAMethodsPutHandler handler;
 
@@ -145,6 +151,7 @@ class MFAMethodsPutHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        when(authenticationService.getOrGenerateSalt(NON_MIGRATED_USER)).thenReturn(TEST_SALT);
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         handler =
@@ -227,40 +234,34 @@ class MFAMethodsPutHandlerTest {
     @Test
     void shouldReturn200WithUpdatedMethodWhenFeatureFlagEnabledAndUserMigrationSuccessful()
             throws Json.JsonException {
-        var nonMigratedEmail = "non-migrated-email@example.com";
-        var nonMigratedUser =
-                new UserProfile()
-                        .withMfaMethodsMigrated(false)
-                        .withEmail(nonMigratedEmail)
-                        .withSubjectID(TEST_PUBLIC_SUBJECT);
-        when(authenticationService.getOrGenerateSalt(nonMigratedUser)).thenReturn(TEST_SALT);
-        var phoneNumber = UK_MOBILE_NUMBER;
-        var event = requestWithPublicSubjectAndMfaIdentifier(TEST_PUBLIC_SUBJECT, MFA_IDENTIFIER);
-        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        setupValidOtpForEmail(TEST_OTP, nonMigratedEmail);
-
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(nonMigratedUser));
+                .thenReturn(Optional.of(NON_MIGRATED_USER));
 
-        var updatedMfaMethod =
-                MFAMethod.smsMfaMethod(
-                        true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
-        when(mfaMethodsService.getMfaMethod(nonMigratedEmail, MFA_IDENTIFIER))
+        setupValidOtpForEmail(TEST_OTP, NON_MIGRATED_EMAIL);
+        when(mfaMethodsService.getMfaMethod(NON_MIGRATED_EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+
+        var phoneNumber = UK_MOBILE_NUMBER;
+        var event = requestWithPublicSubjectAndMfaIdentifier(TEST_PUBLIC_SUBJECT, MFA_IDENTIFIER);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
+
+        var updatedMfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
         var expectedDatabaseUpdatedRequest =
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         when(mfaMethodsService.updateMfaMethod(
-                        eq(nonMigratedEmail), any(), any(), eq(expectedDatabaseUpdatedRequest)))
+                        eq(NON_MIGRATED_EMAIL), any(), any(), eq(expectedDatabaseUpdatedRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
                                         MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
-        when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
+        when(mfaMethodsService.migrateMfaCredentialsForUser(NON_MIGRATED_USER))
                 .thenReturn(Result.success(false));
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
@@ -288,15 +289,15 @@ class MFAMethodsPutHandlerTest {
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
-                                        nonMigratedEmail,
+                                        NON_MIGRATED_EMAIL,
                                         CHANGED_DEFAULT_MFA,
                                         LocaleHelper.SupportedLanguage.EN)));
         verify(authenticationService).getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT);
         verify(codeStorageService)
-                .isValidOtpCode(nonMigratedEmail, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
+                .isValidOtpCode(NON_MIGRATED_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
         verify(mfaMethodsService)
                 .updateMfaMethod(
-                        eq(nonMigratedEmail),
+                        eq(NON_MIGRATED_EMAIL),
                         eq(DEFAULT_SMS_METHOD),
                         eq(List.of(DEFAULT_SMS_METHOD)),
                         eq(expectedDatabaseUpdatedRequest));
@@ -681,26 +682,19 @@ class MFAMethodsPutHandlerTest {
     void shouldReturnAppropriateResponseWhenUserMigrationNotSuccessful(
             MfaMigrationFailureReason migrationFailureReason, int expectedStatusCode)
             throws Json.JsonException {
-        var nonMigratedEmail = "non-migrated-email@example.com";
-        var nonMigratedUser =
-                new UserProfile()
-                        .withMfaMethodsMigrated(false)
-                        .withEmail(nonMigratedEmail)
-                        .withSubjectID(TEST_PUBLIC_SUBJECT);
-        when(authenticationService.getOrGenerateSalt(nonMigratedUser)).thenReturn(TEST_SALT);
-        var phoneNumber = UK_MOBILE_NUMBER;
-        var event = requestWithPublicSubjectAndMfaIdentifier(TEST_PUBLIC_SUBJECT, MFA_IDENTIFIER);
-        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        setupValidOtpForEmail(TEST_OTP, nonMigratedEmail);
-
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(nonMigratedUser));
+                .thenReturn(Optional.of(NON_MIGRATED_USER));
 
-        when(mfaMethodsService.getMfaMethod(nonMigratedEmail, MFA_IDENTIFIER))
+        setupValidOtpForEmail(TEST_OTP, NON_MIGRATED_EMAIL);
+        when(mfaMethodsService.getMfaMethod(NON_MIGRATED_EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+
+        var phoneNumber = UK_MOBILE_NUMBER;
+        var event = requestWithPublicSubjectAndMfaIdentifier(TEST_PUBLIC_SUBJECT, MFA_IDENTIFIER);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
 
         var updatedMfaMethod =
                 MFAMethod.smsMfaMethod(
@@ -709,13 +703,13 @@ class MFAMethodsPutHandlerTest {
                 MfaMethodUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         when(mfaMethodsService.updateMfaMethod(
-                        eq(nonMigratedEmail), any(), any(), eq(expectedDatabaseUpdateRequest)))
+                        eq(NON_MIGRATED_EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
                                         MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
-        when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
+        when(mfaMethodsService.migrateMfaCredentialsForUser(NON_MIGRATED_USER))
                 .thenReturn(Result.failure(migrationFailureReason));
         var expectedGateway = new APIGatewayProxyResponseEvent().withStatusCode(expectedStatusCode);
         if (expectedStatusCode != 200) {
@@ -755,7 +749,7 @@ class MFAMethodsPutHandlerTest {
                     .send(
                             objectMapper.writeValueAsString(
                                     new NotifyRequest(
-                                            nonMigratedEmail,
+                                            NON_MIGRATED_EMAIL,
                                             CHANGED_DEFAULT_MFA,
                                             LocaleHelper.SupportedLanguage.EN)));
         } else {
