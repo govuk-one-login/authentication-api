@@ -4,6 +4,7 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.ToNumberPolicy;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -35,6 +36,7 @@ public class SerializationService implements Json {
         gson =
                 new GsonBuilder()
                         .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+                        .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
                         .serializeNulls()
                         .excludeFieldsWithoutExposeAnnotation()
                         .registerTypeAdapter(State.class, new StateAdapter())

@@ -229,7 +229,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 (JSONArray) userInfoResponse.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
         var returnCodeClaim =
                 (JSONArray) userInfoResponse.getClaim(ValidClaims.RETURN_CODE.getValue());
-        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(7));
+        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(8));
         assertThat(((JSONObject) passportClaim.get(0)).size(), equalTo(2));
         assertThat(((JSONObject) drivingPermitClaim.get(0)).size(), equalTo(6));
         assertThat(((JSONObject) returnCodeClaim.get(0)).size(), equalTo(1));
