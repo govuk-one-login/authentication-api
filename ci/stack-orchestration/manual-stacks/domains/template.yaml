@@ -253,9 +253,11 @@ Outputs:
 
   OidcHostedZoneNameServers:
     Description: "Name servers for the OIDC domain"
-    Value: !GetAtt
-      - OidcHostedZone
-      - NameServers
+    Value: !Join
+      - ","
+      - !GetAtt
+        - OidcHostedZone
+        - NameServers
     Export:
       Name: !Sub "${AWS::StackName}-OidcHostedZoneNameServers"
 
@@ -290,26 +292,32 @@ Outputs:
   OrchDev1HostedZoneNameServers:
     Condition: DeployDevSubDomains
     Description: "Name servers for the orchdev1 domain"
-    Value: !GetAtt
-      - Orchdev1HostedZone
-      - NameServers
+    Value: !Join
+      - ","
+      - !GetAtt
+        - Orchdev1HostedZone
+        - NameServers
     Export:
       Name: !Sub "${AWS::StackName}-orchdev1-HostedZoneNameServers"
 
   OrchDev2HostedZoneNameServers:
     Condition: DeployDevSubDomains
     Description: "Name servers for the orchdev2 domain"
-    Value: !GetAtt
-      - Orchdev2HostedZone
-      - NameServers
+    Value: !Join
+      - ","
+      - !GetAtt
+        - Orchdev2HostedZone
+        - NameServers
     Export:
       Name: !Sub "${AWS::StackName}-orchdev2-HostedZoneNameServers"
 
   OrchDev3HostedZoneNameServers:
     Condition: DeployDevSubDomains
     Description: "Name servers for the orchdev3 domain"
-    Value: !GetAtt
-      - Orchdev3HostedZone
-      - NameServers
+    Value: !Join
+      - ","
+      - !GetAtt
+        - Orchdev3HostedZone
+        - NameServers
     Export:
       Name: !Sub "${AWS::StackName}-orchdev3-HostedZoneNameServers"
