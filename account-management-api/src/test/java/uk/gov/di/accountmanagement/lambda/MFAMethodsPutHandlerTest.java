@@ -162,9 +162,6 @@ class MFAMethodsPutHandlerTest {
     @Test
     void shouldReturn200WithUpdatedMethodWhenFeatureFlagEnabled() throws Json.JsonException {
         var phoneNumber = UK_MOBILE_NUMBER;
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         setupValidOtpForEmail(TEST_OTP, EMAIL);
@@ -177,7 +174,11 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -220,7 +221,7 @@ class MFAMethodsPutHandlerTest {
                         eq(EMAIL),
                         eq(DEFAULT_SMS_METHOD),
                         eq(List.of(DEFAULT_SMS_METHOD)),
-                        eq(updateRequest));
+                        eq(expectedDatabaseUpdateRequest));
     }
 
     @Test
@@ -234,9 +235,6 @@ class MFAMethodsPutHandlerTest {
                         .withSubjectID(TEST_PUBLIC_SUBJECT);
         when(authenticationService.getOrGenerateSalt(nonMigratedUser)).thenReturn(TEST_SALT);
         var phoneNumber = UK_MOBILE_NUMBER;
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         setupValidOtpForEmail(TEST_OTP, nonMigratedEmail);
@@ -252,8 +250,11 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+        var expectedDatabaseUpdatedRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         when(mfaMethodsService.updateMfaMethod(
-                        eq(nonMigratedEmail), any(), any(), eq(updateRequest)))
+                        eq(nonMigratedEmail), any(), any(), eq(expectedDatabaseUpdatedRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -298,7 +299,7 @@ class MFAMethodsPutHandlerTest {
                         eq(nonMigratedEmail),
                         eq(DEFAULT_SMS_METHOD),
                         eq(List.of(DEFAULT_SMS_METHOD)),
-                        eq(updateRequest));
+                        eq(expectedDatabaseUpdatedRequest));
         verify(mfaMethodsMigrationService)
                 .migrateMfaCredentialsForUserIfRequired(any(), any(), any(), any());
     }
@@ -323,9 +324,6 @@ class MFAMethodsPutHandlerTest {
             NotificationType notificationType)
             throws Json.JsonException {
         var phoneNumber = UK_MOBILE_NUMBER;
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         setupValidOtpForEmail(TEST_OTP, EMAIL);
@@ -338,7 +336,11 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -380,16 +382,13 @@ class MFAMethodsPutHandlerTest {
                         eq(EMAIL),
                         eq(DEFAULT_SMS_METHOD),
                         eq(List.of(DEFAULT_SMS_METHOD)),
-                        eq(updateRequest));
+                        eq(expectedDatabaseUpdateRequest));
     }
 
     @CsvSource({"500", "404", "200"})
     @Test
     void shouldRaiseSwitchCompletedAuditEvent() {
         var phoneNumber = UK_MOBILE_NUMBER;
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         setupValidOtpForEmail(TEST_OTP, EMAIL);
@@ -412,7 +411,11 @@ class MFAMethodsPutHandlerTest {
                                 new MFAMethodsService.GetMfaResult(
                                         defaultMfaMethod, postUpdateMfaMethods)));
 
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -445,9 +448,6 @@ class MFAMethodsPutHandlerTest {
     @MethodSource("phoneNumberUpdateTypeIdentifiers")
     void shouldRaiseUpdatePhoneNumberAuditEvent(MFAMethodUpdateIdentifier updateTypeIdentifier) {
         var phoneNumber = UK_MOBILE_NUMBER;
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         setupValidOtpForEmail(TEST_OTP, EMAIL);
@@ -469,7 +469,11 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         defaultMfaMethod, postUpdateMfaMethods)));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -497,10 +501,6 @@ class MFAMethodsPutHandlerTest {
         var firstPhoneNumber = UK_MOBILE_NUMBER;
         var secondPhoneNumber = "+447316763843";
 
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT,
-                        new RequestSmsMfaDetail(firstPhoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(firstPhoneNumber, TEST_OTP));
         setupValidOtpForEmail(TEST_OTP, EMAIL);
@@ -523,7 +523,12 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT,
+                        new RequestSmsMfaDetail(firstPhoneNumber, TEST_OTP));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -552,9 +557,6 @@ class MFAMethodsPutHandlerTest {
     @Test
     void shouldNotRaiseUpdatePhoneNumberAuditEventWhenChangedDefaultAuthAppMfa() {
         var credential = "some credential";
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestAuthAppMfaDetail(credential));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateAuthAppRequest(credential));
 
@@ -579,7 +581,11 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestAuthAppMfaDetail(credential));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -595,10 +601,6 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldRaiseAuthCodeVerifiedAuditEvent() {
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT,
-                        new RequestSmsMfaDetail(DEFAULT_SMS_METHOD.getDestination(), TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest =
                 event.withBody(updateSmsRequest(DEFAULT_SMS_METHOD.getDestination(), TEST_OTP));
@@ -608,7 +610,12 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT,
+                        new RequestSmsMfaDetail(DEFAULT_SMS_METHOD.getDestination(), TEST_OTP));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -675,9 +682,6 @@ class MFAMethodsPutHandlerTest {
                         .withSubjectID(TEST_PUBLIC_SUBJECT);
         when(authenticationService.getOrGenerateSalt(nonMigratedUser)).thenReturn(TEST_SALT);
         var phoneNumber = UK_MOBILE_NUMBER;
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         setupValidOtpForEmail(TEST_OTP, nonMigratedEmail);
@@ -694,8 +698,11 @@ class MFAMethodsPutHandlerTest {
         var updatedMfaMethod =
                 MFAMethod.smsMfaMethod(
                         true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         when(mfaMethodsService.updateMfaMethod(
-                        eq(nonMigratedEmail), any(), any(), eq(updateRequest)))
+                        eq(nonMigratedEmail), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -805,15 +812,15 @@ class MFAMethodsPutHandlerTest {
             int expectedStatus,
             Optional<ErrorResponse> maybeErrorResponse) {
         setupValidOtpForEmail(TEST_OTP, EMAIL);
-
         var phoneNumber = UK_MOBILE_NUMBER;
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(Result.failure(new MfaUpdateFailure(failureReason)));
         when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
@@ -836,9 +843,6 @@ class MFAMethodsPutHandlerTest {
     void shouldRaiseSwitchFailedAuditEvent() {
         setupValidOtpForEmail(TEST_OTP, EMAIL);
         var phoneNumber = BACKUP_SMS_METHOD.getDestination();
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
 
@@ -847,7 +851,11 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.failure(
                                 new MfaUpdateFailure(
@@ -1208,7 +1216,6 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldReturn401WhenPrincipalIsInvalid() {
-
         var event = generateApiGatewayEvent("invalid-principal");
         event = event.withBody(updateSmsRequest(UK_MOBILE_NUMBER, TEST_OTP));
         var result = handler.handleRequest(event, context);
@@ -1275,9 +1282,6 @@ class MFAMethodsPutHandlerTest {
     @Test
     void shouldEmitAuthUpdateProfileAuthAppAuditEventWhenUpdatingAuthApp() {
         var credential = "some-credential";
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestAuthAppMfaDetail(credential));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateAuthAppRequest(credential));
 
@@ -1289,7 +1293,11 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+        var expectedDatabaseUpdateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestAuthAppMfaDetail(credential));
+        when(mfaMethodsService.updateMfaMethod(
+                        eq(EMAIL), any(), any(), eq(expectedDatabaseUpdateRequest)))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
