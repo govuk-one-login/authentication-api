@@ -51,7 +51,7 @@ Conditions:
       !Equals [!Ref Environment, dev],
       !Equals [!Ref DeploySubEnvDomains, "Yes"],
     ]
-  DeployCertificate: !And [!Equals [!Ref DeployCertificate, "Yes"]]
+  DeployCertificate: !Equals [!Ref DeployCertificate, "Yes"]
 
 Mappings:
   EnvironmentConfiguration:
@@ -175,6 +175,7 @@ Resources:
         - !Ref AWS::NoValue
 
   OidcCertificateArnSSMParam:
+    Condition: DeployCertificate
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Type: AWS::SSM::Parameter
@@ -283,6 +284,7 @@ Outputs:
 
   CertificateArn:
     Description: "The ARN of the ACM certificate"
+    Condition: DeployCertificate
     Value: !Ref OidcHostedZoneRootCertificate
     Export:
       Name: !Sub "${AWS::StackName}-certificateArn"
