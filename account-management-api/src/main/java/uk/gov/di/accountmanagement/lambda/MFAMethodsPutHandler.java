@@ -568,8 +568,10 @@ public class MFAMethodsPutHandler
             APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
             MFAMethod mfaMethod) {
-        return buildAuditContext(auditEvent, input, putRequest, mfaMethod)
+        return accountManagementAuditContext(
+                        configurationService, authenticationService, input, putRequest.userProfile)
                 .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
+                .map(context -> buildAuditContext(auditEvent, putRequest, mfaMethod, context))
                 .flatMap(
                         context ->
                                 AuditHelper.sendAuditEvent(auditEvent, context, auditService, LOG)
@@ -613,24 +615,16 @@ public class MFAMethodsPutHandler
         return Result.success(null);
     }
 
-    private Result<ErrorResponse, AuditContext> buildAuditContext(
+    private AuditContext buildAuditContext(
             AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
-            MFAMethod mfaMethod) {
-        var auditContextResult =
-                accountManagementAuditContext(
-                        configurationService, authenticationService, input, putRequest.userProfile);
-
-        if (auditContextResult.isFailure()) {
-            return auditContextResult;
-        }
-
+            MFAMethod mfaMethod,
+            AuditContext baseContext) {
         var phoneNumber =
                 mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
                         ? mfaMethod.getDestination()
                         : AuditService.UNKNOWN;
-        var context = auditContextResult.getSuccess().withPhoneNumber(phoneNumber);
+        var context = baseContext.withPhoneNumber(phoneNumber);
 
         if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
             var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType());
@@ -667,6 +661,6 @@ public class MFAMethodsPutHandler
                             .withMetadataItem(mfaTypePair);
         }
 
-        return Result.success(context);
+        return context;
     }
 }
