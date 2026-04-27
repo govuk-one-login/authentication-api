@@ -138,7 +138,7 @@ Mappings:
       UseAlarmActions: "Yes"
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed6c6a2d-866f-4e2e-9ebd-c499ce9513c6
       dataStoreAccountId: 758531536632
-      accountComponentsVpcEndpointId: vpce-0fed7b2d44a0bde33
+      accountComponentsVpcEndpointId: vpce-04ae8d53b32b38278
       accountDataJwksUrl: https://z02rnzbqw8.execute-api.eu-west-2.amazonaws.com/staging/.well-known/ad-jwks.json
     integration:
       cloudwatchLogRetentionInDays: 30
@@ -147,7 +147,7 @@ Mappings:
       UseAlarmActions: "Yes"
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/743b2818-03fd-4414-bfaf-6aa8a4bb4e45
       dataStoreAccountId: 761723964695
-      accountComponentsVpcEndpointId: vpce-00865f4c00dcdbb83
+      accountComponentsVpcEndpointId: vpce-0553cfc8fc1aeb970
       accountDataJwksUrl: https://db10ia9pr6.execute-api.eu-west-2.amazonaws.com/integration/.well-known/ad-jwks.json
     production:
       cloudwatchLogRetentionInDays: 30
@@ -156,7 +156,7 @@ Mappings:
       UseAlarmActions: "Yes"
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/b380ea74-d240-4500-b02b-f5c3d414e34e
       dataStoreAccountId: 172348255554
-      accountComponentsVpcEndpointId: vpce-08bfce415b33dc8f6
+      accountComponentsVpcEndpointId: vpce-0d6fa47d5c9ae876d
       accountDataJwksUrl: https://86n9innl95.execute-api.eu-west-2.amazonaws.com/production/.well-known/ad-jwks.json
   LambdaConfiguration:
     passkeys-create:
