@@ -66,6 +66,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
@@ -166,9 +167,7 @@ class MFAMethodsPutHandlerTest {
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
 
         var updatedMfaMethod =
                 MFAMethod.smsMfaMethod(
@@ -240,9 +239,7 @@ class MFAMethodsPutHandlerTest {
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        nonMigratedEmail, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, nonMigratedEmail);
 
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(nonMigratedUser));
@@ -331,9 +328,7 @@ class MFAMethodsPutHandlerTest {
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
 
         var updatedMfaMethod =
                 MFAMethod.smsMfaMethod(
@@ -397,9 +392,7 @@ class MFAMethodsPutHandlerTest {
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
 
         var defaultMfaMethod =
                 MFAMethod.smsMfaMethod(
@@ -457,9 +450,7 @@ class MFAMethodsPutHandlerTest {
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
 
         var defaultMfaMethod =
                 MFAMethod.smsMfaMethod(
@@ -512,9 +503,7 @@ class MFAMethodsPutHandlerTest {
                         new RequestSmsMfaDetail(firstPhoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(firstPhoneNumber, TEST_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
 
         var defaultMfaMethod =
                 MFAMethod.smsMfaMethod(
@@ -613,9 +602,7 @@ class MFAMethodsPutHandlerTest {
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest =
                 event.withBody(updateSmsRequest(DEFAULT_SMS_METHOD.getDestination(), TEST_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
         when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
                         Result.success(
@@ -655,8 +642,7 @@ class MFAMethodsPutHandlerTest {
         var eventWithUpdateRequest =
                 event.withBody(
                         updateSmsRequest(DEFAULT_SMS_METHOD.getDestination(), INCORRECT_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, INCORRECT_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+        when(codeStorageService.isValidOtpCode(EMAIL, INCORRECT_OTP, VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
         when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
@@ -694,9 +680,7 @@ class MFAMethodsPutHandlerTest {
                         PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
-        when(codeStorageService.isValidOtpCode(
-                        nonMigratedEmail, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, nonMigratedEmail);
 
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(nonMigratedUser));
@@ -820,9 +804,7 @@ class MFAMethodsPutHandlerTest {
             MfaUpdateFailureReason failureReason,
             int expectedStatus,
             Optional<ErrorResponse> maybeErrorResponse) {
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
 
         var phoneNumber = UK_MOBILE_NUMBER;
         var updateRequest =
@@ -852,9 +834,7 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldRaiseSwitchFailedAuditEvent() {
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
         var phoneNumber = BACKUP_SMS_METHOD.getDestination();
         var updateRequest =
                 MfaMethodUpdateRequest.from(
@@ -1213,9 +1193,7 @@ class MFAMethodsPutHandlerTest {
         var eventWithUpdateRequest =
                 event.withBody(updateSmsRequest(INTERNATIONAL_MOBILE_NUMBER, TEST_OTP));
 
-        when(codeStorageService.isValidOtpCode(
-                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
+        setupValidOtpForEmail(TEST_OTP, EMAIL);
         when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
                         Result.success(
@@ -1386,5 +1364,10 @@ class MFAMethodsPutHandlerTest {
                         }
                         """,
                 credential);
+    }
+
+    private static void setupValidOtpForEmail(String otp, String email) {
+        when(codeStorageService.isValidOtpCode(email, otp, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
     }
 }
