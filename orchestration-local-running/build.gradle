@@ -35,5 +35,6 @@ application {
 sonar {
     properties {
         property 'sonar.coverage.exclusions', '**/uk/gov/di/orchestration/local/**'
+        property 'sonar.cpd.exclusions', '**/uk/gov/di/orchestration/local/**'
     }
 }
