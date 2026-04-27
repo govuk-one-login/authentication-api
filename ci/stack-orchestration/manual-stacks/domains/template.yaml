@@ -81,29 +81,6 @@ Resources:
               domainSuffix,
             ]
 
-  # Manually Create the NS records sets here as we want to adjust the
-  # TTL to 60 seconds from the default created by the public hosted zone
-  # See here: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-migrating.html#:~:text=The%20typical%20TTL,something%20goes%20wrong.
-  OidcNSRecordSet:
-    Type: AWS::Route53::RecordSet
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      Name: !Sub
-        - oidc${EndpointSuffix}.${DomainSuffix}
-        - DomainSuffix:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              domainSuffix,
-            ]
-      Type: NS
-      HostedZoneId: !Ref OidcHostedZone
-      ResourceRecords: !GetAtt
-        - OidcHostedZone
-        - NameServers
-      TTL: "60"
-
   OidcHostedZoneIdSSMParam:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
