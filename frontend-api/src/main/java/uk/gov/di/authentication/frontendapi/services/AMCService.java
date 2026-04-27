@@ -65,7 +65,7 @@ public class AMCService {
             String internalPairwiseSubject,
             AMCScope amcScope,
             AuthSessionItem authSessionItem,
-            String publicSubject,
+            String publicSubjectId,
             String amcRedirectUri,
             List<AccessTokenConfig> accessTokenConfigs,
             RSAPublicKey publicEncryptionKey,
@@ -74,10 +74,10 @@ public class AMCService {
 
         return createTransportJWTAndAmcCookie(
                         internalPairwiseSubject,
+                        publicSubjectId,
                         amcScope,
                         amcRedirectUri,
                         authSessionItem,
-                        publicSubject,
                         accessTokenConfigs,
                         publicEncryptionKey,
                         state)
@@ -134,10 +134,10 @@ public class AMCService {
 
     private Result<AMCFailureReason, EncryptedJWTAndAmcCookie> createTransportJWTAndAmcCookie(
             String internalPairwiseSubject,
+            String publicSubjectId,
             AMCScope amcScope,
             String amcRedirectUri,
             AuthSessionItem authSessionItem,
-            String publicSubject,
             List<AccessTokenConfig> accessTokenConfigs,
             RSAPublicKey publicEncryptionKey,
             State state) {
@@ -146,8 +146,8 @@ public class AMCService {
 
         return createAccessTokenClaimsMap(
                         accessTokenConfigs,
-                        internalPairwiseSubject,
-                        authSessionItem,
+                        publicSubjectId,
+                        authSessionItem.getSessionId(),
                         issueTime,
                         expiryDate)
                 .flatMap(
@@ -171,7 +171,7 @@ public class AMCService {
                                             .expirationTime(expiryDate)
                                             .subject(internalPairwiseSubject)
                                             .claim("email", authSessionItem.getEmailAddress())
-                                            .claim("public_sub", publicSubject);
+                                            .claim("public_sub", publicSubjectId);
 
                             accessTokenMap.forEach(
                                     (claimName, accessToken) ->
@@ -199,8 +199,8 @@ public class AMCService {
 
     private Result<AMCFailureReason, Map<String, BearerAccessToken>> createAccessTokenClaimsMap(
             List<AccessTokenConfig> configs,
-            String internalPairwiseSubject,
-            AuthSessionItem authSessionItem,
+            String publicSubjectId,
+            String sessionId,
             Date issueTime,
             Date expiryDate) {
         var accessTokens = new HashMap<String, BearerAccessToken>();
@@ -209,9 +209,9 @@ public class AMCService {
             var result =
                     accessTokenConstructorService
                             .createSignedAccessToken(
-                                    internalPairwiseSubject,
+                                    publicSubjectId,
                                     config.scope(),
-                                    authSessionItem.getSessionId(),
+                                    sessionId,
                                     issueTime,
                                     expiryDate,
                                     config.audience(),
