@@ -104,6 +104,23 @@ Resources:
         - NameServers
       TTL: "60"
 
+  OidcHostedZoneIdSSMParam:
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: !Sub
+        - "SSM parameter to stored the hosted ID for the oidc${EndpointSuffix}.${DomainSuffix} hosted zone"
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+      Name: !Sub "/deploy/hosted-zone/oidc${EndpointSuffix}/hosted-zone-id"
+      Type: String
+      Value: !Ref OidcHostedZone
+
   OidcHostedZoneRootCertificate:
     Condition: DeployCertificate
     DeletionPolicy: Retain
@@ -156,6 +173,23 @@ Resources:
                   domainSuffix,
                 ]
         - !Ref AWS::NoValue
+
+  OidcCertificateArnSSMParam:
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: !Sub
+        - "SSM parameter to stored the ARN of the ACM certificate for the oidc${EndpointSuffix}.${DomainSuffix} domain"
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+      Name: !Sub "/deploy/hosted-zone/oidc${EndpointSuffix}/certificate-Arn"
+      Type: String
+      Value: !Ref OidcHostedZoneRootCertificate
 
   Orchdev1HostedZone:
     Condition: DeployDevSubDomains
