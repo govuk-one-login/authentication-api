@@ -543,18 +543,18 @@ Mappings:
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/d0bdb864-8478-4411-a44a-a4232fc97cf3
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/4373aa74-95b2-454c-bd86-9716f105a1c4
       amcPublicAudience: https://manage.staging.account.gov.uk/authorize
-      amcPrivateAudience: https://api.manage.staging.account.gov.uk/token
-      amcAuthorizeUri: https://amcstub.signin.staging.account.gov.uk/authorize
+      amcPrivateAudience: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/token
+      amcAuthorizeUri: https://manage.staging.account.gov.uk/authorize
       amcSfadRedirectUri: https://signin.staging.account.gov.uk/sfad-callback
-      amcTokenUri: https://api.manage.staging.account.gov.uk/token
-      amcJourneyOutcomeUri: https://api.manage.staging.account.gov.uk/journeyoutcome
+      amcTokenUri: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/token
+      amcJourneyOutcomeUri: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
       amcClientId: bb8ba862f42b4e5eb97cc0950f6419ca
       accountDataApiId: 7xgl7lexy4
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
       amcCreatePasskeyRedirectUri: https://signin.staging.account.gov.uk/create-passkey-callback
       bulkEmailSendingEnabled: "true"
-      amcJwksUrl: https://kvys7gq7h4.execute-api.eu-west-2.amazonaws.com/v1/.well-known/jwks.json
+      amcJwksUrl: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/.well-known/jwks.json
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
@@ -611,18 +611,18 @@ Mappings:
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/808a8c1e-82d8-487e-abb8-e13d6564b426
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:058264132019:key/11948d7f-8e88-41d3-afe5-5ec9f37f979d
       amcPublicAudience: https://manage.integration.account.gov.uk/authorize
-      amcPrivateAudience: https://api.manage.integration.account.gov.uk/token
-      amcAuthorizeUri: https://amcstub.signin.integration.account.gov.uk/authorize
+      amcPrivateAudience: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/token
+      amcAuthorizeUri: https://manage.integration.account.gov.uk/authorize
       amcSfadRedirectUri: https://signin.integration.account.gov.uk/sfad-callback
-      amcTokenUri: https://api.manage.integration.account.gov.uk/token
-      amcJourneyOutcomeUri: https://api.manage.integration.account.gov.uk/journeyoutcome
+      amcTokenUri: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/token
+      amcJourneyOutcomeUri: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
       amcClientId: 0b649817932e4632861f1ab3fccb650d
       accountDataApiId: hoidt6wujb
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
       amcCreatePasskeyRedirectUri: https://signin.integration.account.gov.uk/create-passkey-callback
       bulkEmailSendingEnabled: "false"
-      amcJwksUrl: https://rxkn8gwqb8.execute-api.eu-west-2.amazonaws.com/v1/.well-known/jwks.json
+      amcJwksUrl: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/.well-known/jwks.json
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/075774c2-b836-452f-9684-dcd742146f81
@@ -679,18 +679,18 @@ Mappings:
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/b2979629-c62f-458d-992b-ac4239c2cf81
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/e9f1350d-75e2-4532-be84-8bec6de99755
       amcPublicAudience: https://manage.account.gov.uk/authorize
-      amcPrivateAudience: https://api.manage.account.gov.uk/token
-      amcAuthorizeUri: https://amcstub.signin.account.gov.uk/authorize
+      amcPrivateAudience: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/token
+      amcAuthorizeUri: https://manage.account.gov.uk/authorize
       amcSfadRedirectUri: https://signin.account.gov.uk/sfad-callback
-      amcTokenUri: https://api.manage.account.gov.uk/token
-      amcJourneyOutcomeUri: https://api.manage.account.gov.uk/journeyoutcome
+      amcTokenUri: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/token
+      amcJourneyOutcomeUri: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
       amcClientId: be05e73e93e94626917b2bc0d7627cfa
       accountDataApiId: 0218o1p9tj
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
       amcCreatePasskeyRedirectUri: https://signin.account.gov.uk/create-passkey-callback
       bulkEmailSendingEnabled: "false"
-      amcJwksUrl: https://hkzy726xx0.execute-api.eu-west-2.amazonaws.com/v1/.well-known/jwks.json
+      amcJwksUrl: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/.well-known/jwks.json
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
