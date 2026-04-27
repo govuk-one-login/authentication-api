@@ -600,8 +600,8 @@ public class MFAMethodsPutHandler
         }
 
         var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.getValue());
-        // TODO: check whether this should always be default
-        var priorityPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+        var priority = putRequest.request.mfaMethod().priorityIdentifier().toString().toLowerCase();
+        var priorityPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority);
 
         var auditContext =
                 maybeAuditContext
