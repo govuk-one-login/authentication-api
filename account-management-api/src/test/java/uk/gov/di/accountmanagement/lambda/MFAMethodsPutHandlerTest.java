@@ -297,10 +297,10 @@ class MFAMethodsPutHandlerTest {
                 .isValidOtpCode(NON_MIGRATED_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
         verify(mfaMethodsService)
                 .updateMfaMethod(
-                        eq(NON_MIGRATED_EMAIL),
-                        eq(DEFAULT_SMS_METHOD),
-                        eq(List.of(DEFAULT_SMS_METHOD)),
-                        eq(expectedDatabaseUpdatedRequest));
+                        NON_MIGRATED_EMAIL,
+                        DEFAULT_SMS_METHOD,
+                        List.of(DEFAULT_SMS_METHOD),
+                        expectedDatabaseUpdatedRequest);
         verify(mfaMethodsMigrationService)
                 .migrateMfaCredentialsForUserIfRequired(any(), any(), any(), any());
     }
