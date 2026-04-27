@@ -87,7 +87,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Description: !Sub
-        - "SSM parameter to stored the hosted ID for the oidc${EndpointSuffix}.${DomainSuffix} hosted zone"
+        - "SSM parameter to stored the hosted zone ID for the oidc${EndpointSuffix}.${DomainSuffix} hosted zone"
         - DomainSuffix:
             !FindInMap [
               EnvironmentConfiguration,
@@ -158,7 +158,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Description: !Sub
-        - "SSM parameter to stored the ARN of the ACM certificate for the oidc${EndpointSuffix}.${DomainSuffix} domain"
+        - "SSM parameter to store the ARN of the ACM certificate for the oidc${EndpointSuffix}.${DomainSuffix} domain"
         - DomainSuffix:
             !FindInMap [
               EnvironmentConfiguration,
