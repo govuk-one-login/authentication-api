@@ -1259,7 +1259,6 @@ class MFAMethodsPutHandlerTest {
         when(codeStorageService.isValidOtpCode(
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
-        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
                 .thenReturn(
                         Result.success(
