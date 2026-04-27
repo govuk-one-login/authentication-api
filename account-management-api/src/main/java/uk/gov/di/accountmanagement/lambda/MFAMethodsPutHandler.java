@@ -568,23 +568,18 @@ public class MFAMethodsPutHandler
             APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
             MFAMethod mfaMethod) {
-        var maybeAuditContext = buildAuditContext(auditEvent, input, putRequest, mfaMethod);
-
-        if (maybeAuditContext.isFailure()) {
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(500, maybeAuditContext.getFailure()));
-        }
-
-        var result =
-                AuditHelper.sendAuditEvent(
-                        auditEvent, maybeAuditContext.getSuccess(), auditService, LOG);
-
-        if (result.isFailure()) {
-            return Result.failure(generateApiGatewayProxyErrorResponse(500, result.getFailure()));
-        }
-
-        LOG.info("Successfully submitted audit event: {}", auditEvent.name());
-        return Result.success(null);
+        return buildAuditContext(auditEvent, input, putRequest, mfaMethod)
+                .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
+                .flatMap(
+                        context ->
+                                AuditHelper.sendAuditEvent(auditEvent, context, auditService, LOG)
+                                        .mapFailure(
+                                                f -> generateApiGatewayProxyErrorResponse(500, f)))
+                .map(
+                        success -> {
+                            LOG.info("Successfully submitted audit event: {}", auditEvent.name());
+                            return success;
+                        });
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> emitAuditEventForAuthAppUpdate(
