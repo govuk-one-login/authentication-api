@@ -673,12 +673,7 @@ class MFAMethodsPutHandlerTest {
     }
 
     @Test
-    void shouldNotRaiseAuthCodeVerifiedAuditEvent() {
-        var updateRequest =
-                MfaMethodUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT,
-                        new RequestSmsMfaDetail(
-                                DEFAULT_SMS_METHOD.getDestination(), INCORRECT_OTP));
+    void shouldNotRaiseAuthCodeVerifiedAuditEventWhenOtpIncorrect() {
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest =
                 event.withBody(
@@ -693,12 +688,6 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.GetMfaResult(
                                         DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
-                .thenReturn(
-                        Result.success(
-                                new MFAMethodsService.MfaUpdateResponse(
-                                        List.of(DEFAULT_SMS_METHOD),
-                                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
 
         handler.handleRequest(eventWithUpdateRequest, context);
 
