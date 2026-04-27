@@ -28,7 +28,7 @@ public class AccountDataApiService {
         this.configurationService = configurationService;
     }
 
-    public HttpResponse<String> retrievePasskeys(String publicSubjectId)
+    public HttpResponse<String> retrievePasskeys(String publicSubjectId, String token)
             throws UnsuccessfulAccountDataApiResponseException {
         var request =
                 HttpRequest.newBuilder(
@@ -37,6 +37,7 @@ public class AccountDataApiService {
                                         "/accounts/"
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys"))
+                        .header("Authorization", "Bearer " + token)
                         .GET()
                         .timeout(
                                 Duration.ofMillis(
@@ -45,7 +46,8 @@ public class AccountDataApiService {
         return sendRequest(request);
     }
 
-    public HttpResponse<String> deletePasskey(String publicSubjectId, String passkeyId)
+    public HttpResponse<String> deletePasskey(
+            String publicSubjectId, String passkeyId, String token)
             throws UnsuccessfulAccountDataApiResponseException {
         var request =
                 HttpRequest.newBuilder(
@@ -55,6 +57,7 @@ public class AccountDataApiService {
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys/"
                                                 + passkeyId))
+                        .header("Authorization", "Bearer " + token)
                         .DELETE()
                         .timeout(
                                 Duration.ofMillis(
@@ -69,8 +72,7 @@ public class AccountDataApiService {
         try {
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (HttpTimeoutException e) {
-            throw timeoutException(
-                    configurationService.getAccountInterventionServiceCallTimeout(), e);
+            throw timeoutException(configurationService.getAccountDataApiCallTimeout(), e);
         } catch (IOException e) {
             throw ioException(e);
         } catch (InterruptedException e) {
