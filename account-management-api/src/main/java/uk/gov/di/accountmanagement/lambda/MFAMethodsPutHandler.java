@@ -602,17 +602,15 @@ public class MFAMethodsPutHandler
                     generateApiGatewayProxyErrorResponse(401, maybeAuditContext.getFailure()));
         }
 
+        var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.getValue());
+        // TODO: check whether this should always be default
+        var priorityPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+
         var auditContext =
                 maybeAuditContext
                         .getSuccess()
-                        .withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                        MFAMethodType.AUTH_APP.getValue()))
-                        .withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                        PriorityIdentifier.DEFAULT.name().toLowerCase()));
+                        .withMetadataItem(mfaTypePair)
+                        .withMetadataItem(priorityPair);
 
         auditService.submitAuditEvent(
                 AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
@@ -640,48 +638,38 @@ public class MFAMethodsPutHandler
         var context = auditContextResult.getSuccess().withPhoneNumber(phoneNumber);
 
         if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
-            context =
-                    context.withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType()));
+            var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType());
+            context = context.withMetadataItem(mfaTypePair);
         }
 
         if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
                 || auditEvent.equals(AUTH_INVALID_CODE_SENT)
                 || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
-            context =
-                    context.withMetadataItem(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                    mfaMethod.getPriority().toLowerCase()));
+            var priorityPair =
+                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaMethod.getPriority().toLowerCase());
+            context = context.withMetadataItem(priorityPair);
         }
 
         if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
             MfaMethodUpdateRequest.MfaMethod requestedMethod = putRequest.request.mfaMethod();
             if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
                     && requestSmsMfaDetail.otp() != null) {
+                var codeEnteredPair =
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, requestSmsMfaDetail.otp());
+                var notificationTypePair =
+                        pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
                 context =
-                        context.withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
-                                                requestSmsMfaDetail.otp()))
-                                .withMetadataItem(
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
-                                                MFA_SMS.name()));
+                        context.withMetadataItem(codeEnteredPair)
+                                .withMetadataItem(notificationTypePair);
             }
+            var priority = requestedMethod.priorityIdentifier().name().toLowerCase();
+            var mfaType = requestedMethod.method().mfaMethodType().toString();
+            var priorityPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority);
+            var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType);
             context =
                     context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                            .withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                            requestedMethod
-                                                    .priorityIdentifier()
-                                                    .name()
-                                                    .toLowerCase()))
-                            .withMetadataItem(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                            requestedMethod.method().mfaMethodType().toString()));
+                            .withMetadataItem(priorityPair)
+                            .withMetadataItem(mfaTypePair);
         }
 
         return Result.success(context);
