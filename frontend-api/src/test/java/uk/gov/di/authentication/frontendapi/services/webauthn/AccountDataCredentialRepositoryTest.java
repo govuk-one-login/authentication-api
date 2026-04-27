@@ -3,7 +3,6 @@ package uk.gov.di.authentication.frontendapi.services.webauthn;
 import com.yubico.webauthn.CredentialRepository;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.PublicKeyCredentialType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
@@ -11,9 +10,7 @@ import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeysRetrieveResp
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -36,20 +33,10 @@ class AccountDataCredentialRepositoryTest {
 
     private final PasskeysService passkeysService = mock(PasskeysService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AccountDataCredentialRepository repository =
-            new AccountDataCredentialRepository(
-                    passkeysService, authenticationService, configurationService);
+            new AccountDataCredentialRepository(passkeysService, authenticationService);
 
     private static final String PASSKEY_ID_BASE64URL = "dGVzdC1jcmVkZW50aWFsLWlk";
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
-
-    @BeforeEach
-    void setUp() {
-        when(authenticationService.getOrGenerateSalt(any())).thenReturn(TEST_SALT);
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-    }
 
     @Test
     void implementsCredentialRepository() {
@@ -61,7 +48,7 @@ class AccountDataCredentialRepositoryTest {
         @Test
         void returnsCredentialIdsWhenPasskeysExist() {
             setupUserProfile();
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(
                             Result.success(
                                     new PasskeysRetrieveResponse(
@@ -80,7 +67,7 @@ class AccountDataCredentialRepositoryTest {
         @Test
         void returnsEmptySetWhenNoPasskeys() {
             setupUserProfile();
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(Result.success(new PasskeysRetrieveResponse(List.of())));
 
             var result = repository.getCredentialIdsForUsername(EMAIL);
@@ -101,7 +88,7 @@ class AccountDataCredentialRepositoryTest {
         @Test
         void returnsEmptySetWhenApiCallFails() {
             setupUserProfile();
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(
                             Result.failure(
                                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));
@@ -174,7 +161,7 @@ class AccountDataCredentialRepositoryTest {
 
         @Test
         void returnsRegisteredCredentialWhenFound() {
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(
                             Result.success(
                                     new PasskeysRetrieveResponse(
@@ -192,7 +179,7 @@ class AccountDataCredentialRepositoryTest {
 
         @Test
         void returnsEmptyWhenCredentialNotFound() {
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(Result.success(new PasskeysRetrieveResponse(List.of())));
             var credentialId = new ByteArray(Base64.getUrlDecoder().decode(PASSKEY_ID_BASE64URL));
 
@@ -203,7 +190,7 @@ class AccountDataCredentialRepositoryTest {
 
         @Test
         void returnsEmptyWhenApiCallFails() {
-            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any(), any()))
+            when(passkeysService.retrievePasskeys(eq(PUBLIC_SUBJECT_ID), any()))
                     .thenReturn(
                             Result.failure(
                                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));
@@ -235,8 +222,6 @@ class AccountDataCredentialRepositoryTest {
                                 .withPublicSubjectID(PUBLIC_SUBJECT_ID)
                                 .withSubjectID("subject"));
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(userProfile);
-        when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
-                .thenReturn(userProfile);
     }
 
     private static PasskeysRetrieveResponse.PasskeyResponse aPasskeyResponse(String passkeyId) {

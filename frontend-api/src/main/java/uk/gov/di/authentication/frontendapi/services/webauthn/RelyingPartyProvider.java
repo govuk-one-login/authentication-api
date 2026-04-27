@@ -36,7 +36,7 @@ public class RelyingPartyProvider {
 
                     AccountDataCredentialRepository credentialRepository =
                             new AccountDataCredentialRepository(
-                                    passkeysService, authenticationService, configurationService);
+                                    passkeysService, authenticationService);
 
                     return RelyingParty.builder()
                             .identity(rpIdentity)

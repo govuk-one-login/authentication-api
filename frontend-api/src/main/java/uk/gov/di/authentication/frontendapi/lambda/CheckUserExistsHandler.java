@@ -251,10 +251,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             LOG.info("Checking if user has active passkey");
 
             var hasActivePasskeyResult =
-                    passkeysService.hasActivePasskey(
-                            publicSubjectId,
-                            authSession.getInternalCommonSubjectId(),
-                            authSession.getSessionId());
+                    passkeysService.hasActivePasskey(publicSubjectId, authSession.getSessionId());
             if (hasActivePasskeyResult.isFailure()) {
                 LOG.warn(
                         "Error retrieving passkey information for user. Error: {}",

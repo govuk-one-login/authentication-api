@@ -51,16 +51,16 @@ public class PasskeysService {
     }
 
     public Result<PasskeyRetrieveError, Boolean> hasActivePasskey(
-            String publicSubjectId, String internalCommonSubjectId, String sessionId) {
-        return retrievePasskeys(publicSubjectId, internalCommonSubjectId, sessionId)
+            String publicSubjectId, String sessionId) {
+        return retrievePasskeys(publicSubjectId, sessionId)
                 .map(response -> !response.passkeys().isEmpty());
     }
 
     public Result<PasskeyRetrieveError, PasskeysRetrieveResponse> retrievePasskeys(
-            String publicSubjectId, String internalCommonSubjectId, String sessionId) {
+            String publicSubjectId, String sessionId) {
 
         var accountDataApiAccessTokenResult =
-                createAccountDataApiAccessToken(internalCommonSubjectId, sessionId);
+                createAccountDataApiAccessToken(publicSubjectId, sessionId);
         if (accountDataApiAccessTokenResult.isFailure()) {
             return Result.failure(accountDataApiAccessTokenResult.getFailure());
         }
@@ -123,10 +123,10 @@ public class PasskeysService {
     }
 
     private Result<PasskeyRetrieveError, BearerAccessToken> createAccountDataApiAccessToken(
-            String internalCommonSubjectId, String sessionId) {
+            String publicSubjectId, String sessionId) {
         return accessTokenConstructorService
                 .createSignedAccessToken(
-                        internalCommonSubjectId,
+                        publicSubjectId,
                         AccountDataScope.PASSKEY_RETRIEVE,
                         sessionId,
                         nowClock.now(),
