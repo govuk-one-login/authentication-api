@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "DeployCertificate",
+    "ParameterValue": "Yes"
+  },
+  {
+    "ParameterKey": "DeploySubEnvDomains",
+    "ParameterValue": "No"
+  }
+]
