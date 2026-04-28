@@ -213,14 +213,13 @@ class MFAMethodsDeleteHandlerTest {
 
         @Test
         void shouldReturn400IfPublicSubjectIdNotIncludedInPath() {
+            var pathParamsWithoutPublicSubjectId =
+                    Map.ofEntries(
+                            Map.entry("publicSubjectId", ""),
+                            Map.entry("mfaIdentifier", MFA_IDENTIFIER_TO_DELETE));
             var eventWithoutPublicSubjectId =
                     new APIGatewayProxyRequestEvent()
-                            .withPathParameters(
-                                    (Map.of(
-                                            "publicSubjectId",
-                                            "",
-                                            "mfaIdentifier",
-                                            MFA_IDENTIFIER_TO_DELETE)))
+                            .withPathParameters(pathParamsWithoutPublicSubjectId)
                             .withHeaders(VALID_HEADERS);
 
             var result = handler.handleRequest(eventWithoutPublicSubjectId, context);
@@ -232,14 +231,13 @@ class MFAMethodsDeleteHandlerTest {
 
         @Test
         void shouldReturn400IfMfaIdentifierNotIncludedInPath() {
+            var pathParamsWithoutMfaIdentifier =
+                    Map.ofEntries(
+                            Map.entry("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                            Map.entry("mfaIdentifier", ""));
             var eventWithoutMfaIdentifier =
                     new APIGatewayProxyRequestEvent()
-                            .withPathParameters(
-                                    (Map.of(
-                                            "publicSubjectId",
-                                            TEST_PUBLIC_SUBJECT,
-                                            "mfaIdentifier",
-                                            "")))
+                            .withPathParameters(pathParamsWithoutMfaIdentifier)
                             .withHeaders(VALID_HEADERS);
 
             var result = handler.handleRequest(eventWithoutMfaIdentifier, context);
