@@ -92,6 +92,15 @@ class MFAMethodsDeleteHandlerTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
+    private static final AuditContext EXPECTED_AUDIT_CONTEXT =
+            AuditContext.emptyAuditContext()
+                    .withPhoneNumber(SMS_MFA_METHOD.getDestination())
+                    .withEmail(TEST_EMAIL)
+                    .withClientSessionId(SESSION_ID)
+                    .withSubjectId(TEST_INTERNAL_SUBJECT)
+                    .withIpAddress(IP_ADDRESS)
+                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                    .withPersistentSessionId(PERSISTENT_ID);
 
     private MFAMethodsDeleteHandler handler;
 
@@ -131,23 +140,13 @@ class MFAMethodsDeleteHandlerTest {
                                             NotificationType.BACKUP_METHOD_REMOVED,
                                             LocaleHelper.SupportedLanguage.EN)));
 
-            var expectedAuditContext =
-                    AuditContext.emptyAuditContext()
-                            .withPhoneNumber(SMS_MFA_METHOD.getDestination())
-                            .withEmail(TEST_EMAIL)
-                            .withClientSessionId(SESSION_ID)
-                            .withSubjectId(TEST_INTERNAL_SUBJECT)
-                            .withIpAddress(IP_ADDRESS)
-                            .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
-                            .withPersistentSessionId(PERSISTENT_ID)
-                            .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()))
-                            .withMetadataItem(pair("mfa-type", SMS.getValue(), false));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_DELETE_COMPLETED,
-                            expectedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            EXPECTED_AUDIT_CONTEXT,
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
+                            pair("mfa-type", SMS.getValue(), false));
         }
 
         @Test
