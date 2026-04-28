@@ -34,6 +34,8 @@ public class AuditHelper {
     private static final Logger LOG = LogManager.getLogger(AuditHelper.class);
     public static final String TXMA_ENCODED_HEADER_NAME = "txma-audit-encoded";
     public static final String ERROR_BUILDING_AUDIT_CONTEXT = "Error building audit context";
+    public static final AuditService.MetadataPair ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR =
+            pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue());
 
     private AuditHelper() {}
 
@@ -49,11 +51,12 @@ public class AuditHelper {
         }
     }
 
-    public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
-            ConfigurationService configurationService,
-            AuthenticationService authenticationService,
-            APIGatewayProxyRequestEvent input,
-            UserProfile userProfile) {
+    public static Result<ErrorResponse, AuditContext>
+            accountManagementAuditContextWithoutJourneyType(
+                    ConfigurationService configurationService,
+                    AuthenticationService authenticationService,
+                    APIGatewayProxyRequestEvent input,
+                    UserProfile userProfile) {
         try {
             return Result.success(
                     new AuditContext(
@@ -74,14 +77,21 @@ public class AuditHelper {
                             null,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             getTxmaAuditEncoded(input.getHeaders()),
-                            List.of(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                            ACCOUNT_MANAGEMENT.getValue()))));
+                            List.of()));
         } catch (Exception e) {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
+    }
+
+    public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
+            ConfigurationService configurationService,
+            AuthenticationService authenticationService,
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile) {
+        return accountManagementAuditContextWithoutJourneyType(
+                        configurationService, authenticationService, input, userProfile)
+                .map(context -> context.withMetadataItem(ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR));
     }
 
     public static Result<ErrorResponse, Void> sendAuditEvent(
@@ -91,6 +101,23 @@ public class AuditHelper {
             Logger logger) {
         try {
             auditService.submitAuditEvent(auditEvent, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
+        } catch (Exception e) {
+            logger.error("Error submitting audit event", e);
+            return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
+        }
+
+        return Result.success(null);
+    }
+
+    public static Result<ErrorResponse, Void> sendAuditEvent(
+            AccountManagementAuditableEvent auditEvent,
+            AuditContext auditContext,
+            AuditService auditService,
+            Logger logger,
+            AuditService.MetadataPair[] metadataPairs) {
+        try {
+            auditService.submitAuditEvent(
+                    auditEvent, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME, metadataPairs);
         } catch (Exception e) {
             logger.error("Error submitting audit event", e);
             return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
