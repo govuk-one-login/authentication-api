@@ -18,7 +18,7 @@ Resources:
           ACCOUNT_DATA_JWKS_URL:
             !FindInMap [
               EnvironmentConfiguration,
-              !Ref Environment,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               accountDataJwksUrl,
             ]
       LoggingConfig:

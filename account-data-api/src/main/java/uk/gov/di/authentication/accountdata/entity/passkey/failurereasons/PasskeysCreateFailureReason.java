@@ -5,7 +5,8 @@ public enum PasskeysCreateFailureReason {
     PASSKEY_EXISTS("passkey_exists"),
     INVALID_AAGUID("invalid_aaguid"),
     INVALID_REQUEST_BODY("invalid_request_body"),
-    MISSING_SUBJECT_ID("missing_subject_id");
+    MISSING_SUBJECT_ID("missing_subject_id"),
+    UNAUTHORIZED_REQUEST("unauthorized_request");
 
     private final String value;
 

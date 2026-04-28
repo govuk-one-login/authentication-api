@@ -24,15 +24,17 @@ public abstract class ApiGatewayHandlerIntegrationTest {
             Optional<String> body,
             Map<String, String> headers,
             Map<String, String> queryString,
-            Map<String, String> pathParams) {
+            Map<String, String> pathParams,
+            Map<String, Object> authorizerParams) {
         String requestId = UUID.randomUUID().toString();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        var requestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext().withRequestId(requestId);
+        requestContext.setAuthorizer(authorizerParams);
         request.withHeaders(headers)
                 .withQueryStringParameters(queryString)
                 .withPathParameters(pathParams)
-                .withRequestContext(
-                        new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                                .withRequestId(requestId));
+                .withRequestContext(requestContext);
         body.ifPresent(request::withBody);
 
         return handler.handleRequest(request, context);

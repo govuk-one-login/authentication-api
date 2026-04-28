@@ -3,7 +3,8 @@ package uk.gov.di.authentication.accountdata.entity.passkey.failurereasons;
 public enum PasskeysRetrieveFailureReasons {
     REQUEST_MISSING_PARAMS("request_missing_params"),
     FAILED_TO_GET_PASSKEYS("failed_to_get_passkeys"),
-    FAILED_TO_SERIALIZE_RESPONSE("failed_to_serialize_response");
+    FAILED_TO_SERIALIZE_RESPONSE("failed_to_serialize_response"),
+    UNAUTHORIZED_REQUEST("unauthorized_request");
 
     private final String value;
 

@@ -32,6 +32,8 @@ class PasskeysRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     private final ConfigurationService configurationService = ConfigurationService.getInstance();
     DynamoPasskeyService dynamoPasskeyService = new DynamoPasskeyService(configurationService);
+    private static final Map<String, Object> AUTHORIZER_PARAMS =
+            Map.of("principalId", PUBLIC_SUBJECT_ID);
 
     @RegisterExtension
     protected static final AuthenticatorExtension authenticatorExtension =
@@ -73,7 +75,8 @@ class PasskeysRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Optional.empty(),
                             headers,
                             Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertThat(response.getStatusCode(), equalTo(200));
@@ -93,7 +96,8 @@ class PasskeysRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Optional.empty(),
                             headers,
                             Collections.emptyMap(),
-                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID));
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertThat(response.getStatusCode(), equalTo(200));
@@ -114,7 +118,8 @@ class PasskeysRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Optional.empty(),
                             headers,
                             Collections.emptyMap(),
-                            Map.of("publicSubjectId", ""));
+                            Map.of("publicSubjectId", ""),
+                            AUTHORIZER_PARAMS);
 
             // Then
             assertThat(response.getStatusCode(), equalTo(400));

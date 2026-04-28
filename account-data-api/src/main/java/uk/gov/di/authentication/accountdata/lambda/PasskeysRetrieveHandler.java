@@ -18,6 +18,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
 
+import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons.UNAUTHORIZED_REQUEST;
+import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -59,6 +61,9 @@ public class PasskeysRetrieveHandler
         LOG.info("PasskeysRetrieveHandler called");
 
         return parseRequest(input)
+                .flatMap(
+                        publicSubjectIdFromPath ->
+                                validateAuthorizedSubjectId(publicSubjectIdFromPath, input))
                 .flatMap(passkeysService::retrievePasskeys)
                 .flatMap(this::mapPasskeysListToResponse)
                 .flatMap(this::generateApiResponse)
@@ -67,6 +72,8 @@ public class PasskeysRetrieveHandler
                                 switch (failure) {
                                     case REQUEST_MISSING_PARAMS -> generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.REQUEST_MISSING_PARAMS);
+                                    case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
+                                            401, ErrorResponse.UNAUTHORIZED_REQUEST);
                                     case FAILED_TO_GET_PASSKEYS,
                                             FAILED_TO_SERIALIZE_RESPONSE -> generateApiGatewayProxyErrorResponse(
                                             500, ErrorResponse.INTERNAL_SERVER_ERROR);
@@ -83,6 +90,16 @@ public class PasskeysRetrieveHandler
         }
 
         return Result.success(publicSubjectId);
+    }
+
+    private Result<PasskeysRetrieveFailureReasons, String> validateAuthorizedSubjectId(
+            String publicSubjectId, APIGatewayProxyRequestEvent input) {
+        if (isSubjectIdAuthorized(publicSubjectId, input.getRequestContext())) {
+            return Result.success(publicSubjectId);
+        } else {
+            LOG.warn("SubjectId in path parameter does not match Authorizer principalId");
+            return Result.failure(UNAUTHORIZED_REQUEST);
+        }
     }
 
     private Result<PasskeysRetrieveFailureReasons, PasskeysRetrieveResponse>

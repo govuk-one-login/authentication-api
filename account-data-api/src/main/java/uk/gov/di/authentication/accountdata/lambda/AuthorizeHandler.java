@@ -69,6 +69,7 @@ public class AuthorizeHandler
 
             var subject = validatedClaimsResult.getSuccess().getSubject();
             var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
+            LOG.info("Request validated, returning access policy");
             return getAllowExecuteApiPolicyForSubject(subject, methodArn);
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token {}", e.getMessage());

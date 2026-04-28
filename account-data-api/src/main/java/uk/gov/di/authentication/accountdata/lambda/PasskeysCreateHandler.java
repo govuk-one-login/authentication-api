@@ -19,7 +19,9 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.INVALID_AAGUID;
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.INVALID_REQUEST_BODY;
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.MISSING_SUBJECT_ID;
+import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.UNAUTHORIZED_REQUEST;
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.isAaguidValid;
+import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -62,6 +64,7 @@ public class PasskeysCreateHandler
         LOG.info("PasskeysCreateHandler called");
 
         return parseRequest(input)
+                .flatMap(createContext -> validateAuthorizedSubjectId(createContext, input))
                 .flatMap(this::validateRequest)
                 .flatMap(this::createPasskey)
                 .fold(
@@ -71,6 +74,8 @@ public class PasskeysCreateHandler
                                             400, ErrorResponse.INVALID_REQUEST_BODY);
                                     case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.MISSING_SUBJECT_ID);
+                                    case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
+                                            401, ErrorResponse.UNAUTHORIZED_REQUEST);
                                     case PASSKEY_EXISTS -> generateApiGatewayProxyErrorResponse(
                                             409, ErrorResponse.PASSKEY_ALREADY_EXISTS);
                                     case INVALID_AAGUID -> generateApiGatewayProxyErrorResponse(
@@ -100,6 +105,16 @@ public class PasskeysCreateHandler
         }
 
         return Result.success(new PasskeysCreateContext(publicSubjectId, passkeysCreateRequest));
+    }
+
+    private Result<PasskeysCreateFailureReason, PasskeysCreateContext> validateAuthorizedSubjectId(
+            PasskeysCreateContext context, APIGatewayProxyRequestEvent input) {
+        if (isSubjectIdAuthorized(context.publicSubjectId(), input.getRequestContext())) {
+            return Result.success(context);
+        } else {
+            LOG.warn("SubjectId in path parameter does not match Authorizer principalId");
+            return Result.failure(UNAUTHORIZED_REQUEST);
+        }
     }
 
     private Result<PasskeysCreateFailureReason, PasskeysCreateContext> validateRequest(

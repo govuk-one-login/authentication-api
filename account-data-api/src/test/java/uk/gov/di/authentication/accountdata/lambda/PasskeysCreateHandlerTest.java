@@ -6,7 +6,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
-import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -27,11 +26,10 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.CREDENTIAL;
-import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PASSKEY_TRANSPORTS;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.TEST_AAGUID;
-import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.contextWithSourceIp;
 
 class PasskeysCreateHandlerTest {
 
@@ -39,6 +37,8 @@ class PasskeysCreateHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeysService passkeysService = mock(PasskeysService.class);
     private final Json objectMapper = SerializationService.getInstance();
+    private static final Map<String, Object> AUTHORIZER_PARAMS =
+            Map.of("principalId", PUBLIC_SUBJECT_ID);
 
     private PasskeysCreateHandler handler;
 
@@ -53,7 +53,7 @@ class PasskeysCreateHandlerTest {
         @Test
         void shouldReturn200ForValidRequest() throws Json.JsonException {
             // Given
-            var pathParams = Map.of("publicSubjectId", CommonTestVariables.PUBLIC_SUBJECT_ID);
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
             var passkeysCreateRequestBody =
                     buildPasskeysCreateRequestBody(
                             CREDENTIAL,
@@ -65,13 +65,13 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysService.createPasskey(any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
+            when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.success(null));
+            var request =
+                    passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
             // When
-            var result =
-                    handler.handleRequest(
-                            passkeysCreateRequest(passkeysCreateRequestBody, pathParams), context);
+            var result = handler.handleRequest(request, context);
 
             // Then
             assertThat(result, hasStatus(201));
@@ -85,7 +85,7 @@ class PasskeysCreateHandlerTest {
         @Test
         void shouldReturn400WhenReadValueFails() throws Json.JsonException {
             // Given
-            var pathParams = Map.of("publicSubjectId", CommonTestVariables.PUBLIC_SUBJECT_ID);
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
             var passkeysCreateRequestBody =
                     buildPasskeysCreateRequestBody(
                             CREDENTIAL,
@@ -97,11 +97,11 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
+            var request =
+                    passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
             // When
-            var result =
-                    handler.handleRequest(
-                            passkeysCreateRequest(passkeysCreateRequestBody, pathParams), context);
+            var result = handler.handleRequest(request, context);
 
             // Then
             assertThat(result, hasStatus(400));
@@ -123,11 +123,11 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
+            var request =
+                    passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
             // When
-            var result =
-                    handler.handleRequest(
-                            passkeysCreateRequest(passkeysCreateRequestBody, pathParams), context);
+            var result = handler.handleRequest(request, context);
 
             // Then
             assertThat(result, hasStatus(400));
@@ -137,7 +137,7 @@ class PasskeysCreateHandlerTest {
         @Test
         void shouldReturn500WhenFailedToSavePasskey() throws Json.JsonException {
             // Given
-            var pathParams = Map.of("publicSubjectId", CommonTestVariables.PUBLIC_SUBJECT_ID);
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
             var passkeysCreateRequestBody =
                     buildPasskeysCreateRequestBody(
                             CREDENTIAL,
@@ -149,13 +149,13 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysService.createPasskey(any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
+            when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.failure(PasskeysCreateFailureReason.FAILED_TO_SAVE_PASSKEY));
+            var request =
+                    passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
             // When
-            var result =
-                    handler.handleRequest(
-                            passkeysCreateRequest(passkeysCreateRequestBody, pathParams), context);
+            var result = handler.handleRequest(request, context);
 
             // Then
             assertThat(result, hasStatus(500));
@@ -165,7 +165,7 @@ class PasskeysCreateHandlerTest {
         @Test
         void shouldReturn409WhenPasskeyExists() throws Json.JsonException {
             // Given
-            var pathParams = Map.of("publicSubjectId", CommonTestVariables.PUBLIC_SUBJECT_ID);
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
             var passkeysCreateRequestBody =
                     buildPasskeysCreateRequestBody(
                             CREDENTIAL,
@@ -177,13 +177,13 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
-            when(passkeysService.createPasskey(any(), eq(CommonTestVariables.PUBLIC_SUBJECT_ID)))
+            when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.failure(PasskeysCreateFailureReason.PASSKEY_EXISTS));
+            var request =
+                    passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
             // When
-            var result =
-                    handler.handleRequest(
-                            passkeysCreateRequest(passkeysCreateRequestBody, pathParams), context);
+            var result = handler.handleRequest(request, context);
 
             // Then
             assertThat(result, hasStatus(409));
@@ -193,7 +193,7 @@ class PasskeysCreateHandlerTest {
         @Test
         void shouldReturn422WhenInvalidAaguid() throws Json.JsonException {
             // Given
-            var pathParams = Map.of("publicSubjectId", CommonTestVariables.PUBLIC_SUBJECT_ID);
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
             var passkeysCreateRequestBody =
                     buildPasskeysCreateRequestBody(
                             CREDENTIAL,
@@ -205,11 +205,11 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
+            var request =
+                    passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
             // When
-            var result =
-                    handler.handleRequest(
-                            passkeysCreateRequest(passkeysCreateRequestBody, pathParams), context);
+            var result = handler.handleRequest(request, context);
 
             // Then
             assertThat(result, hasStatus(422));
@@ -219,7 +219,7 @@ class PasskeysCreateHandlerTest {
         @Test
         void shouldReturn422WhenEmptyAaguid() throws Json.JsonException {
             // Given
-            var pathParams = Map.of("publicSubjectId", CommonTestVariables.PUBLIC_SUBJECT_ID);
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
             var passkeysCreateRequestBody =
                     buildPasskeysCreateRequestBody(
                             CREDENTIAL,
@@ -231,16 +231,46 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             false);
+            var request =
+                    passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
             // When
-            var result =
-                    handler.handleRequest(
-                            passkeysCreateRequest(passkeysCreateRequestBody, pathParams), context);
+            var result = handler.handleRequest(request, context);
 
             // Then
             assertThat(result, hasStatus(422));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_AAGUID));
         }
+    }
+
+    @Test
+    void shouldReturn401WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams()
+            throws Json.JsonException {
+        // Given
+        when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
+                .thenReturn(Result.success(null));
+        var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+        var passkeysCreateRequestBody =
+                buildPasskeysCreateRequestBody(
+                        CREDENTIAL,
+                        PRIMARY_PASSKEY_ID,
+                        TEST_AAGUID,
+                        false,
+                        0,
+                        PASSKEY_TRANSPORTS,
+                        false,
+                        false,
+                        false);
+        var authorizerParams = Map.<String, Object>of("principalId", "different-subject-id");
+        var request =
+                passkeysCreateRequest(passkeysCreateRequestBody, pathParams, authorizerParams);
+
+        // When
+        var result = handler.handleRequest(request, context);
+
+        // Then
+        assertThat(result, hasStatus(401));
+        assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
     }
 
     private String buildPasskeysCreateRequestBody(
@@ -269,10 +299,15 @@ class PasskeysCreateHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent passkeysCreateRequest(
-            String requestBody, Map<String, String> pathParams) {
+            String requestBody,
+            Map<String, String> pathParams,
+            Map<String, Object> authorizerParams) {
+        var requestContext = new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        requestContext.setAuthorizer(authorizerParams);
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(pathParams)
+                .withRequestContext(requestContext)
                 .withBody(requestBody)
-                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+                .withRequestContext(requestContext);
     }
 }

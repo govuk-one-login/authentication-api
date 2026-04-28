@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
-import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
 import uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -23,6 +22,8 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.contextWithSourceIp;
 
 class PasskeysRetrieveHandlerTest {
@@ -30,6 +31,8 @@ class PasskeysRetrieveHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeysService passkeysService = mock(PasskeysService.class);
+    private static final Map<String, Object> AUTHORIZER_PARAMS =
+            Map.of("principalId", PUBLIC_SUBJECT_ID);
 
     private PasskeysRetrieveHandler handler;
 
@@ -44,21 +47,22 @@ class PasskeysRetrieveHandlerTest {
         @Test
         void shouldReturn200ForValidRequest() {
             // Given
-            var pathParams = Map.of("publicSubjectId", CommonTestVariables.PUBLIC_SUBJECT_ID);
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
             var savedPasskey =
                     PasskeysTestHelper.buildGenericPasskeyForUserWithSubjectId(
-                            CommonTestVariables.PUBLIC_SUBJECT_ID,
-                            CommonTestVariables.PRIMARY_PASSKEY_ID);
+                            PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
             var savedPasskeysForUser = List.of(savedPasskey);
             var expectedRetrievedPasskeys =
                     new PasskeysRetrieveResponse(
                             List.of(PasskeysRetrieveResponse.from(savedPasskey)));
 
-            when(passkeysService.retrievePasskeys(CommonTestVariables.PUBLIC_SUBJECT_ID))
+            when(passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID))
                     .thenReturn(Result.success(savedPasskeysForUser));
 
             // When
-            var result = handler.handleRequest(passkeysRetrieveRequest(pathParams), context);
+            var result =
+                    handler.handleRequest(
+                            passkeysRetrieveRequest(pathParams, AUTHORIZER_PARAMS), context);
 
             // Then
             assertThat(result, hasStatus(200));
@@ -75,7 +79,9 @@ class PasskeysRetrieveHandlerTest {
             var pathParams = Map.of("publicSubjectId", "");
 
             // When
-            var result = handler.handleRequest(passkeysRetrieveRequest(pathParams), context);
+            var result =
+                    handler.handleRequest(
+                            passkeysRetrieveRequest(pathParams, AUTHORIZER_PARAMS), context);
 
             // Then
             assertThat(result, hasStatus(400));
@@ -83,15 +89,34 @@ class PasskeysRetrieveHandlerTest {
         }
 
         @Test
+        void shouldReturn401WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams() {
+            // Given
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+            var authorizerParams =
+                    Map.<String, Object>of("principalId", "a-different-public-subject-id");
+
+            // When
+            var result =
+                    handler.handleRequest(
+                            passkeysRetrieveRequest(pathParams, authorizerParams), context);
+
+            // Then
+            assertThat(result, hasStatus(401));
+            assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+        }
+
+        @Test
         void shouldReturn500IfFailedToGetPasskeys() {
             // Given
-            var pathParams = Map.of("publicSubjectId", CommonTestVariables.PUBLIC_SUBJECT_ID);
-            when(passkeysService.retrievePasskeys(CommonTestVariables.PUBLIC_SUBJECT_ID))
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+            when(passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID))
                     .thenReturn(
                             Result.failure(PasskeysRetrieveFailureReasons.FAILED_TO_GET_PASSKEYS));
 
             // When
-            var result = handler.handleRequest(passkeysRetrieveRequest(pathParams), context);
+            var result =
+                    handler.handleRequest(
+                            passkeysRetrieveRequest(pathParams, AUTHORIZER_PARAMS), context);
 
             // Then
             assertThat(result, hasStatus(500));
@@ -99,9 +124,12 @@ class PasskeysRetrieveHandlerTest {
         }
     }
 
-    private APIGatewayProxyRequestEvent passkeysRetrieveRequest(Map<String, String> pathParams) {
+    private APIGatewayProxyRequestEvent passkeysRetrieveRequest(
+            Map<String, String> pathParams, Map<String, Object> authorizerParams) {
+        var requestContext = contextWithSourceIp(IP_ADDRESS);
+        requestContext.setAuthorizer(authorizerParams);
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(pathParams)
-                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+                .withRequestContext(requestContext);
     }
 }
