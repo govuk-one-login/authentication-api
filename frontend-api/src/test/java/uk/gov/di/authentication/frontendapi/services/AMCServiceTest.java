@@ -410,7 +410,7 @@ class AMCServiceTest {
             assertAll(
                     "Access Token Claims",
                     () -> assertEquals(AUTH_ISSUER_CLAIM, accessTokenClaims.getIssuer()),
-                    () -> assertEquals(INTERNAL_PAIRWISE_ID, accessTokenClaims.getSubject()),
+                    () -> assertEquals(PUBLIC_SUBJECT, accessTokenClaims.getSubject()),
                     () -> assertEquals(List.of(expectedAudience), accessTokenClaims.getAudience()),
                     () ->
                             assertEquals(
@@ -611,7 +611,7 @@ class AMCServiceTest {
                         any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(
                         invocation -> {
-                            String internalPairwiseSubject = invocation.getArgument(0);
+                            String publicSubjectId = invocation.getArgument(0);
                             AccessTokenScope scope = invocation.getArgument(1);
                             String sessionId = invocation.getArgument(2);
                             Date issueTime = invocation.getArgument(3);
@@ -636,7 +636,7 @@ class AMCServiceTest {
                                             .expirationTime(expiryDate)
                                             .issueTime(issueTime)
                                             .notBeforeTime(issueTime)
-                                            .subject(internalPairwiseSubject)
+                                            .subject(publicSubjectId)
                                             .claim("client_id", clientId)
                                             .claim("sid", sessionId)
                                             .jwtID(UUID.randomUUID().toString())

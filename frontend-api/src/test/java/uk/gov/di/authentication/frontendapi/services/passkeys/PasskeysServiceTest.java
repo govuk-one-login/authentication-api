@@ -34,7 +34,6 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 
@@ -102,9 +101,7 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result =
-                    passkeysService.hasActivePasskey(
-                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isSuccess());
 
             var expectedAuthorizationHeader =
@@ -119,7 +116,7 @@ class PasskeysServiceTest {
                             any());
             verify(accessTokenConstructorService)
                     .createSignedAccessToken(
-                            eq(INTERNAL_COMMON_SUBJECT_ID),
+                            eq(PUBLIC_SUBJECT_ID),
                             eq(AccountDataScope.PASSKEY_RETRIEVE),
                             eq(SESSION_ID),
                             any(),
@@ -145,9 +142,7 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result =
-                    passkeysService.retrievePasskeys(
-                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
+            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isSuccess());
             assertEquals(1, result.getSuccess().passkeys().size());
             assertEquals("123456", result.getSuccess().passkeys().get(0).passkeyId());
@@ -167,9 +162,7 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result =
-                    passkeysService.hasActivePasskey(
-                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
@@ -190,9 +183,7 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result =
-                    passkeysService.hasActivePasskey(
-                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
@@ -220,9 +211,7 @@ class PasskeysServiceTest {
                             any()))
                     .thenThrow(e);
 
-            var result =
-                    passkeysService.hasActivePasskey(
-                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
@@ -239,9 +228,7 @@ class PasskeysServiceTest {
                             any()))
                     .thenReturn(httpResponse);
 
-            var result =
-                    passkeysService.retrievePasskeys(
-                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
+            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
             assertEquals(
                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, result.getFailure());
@@ -253,9 +240,7 @@ class PasskeysServiceTest {
                             any(), any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
 
-            var result =
-                    passkeysService.hasActivePasskey(
-                            PUBLIC_SUBJECT_ID, INTERNAL_COMMON_SUBJECT_ID, SESSION_ID);
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
 
             assertTrue(result.isFailure());
             assertEquals(PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN, result.getFailure());

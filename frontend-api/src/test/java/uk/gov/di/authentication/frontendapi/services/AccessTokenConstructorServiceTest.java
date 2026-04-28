@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_PAIRWISE_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 
 class AccessTokenConstructorServiceTest {
@@ -80,7 +80,7 @@ class AccessTokenConstructorServiceTest {
         // Act
         var result =
                 accessTokenConstructorService.createSignedAccessToken(
-                        INTERNAL_PAIRWISE_ID,
+                        PUBLIC_SUBJECT_ID,
                         accessTokenScope,
                         SESSION_ID,
                         NOW,
@@ -100,7 +100,7 @@ class AccessTokenConstructorServiceTest {
         assertEquals(expectedScope, claims.getClaim("scope"));
         assertEquals(ISSUER, claims.getIssuer());
         assertEquals(AUDIENCE, claims.getAudience().get(0));
-        assertEquals(INTERNAL_PAIRWISE_ID, claims.getSubject());
+        assertEquals(PUBLIC_SUBJECT_ID, claims.getSubject());
         assertEquals(AMC_CLIENT_ID, claims.getClaim("client_id"));
         assertEquals(SESSION_ID, claims.getClaim("sid"));
         assertEquals(NOW, claims.getIssueTime());
@@ -117,7 +117,7 @@ class AccessTokenConstructorServiceTest {
         // Act
         var result =
                 accessTokenConstructorService.createSignedAccessToken(
-                        INTERNAL_PAIRWISE_ID,
+                        PUBLIC_SUBJECT_ID,
                         AccountDataScope.PASSKEY_CREATE,
                         SESSION_ID,
                         NOW,

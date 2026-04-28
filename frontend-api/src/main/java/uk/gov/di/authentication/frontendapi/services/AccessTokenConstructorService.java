@@ -30,7 +30,7 @@ public class AccessTokenConstructorService {
     }
 
     public Result<JwtFailureReason, BearerAccessToken> createSignedAccessToken(
-            String internalPairwiseSubject,
+            String publicSubjectId,
             AccessTokenScope scope,
             String sessionId,
             Date issueTime,
@@ -47,7 +47,7 @@ public class AccessTokenConstructorService {
                         .expirationTime(expiryDate)
                         .issueTime(issueTime)
                         .notBeforeTime(issueTime)
-                        .subject(internalPairwiseSubject)
+                        .subject(publicSubjectId)
                         .claim("client_id", clientId)
                         .claim("sid", sessionId)
                         .jwtID(UUID.randomUUID().toString())
