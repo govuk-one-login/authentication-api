@@ -124,6 +124,10 @@ public class UserInfoService {
             userInfo.setClaim(
                     AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue(),
                     tmpUserInfo.getClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()));
+            userInfo.setClaim(
+                    AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue(),
+                    tmpUserInfo.getClaim(
+                            AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
         }
         if (accessTokenInfo.scopes().contains(CustomScopeValue.WALLET_SUBJECT_ID.getValue())) {
             var walletSubjectID = calculateWalletSubjectID(accessTokenInfo);

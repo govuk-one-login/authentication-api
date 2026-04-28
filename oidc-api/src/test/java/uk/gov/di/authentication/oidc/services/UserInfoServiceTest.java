@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
@@ -38,6 +39,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -136,6 +138,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
+        assertNull(userInfo.getClaim(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
     }
 
     @Test
@@ -177,6 +180,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+        assertNull(userInfo.getClaim(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
     }
 
     @Nested
@@ -207,6 +211,8 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+            assertNull(
+                    userInfo.getClaim(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
         }
 
         @Test
@@ -263,6 +269,8 @@ class UserInfoServiceTest {
             assertThat(passportClaim.toJSONString(), equalTo(PASSPORT_CLAIM));
             assertThat(drivingPermitClaim.toJSONString(), equalTo(DRIVING_PERMIT));
             assertThat(returnCodeClaim.toJSONString(), equalTo(RETURN_CODE));
+            assertNull(
+                    userInfo.getClaim(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/address");
@@ -298,6 +306,8 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+            assertNull(
+                    userInfo.getClaim(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
         }
 
         @Test
@@ -327,6 +337,8 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+            assertNull(
+                    userInfo.getClaim(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
         }
 
         @Test
@@ -367,8 +379,57 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
+            assertNull(
+                    userInfo.getClaim(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
+        }
+
+        @Test
+        void shouldJustPopulateAccountDataApiAccessTokenClaimWhenOnlyAmScopeIsPresent()
+                throws AccessTokenException, ClientNotFoundException, ParseException {
+            givenThereIsUserInfo();
+            when(configurationService.isIdentityEnabled()).thenReturn(false);
+            var scopes =
+                    List.of(
+                            OIDCScopeValue.OPENID.getValue(),
+                            CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
+
+            var accessTokenInfo =
+                    new AccessTokenInfo(
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
+                            SUBJECT.getValue(),
+                            scopes,
+                            null,
+                            CLIENT_ID);
+
+            UserInfo testUserInfo = new UserInfo(INTERNAL_SUBJECT);
+            testUserInfo.setEmailAddress(EMAIL);
+            testUserInfo.setEmailVerified(true);
+            testUserInfo.setPhoneNumber(PHONE_NUMBER);
+            testUserInfo.setPhoneNumberVerified(true);
+            testUserInfo.setClaim(
+                    AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue(), "test-token");
+
+            when(userInfoStorageService.getAuthenticationUserInfo(
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID))
+                    .thenReturn(Optional.of(testUserInfo));
+
+            var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+
+            assertEquals(
+                    "test-token",
+                    userInfo.getClaim(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
+            assertNull(userInfo.getPhoneNumber());
+            assertNull(userInfo.getPhoneNumberVerified());
+            assertNull(userInfo.getEmailAddress());
+            assertNull(userInfo.getEmailVerified());
+            assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
     }
 
