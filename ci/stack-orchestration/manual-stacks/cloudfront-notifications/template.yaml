@@ -1,0 +1,199 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Rules:
+  MustBeDeployedInUSEast1:
+    Assertions:
+      - Assert: !Equals [!Ref AWS::Region, "us-east-1"]
+        AssertDescription: "Template must be deployed in us-east-1"
+
+Parameters:
+  Environment:
+    Type: String
+    Description: The name of the environment to deploy to
+    AllowedValues:
+      - dev
+      - build
+      - staging
+      - integration
+      - production
+  DeployPagerDutySnsTopic:
+    Type: String
+    Description: |
+      Should deploy the PagerDuty SNS topic. Should only be set to yes once the secrets have been setup.
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "No"
+  DeploySlackNotificationTopic:
+    Type: String
+    Description: |
+      Should deploy the Slack Notification SNS topic. Should only be set to yes once the secrets have been setup.
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "No"
+
+Conditions:
+  DeployPagerDutyIntegration:
+    !And [
+      !Equals [!Ref Environment, production],
+      !Equals [!Ref DeployPagerDutySnsTopic, "Yes"],
+    ]
+  DeployPagerDutySecrets: !Equals [!Ref Environment, production]
+  DeploySlackIntegration:
+    !And [
+      !Equals [!Ref DeploySlackNotificationTopic, "Yes"],
+      !Or [
+        !Equals [dev, !Ref Environment],
+        !Equals [build, !Ref Environment],
+        !Equals [staging, !Ref Environment],
+        !Equals [integration, !Ref Environment],
+      ],
+    ]
+  DeploySlackSecrets:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+    ]
+
+Resources:
+  #region Production PagerDuty resources
+
+  PagerDutyUrlSecret:
+    # This needs to be manually populated
+    Condition: DeployPagerDutySecrets
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: pager_duty_url
+
+  CloudFrontCacheHitPagerDutySnsTopic:
+    Condition: DeployPagerDutyIntegration
+    Type: AWS::SNS::Topic
+    Properties:
+      # No customer managed key as it is this is only used for alerting
+      DisplayName: !Sub "CloudFront Cache Hit alerts PagerDuty SNS topic"
+      TopicName: !Sub ${Environment}-oidc-cloudfront-cache-hit-alerts
+
+  CloudFrontCacheHitPagerDutyTopicPolicy:
+    Condition: DeployPagerDutyIntegration
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref CloudFrontCacheHitPagerDutySnsTopic
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sns:Publish
+            Effect: Allow
+            Resource: !Ref CloudFrontCacheHitPagerDutySnsTopic
+            Principal:
+              Service:
+                - cloudwatch.amazonaws.com
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+
+  PagerDutySNSSubscription:
+    Condition: DeployPagerDutyIntegration
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Sub
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:integrationURL}}"
+        - SecretArn: !Ref PagerDutyUrlSecret
+      Protocol: https
+      RawMessageDelivery: true
+      TopicArn: !Ref CloudFrontCacheHitPagerDutySnsTopic
+  #endregion
+
+  #region non-prod Slack events resources
+
+  SlackWebHookUrlSecret:
+    # This needs to be manually populated
+    Condition: DeploySlackSecrets
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: slack_webhook_url
+
+  SlackChannelIdSecret:
+    # This needs to be manually populated
+    Condition: DeploySlackSecrets
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: slack_channel_id
+
+  CloudFrontCacheHitSlackNotificationsTopic:
+    Condition: DeploySlackIntegration
+    Type: AWS::SNS::Topic
+    Properties:
+      # No customer managed key as it is this is only used for alerting
+      DisplayName: !Sub "CloudFront Cache Hit alerts Slack SNS topic"
+      TopicName: !Sub ${Environment}-oidc-cloudfront-cache-hit-alerts
+
+  CloudFrontCacheHitSlackNotificationsTopicPolicy:
+    Condition: DeploySlackIntegration
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref CloudFrontCacheHitSlackNotificationsTopic
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sns:Publish
+            Effect: Allow
+            Resource: !Ref CloudFrontCacheHitSlackNotificationsTopic
+            Principal:
+              Service:
+                - cloudwatch.amazonaws.com
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+
+  CloudFrontCacheHitTopicLambdaPermission:
+    Condition: DeploySlackIntegration
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CloudFrontCacheHitSlackNotificationsLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Ref CloudFrontCacheHitSlackNotificationsTopic
+
+  CloudFrontCacheHitSlackNotificationsLambdaFunction:
+    Condition: DeploySlackIntegration
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Environment}-CloudFrontSlackNotifications
+      CodeUri: .
+      Handler: index.handler
+      ReservedConcurrentExecutions: 1
+      Runtime: "nodejs24.x"
+      Environment:
+        Variables:
+          SLACK_WEBHOOK_SECRET_ARN: !Ref SlackWebHookUrlSecret
+          SLACK_CHANNEL_ID_SECRET_ARN: !Ref SlackChannelIdSecret
+      Policies:
+        - Statement:
+            - Sid: AllowGetSlackSecrets
+              Effect: "Allow"
+              Action:
+                - "secretsmanager:GetSecretValue"
+              Resource:
+                - !Ref SlackWebHookUrlSecret
+                - !Ref SlackChannelIdSecret
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+      Events:
+        SNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref CloudFrontCacheHitSlackNotificationsTopic
+    Metadata:
+      BuildProperties:
+        External:
+          - "@aws-sdk/*" # AWS SDK v3 dependencies are already included in the lambda runtime
+        UseNpmCi: true
+#endregion
