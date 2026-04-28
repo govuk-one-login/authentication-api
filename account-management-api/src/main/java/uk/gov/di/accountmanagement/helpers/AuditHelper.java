@@ -51,12 +51,11 @@ public class AuditHelper {
         }
     }
 
-    public static Result<ErrorResponse, AuditContext>
-            accountManagementAuditContextWithoutJourneyType(
-                    ConfigurationService configurationService,
-                    AuthenticationService authenticationService,
-                    APIGatewayProxyRequestEvent input,
-                    UserProfile userProfile) {
+    public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
+            ConfigurationService configurationService,
+            AuthenticationService authenticationService,
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile) {
         try {
             return Result.success(
                     new AuditContext(
@@ -82,31 +81,6 @@ public class AuditHelper {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
-    }
-
-    public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
-            ConfigurationService configurationService,
-            AuthenticationService authenticationService,
-            APIGatewayProxyRequestEvent input,
-            UserProfile userProfile) {
-        return accountManagementAuditContextWithoutJourneyType(
-                        configurationService, authenticationService, input, userProfile)
-                .map(context -> context.withMetadataItem(ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR));
-    }
-
-    public static Result<ErrorResponse, Void> sendAuditEvent(
-            AccountManagementAuditableEvent auditEvent,
-            AuditContext auditContext,
-            AuditService auditService,
-            Logger logger) {
-        try {
-            auditService.submitAuditEvent(auditEvent, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
-        } catch (Exception e) {
-            logger.error("Error submitting audit event", e);
-            return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
-        }
-
-        return Result.success(null);
     }
 
     public static Result<ErrorResponse, Void> sendAuditEvent(
