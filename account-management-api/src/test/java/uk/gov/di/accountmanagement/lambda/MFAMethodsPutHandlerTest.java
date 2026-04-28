@@ -635,16 +635,12 @@ class MFAMethodsPutHandlerTest {
         var expectedAuditContext =
                 BASE_AUDIT_CONTEXT
                         .withPhoneNumber(UK_MOBILE_NUMBER)
-                        .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()))
                         .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                         .withMetadataItem(pair("notification-type", "MFA_SMS"))
                         .withMetadataItem(pair("account-recovery", "false"))
-                        .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()))
                         .withMetadataItem(
                                 pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()))
                         .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()));
-        // journey type repeated here (also in base context)- to fix
-        // mfa type also repeated - to fix
 
         verify(auditService)
                 .submitAuditEvent(
@@ -1323,9 +1319,7 @@ class MFAMethodsPutHandlerTest {
                 BASE_AUDIT_CONTEXT
                         .withPhoneNumber(null)
                         .withMetadataItem(pair("mfa-type", "AUTH_APP"))
-                        .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()))
-                        .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
-        // Journey type duplicated here - in base context
+                        .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
 
         verify(auditService)
                 .submitAuditEvent(

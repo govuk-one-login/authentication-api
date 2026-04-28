@@ -702,7 +702,6 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
 
-            // Query: should this instead be reflecting the method that has failed to add? Ie sms
             var expectedMfaMethodAddFailedAuditContext =
                     BASE_AUDIT_CONTEXT
                             .withPhoneNumber(null)
