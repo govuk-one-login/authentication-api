@@ -17,7 +17,8 @@ public enum AuthUserInfoClaims {
     VERIFIED_MFA_METHOD_TYPE("verified_mfa_method_type"),
     NEW_ACCOUNT("new_account"),
     UPLIFT_REQUIRED("uplift_required"),
-    ACHIEVED_CREDENTIAL_STRENGTH("achieved_credential_strength");
+    ACHIEVED_CREDENTIAL_STRENGTH("achieved_credential_strength"),
+    ACCOUNT_DATA_API_ACCESS_TOKEN("account_data_api_access_token");
 
     private final String value;
 
