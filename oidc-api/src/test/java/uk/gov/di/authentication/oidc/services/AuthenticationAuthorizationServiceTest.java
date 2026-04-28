@@ -68,6 +68,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.samePropertyValuesAs;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,6 +85,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
 import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX;
 import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY;
+import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.EMAIL;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
@@ -207,6 +209,7 @@ class AuthenticationAuthorizationServiceTest {
                             .readValue(claimsSet.getClaim("claim").toString(), Map.class);
             var actualUserInfoClaims = (Map<String, String>) actualUserinfo.get("userinfo");
             assertRequiredUserInfoClaimsAreSet(actualUserInfoClaims);
+            assertFalse(actualUserInfoClaims.containsKey(ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
         }
 
         @Test
@@ -242,6 +245,7 @@ class AuthenticationAuthorizationServiceTest {
             assertRequiredUserInfoClaimsAreSet(actualUserInfoClaims);
             assertTrue(actualUserInfoClaims.containsKey(PHONE_NUMBER.getValue()));
             assertTrue(actualUserInfoClaims.containsKey(SALT.getValue()));
+            assertFalse(actualUserInfoClaims.containsKey(ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
         }
 
         @Test
@@ -292,6 +296,7 @@ class AuthenticationAuthorizationServiceTest {
                             .readValue(claimsSet.getClaim("claim").toString(), Map.class);
             var actualUserInfoClaims = (Map<String, String>) actualUserinfo.get("userinfo");
             assertRequiredUserInfoClaimsAreSet(actualUserInfoClaims);
+            assertFalse(actualUserInfoClaims.containsKey(ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
         }
 
         @Test
@@ -469,7 +474,8 @@ class AuthenticationAuthorizationServiceTest {
         }
 
         @Test
-        void shouldAddPublicSubjectIdClaimIfAuthRequestHasAmScope() throws Exception {
+        void shouldAddPublicSubjectIdClaimAndAccountDataApiAccessTokenClaimIfAuthRequestHasAmScope()
+                throws Exception {
             var authRequest =
                     authRequestBuilder(AUTH_ONLY_VTR).scope(Scope.parse("openid am")).build();
             authService.generateAuthRedirectRequest(
@@ -491,6 +497,7 @@ class AuthenticationAuthorizationServiceTest {
                             .readValue(claimsSet.getClaim("claim").toString(), Map.class);
             var actualUserInfoClaims = (Map<String, String>) actualUserinfo.get("userinfo");
             assertTrue(actualUserInfoClaims.containsKey(PUBLIC_SUBJECT_ID.getValue()));
+            assertTrue(actualUserInfoClaims.containsKey(ACCOUNT_DATA_API_ACCESS_TOKEN.getValue()));
         }
 
         @Test
