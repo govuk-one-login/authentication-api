@@ -31,7 +31,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         super(AuthSessionItem.class, "auth-session", configurationService);
         this.timeToLive = configurationService.getSessionExpiry();
         this.configurationService = configurationService;
-        this.useConsistentReads = configurationService.isUsingStronglyConsistentReads();
+        this.useConsistentReads = configurationService.isAuthSessionUsingStronglyConsistentReads();
         LOG.info("Is using strongly consistent reads: {}", useConsistentReads);
     }
 
@@ -42,7 +42,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
         this.configurationService = configurationService;
-        this.useConsistentReads = configurationService.isUsingStronglyConsistentReads();
+        this.useConsistentReads = configurationService.isAuthSessionUsingStronglyConsistentReads();
         LOG.info("Is using strongly consistent reads: {}", useConsistentReads);
     }
 

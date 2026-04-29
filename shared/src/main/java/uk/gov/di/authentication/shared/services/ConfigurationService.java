@@ -841,9 +841,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals(FEATURE_SWITCH_ON);
     }
 
-    public boolean isUsingStronglyConsistentReads() {
+    public boolean isAuthSessionUsingStronglyConsistentReads() {
         return System.getenv()
-                .getOrDefault("USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_OFF)
+                .getOrDefault("AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 

@@ -95,11 +95,11 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS:
+          AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              useStronglyConsistentReads,
+              authSessionUseStronglyConsistentReads,
             ]
           FORCED_MFA_RESET_AFTER_MFA_CHECK_ENABLED:
             !FindInMap [
