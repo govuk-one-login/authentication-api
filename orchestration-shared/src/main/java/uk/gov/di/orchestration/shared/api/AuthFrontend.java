@@ -72,7 +72,7 @@ public class AuthFrontend implements CommonFrontend {
         return buildURI(frontendBaseUri, "ipv-callback-session-expiry-error");
     }
 
-    public URI sessionEndedUri() {
+    public URI sessionEndedURI() {
         return buildURI(frontendBaseUri, "session-ended");
     }
 }

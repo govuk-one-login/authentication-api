@@ -143,7 +143,7 @@ class AuthFrontendTest {
     @Test
     void sessionEndedURIReturnsCorrectUri() {
         var expectedUri = URI.create("https://auth.frontend/session-ended");
-        var actualUri = authFrontend.sessionEndedUri();
+        var actualUri = authFrontend.sessionEndedURI();
         assertThat(actualUri, equalTo(expectedUri));
     }
 }
