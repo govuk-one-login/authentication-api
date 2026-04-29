@@ -50,6 +50,32 @@ Resources:
                           DefaultValue: "",
                         ]
                       - !Ref AWS::NoValue
+                    - !If
+                      - AddAmcApiVpcEndpointId
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          amcApiVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+                      - !Ref AWS::NoValue
+            - !If
+              - AddAmcApiVpcEndpointId
+              - Effect: Deny
+                Action: "execute-api:Invoke"
+                Principal: "*"
+                NotResource:
+                  - "execute-api:/*/GET/.well-known/amc-jwks.json"
+                Condition:
+                  StringEquals:
+                    aws:SourceVpce:
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          amcApiVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+              - !Ref AWS::NoValue
       DefinitionBody:
         openapi: "3.0.1" # workaround to get `sam validate` to work
         Fn::Transform:
@@ -67,6 +93,15 @@ Resources:
                 EnvironmentConfiguration,
                 !Ref Environment,
                 EvcsApiVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
+          - !If
+            - AddAmcApiVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                amcApiVpcEndpointId,
                 DefaultValue: "",
               ]
             - !Ref AWS::NoValue
