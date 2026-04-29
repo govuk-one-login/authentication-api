@@ -339,6 +339,7 @@ public class AuthenticationAuthorizationService {
         if (amScopePresent) {
             LOG.info("am scope is present. Adding the public_subject_id claim");
             claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
+            claimsSet.add(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN);
         } else if (PUBLIC.toString().equalsIgnoreCase(clientRegistry.getSubjectType())) {
             LOG.info("client has PUBLIC subjectType. Adding the public_subject_id claim");
             claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
