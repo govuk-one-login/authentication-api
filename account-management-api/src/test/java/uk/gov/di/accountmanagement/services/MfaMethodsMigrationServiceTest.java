@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -42,16 +41,17 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.TXMA_ENCODED_HEADER_VALUE;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.ALREADY_MIGRATED;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS;
@@ -70,6 +70,16 @@ class MfaMethodsMigrationServiceTest {
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
     private static final String MFA_IDENTIFIER = "some-mfa-identifier";
+    private static final AuditContext BASE_AUDIT_CONTEXT =
+            AuditContext.emptyAuditContext()
+                    .withEmail(EMAIL)
+                    .withClientId(TEST_CLIENT)
+                    .withIpAddress(IP_ADDRESS)
+                    .withPersistentSessionId(PERSISTENT_ID)
+                    .withSessionId(SESSION_ID)
+                    .withSubjectId(TEST_PUBLIC_SUBJECT)
+                    .withClientSessionId(TEST_CLIENT)
+                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -227,30 +237,27 @@ class MfaMethodsMigrationServiceTest {
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
 
             // Then
-            ArgumentCaptor<AuditContext> auditContextCaptor =
-                    ArgumentCaptor.forClass(AuditContext.class);
+            var expectedAuditContext =
+                    BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
+
+            if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
+                expectedAuditContext =
+                        expectedAuditContext.withMetadataItem(
+                                pair("phone_number_country_code", "44"));
+            }
+
+            expectedAuditContext =
+                    expectedAuditContext
+                            .withMetadataItem(pair("had-partial", true))
+                            .withMetadataItem(pair("mfa-type", expectedMfaMethodType))
+                            .withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT))
+                            .withMetadataItem(pair("migration-succeeded", true));
+
             verify(auditService)
                     .submitAuditEvent(
-                            eq(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED),
-                            auditContextCaptor.capture(),
-                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-
-            AuditContext capturedContext = auditContextCaptor.getValue();
-
-            containsMetadataPair(
-                    capturedContext, "journey-type", JourneyType.ACCOUNT_MANAGEMENT.name());
-            containsMetadataPair(capturedContext, "mfa-type", expectedMfaMethodType.getValue());
-            containsMetadataPair(capturedContext, "migration-succeeded", "true");
-            if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
-                containsMetadataPair(capturedContext, "phone_number_country_code", "44");
-            }
-            assertEquals(EMAIL, capturedContext.email());
-            assertEquals(TEST_CLIENT, capturedContext.clientSessionId());
-            assertEquals("123.123.123.123", capturedContext.ipAddress());
-            assertEquals(PERSISTENT_ID, capturedContext.persistentSessionId());
-            assertEquals(userProfile.getPhoneNumber(), capturedContext.phoneNumber());
-            assertEquals(SESSION_ID, capturedContext.sessionId());
-            assertEquals(TEST_PUBLIC_SUBJECT, capturedContext.subjectId());
+                            AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
+                            expectedAuditContext,
+                            AUDIT_EVENT_COMPONENT_ID_HOME);
         }
 
         @ParameterizedTest
@@ -267,30 +274,27 @@ class MfaMethodsMigrationServiceTest {
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
 
             // Then
-            ArgumentCaptor<AuditContext> auditContextCaptor =
-                    ArgumentCaptor.forClass(AuditContext.class);
+            var expectedAuditContext =
+                    BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
+
+            if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
+                expectedAuditContext =
+                        expectedAuditContext.withMetadataItem(
+                                pair("phone_number_country_code", "44"));
+            }
+
+            expectedAuditContext =
+                    expectedAuditContext
+                            .withMetadataItem(pair("had-partial", false))
+                            .withMetadataItem(pair("mfa-type", expectedMfaMethodType))
+                            .withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT))
+                            .withMetadataItem(pair("migration-succeeded", false));
+
             verify(auditService)
                     .submitAuditEvent(
-                            eq(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED),
-                            auditContextCaptor.capture(),
-                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-
-            AuditContext capturedContext = auditContextCaptor.getValue();
-
-            containsMetadataPair(
-                    capturedContext, "journey-type", JourneyType.ACCOUNT_MANAGEMENT.name());
-            containsMetadataPair(capturedContext, "mfa-type", expectedMfaMethodType.getValue());
-            containsMetadataPair(capturedContext, "migration-succeeded", "false");
-            if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
-                containsMetadataPair(capturedContext, "phone_number_country_code", "44");
-            }
-            assertEquals(EMAIL, capturedContext.email());
-            assertEquals(TEST_CLIENT, capturedContext.clientSessionId());
-            assertEquals("123.123.123.123", capturedContext.ipAddress());
-            assertEquals(PERSISTENT_ID, capturedContext.persistentSessionId());
-            assertEquals(userProfile.getPhoneNumber(), capturedContext.phoneNumber());
-            assertEquals(SESSION_ID, capturedContext.sessionId());
-            assertEquals(TEST_PUBLIC_SUBJECT, capturedContext.subjectId());
+                            AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
+                            expectedAuditContext,
+                            AUDIT_EVENT_COMPONENT_ID_HOME);
         }
     }
 
@@ -300,7 +304,7 @@ class MfaMethodsMigrationServiceTest {
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("clientId", TEST_CLIENT);
         proxyRequestContext.setAuthorizer(authorizerParams);
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp(IP_ADDRESS));
         Map<String, String> headers =
                 Map.of(
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
@@ -319,15 +323,5 @@ class MfaMethodsMigrationServiceTest {
                                 Map.entry("mfaIdentifier", MFA_IDENTIFIER)))
                 .withHeaders(headers)
                 .withRequestContext(proxyRequestContext);
-    }
-
-    private void containsMetadataPair(AuditContext capturedObject, String field, String value) {
-        capturedObject
-                .getMetadataItemByKey(field)
-                .ifPresent(
-                        actualMetadataPairForMfaMethod -> {
-                            assertEquals(field, actualMetadataPairForMfaMethod.key());
-                            assertEquals(value, actualMetadataPairForMfaMethod.value().toString());
-                        });
     }
 }
