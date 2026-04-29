@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -70,15 +71,16 @@ class MfaMethodsMigrationServiceTest {
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
     private static final String MFA_IDENTIFIER = "some-mfa-identifier";
-    private static final AuditContext BASE_AUDIT_CONTEXT = AuditContext.emptyAuditContext()
-            .withEmail(EMAIL)
-            .withClientId(TEST_CLIENT)
-            .withIpAddress(IP_ADDRESS)
-            .withPersistentSessionId(PERSISTENT_ID)
-            .withSessionId(SESSION_ID)
-            .withSubjectId(TEST_PUBLIC_SUBJECT)
-            .withClientSessionId(TEST_CLIENT)
-            .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE));
+    private static final AuditContext BASE_AUDIT_CONTEXT =
+            AuditContext.emptyAuditContext()
+                    .withEmail(EMAIL)
+                    .withClientId(TEST_CLIENT)
+                    .withIpAddress(IP_ADDRESS)
+                    .withPersistentSessionId(PERSISTENT_ID)
+                    .withSessionId(SESSION_ID)
+                    .withSubjectId(TEST_PUBLIC_SUBJECT)
+                    .withClientSessionId(TEST_CLIENT)
+                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -222,7 +224,8 @@ class MfaMethodsMigrationServiceTest {
 
         @ParameterizedTest
         @MethodSource("auditEventsExpectedResponsesForMfaTypes")
-        void shouldEmitAuditEventWhenMigrationSuccessful(MfaDetail mfaDetail, MFAMethodType expectedMfaMethodType) {
+        void shouldEmitAuditEventWhenMigrationSuccessful(
+                MfaDetail mfaDetail, MFAMethodType expectedMfaMethodType) {
             // Given
             var userProfile = new UserProfile().withEmail(EMAIL).withMfaMethodsMigrated(false);
             var input = generateApiGatewayEvent();
@@ -235,23 +238,25 @@ class MfaMethodsMigrationServiceTest {
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
 
             // Then
-            var expectedAuditContext = BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
+            var expectedAuditContext =
+                    BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
 
+            var expectedMetadataPairs = new ArrayList<AuditService.MetadataPair>();
             if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
-                expectedAuditContext = expectedAuditContext.withMetadataItem(pair("phone_number_country_code", "44"));
+                expectedMetadataPairs.add(pair("phone_number_country_code", "44"));
             }
 
-            expectedAuditContext = expectedAuditContext
-                    .withMetadataItem(pair("had-partial", true))
-                    .withMetadataItem(pair("mfa-type", expectedMfaMethodType))
-                    .withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT))
-                    .withMetadataItem(pair("migration-succeeded", true));
+            expectedMetadataPairs.add(pair("had-partial", true));
+            expectedMetadataPairs.add(pair("mfa-type", expectedMfaMethodType));
+            expectedMetadataPairs.add(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT));
+            expectedMetadataPairs.add(pair("migration-succeeded", true));
 
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
                             expectedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            expectedMetadataPairs.toArray(new AuditService.MetadataPair[0]));
         }
 
         @ParameterizedTest
@@ -268,23 +273,25 @@ class MfaMethodsMigrationServiceTest {
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
 
             // Then
-            var expectedAuditContext = BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
+            var expectedAuditContext =
+                    BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
 
+            var expectedMetadataPairs = new ArrayList<AuditService.MetadataPair>();
             if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
-                expectedAuditContext = expectedAuditContext.withMetadataItem(pair("phone_number_country_code", "44"));
+                expectedMetadataPairs.add(pair("phone_number_country_code", "44"));
             }
 
-            expectedAuditContext = expectedAuditContext
-                    .withMetadataItem(pair("had-partial", false))
-                    .withMetadataItem(pair("mfa-type", expectedMfaMethodType))
-                    .withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT))
-                    .withMetadataItem(pair("migration-succeeded", false));
+            expectedMetadataPairs.add(pair("had-partial", false));
+            expectedMetadataPairs.add(pair("mfa-type", expectedMfaMethodType));
+            expectedMetadataPairs.add(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT));
+            expectedMetadataPairs.add(pair("migration-succeeded", false));
 
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
                             expectedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            expectedMetadataPairs.toArray(new AuditService.MetadataPair[0]));
         }
     }
 
