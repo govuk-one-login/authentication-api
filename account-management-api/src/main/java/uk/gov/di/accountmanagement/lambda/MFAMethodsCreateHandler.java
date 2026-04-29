@@ -417,7 +417,8 @@ public class MFAMethodsCreateHandler
             AccountManagementAuditableEvent auditEvent,
             RequestSmsMfaDetail smsDetail) {
         var updatedContext =
-                context.withPhoneNumber(smsDetail.phoneNumber())
+                context.withPhoneNumber(
+                                PhoneNumberHelper.formatPhoneNumber(smsDetail.phoneNumber()))
                         .withMetadataItem(
                                 pair(
                                         AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,

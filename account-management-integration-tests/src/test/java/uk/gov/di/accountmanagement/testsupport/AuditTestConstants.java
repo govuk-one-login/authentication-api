@@ -7,4 +7,5 @@ public interface AuditTestConstants {
     String EXTENSIONS_MFA_METHOD = "extensions.mfa-method";
     String EXTENSIONS_MFA_TYPE = "extensions.mfa-type";
     String EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE = "extensions.phone_number_country_code";
+    String USER_PHONE = "user.phone";
 }
