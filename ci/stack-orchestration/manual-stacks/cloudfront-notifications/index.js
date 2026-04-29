@@ -13,31 +13,10 @@ const getSecretWithId = async (secretArn) => {
 };
 
 const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
-  var descriptionAndAccount = snsMessage.AlarmDescription.split("ACCOUNT:");
-  var runbook = null;
   var account = snsMessage.AWSAccountId;
-  if (descriptionAndAccount.length > 1) {
-    const runbookSplit = descriptionAndAccount[1].split("Runbook: ");
-    if (runbookSplit.length > 1) {
-      runbook = runbookSplit[1];
-    }
-    account = runbookSplit[0];
-  }
-  var description = descriptionAndAccount[0];
-  if (snsMessage.AlarmName.includes("pagerduty")) {
-    if (snsMessage.NewStateValue === "ALARM") {
-      description =
-        description +
-        "\n\nThis has triggered a PagerDuty alert for the following service:" +
-        "\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
-    }
-    if (snsMessage.NewStateValue === "OK") {
-      description =
-        description +
-        "\n\nThis has resolved the associated PagerDuty alert for the following service:" +
-        "\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
-    }
-  }
+
+  var description =
+    "OIDC Cloudfront CacheHit alarm triggered, this indicates our Cloudfront has started to serve cached responses.";
   var fields = [
     {
       title: "Status",
@@ -50,13 +29,13 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
       short: false,
     },
   ];
-  if (runbook != null) {
-    fields.push({
-      title: "Runbook",
-      value: runbook.trim(),
-      short: false,
-    });
-  }
+
+  fields.push({
+    title: "Runbook:",
+    value: "https://govukverify.atlassian.net/wiki/x/AYC0gwE",
+    short: false,
+  });
+
   return {
     attachments: [
       {
@@ -72,7 +51,9 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
 };
 
 const sendAlertToSlack = async function (messageRequestBody) {
-  const slackHookUrl = getSecretWithId(process.env.SLACK_WEBHOOK_SECRET_ARN);
+  const slackHookUrl = await getSecretWithId(
+    process.env.SLACK_WEBHOOK_SECRET_ARN,
+  );
   const messageRequest = {
     method: "post",
     headers: {
