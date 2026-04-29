@@ -7,6 +7,7 @@ import uk.gov.di.orchestration.local.initialisers.ParameterInitialiser;
 import uk.gov.di.orchestration.local.initialisers.SqsInitialiser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.helpers.Argon2EncoderHelper;
@@ -86,7 +87,13 @@ public class App {
                                 .withServiceType(ServiceType.MANDATORY.name())
                                 .withSubjectType("public")
                                 .withClientType(ClientType.WEB.getValue())
-                                .withIdentityVerificationSupported(true),
+                                .withIdentityVerificationSupported(true)
+                                .withClientLoCs(
+                                        List.of(
+                                                LevelOfConfidence.NONE.getValue(),
+                                                LevelOfConfidence.LOW_LEVEL.getValue(),
+                                                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                                LevelOfConfidence.HIGH_LEVEL.getValue())),
                         // Clients for the OIDC conformance test suite
                         new ClientRegistry()
                                 .withClientID("oidc-conformance-test")
