@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
@@ -113,30 +114,23 @@ public class MfaMethodsMigrationService {
                         .withPhoneNumber(userProfile.getPhoneNumber())
                         .withTxmaAuditEncoded(AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+
         if (mfaMethod instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            auditContext =
-                    auditContext.withMetadataItem(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
-                                    PhoneNumberHelper.getCountry(
-                                            requestSmsMfaDetail.phoneNumber())));
+            var countryCode = PhoneNumberHelper.getCountry(requestSmsMfaDetail.phoneNumber());
+            metadataPairs.add(pair(AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, countryCode));
         }
 
-        auditContext =
-                auditContext.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL, hadPartial));
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.mfaMethodType()));
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_MANAGEMENT));
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED, migrationSucceeded));
+        metadataPairs.add(pair(AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL, hadPartial));
+        metadataPairs.add(pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.mfaMethodType()));
+        metadataPairs.add(
+                pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_MANAGEMENT));
+        metadataPairs.add(pair(AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED, migrationSucceeded));
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
                 auditContext,
-                AUDIT_EVENT_COMPONENT_ID_HOME);
+                AUDIT_EVENT_COMPONENT_ID_HOME,
+                metadataPairs.toArray(new AuditService.MetadataPair[0]));
     }
 }

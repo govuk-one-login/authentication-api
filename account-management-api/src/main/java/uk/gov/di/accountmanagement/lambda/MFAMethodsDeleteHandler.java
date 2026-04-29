@@ -30,6 +30,7 @@ import java.util.Map;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_DELETE_COMPLETED;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -164,7 +165,11 @@ public class MFAMethodsDeleteHandler
         auditService.submitAuditEvent(
                 AUTH_MFA_METHOD_DELETE_COMPLETED,
                 auditContextResult.getSuccess(),
-                AUDIT_EVENT_COMPONENT_ID_HOME);
+                AUDIT_EVENT_COMPONENT_ID_HOME,
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                        deleteResult.getSuccess().getMfaMethodType()));
 
         LOG.info("Audit event emitted.");
 
@@ -198,13 +203,8 @@ public class MFAMethodsDeleteHandler
                 mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.name())
                         ? mfaMethod.getDestination()
                         : AuditService.UNKNOWN;
-        var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType());
         return accountManagementAuditContext(
                         configurationService, dynamoService, input, userProfile)
-                .map(
-                        baseContext ->
-                                baseContext
-                                        .withPhoneNumber(phoneNumber)
-                                        .withMetadataItem(mfaTypePair));
+                .map(baseContext -> baseContext.withPhoneNumber(phoneNumber));
     }
 }
