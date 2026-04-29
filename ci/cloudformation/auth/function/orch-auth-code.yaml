@@ -40,6 +40,12 @@ Resources:
               !Ref Environment,
               enhancedAuthCodeProtectionEnabled,
             ]
+          AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              authSessionUseStronglyConsistentReads,
+            ]
       LoggingConfig:
         LogGroup: !Ref OrchAuthCodeFunctionLogGroup
       Policies:
