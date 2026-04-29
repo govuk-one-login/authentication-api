@@ -75,8 +75,8 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       # No customer managed key as it is this is only used for alerting
-      DisplayName: !Sub "CloudFront Cache Hit alerts PagerDuty SNS topic"
-      TopicName: !Sub ${Environment}-oidc-cloudfront-cache-hit-alerts
+      DisplayName: !Sub ${Environment}-CloudFrontCacheHitP1Alerts
+      TopicName: !Sub ${Environment}-CloudFrontCacheHitP1Alerts
 
   CloudFrontCacheHitPagerDutyTopicPolicy:
     Condition: DeployPagerDutyIntegration
@@ -130,8 +130,8 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       # No customer managed key as it is this is only used for alerting
-      DisplayName: !Sub "CloudFront Cache Hit alerts Slack SNS topic"
-      TopicName: !Sub ${Environment}-oidc-cloudfront-cache-hit-alerts
+      DisplayName: !Sub ${Environment}-CloudFrontCacheHitSlackAlerts
+      TopicName: !Sub ${Environment}-CloudFrontCacheHitSlackAlerts
 
   CloudFrontCacheHitSlackNotificationsTopicPolicy:
     Condition: DeploySlackIntegration
@@ -152,16 +152,6 @@ Resources:
               StringEquals:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
-  CloudFrontCacheHitTopicLambdaPermission:
-    Condition: DeploySlackIntegration
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref CloudFrontCacheHitSlackNotificationsLambdaFunction
-      Action: lambda:InvokeFunction
-      Principal: sns.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Ref CloudFrontCacheHitSlackNotificationsTopic
-
   CloudFrontCacheHitSlackNotificationsLambdaFunction:
     Condition: DeploySlackIntegration
     Type: AWS::Serverless::Function
@@ -170,7 +160,7 @@ Resources:
       CodeUri: .
       Handler: index.handler
       ReservedConcurrentExecutions: 1
-      Runtime: "nodejs24.x"
+      Runtime: nodejs22.x
       Environment:
         Variables:
           SLACK_WEBHOOK_SECRET_ARN: !Ref SlackWebHookUrlSecret

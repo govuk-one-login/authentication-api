@@ -5,6 +5,6 @@
   },
   {
     "ParameterKey": "DeploySlackNotificationTopic",
-    "ParameterValue": "No"
+    "ParameterValue": "Yes"
   }
 ]
