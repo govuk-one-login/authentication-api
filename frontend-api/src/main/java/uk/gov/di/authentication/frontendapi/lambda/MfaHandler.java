@@ -43,9 +43,11 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolder;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST;
@@ -178,12 +180,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             persistentSessionId);
-
-            auditContext =
-                    auditContext.withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType));
-            auditContext =
-                    auditContext.withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue()));
+            var journeyTypePair = pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType);
+            var mfaTypePair = pair("mfa-type", MFAMethodType.SMS.getValue());
 
             CodeRequestType.SupportedCodeType supportedCodeType =
                     CodeRequestType.SupportedCodeType.getFromMfaMethodType(
@@ -198,7 +196,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             if (!userContext.getAuthSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
-                auditService.submitAuditEvent(AUTH_MFA_MISMATCHED_EMAIL, auditContext);
+                auditService.submitAuditEvent(
+                        AUTH_MFA_MISMATCHED_EMAIL, auditContext, getMetadataPairs(journeyType));
 
                 return generateApiGatewayProxyErrorResponse(400, SESSION_ID_MISSING);
             }
@@ -233,7 +232,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             retrievedMfaMethods, request.getMfaMethodId(), MFAMethodType.SMS);
 
             if (maybeRequestedSmsMfaMethod.isEmpty()) {
-                auditService.submitAuditEvent(AUTH_MFA_MISSING_PHONE_NUMBER, auditContext);
+                auditService.submitAuditEvent(
+                        AUTH_MFA_MISSING_PHONE_NUMBER, auditContext, getMetadataPairs(journeyType));
                 return generateApiGatewayProxyErrorResponse(400, PHONE_NUMBER_NOT_REGISTERED);
             }
 
@@ -291,12 +291,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             .orElseGet(
                                     () -> generateAndSaveNewCode(codeIdentifier, notificationType));
 
-            auditContext =
-                    auditContext.withMetadataItem(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                    requestSmsMfaMethod.getPriority().toLowerCase()));
-
             AuditableEvent auditableEvent;
             if (testUserHelper.isTestJourney(userContext)) {
                 LOG.info(
@@ -321,7 +315,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 auditableEvent = FrontendAuditableEvent.AUTH_MFA_CODE_SENT;
             }
 
-            auditService.submitAuditEvent(auditableEvent, auditContext);
+            var metadataPairs = getMetadataPairsWithPriority(journeyType, requestSmsMfaMethod);
+            auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();
@@ -362,7 +357,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         }
         if (canSendSmsResult.getSuccess() instanceof Decision.ReauthLockedOut
                 || canSendSmsResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-            auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_MFA_INVALID_CODE_REQUEST, auditContext, getMetadataPairs(journeyType));
             var errorResponse =
                     afterActionRecorded ? TOO_MANY_MFA_OTPS_SENT : BLOCKED_FOR_SENDING_MFA_OTPS;
             return Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse));
@@ -383,7 +379,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR));
         }
         if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-            auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_MFA_INVALID_CODE_REQUEST, auditContext, getMetadataPairs(journeyType));
             return Optional.of(
                     generateApiGatewayProxyErrorResponse(400, TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         }
@@ -400,5 +397,21 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOG.warn("Failed to derive RP pairwise ID: {}", e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private AuditService.MetadataPair[] getMetadataPairsWithPriority(
+            JourneyType journeyType, MFAMethod requestSmsMfaMethod) {
+        var priorityPair =
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                        requestSmsMfaMethod.getPriority().toLowerCase());
+        return Stream.concat(Arrays.stream(getMetadataPairs(journeyType)), Stream.of(priorityPair))
+                .toArray(AuditService.MetadataPair[]::new);
+    }
+
+    private AuditService.MetadataPair[] getMetadataPairs(JourneyType journeyType) {
+        var journeyTypePair = pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType.getValue());
+        var mfaTypePair = pair("mfa-type", MFAMethodType.SMS.getValue());
+        return new AuditService.MetadataPair[] {journeyTypePair, mfaTypePair};
     }
 }
