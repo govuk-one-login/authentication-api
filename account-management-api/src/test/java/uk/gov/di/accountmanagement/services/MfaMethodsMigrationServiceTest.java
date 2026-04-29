@@ -52,6 +52,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.TXMA_ENCODED_HEADER_VALUE;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.ALREADY_MIGRATED;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS;
@@ -70,6 +71,15 @@ class MfaMethodsMigrationServiceTest {
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
     private static final String MFA_IDENTIFIER = "some-mfa-identifier";
+    private static final AuditContext BASE_AUDIT_CONTEXT = AuditContext.emptyAuditContext()
+            .withEmail(EMAIL)
+            .withClientId(TEST_CLIENT)
+            .withIpAddress("123.123.123.123")
+            .withPersistentSessionId(PERSISTENT_ID)
+            .withSessionId(SESSION_ID)
+            .withSubjectId(TEST_PUBLIC_SUBJECT)
+            .withClientSessionId(TEST_CLIENT)
+            .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -213,8 +223,7 @@ class MfaMethodsMigrationServiceTest {
 
         @ParameterizedTest
         @MethodSource("auditEventsExpectedResponsesForMfaTypes")
-        void shouldEmitAuditEventWhenMigrationSuccessful(
-                MfaDetail mfaDetail, MFAMethodType expectedMfaMethodType) {
+        void shouldEmitAuditEventWhenMigrationSuccessful(MfaDetail mfaDetail, MFAMethodType expectedMfaMethodType) {
             // Given
             var userProfile = new UserProfile().withEmail(EMAIL).withMfaMethodsMigrated(false);
             var input = generateApiGatewayEvent();
@@ -266,13 +275,23 @@ class MfaMethodsMigrationServiceTest {
             // When
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
 
+            var expectedAuditContext = BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
+
+            if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
+                expectedAuditContext = expectedAuditContext.withMetadataItem(pair("phone_number_country_code", "44"));
+            }
+            expectedAuditContext = expectedAuditContext.withMetadataItem(pair("had-partial", false))
+                    .withMetadataItem(pair("mfa-type", expectedMfaMethodType.getValue()))
+                    .withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT.name()))
+                    .withMetadataItem(pair("migration-succeeded", "false"));
+
             // Then
             ArgumentCaptor<AuditContext> auditContextCaptor =
                     ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService)
                     .submitAuditEvent(
                             eq(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED),
-                            auditContextCaptor.capture(),
+                            eq(expectedAuditContext),
                             eq(AUDIT_EVENT_COMPONENT_ID_HOME));
 
             AuditContext capturedContext = auditContextCaptor.getValue();
