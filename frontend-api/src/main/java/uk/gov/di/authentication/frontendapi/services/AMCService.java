@@ -70,6 +70,7 @@ public class AMCService {
             String amcRedirectUri,
             List<AccessTokenConfig> accessTokenConfigs,
             RSAPublicKey publicEncryptionKey,
+            String encryptionKeyId,
             State state) {
         LOG.info("Building AMC authorization URL");
 
@@ -81,6 +82,7 @@ public class AMCService {
                         authSessionItem,
                         accessTokenConfigs,
                         publicEncryptionKey,
+                        encryptionKeyId,
                         state)
                 .map(
                         encryptedJWTAndAmcCookie -> {
@@ -144,6 +146,7 @@ public class AMCService {
             AuthSessionItem authSessionItem,
             List<AccessTokenConfig> accessTokenConfigs,
             RSAPublicKey publicEncryptionKey,
+            String encryptionKeyId,
             State state) {
         Date issueTime = nowClock.now();
         Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
@@ -192,7 +195,7 @@ public class AMCService {
                         signedJWT -> {
                             var hashedCookie = HashHelper.hashSha256String(signedJWT.serialize());
                             return jwtService
-                                    .encryptJWT(signedJWT, publicEncryptionKey)
+                                    .encryptJWT(signedJWT, publicEncryptionKey, encryptionKeyId)
                                     .map(
                                             encryptedJWT ->
                                                     new EncryptedJWTAndAmcCookie(

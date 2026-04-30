@@ -218,6 +218,7 @@ class AMCServiceTest {
                             REDIRECT_URI,
                             accessTokenConfigs,
                             TEST_PUBLIC_ENCRYPTION_KEY,
+                            "test-key-id",
                             STATE);
 
             assertTrue(result.isSuccess());
@@ -273,6 +274,7 @@ class AMCServiceTest {
                             REDIRECT_URI,
                             ACCESS_TOKEN_CONFIG,
                             TEST_PUBLIC_ENCRYPTION_KEY,
+                            "test-key-id",
                             STATE);
 
             assertTrue(result.isFailure());
@@ -293,6 +295,7 @@ class AMCServiceTest {
                             REDIRECT_URI,
                             ACCESS_TOKEN_CONFIG,
                             TEST_PUBLIC_ENCRYPTION_KEY,
+                            "test-key-id",
                             STATE);
 
             assertTrue(result.isFailure());
@@ -339,6 +342,7 @@ class AMCServiceTest {
                             REDIRECT_URI,
                             ACCESS_TOKEN_CONFIG,
                             TEST_PUBLIC_ENCRYPTION_KEY,
+                            "test-key-id",
                             STATE);
 
             assertTrue(result.isFailure());
@@ -370,6 +374,7 @@ class AMCServiceTest {
                             REDIRECT_URI,
                             ACCESS_TOKEN_CONFIG,
                             TEST_PUBLIC_ENCRYPTION_KEY,
+                            "test-key-id",
                             STATE);
 
             assertTrue(result.isFailure());
@@ -595,20 +600,24 @@ class AMCServiceTest {
     private void mockJwtEncryption() throws KeySourceException {
         when(jwkSource.get(any(JWKSelector.class), isNull()))
                 .thenReturn(List.of(new RSAKey.Builder(TEST_PUBLIC_ENCRYPTION_KEY).build()));
-        when(jwtService.encryptJWT(any(SignedJWT.class), any(RSAPublicKey.class)))
+        when(jwtService.encryptJWT(any(SignedJWT.class), any(RSAPublicKey.class), any()))
                 .thenAnswer(
                         invocation -> {
                             SignedJWT signedJWT = invocation.getArgument(0);
                             RSAPublicKey publicKey = invocation.getArgument(1);
+                            String keyId = invocation.getArgument(2);
                             try {
+                                var headerBuilder =
+                                        new JWEHeader.Builder(
+                                                        JWEAlgorithm.RSA_OAEP_256,
+                                                        EncryptionMethod.A256GCM)
+                                                .contentType("JWT");
+                                if (keyId != null) {
+                                    headerBuilder.keyID(keyId);
+                                }
                                 JWEObject jweObject =
                                         new JWEObject(
-                                                new JWEHeader.Builder(
-                                                                JWEAlgorithm.RSA_OAEP_256,
-                                                                EncryptionMethod.A256GCM)
-                                                        .contentType("JWT")
-                                                        .build(),
-                                                new Payload(signedJWT));
+                                                headerBuilder.build(), new Payload(signedJWT));
                                 jweObject.encrypt(new RSAEncrypter(publicKey));
                                 return Result.success(EncryptedJWT.parse(jweObject.serialize()));
                             } catch (JOSEException | ParseException e) {

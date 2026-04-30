@@ -174,6 +174,19 @@ class JwtServiceTest {
             assertEquals(testSignedJwt.serialize(), encryptedJWT.getPayload().toString());
         }
 
+        @Test
+        void shouldIncludeKidInJWEHeaderWhenKeyIdProvided() throws JOSEException {
+            var publicKey = (RSAPublicKey) TEST_KEY_PAIR.getPublic();
+            var privateKey = (RSAPrivateKey) TEST_KEY_PAIR.getPrivate();
+
+            var result = jwtService.encryptJWT(testSignedJwt, publicKey, "test-kid");
+            var encryptedJWT = result.getSuccess();
+            encryptedJWT.decrypt(new RSADecrypter(privateKey));
+
+            assertEquals("test-kid", encryptedJWT.getHeader().getKeyID());
+            assertEquals(testSignedJwt.serialize(), encryptedJWT.getPayload().toString());
+        }
+
         // 512-bit key too short for RSA_OAEP_256 encryption so a JOSEException will be thrown
         @Test
         void shouldReturnEncryptionErrorFailureReasonWhenEncryptionFails() throws Exception {

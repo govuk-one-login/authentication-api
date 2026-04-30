@@ -103,15 +103,20 @@ public class JwtService {
 
     public Result<JwtFailureReason, EncryptedJWT> encryptJWT(
             SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) {
+        return encryptJWT(signedJWT, publicEncryptionKey, null);
+    }
+
+    public Result<JwtFailureReason, EncryptedJWT> encryptJWT(
+            SignedJWT signedJWT, RSAPublicKey publicEncryptionKey, String keyId) {
         try {
             LOG.info("Encrypting SignedJWT");
-            JWEObject jweObject =
-                    new JWEObject(
-                            new JWEHeader.Builder(
-                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
-                                    .contentType("JWT")
-                                    .build(),
-                            new Payload(signedJWT));
+            var headerBuilder =
+                    new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                            .contentType("JWT");
+            if (keyId != null) {
+                headerBuilder.keyID(keyId);
+            }
+            JWEObject jweObject = new JWEObject(headerBuilder.build(), new Payload(signedJWT));
             jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
             LOG.info("SignedJWT has been successfully encrypted");
             return Result.success(EncryptedJWT.parse(jweObject.serialize()));
