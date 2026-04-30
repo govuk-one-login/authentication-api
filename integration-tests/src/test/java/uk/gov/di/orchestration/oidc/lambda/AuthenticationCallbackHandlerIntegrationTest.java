@@ -111,8 +111,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     public static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
     public static final State RP_STATE = new State();
     public static final State ORCH_TO_AUTH_STATE = new State();
-    private static final String ERROR_ENDPOINT = "error";
     private static final String BLOCKED_ENDPOINT = "unavailable-permanent";
+    private static final String SESSION_ENDED_ENDPOINT = "session-ended";
     private static final String SUSPENDED_ENDPOINT = "unavailable-temporary";
 
     @RegisterExtension
@@ -325,11 +325,12 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenNoSessionCookieAndNoQueryParams() {
+    void shouldRedirectToSessionEndedPageWhenNoSessionCookieAndNoQueryParams() {
         var response = makeRequest(Optional.empty(), emptyMap(), emptyMap());
 
         var expectedURI =
-                buildURI(configurationService.getAuthFrontendBaseURL(), ERROR_ENDPOINT).toString();
+                buildURI(configurationService.getAuthFrontendBaseURL(), SESSION_ENDED_ENDPOINT)
+                        .toString();
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
     }

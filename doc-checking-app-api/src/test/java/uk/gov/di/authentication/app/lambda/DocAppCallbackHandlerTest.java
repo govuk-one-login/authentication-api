@@ -98,6 +98,8 @@ class DocAppCallbackHandlerTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
 
     private static final URI EXPECTED_ERROR_REDIRECT_URI = URI.create("https://example.com/error");
+    private static final URI EXPECTED_SESSION_ENDED_REDIRECT_URI =
+            URI.create("https://example.com/session-ended");
 
     private static final URI DOC_APP_CRI_V2_URI = URI.create("https://base-url.com/userinfo/v2");
     private static final URI CRI_URI = URI.create("http://cri/");
@@ -165,6 +167,7 @@ class DocAppCallbackHandlerTest {
                         docAppCriApi,
                         orchSessionService);
         when(authFrontend.errorURI()).thenReturn(EXPECTED_ERROR_REDIRECT_URI);
+        when(authFrontend.sessionEndedURI()).thenReturn(EXPECTED_SESSION_ENDED_REDIRECT_URI);
         when(docAppCriApi.criDataURI()).thenReturn(DOC_APP_CRI_V2_URI);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
@@ -506,7 +509,7 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void
-            shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
+            shouldRedirectToSessionEndedPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
                     throws NoSessionException {
         usingValidClientSession();
 
@@ -529,7 +532,7 @@ class DocAppCallbackHandlerTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get("Location"),
-                equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
+                equalTo(EXPECTED_SESSION_ENDED_REDIRECT_URI.toString()));
         assertThat(
                 redirectLogging.events(),
                 hasItem(
