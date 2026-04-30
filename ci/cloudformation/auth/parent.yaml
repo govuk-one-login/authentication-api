@@ -560,7 +560,7 @@ Mappings:
       amcSfadRedirectUri: https://signin.staging.account.gov.uk/sfad-callback
       amcTokenUri: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/token
       amcJourneyOutcomeUri: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
-      amcClientId: bb8ba862f42b4e5eb97cc0950f6419ca
+      amcClientId: auth
       accountDataApiId: 7xgl7lexy4
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: true
@@ -629,7 +629,7 @@ Mappings:
       amcSfadRedirectUri: https://signin.integration.account.gov.uk/sfad-callback
       amcTokenUri: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/token
       amcJourneyOutcomeUri: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
-      amcClientId: 0b649817932e4632861f1ab3fccb650d
+      amcClientId: auth
       accountDataApiId: hoidt6wujb
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
@@ -698,7 +698,7 @@ Mappings:
       amcSfadRedirectUri: https://signin.account.gov.uk/sfad-callback
       amcTokenUri: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/token
       amcJourneyOutcomeUri: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
-      amcClientId: be05e73e93e94626917b2bc0d7627cfa
+      amcClientId: auth
       accountDataApiId: 0218o1p9tj
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
