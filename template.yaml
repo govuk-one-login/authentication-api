@@ -140,6 +140,7 @@ Conditions:
       ],
     ]
   ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
+  UseCloudfront: !Equals [dev, !Ref Environment]
   ProvisionNewApiClientRegistryApiKey:
     !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
   UseStoredOldIdTokenPublicKeys:
@@ -5991,6 +5992,7 @@ Resources:
       Tags:
         Name: orchestration-oidc-api
         CheckovRulesToSkip: CKV_AWS_120
+        FMSRegionalPolicy: "false"
 
   OidcApiAccessLogGroup:
     Condition: ProvisionNewApiGateway
@@ -6013,6 +6015,16 @@ Resources:
       StageKeys:
         - RestApiId: !Ref OrchestrationOidcApi
           StageName: !Sub "${Environment}"
+
+  OrchestrationOidcApiWafAssociation:
+    Type: "AWS::WAFv2::WebACLAssociation"
+    Condition: UseCloudfront
+    Properties:
+      WebACLArn:
+        Fn::ImportValue: !Sub "${Environment}-oidc-cloudfront-CloakingOriginWebACLArn"
+      ResourceArn: !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${OrchestrationOidcApi}/stages/${Environment}"
+    DependsOn:
+      - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
 
   #endregion
 
