@@ -236,7 +236,7 @@ function main {
       execute_change_set "${STACK_NAME}" "${CHANGE_SET_NAME}"
     fi
   else
-    create_stack "${STACK_NAME}" "${template_path}" "${PARAMETERS_FILE}" "${TAGS_FILE}" # Creates a new stack
+    create_stack "${STACK_NAME}" "${TEMPLATE_PATH}" "${PARAMETERS_FILE}" "${TAGS_FILE}" # Creates a new stack
   fi
   get_stack_outputs "${STACK_NAME}" # Print the stack outputs
 }

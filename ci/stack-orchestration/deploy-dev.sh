@@ -17,6 +17,7 @@ PROVISION_VPC_STACK=false
 PROVISION_PIPELINE_STACK=false
 PROVISION_TXMA_STACK=false
 PROVISION_CLOUDWATCH_ALARM_STACK=false
+PROVISION_HOSTED_ZONE=false
 
 ENVIRONMENT=dev
 
@@ -59,6 +60,7 @@ function usage() {
     -c, --cloudwatch-alarm                 Provisions the cloudwatch alarm stack: A stack for deploying an alarm which
                                            monitors the lambda code storage and sends an alert when a threshold is reached.
                                            See confluence page: https://govukverify.atlassian.net/wiki/x/AwCc3Q
+    -h, --hosted-zone                      Provisions the hosted zone stack for the OIDC domain.
 USAGE
 }
 
@@ -103,6 +105,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     -c | --cloudwatch-alarm)
       PROVISION_CLOUDWATCH_ALARM_STACK=true
+      ;;
+    -h | --hosted-zone)
+      PROVISION_HOSTED_ZONE=true
       ;;
     *)
       usage
@@ -179,6 +184,20 @@ function provision_pipeline_stack() {
   echo "Provisioned secure pipeline stack"
 }
 
+function provision_hosted_zone_stack() {
+  export AWS_REGION="eu-west-2"
+
+  echo "Provisioning hosted zone stack"
+  TEMPLATE_FILE="$(pwd)/manual-stacks/domains/template.yaml"
+  if [ ! -f "${TEMPLATE_FILE}" ]; then
+    echo "Could not find the hosted zone stack template at path: ${TEMPLATE_FILE}"
+    exit 1
+  fi
+
+  ${LOCAL_PROVISION_COMMAND} "${ENVIRONMENT}" "hosted-zone" "${TEMPLATE_FILE}"
+  echo "Provisioned hosted zone stack"
+}
+
 # --------------------
 # Run provision commands
 # --------------------
@@ -198,3 +217,5 @@ function provision_pipeline_stack() {
 [ "${PROVISION_TXMA_STACK}" == "true" ] && provision_txma_stack
 #This stack currently has a dependency on the main application stack for the SNS topic
 [ "${PROVISION_CLOUDWATCH_ALARM_STACK}" == "true" ] && provision_cloudwatch_alarm_stack
+
+[ "${PROVISION_HOSTED_ZONE}" == "true" ] && provision_hosted_zone_stack

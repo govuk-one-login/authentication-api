@@ -51,7 +51,7 @@ Conditions:
       !Equals [!Ref Environment, dev],
       !Equals [!Ref DeploySubEnvDomains, "Yes"],
     ]
-  DeployCertificate: !And [!Equals [!Ref DeployCertificate, "Yes"]]
+  DeployCertificate: !Equals [!Ref DeployCertificate, "Yes"]
 
 Mappings:
   EnvironmentConfiguration:
@@ -81,28 +81,22 @@ Resources:
               domainSuffix,
             ]
 
-  # Manually Create the NS records sets here as we want to adjust the
-  # TTL to 60 seconds from the default created by the public hosted zone
-  # See here: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-migrating.html#:~:text=The%20typical%20TTL,something%20goes%20wrong.
-  OidcNSRecordSet:
-    Type: AWS::Route53::RecordSet
+  OidcHostedZoneIdSSMParam:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
+    Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub
-        - oidc${EndpointSuffix}.${DomainSuffix}
+      Description: !Sub
+        - "SSM parameter to stored the hosted zone ID for the oidc${EndpointSuffix}.${DomainSuffix} hosted zone"
         - DomainSuffix:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
               domainSuffix,
             ]
-      Type: NS
-      HostedZoneId: !Ref OidcHostedZone
-      ResourceRecords: !GetAtt
-        - OidcHostedZone
-        - NameServers
-      TTL: "60"
+      Name: !Sub "/deploy/hosted-zone/oidc${EndpointSuffix}/hosted-zone-id"
+      Type: String
+      Value: !Ref OidcHostedZone
 
   OidcHostedZoneRootCertificate:
     Condition: DeployCertificate
@@ -156,6 +150,24 @@ Resources:
                   domainSuffix,
                 ]
         - !Ref AWS::NoValue
+
+  OidcCertificateArnSSMParam:
+    Condition: DeployCertificate
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: !Sub
+        - "SSM parameter to store the ARN of the ACM certificate for the oidc${EndpointSuffix}.${DomainSuffix} domain"
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+      Name: !Sub "/deploy/hosted-zone/oidc${EndpointSuffix}/certificate-Arn"
+      Type: String
+      Value: !Ref OidcHostedZoneRootCertificate
 
   Orchdev1HostedZone:
     Condition: DeployDevSubDomains
@@ -241,14 +253,17 @@ Outputs:
 
   OidcHostedZoneNameServers:
     Description: "Name servers for the OIDC domain"
-    Value: !GetAtt
-      - OidcHostedZone
-      - NameServers
+    Value: !Join
+      - ","
+      - !GetAtt
+        - OidcHostedZone
+        - NameServers
     Export:
       Name: !Sub "${AWS::StackName}-OidcHostedZoneNameServers"
 
   CertificateArn:
     Description: "The ARN of the ACM certificate"
+    Condition: DeployCertificate
     Value: !Ref OidcHostedZoneRootCertificate
     Export:
       Name: !Sub "${AWS::StackName}-certificateArn"
@@ -277,26 +292,32 @@ Outputs:
   OrchDev1HostedZoneNameServers:
     Condition: DeployDevSubDomains
     Description: "Name servers for the orchdev1 domain"
-    Value: !GetAtt
-      - Orchdev1HostedZone
-      - NameServers
+    Value: !Join
+      - ","
+      - !GetAtt
+        - Orchdev1HostedZone
+        - NameServers
     Export:
       Name: !Sub "${AWS::StackName}-orchdev1-HostedZoneNameServers"
 
   OrchDev2HostedZoneNameServers:
     Condition: DeployDevSubDomains
     Description: "Name servers for the orchdev2 domain"
-    Value: !GetAtt
-      - Orchdev2HostedZone
-      - NameServers
+    Value: !Join
+      - ","
+      - !GetAtt
+        - Orchdev2HostedZone
+        - NameServers
     Export:
       Name: !Sub "${AWS::StackName}-orchdev2-HostedZoneNameServers"
 
   OrchDev3HostedZoneNameServers:
     Condition: DeployDevSubDomains
     Description: "Name servers for the orchdev3 domain"
-    Value: !GetAtt
-      - Orchdev3HostedZone
-      - NameServers
+    Value: !Join
+      - ","
+      - !GetAtt
+        - Orchdev3HostedZone
+        - NameServers
     Export:
       Name: !Sub "${AWS::StackName}-orchdev3-HostedZoneNameServers"
