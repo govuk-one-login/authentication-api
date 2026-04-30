@@ -41,6 +41,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
+// QualityGateUnitTest
 class PrivateKeyJwtClientAuthValidatorTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -70,6 +71,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
                 JWSAlgorithm.PS512);
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("supportedAlgorithms")
     void shouldSuccessfullyValidatePrivateKeyJWT(JWSAlgorithm algorithm)
@@ -92,6 +94,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
                 clientRegistryOutput.getClientID(), equalTo(expectedClientRegistry.getClientID()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidatePrivateKeyJWTWhenAuthenticationIsNotRegisteredInClientRegistry()
             throws JOSEException, TokenAuthInvalidException {
@@ -112,6 +115,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
                 clientRegistryOutput.getClientID(), equalTo(expectedClientRegistry.getClientID()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowClientsAuthenticationMethodIsClientSecretPost() throws JOSEException {
         var publicKey =
@@ -143,6 +147,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
                                 "Client is not registered to use private_key_jwt")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenUnableToValidatePrivateKeyJWTIfExpired() throws JOSEException {
         var publicKey =
@@ -171,6 +176,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
                                 OAuth2Error.INVALID_GRANT_CODE, "private_key_jwt has expired")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidatePrivateKeyJWTIfExpiredButWithinClockSkew()
             throws JOSEException, TokenAuthInvalidException {
@@ -191,6 +197,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
                 clientRegistryOutput.getClientID(), equalTo(expectedClientRegistry.getClientID()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfUnableToValidatePrivateKeyJWTSignature()
             throws JOSEException, ClientSignatureValidationException, JwksException {

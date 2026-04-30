@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class TokenValidationServiceTest {
 
     private final JwksService jwksService = mock(JwksService.class);
@@ -57,6 +58,7 @@ class TokenValidationServiceTest {
                 .thenReturn(false);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidateIDToken() {
         Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
@@ -64,6 +66,7 @@ class TokenValidationServiceTest {
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
         Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
@@ -71,6 +74,7 @@ class TokenValidationServiceTest {
         assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
@@ -79,6 +83,7 @@ class TokenValidationServiceTest {
                         new BearerAccessToken(signedAccessToken.serialize()).getValue()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidateNewECKeyV2AccessToken() throws JOSEException {
         var newECKey = generateCustomECKeyPair(NEW_V2_KEY_ID);
@@ -138,6 +143,7 @@ class TokenValidationServiceTest {
                         new BearerAccessToken(signedAccessToken.serialize()).getValue()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidateNewV2RsaSignedAccessToken() throws JOSEException {
         var rsaKey = generateCustomRsaKeyPair(KEY_ID);
@@ -312,6 +318,7 @@ class TokenValidationServiceTest {
                         new RefreshToken(signedAccessToken.serialize())));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldFailToValidateRefreshTokenIfExpired() {
         Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
@@ -322,12 +329,14 @@ class TokenValidationServiceTest {
                         new RefreshToken(signedAccessToken.serialize())));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSuccessfullyValidateRefreshTokenScopes() {
         List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
         assertTrue(tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldFailToValidateRefreshTokenScopesWhenMissingOfflineAccess() {
         List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
@@ -335,6 +344,7 @@ class TokenValidationServiceTest {
         assertFalse(tokenValidationService.validateRefreshTokenScopes(clientScopes, refreshScopes));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldFailToValidateRefreshTokenScopesWhenClientScopesDoNotContainAllRefreshTokenScopes() {
         List<String> clientScopes = List.of("openid", "phone", "offline_access");

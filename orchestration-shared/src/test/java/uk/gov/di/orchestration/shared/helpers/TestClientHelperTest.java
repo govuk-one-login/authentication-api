@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
+// QualityGateUnitTest
 class TestClientHelperTest {
 
     private static final List<String> ALLOWLIST =
@@ -28,6 +29,7 @@ class TestClientHelperTest {
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(TestClientHelper.class);
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @ValueSource(
             strings = {
@@ -43,6 +45,7 @@ class TestClientHelperTest {
         assertTrue(TestClientHelper.emailMatchesAllowlist(email, ALLOWLIST));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @ValueSource(
             strings = {
@@ -57,6 +60,7 @@ class TestClientHelperTest {
         assertFalse(TestClientHelper.emailMatchesAllowlist(email, ALLOWLIST));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @ValueSource(
             strings = {
@@ -70,6 +74,7 @@ class TestClientHelperTest {
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void emailShouldNotMatchRegexAllowlistWhenEmailIsNull() {
         assertFalse(TestClientHelper.emailMatchesAllowlist(null, List.of("^$", "[", "*")));

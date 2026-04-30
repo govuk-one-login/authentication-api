@@ -17,6 +17,7 @@ import static org.hamcrest.Matchers.hasEntry;
 import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.baseUri;
 import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.queryParameters;
 
+// QualityGateUnitTest
 class ConstructUriHelperTest {
 
     private static Stream<Arguments> validVectorValues() {
@@ -26,6 +27,7 @@ class ConstructUriHelperTest {
                 Arguments.of("https://GOV.UK", "information"));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("validVectorValues")
     void shouldBuildUriWithPath(String baseUrl, String path) {
@@ -34,6 +36,7 @@ class ConstructUriHelperTest {
         assertThat(uri.toString(), equalTo("https://GOV.UK/information"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBuildUriWhenSingleQueryParamIsPresent() {
         var baseUrl = "https://GOV.UK/";
@@ -47,6 +50,7 @@ class ConstructUriHelperTest {
                 equalTo("https://GOV.UK/information?referer=emailConfirmationEmail"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBuildUriWhenMultipleQueryParamsArePresent() {
         var baseUrl = "https://GOV.UK/";
@@ -63,6 +67,7 @@ class ConstructUriHelperTest {
                         "https://GOV.UK/information?referer=emailConfirmationEmail&extraInformation=true"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBeAbleToChainBuildURI() {
         var baseUrl = URI.create("https://GOV.UK/");
@@ -79,6 +84,7 @@ class ConstructUriHelperTest {
                 equalTo("https://GOV.UK/information/user?name=smith&dob=2000-01-01"));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("queryParameterOnlyCases")
     void constructingUriWithQueryParametersShouldReturnCorrectUri(
@@ -107,6 +113,7 @@ class ConstructUriHelperTest {
                         "https://GOV.UK/path/", Map.of("param1", "value1", "param2", "value2")));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("pathOnlyCases")
     void constructingUriWithPathShouldReturnCorrectUri(
@@ -131,6 +138,7 @@ class ConstructUriHelperTest {
                 Arguments.of("https://GOV.UK/path1", "path2", "https://GOV.UK/path1/path2"));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("pathAndQueryParameterCases")
     void constructingUriWithPathAndQueryParametersShouldReturnCorrectUri(
