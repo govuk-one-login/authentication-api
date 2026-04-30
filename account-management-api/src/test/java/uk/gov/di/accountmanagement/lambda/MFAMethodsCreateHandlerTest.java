@@ -95,6 +95,7 @@ class MFAMethodsCreateHandlerTest {
 
     private final Context context = mock(Context.class);
     private static final String TEST_PHONE_NUMBER = "07123123123";
+    private static final String TEST_E164_PHONE_NUMBER = "+447123123123";
     private static final String TEST_EMAIL = "test@test.com";
     private static final String TEST_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
     private static final String TEST_AUTH_APP_ID = "f2ec40f3-9e63-496c-a0a5-a3bdafee868b";
@@ -284,7 +285,7 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedAuthCodeVerifiedAuditContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
+                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
                             .withMetadataItem(pair("phone_number_country_code", "44"))
@@ -300,7 +301,7 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedAuthMfaMethodAddCompleteContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
+                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
                             .withMetadataItem(pair("phone_number_country_code", "44"));
@@ -313,7 +314,7 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedUpdatedPhoneNumberContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
+                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
                             .withMetadataItem(pair("phone_number_country_code", "44"));
@@ -470,7 +471,7 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedAuthCodeVerifiedAuditContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
+                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
                             .withMetadataItem(pair("phone_number_country_code", "44"))
@@ -780,7 +781,7 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedInvalidCodeSentAuditContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
+                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.toString()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
                             .withMetadataItem(pair("phone_number_country_code", "44"));

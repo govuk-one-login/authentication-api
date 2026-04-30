@@ -52,6 +52,7 @@ import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSI
 import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.USER_PHONE;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
@@ -207,7 +208,12 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
             addCompletedAttributes.put(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
+            addCompletedAttributes.put(USER_PHONE, TEST_PHONE_NUMBER_TWO_WITH_COUNTRY_CODE);
             eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
+
+            Map<String, String> updatePhoneAttributes = new HashMap<>();
+            updatePhoneAttributes.put(USER_PHONE, TEST_PHONE_NUMBER_TWO_WITH_COUNTRY_CODE);
+            eventExpectations.put(AUTH_UPDATE_PHONE_NUMBER.name(), updatePhoneAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
         }
@@ -299,10 +305,15 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             Map<String, String> addCompletedAttributes = new HashMap<>();
             addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            addCompletedAttributes.put(USER_PHONE, phoneNumberWithCountryCode);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
             eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
             eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
+
+            Map<String, String> updatePhoneAttributes = new HashMap<>();
+            updatePhoneAttributes.put(USER_PHONE, phoneNumberWithCountryCode);
+            eventExpectations.put(AUTH_UPDATE_PHONE_NUMBER.name(), updatePhoneAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
         }
