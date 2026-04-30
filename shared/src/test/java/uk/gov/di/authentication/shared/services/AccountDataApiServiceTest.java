@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -144,6 +145,62 @@ class AccountDataApiServiceTest {
             // Assert
             assertThat(resp.statusCode(), equalTo(200));
             assertThat(resp.body(), equalTo("{'deleted': true}"));
+        }
+    }
+
+    @Nested
+    class TimeoutRetry {
+        @Test
+        void shouldRetryOnceAfterTimeout()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException {
+            // Arrange
+            var successResponse = mock(HttpResponse.class);
+            when(successResponse.statusCode()).thenReturn(200);
+            when(httpClient.send(any(), any()))
+                    .thenThrow(new HttpTimeoutException("timed out"))
+                    .thenReturn(successResponse);
+
+            // Act
+            var result = service.retrievePasskeys("sub", TOKEN);
+
+            // Assert
+            verify(httpClient, times(2)).send(any(), any());
+            assertThat(result.statusCode(), equalTo(200));
+        }
+
+        @Test
+        void shouldThrowAfterMaxRetriesExhausted() throws IOException, InterruptedException {
+            // Arrange
+            doThrow(new HttpTimeoutException("timed out")).when(httpClient).send(any(), any());
+
+            // Act
+            var exception =
+                    assertThrows(
+                            UnsuccessfulAccountDataApiResponseException.class,
+                            () -> service.retrievePasskeys("sub", TOKEN));
+
+            // Assert
+            verify(httpClient, times(2)).send(any(), any());
+            assertThat(exception.getMessage(), containsString("timeout of " + TIMEOUT));
+        }
+
+        @Test
+        void shouldNotRetryOnSuccess()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException {
+            // Arrange
+            var successResponse = mock(HttpResponse.class);
+            when(successResponse.statusCode()).thenReturn(200);
+            when(httpClient.send(any(), any())).thenReturn(successResponse);
+
+            // Act
+            service.retrievePasskeys("sub", TOKEN);
+
+            // Assert
+            verify(httpClient, times(1)).send(any(), any());
         }
     }
 
