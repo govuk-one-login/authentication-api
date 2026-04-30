@@ -109,3 +109,4 @@ performance_tuning = {
 
 use_strongly_consistent_reads  = true
 support_reauth_signout_enabled = true
+deploy_oidc_api_gateway_domain = false
