@@ -224,7 +224,11 @@ class AMCServiceTest {
             String authorizationUrl = result.getSuccess().url();
             assertTrue(authorizationUrl.startsWith(AMC_AUTHORIZE_URI));
 
-            SignedJWT compositeJWT = extractSignedJwtFromAuthUrl(authorizationUrl);
+            AuthorizationRequest parsedAuthRequest =
+                    AuthorizationRequest.parse(URI.create(authorizationUrl));
+            assertPresenceOfQueryParams(parsedAuthRequest);
+
+            SignedJWT compositeJWT = extractSignedJwtFromAuthRequest(parsedAuthRequest);
 
             String amcCookie = result.getSuccess().amcCookie();
             assertEquals(HashHelper.hashSha256String(compositeJWT.serialize()), amcCookie);
@@ -375,7 +379,7 @@ class AMCServiceTest {
         private void assertCompositeJWTClaims(JWTClaimsSet compositeClaims) {
             assertAll(
                     "Composite JWT Claims",
-                    () -> assertEquals(AUTH_ISSUER_CLAIM, compositeClaims.getIssuer()),
+                    () -> assertEquals(AMC_CLIENT_ID, compositeClaims.getIssuer()),
                     () ->
                             assertEquals(
                                     List.of(AUTH_TO_AMC_PUBLIC_AUDIENCE),
@@ -431,11 +435,18 @@ class AMCServiceTest {
                     () -> assertDoesNotThrow(() -> UUID.fromString(accessTokenClaims.getJWTID())));
         }
 
-        private SignedJWT extractSignedJwtFromAuthUrl(String authorizationUrl) throws Exception {
-            AuthorizationRequest authRequest = AuthorizationRequest.parse(authorizationUrl);
+        private SignedJWT extractSignedJwtFromAuthRequest(AuthorizationRequest authRequest)
+                throws Exception {
             EncryptedJWT encryptedJWT = (EncryptedJWT) authRequest.getRequestObject();
             encryptedJWT.decrypt(new RSADecrypter(TEST_PRIVATE_ENCRYPTION_KEY));
             return encryptedJWT.getPayload().toSignedJWT();
+        }
+
+        private void assertPresenceOfQueryParams(AuthorizationRequest parsedAuthRequest) {
+            assertEquals(
+                    AMCScope.ACCOUNT_DELETE.getValue(), parsedAuthRequest.getScope().toString());
+            assertEquals(URI.create(REDIRECT_URI), parsedAuthRequest.getRedirectionURI());
+            assertEquals(STATE.getValue(), parsedAuthRequest.getState().getValue());
         }
     }
 

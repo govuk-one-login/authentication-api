@@ -251,7 +251,7 @@ Mappings:
       amcSfadRedirectUri: https://signin.authdev1.dev.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.authdev1.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/journeyoutcome
-      amcClientId: auth_amc
+      amcClientId: auth
       accountDataApiId: rjlo8fsb55
       EvcsApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
@@ -304,7 +304,7 @@ Mappings:
       amcSfadRedirectUri: https://signin.authdev2.dev.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.authdev2.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/journeyoutcome
-      amcClientId: auth_amc
+      amcClientId: auth
       accountDataApiId: ez2ro7vca7
       EvcsApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
@@ -361,7 +361,7 @@ Mappings:
       amcSfadRedirectUri: https://signin.authdev3.dev.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.authdev3.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/journeyoutcome
-      amcClientId: auth_amc
+      amcClientId: auth
       accountDataApiId: 5ctgxqnq37
       EvcsApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
@@ -423,7 +423,7 @@ Mappings:
       amcAuthorizeUri: https://amcstub.signin.dev.account.gov.uk/authorize
       amcTokenUri: https://amcstub.signin.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.dev.account.gov.uk/journeyoutcome
-      amcClientId: auth_amc
+      amcClientId: auth
       accountDataApiId: 0aqzty84lj
       amcSfadRedirectUri: https://signin.dev.account.gov.uk/sfad-callback
       enhancedAuthCodeProtectionEnabled: true
@@ -491,7 +491,7 @@ Mappings:
       amcSfadRedirectUri: https://signin.build.account.gov.uk/sfad-callback
       amcTokenUri: https://amcstub.signin.build.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.build.account.gov.uk/journeyoutcome
-      amcClientId: auth_amc
+      amcClientId: auth
       accountDataApiId: ac3znt5m23
       enhancedAuthCodeProtectionEnabled: false
       supportPasskeys: false
