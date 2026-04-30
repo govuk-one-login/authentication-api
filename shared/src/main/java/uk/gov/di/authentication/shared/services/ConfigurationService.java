@@ -71,6 +71,19 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("ACCOUNT_MANAGEMENT_URI");
     }
 
+    public int getArgon2MemoryInKibibytes() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("ARGON2_MEMORY_IN_KIBIBYTES", "15360"));
+    }
+
+    public int getArgon2Iterations() {
+        return Integer.parseInt(System.getenv().getOrDefault("ARGON2_ITERATIONS", "2"));
+    }
+
+    public int getArgon2Parallelism() {
+        return Integer.parseInt(System.getenv().getOrDefault("ARGON2_PARALLELISM", "1"));
+    }
+
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
