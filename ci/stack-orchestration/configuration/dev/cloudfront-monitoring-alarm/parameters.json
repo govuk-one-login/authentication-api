@@ -1,0 +1,18 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "CloudFrontAdditionaldMetricsEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "CacheHitAlarmSNSTopicARN",
+    "ParameterValue": "arn:aws:sns:us-east-1:816047645251:dev-CloudFrontCacheHitSlackAlerts"
+  },
+  {
+    "ParameterKey": "CloudfrontDistribution",
+    "ParameterValue": "E185IA0TYZXSVO"
+  }
+]
