@@ -99,7 +99,7 @@ function provision_cloudfront_distribution() {
 function provision_cloudfront_monitoring() {
 
   echo "Provisioning cloudfront monitoring stack"
-  AWS_REGION="us-east-1" PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/cloudfront-monitoring-alarm/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" "cf-monitoring-alarm" "cloudfront-monitoring-alarm" "${CLOUDFRONT_MONITORING_STACK_VERSION}"
+  AWS_REGION="us-east-1" PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/cloudfront-monitoring-alarm/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${ENVIRONMENT}-oidc-cloudfront-monitoring" "cloudfront-monitoring-alarm" "${CLOUDFRONT_MONITORING_STACK_VERSION}"
 
   echo "Provisioned cloudwatch alarm stack"
 }
