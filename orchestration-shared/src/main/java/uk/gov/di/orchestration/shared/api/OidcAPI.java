@@ -9,9 +9,11 @@ import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI
 public class OidcAPI {
 
     private final URI oidcApiBaseUrl;
+    private final URI oidcFrontendBaseUrl;
 
     public OidcAPI(ConfigurationService configurationService) {
         oidcApiBaseUrl = configurationService.getOidcApiBaseURL();
+        oidcFrontendBaseUrl = configurationService.getOidcFrontendBaseURL();
     }
 
     public URI baseURI() {
@@ -39,14 +41,14 @@ public class OidcAPI {
     }
 
     public URI authorizeURI() {
-        return buildURI(oidcApiBaseUrl, "authorize");
+        return buildURI(oidcFrontendBaseUrl, "authorize");
     }
 
-    public URI registerationURI() {
+    public URI registrationURI() {
         return buildURI(oidcApiBaseUrl, "connect/register");
     }
 
     public URI logoutURI() {
-        return buildURI(oidcApiBaseUrl, "logout");
+        return buildURI(oidcFrontendBaseUrl, "logout");
     }
 }

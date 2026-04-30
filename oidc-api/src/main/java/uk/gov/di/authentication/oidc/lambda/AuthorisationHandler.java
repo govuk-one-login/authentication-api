@@ -991,6 +991,7 @@ public class AuthorisationHandler
                     CookieHelper.buildCookieString(
                             CookieHelper.BROWSER_SESSION_COOKIE_NAME,
                             browserSessionId,
+                            null,
                             configurationService.getSessionCookieAttributes(),
                             configurationService.getOidcDomainName()));
         }

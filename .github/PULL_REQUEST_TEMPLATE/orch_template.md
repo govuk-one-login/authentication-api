@@ -71,6 +71,8 @@ As Orch code reaches production faster than Auth code, if this change could affe
 
 - [ ] Successfully run Authentication acceptance tests against sandpit or not required.
 
+- [ ] Added new endpoints to local running (`LocalOrchestrationApi.java`) or not required.
+
 ### Related PRs
 
 <!-- Links to PRs in other repositories that are relevant to this PR.

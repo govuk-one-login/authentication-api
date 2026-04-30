@@ -311,6 +311,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrThrow("OIDC_API_BASE_URL");
     }
 
+    public URI getOidcFrontendBaseURL() {
+        return getOptionalURI("OIDC_FRONTEND_BASE_URL").orElseGet(this::getOidcApiBaseURL);
+    }
+
     public String getSessionCookieAttributes() {
         return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
                 .orElse("Secure; HttpOnly;");

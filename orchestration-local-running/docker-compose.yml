@@ -1,0 +1,66 @@
+name: di-orchestration-local
+
+include:
+  - ../docker-compose.yml
+
+services:
+  orchestration-api:
+    image: orchestration-api-local:latest
+    container_name: orchestration-api-local
+    build:
+      context: ../
+      dockerfile: orchestration-local-running/Dockerfile
+    depends_on:
+      aws:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dynamodb:
+        condition: service_healthy
+    env_file: ./.env.local
+    healthcheck:
+      test: curl http://localhost:4400
+      interval: 5s
+      timeout: 1m
+    ports:
+      - "4400:4400"
+      - "5400:5400"
+    networks:
+      - di-authentication-api-net
+
+  orchestration-stubs:
+    image: orchestration-stubs:latest
+    container_name: orchestration-stubs
+    build:
+      context: ../../orch-stubs
+      dockerfile: Dockerfile
+    depends_on:
+      aws:
+        condition: service_healthy
+      dynamodb:
+        condition: service_healthy
+      orchestration-api:
+        condition: service_healthy
+    env_file: ../../orch-stubs/.env.local
+    environment:
+      FRONTEND_API_BASE_URL: http://host.docker.internal:4401/
+    ports:
+      - "4401:4401"
+    networks:
+      - di-authentication-api-net
+
+  relying-party-stub:
+    image: relying-party-stub:latest
+    container_name: relying-party-stub
+    build:
+      context: ../../relying-party-stub
+      dockerfile: Dockerfile
+    env_file: ../../relying-party-stub/.env.local
+    ports:
+      - "4000:4000"
+    volumes:
+      - type: bind
+        source: ../../relying-party-stub/config.local.json
+        target: /home/config.json
+    networks:
+      - di-authentication-api-net
