@@ -70,6 +70,8 @@ public class App {
                                 .withRedirectUrls(
                                         List.of(
                                                 "http://localhost:4000/oidc/authorization-code/callback"))
+                                .withPostLogoutRedirectUrls(
+                                        List.of("http://localhost:4000/signed-out"))
                                 .withScopes(
                                         List.of(
                                                 "openid",
