@@ -6,6 +6,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
@@ -90,6 +91,9 @@ public class AMCService {
                                                             configurationService.getAMCClientId()))
                                             .endpointURI(configurationService.getAMCAuthorizeURI())
                                             .requestObject(encryptedJWTAndAmcCookie.encryptedJWT)
+                                            .scope(new Scope(amcScope.getValue()))
+                                            .redirectionURI(URI.create(amcRedirectUri))
+                                            .state(state)
                                             .build();
                             String authorizationUrl = authRequest.toURI().toString();
                             LOG.info("AMC authorization URL created");
@@ -154,7 +158,7 @@ public class AMCService {
                         accessTokenMap -> {
                             var claimsBuilder =
                                     new JWTClaimsSet.Builder()
-                                            .issuer(configurationService.getAuthIssuerClaim())
+                                            .issuer(configurationService.getAMCClientId())
                                             .claim(
                                                     "client_id",
                                                     configurationService.getAMCClientId())

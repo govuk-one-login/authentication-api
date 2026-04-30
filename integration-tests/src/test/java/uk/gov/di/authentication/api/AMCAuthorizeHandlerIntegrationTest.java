@@ -172,6 +172,9 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertTrue(redirectUrl.contains("response_type=code"));
         assertTrue(redirectUrl.contains("client_id=test-amc-client"));
         assertTrue(redirectUrl.contains("request="));
+        assertTrue(redirectUrl.contains("scope="));
+        assertTrue(redirectUrl.contains("redirect_uri="));
+        assertTrue(redirectUrl.contains("state="));
 
         String requestParam =
                 Arrays.stream(new URI(redirectUrl).getQuery().split("&"))
