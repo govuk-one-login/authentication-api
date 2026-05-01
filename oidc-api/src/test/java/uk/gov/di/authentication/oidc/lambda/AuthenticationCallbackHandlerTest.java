@@ -172,6 +172,8 @@ class AuthenticationCallbackHandlerTest {
     private static final String TEST_FRONTEND_BASE_URI = "http://example.com";
     private static final String TEST_FRONTEND_LOGIN_URI = "http://example.com/login";
     private static final String TEST_FRONTEND_ERROR_URI = "http://example.com/error";
+    private static final String TEST_FRONTEND_SESSION_ENDED_URI =
+            "http://example.com/session-ended";
     private static final String TEST_AUTH_BACKEND_BASE_URL = "https://test.auth.backend.url";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String PERSISTENT_SESSION_ID =
@@ -221,6 +223,8 @@ class AuthenticationCallbackHandlerTest {
         when(configurationService.getEnvironment()).thenReturn("test-env");
         when(authFrontend.errorURI()).thenReturn(URI.create(TEST_FRONTEND_ERROR_URI));
         when(authFrontend.baseURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URI));
+        when(authFrontend.sessionEndedURI())
+                .thenReturn(URI.create(TEST_FRONTEND_SESSION_ENDED_URI));
         when(authFrontend.authorizeURI(any(), any()))
                 .thenReturn(URI.create(TEST_FRONTEND_LOGIN_URI));
         when(configurationService.getAuthenticationBackendURI())
@@ -453,7 +457,7 @@ class AuthenticationCallbackHandlerTest {
 
     @Test
     void
-            shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
+            shouldRedirectToFrontendSessionEndedPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
                     throws NoSessionException {
         var event = new APIGatewayProxyRequestEvent();
 
@@ -470,7 +474,7 @@ class AuthenticationCallbackHandlerTest {
         var response = handler.handleRequest(event, CONTEXT);
 
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
+        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_SESSION_ENDED_URI));
 
         verifyNoInteractions(tokenService, auditService, userInfoStorageService, metrics);
 

@@ -11,4 +11,6 @@ public interface CommonFrontend {
     URI errorURI();
 
     URI errorIpvCallbackURI();
+
+    URI sessionEndedURI();
 }

@@ -336,7 +336,7 @@ public class DocAppCallbackHandler
                     authFrontend.errorURI(), e);
         } catch (NoSessionException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
-                    authFrontend.errorURI(), e);
+                    authFrontend.sessionEndedURI(), e);
         } catch (ParseException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(),

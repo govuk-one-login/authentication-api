@@ -595,7 +595,7 @@ public class AuthenticationCallbackHandler
                     new Error("Cannot retrieve auth request params from client session id"));
         } catch (NoSessionException | SessionNotFoundException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
-                    authFrontend.errorURI(), e);
+                    authFrontend.sessionEndedURI(), e);
         }
     }
 
