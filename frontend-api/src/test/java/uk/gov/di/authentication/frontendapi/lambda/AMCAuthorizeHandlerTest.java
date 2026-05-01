@@ -81,7 +81,9 @@ class AMCAuthorizeHandlerTest {
 
     private static final String AMC_COOKIE = "some-cookie";
     private static final RSAKey TEST_RSA_JWK =
-            new RSAKey.Builder((RSAPublicKey) GENERATE_RSA_KEY_PAIR().getPublic()).build();
+            new RSAKey.Builder((RSAPublicKey) GENERATE_RSA_KEY_PAIR().getPublic())
+                    .keyID("test-encryption-key-id")
+                    .build();
 
     @BeforeEach
     void setUp() throws KeySourceException {
@@ -131,6 +133,7 @@ class AMCAuthorizeHandlerTest {
                         anyString(),
                         anyList(),
                         any(RSAPublicKey.class),
+                        anyString(),
                         any(State.class)))
                 .thenReturn(
                         Result.success(new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
@@ -162,6 +165,7 @@ class AMCAuthorizeHandlerTest {
                         eq(expectedRedirectUri),
                         eq(expectedAccessTokenConfigs),
                         any(RSAPublicKey.class),
+                        anyString(),
                         stateCaptor.capture());
     }
 
@@ -238,6 +242,7 @@ class AMCAuthorizeHandlerTest {
                         anyString(),
                         anyList(),
                         any(RSAPublicKey.class),
+                        anyString(),
                         any()))
                 .thenReturn(Result.failure(failureReason));
 

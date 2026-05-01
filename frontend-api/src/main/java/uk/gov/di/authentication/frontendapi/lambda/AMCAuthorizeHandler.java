@@ -39,7 +39,6 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.MalformedURLException;
-import java.security.interfaces.RSAPublicKey;
 import java.time.Clock;
 import java.util.List;
 
@@ -131,16 +130,24 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         Result<AMCFailureReason, AMCAuthorizationUrlAndCookie> result =
                 getAMCPublicEncryptionKey()
                         .flatMap(
-                                publicEncryptionKey ->
-                                        amcService.buildAuthorizationResult(
+                                rsaKey -> {
+                                    try {
+                                        return amcService.buildAuthorizationResult(
                                                 authSessionItem.getInternalCommonSubjectId(),
                                                 transportJwtConfig.scope(),
                                                 authSessionItem,
                                                 userProfile.getPublicSubjectID(),
                                                 transportJwtConfig.redirectUri(),
                                                 accessTokenConfigsForJourneyType,
-                                                publicEncryptionKey,
-                                                state));
+                                                rsaKey.toRSAPublicKey(),
+                                                rsaKey.getKeyID(),
+                                                state);
+                                    } catch (JOSEException e) {
+                                        LOG.error("Could not parse JWK", e);
+                                        return Result.failure(
+                                                AMCFailureReason.JWKS_RETRIEVAL_ERROR);
+                                    }
+                                });
 
         return result.fold(
                 AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,
@@ -155,7 +162,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                 });
     }
 
-    private Result<AMCFailureReason, RSAPublicKey> getAMCPublicEncryptionKey() {
+    private Result<AMCFailureReason, RSAKey> getAMCPublicEncryptionKey() {
         LOG.info("Retrieving RSA encryption JWK from AMC JWKS endpoint for auth -> AMC encryption");
         try {
             return Result.success(
@@ -170,13 +177,9 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                             .orElseThrow(
                                     () ->
                                             new KeySourceException(
-                                                    "No RSA key found on the JWKS endpoint"))
-                            .toRSAPublicKey());
+                                                    "No RSA key found on the JWKS endpoint")));
         } catch (KeySourceException e) {
             LOG.error("Could not retrieve JWKS", e);
-            return Result.failure(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
-        } catch (JOSEException e) {
-            LOG.error("Could not parse JWK", e);
             return Result.failure(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
         }
     }
