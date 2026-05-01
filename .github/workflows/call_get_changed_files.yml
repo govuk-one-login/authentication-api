@@ -21,7 +21,7 @@ jobs:
 
       - name: Get changed Java files
         id: changed-java-files
-        uses: tj-actions/changed-files@5f4a0b68ac816d8cb4a52bd88b460549197b7ff1 # v45.0.7
+        uses: tj-actions/changed-files@778ca51dd262f0b33085d14089d652a53707f25b # v45.0.7
         with:
           # If you change the paths here, ensure they are synchronised with the paths in the other jobs.
           # Find these by searching for "Ensure these are synchronized with the paths in the check-changed-files job"
@@ -35,7 +35,7 @@ jobs:
 
       - name: Get changed files in orchestration-alerting folder
         id: changed-orch-alerting-files
-        uses: tj-actions/changed-files@5f4a0b68ac816d8cb4a52bd88b460549197b7ff1 # v45.0.7
+        uses: tj-actions/changed-files@778ca51dd262f0b33085d14089d652a53707f25b # v45.0.7
         with:
           files: |
             orchestration-alerting/**
