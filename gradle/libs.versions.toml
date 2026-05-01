@@ -9,7 +9,7 @@ xray = "2.21.0"
 apacheCommonsCodec = "commons-codec:commons-codec:1.19.0"
 spotbugs = { module = "com.github.spotbugs:spotbugs", version.ref = "spotbugs" }
 apacheCommonsCollections = "org.apache.commons:commons-collections4:4.5.0"
-apacheCommonsIo = "commons-io:commons-io:2.21.0"
+apacheCommonsIo = "commons-io:commons-io:2.22.0"
 apacheCommonsLang = "org.apache.commons:commons-lang3:3.20.0"
 apacheCommonsNet = "commons-net:commons-net:3.12.0"
 apacheCommonsPool = "org.apache.commons:commons-pool2:2.12.1"
