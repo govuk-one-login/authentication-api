@@ -498,29 +498,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         Decision canSendSmsOtpDecision = canSendSmsOtpResult.getSuccess();
-        if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut) {
+        if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
+            if (temporarilyLockedOut.forbiddenReason().hasExceededOtpSubmissionLimit()) {
+                LOG.info("User is blocked from entering any OTP codes");
+                return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+            }
             LOG.info("User is blocked from requesting any OTP codes");
             return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         } else if (canSendSmsOtpDecision instanceof Decision.IndefinitelyLockedOut) {
             LOG.info("User is indefinitely blocked from requesting OTP codes");
             return Optional.of(ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS);
         } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
-            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
-        }
-
-        var canVerifyMfaOtpResult =
-                permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext);
-        if (canVerifyMfaOtpResult.isFailure()) {
-            DecisionError failure = canVerifyMfaOtpResult.getFailure();
-            LOG.error("Failure to get canVerifyMfaOtp decision due to {}", failure);
-            return Optional.of(DecisionErrorMapper.toErrorResponse(failure));
-        }
-
-        Decision canVerifyMfaOtpDecision = canVerifyMfaOtpResult.getSuccess();
-        if (canVerifyMfaOtpDecision instanceof Decision.TemporarilyLockedOut) {
-            LOG.info("User is blocked from entering any OTP codes");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
-        } else if (!(canVerifyMfaOtpDecision instanceof Decision.Permitted)) {
             return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 

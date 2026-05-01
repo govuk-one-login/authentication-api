@@ -215,8 +215,6 @@ class LoginHandlerTest {
                 .thenReturn(Result.success(new Decision.Permitted(0)));
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
         handler =
                 new LoginHandler(
                         configurationService,
@@ -1265,8 +1263,6 @@ class LoginHandlerTest {
 
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -1274,7 +1270,6 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         verify(permissionDecisionManager).canSendSmsOtpNotification(any(), any());
-        verify(permissionDecisionManager).canVerifyMfaOtp(any(), any());
     }
 
     @ParameterizedTest
@@ -1292,7 +1287,6 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         verify(permissionDecisionManager, never()).canSendSmsOtpNotification(any(), any());
-        verify(permissionDecisionManager, never()).canVerifyMfaOtp(any(), any());
     }
 
     private static Stream<Arguments> validMfaMethodsWithExpectedBlock() {
@@ -1333,21 +1327,13 @@ class LoginHandlerTest {
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
-        if (expectedError == ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS) {
-            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.TemporarilyLockedOut(null, 0, null, false)));
-            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(0)));
-        } else {
-            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(0)));
-            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.TemporarilyLockedOut(null, 0, null, false)));
-        }
+        ForbiddenReason reason =
+                expectedError == ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS
+                        ? ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT
+                        : ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(
+                        Result.success(new Decision.TemporarilyLockedOut(reason, 0, null, false)));
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -1370,8 +1356,6 @@ class LoginHandlerTest {
                                 new Decision.IndefinitelyLockedOut(
                                         ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
                                         10)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

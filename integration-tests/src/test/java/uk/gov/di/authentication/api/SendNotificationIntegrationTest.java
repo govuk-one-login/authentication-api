@@ -8,11 +8,13 @@ import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
@@ -255,6 +257,28 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .withAttribute(USER_PHONE, UK_MOBILE_NUMBER)
                                 .withAttribute(EXTENSIONS_MFA_METHOD, "default")
                                 .withAttribute(EXTENSIONS_JOURNEY_TYPE, "REGISTRATION")));
+    }
+
+    @Test
+    void shouldClearIncorrectEmailOtpBlockWhenNewCodeRequestedForRegistration() {
+        var codeBlockedKeyPrefix =
+                CodeStorageService.CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION;
+        redis.blockMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix);
+
+        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix), equalTo(true));
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new SendNotificationRequest(
+                                        EMAIL,
+                                        NotificationType.VERIFY_EMAIL,
+                                        JourneyType.REGISTRATION)),
+                        constructFrontendHeaders(SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix), equalTo(false));
     }
 
     @Test
