@@ -406,7 +406,8 @@ class QueryParamsAuthorizeValidatorTest {
     void shouldSuccessfullyValidateWhenNonceNotExpectedAndMissing() {
         var clientRegitry =
                 generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString())
-                        .withPermitMissingNonce(true);
+                        .withPermitMissingNonce(true)
+                        .withIdentityVerificationSupported(false);
 
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(Optional.of(clientRegitry));
@@ -495,7 +496,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void validatorLogsTheConflictWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse() {
+    void validatorReturnsErrorWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse() {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         List<String> clientLoCs = List.of("P0", "P2");
         var vtr = jsonArrayOf("Cl.Cm.P2");
@@ -516,7 +517,14 @@ class QueryParamsAuthorizeValidatorTest {
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
-        assertFalse(errorObject.isPresent());
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request vtr is not permitted")
+                                .toJSONObject()));
         String expectedLogMessage =
                 "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.";
         assertThat(baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
@@ -828,7 +836,8 @@ class QueryParamsAuthorizeValidatorTest {
                 .withPublicKey(null)
                 .withTestClient(testClient)
                 .withClientLoCs(clientLoCs)
-                .withScopes(scopes);
+                .withScopes(scopes)
+                .withIdentityVerificationSupported(true);
     }
 
     private AuthenticationRequest generateAuthRequest(

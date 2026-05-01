@@ -15,7 +15,6 @@ import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
@@ -27,7 +26,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.net.URI;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -204,10 +202,11 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 return errorResponse(redirectURI, codeChallengeError.get(), state);
             }
 
-            var vtrError = validateVtr(jwtClaimsSet, client);
+            var vtrError = parseAndValidateVtr(jwtClaimsSet, client);
             if (vtrError.isPresent()) {
                 return errorResponse(redirectURI, vtrError.get(), state);
             }
+
             if (Objects.nonNull(jwtClaimsSet.getClaim("ui_locales"))) {
                 try {
                     String uiLocales = (String) jwtClaimsSet.getClaim("ui_locales");
@@ -264,42 +263,6 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
     private boolean requestContainsInvalidScopes(Scope scopes, ClientRegistry client) {
         return !ValidScopes.areScopesValid(scopes.toStringList())
                 || !client.getScopes().containsAll(scopes.toStringList());
-    }
-
-    private Optional<ErrorObject> validateVtr(JWTClaimsSet jwtClaimsSet, ClientRegistry client) {
-        List<String> authRequestVtr = new ArrayList<>();
-        try {
-            authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
-            var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
-            if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
-                logErrorInProdElseWarn(
-                        String.format(
-                                "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: %s",
-                                levelOfConfidenceValues));
-                return Optional.of(
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
-            }
-            logIfIdentityLoCAndIdentityUnsupported(vtrList, client);
-            if (vtrList.get(0).containsLevelOfConfidence()
-                    && !ipvCapacityService.isIPVCapacityAvailable()) {
-                return Optional.of(OAuth2Error.TEMPORARILY_UNAVAILABLE);
-            }
-        } catch (IllegalArgumentException e) {
-            logErrorInProdElseWarn(
-                    String.format(
-                            "vtr in AuthRequest is not valid. vtr in request: %s. IllegalArgumentException: %s",
-                            authRequestVtr, e));
-            return Optional.of(
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
-        } catch (ParseException | Json.JsonException e) {
-            logErrorInProdElseWarn(
-                    String.format("Parse exception thrown when validating vtr: %s", e));
-            return Optional.of(
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
-        }
-        return Optional.empty();
     }
 
     private Optional<ErrorObject> validateMaxAge(JWTClaimsSet jwtClaimsSet, ClientRegistry client)
@@ -362,6 +325,19 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         }
 
         throw new ParseException("vtr is in an invalid format. Could not be parsed.", 0);
+    }
+
+    private Optional<ErrorObject> parseAndValidateVtr(
+            JWTClaimsSet jwtClaimsSet, ClientRegistry client) {
+        try {
+            var authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
+            return validateVtr(authRequestVtr, client);
+        } catch (ParseException | Json.JsonException e) {
+            logErrorInProdElseWarn(
+                    String.format("Parse exception thrown when validating vtr: %s", e));
+            return Optional.of(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+        }
     }
 
     private static Optional<AuthRequestError> errorResponse(

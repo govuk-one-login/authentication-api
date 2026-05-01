@@ -9,7 +9,6 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -126,41 +125,9 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         }
 
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
-        try {
-            var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
-            if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
-                logErrorInProdElseWarn(
-                        String.format(
-                                "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: %s",
-                                levelOfConfidenceValues));
-                return Optional.of(
-                        new AuthRequestError(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request vtr is not permitted"),
-                                redirectURI,
-                                state));
-            }
-            logIfIdentityLoCAndIdentityUnsupported(vtrList, client);
-            if (vtrList.get(0).containsLevelOfConfidence()
-                    && !ipvCapacityService.isIPVCapacityAvailable()
-                    && !client.isTestClient()) {
-                return Optional.of(
-                        new AuthRequestError(
-                                OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI, state));
-            }
-        } catch (IllegalArgumentException e) {
-            logErrorInProdElseWarn(
-                    String.format(
-                            "vtr in AuthRequest is not valid. vtr in request: %s. IllegalArgumentException: %s",
-                            authRequestVtr, e));
-            return Optional.of(
-                    new AuthRequestError(
-                            new ErrorObject(
-                                    OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"),
-                            redirectURI,
-                            state));
+        var vtrError = validateVtr(authRequestVtr, client);
+        if (vtrError.isPresent()) {
+            return Optional.of(new AuthRequestError(vtrError.get(), redirectURI, state));
         }
         if (!client.getMaxAgeEnabled() && authRequest.getMaxAge() != -1) {
             LOG.warn(
