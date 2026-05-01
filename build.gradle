@@ -9,6 +9,10 @@ buildscript {
             classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
                 because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
             }
+
+            classpath('org.bouncycastle:bcprov-jdk18on:[1.84,)') {
+                because 'CVE-2026-5598 is fixed in org.bouncycastle:bcprov-jdk18on 1.84 and higher'
+            }
         }
     }
 }
