@@ -97,11 +97,11 @@ Resources:
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           SESSION_EXPIRY: "3600"
-          USE_STRONGLY_CONSISTENT_READS:
+          AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              useStronglyConsistentReads,
+              authSessionUseStronglyConsistentReads,
             ]
       LoggingConfig:
         LogGroup: !Ref AMCAuthorizeFunctionLogGroup
