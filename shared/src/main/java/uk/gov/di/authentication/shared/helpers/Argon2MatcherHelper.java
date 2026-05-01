@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.helpers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;
 import org.bouncycastle.util.Arrays;
@@ -7,6 +9,8 @@ import org.bouncycastle.util.Arrays;
 import java.util.Base64;
 
 public class Argon2MatcherHelper {
+
+    private static final Logger LOG = LogManager.getLogger(Argon2MatcherHelper.class);
 
     private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
 
@@ -64,7 +68,16 @@ public class Argon2MatcherHelper {
         }
         paramsBuilder.withParallelism(Integer.parseInt(performanceParams[2].substring(2)));
         paramsBuilder.withSalt(BASE64_DECODER.decode(parts[currentPart++]));
-        return new Argon2Hash(BASE64_DECODER.decode(parts[currentPart]), paramsBuilder.build());
+
+        Argon2Parameters params = paramsBuilder.build();
+
+        LOG.info(
+                "Argon2id config extracted from encoded hash: m={}, t={}, p={}",
+                params.getMemory(),
+                params.getIterations(),
+                params.getLanes());
+
+        return new Argon2Hash(BASE64_DECODER.decode(parts[currentPart]), params);
     }
 
     private static class Argon2Hash {

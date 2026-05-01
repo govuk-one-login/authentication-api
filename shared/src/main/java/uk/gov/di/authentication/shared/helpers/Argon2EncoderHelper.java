@@ -1,30 +1,39 @@
 package uk.gov.di.authentication.shared.helpers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.security.SecureRandom;
 import java.util.Base64;
 
 public class Argon2EncoderHelper {
 
-    private static final int MEMORY_IN_KIBIBYTES = 15360;
-    private static final int PARALLELISM = 1;
-    private static final int ITERATIONS = 2;
+    private static final Logger LOG = LogManager.getLogger(Argon2EncoderHelper.class);
+
     private static final Base64.Encoder BASE64_ENCODER = Base64.getEncoder().withoutPadding();
     private static final SecureRandom RANDOM = new SecureRandom();
 
     public static String argon2Hash(String raw) {
+        var config = ConfigurationService.getInstance();
+        int memoryInKibibytes = config.getArgon2MemoryInKibibytes();
+        int iterations = config.getArgon2Iterations();
+        int parallelism = config.getArgon2Parallelism();
+
+        LOG.info("Argon2id config: m={}, t={}, p={}", memoryInKibibytes, iterations, parallelism);
+
         byte[] salt = new byte[32];
         RANDOM.nextBytes(salt);
 
         var parameters =
                 new Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
                         .withVersion(Argon2Parameters.ARGON2_VERSION_13)
-                        .withIterations(ITERATIONS)
+                        .withIterations(iterations)
                         .withSalt(salt)
-                        .withMemoryAsKB(MEMORY_IN_KIBIBYTES)
-                        .withParallelism(PARALLELISM)
+                        .withMemoryAsKB(memoryInKibibytes)
+                        .withParallelism(parallelism)
                         .build();
 
         var generator = new Argon2BytesGenerator();
