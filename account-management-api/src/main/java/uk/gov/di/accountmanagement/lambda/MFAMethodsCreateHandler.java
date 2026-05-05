@@ -378,7 +378,7 @@ public class MFAMethodsCreateHandler
         };
     }
 
-    private Result<ErrorResponse, AuditContext> buildAuditContext(
+    private AuditContext enrichAuditContextForEvent(
             AccountManagementAuditableEvent auditEvent,
             MfaMethodCreateRequest mfaMethodCreateRequest,
             AuditContext baseAuditContext) {
@@ -400,7 +400,7 @@ public class MFAMethodsCreateHandler
                             pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
         }
 
-        return Result.success(context);
+        return context;
     }
 
     private AuditContext enrichWithSmsDetails(
@@ -448,9 +448,9 @@ public class MFAMethodsCreateHandler
         var maybeAuditContext =
                 accountManagementAuditContext(
                                 configurationService, dynamoService, input, userProfile)
-                        .flatMap(
+                        .map(
                                 baseContext ->
-                                        buildAuditContext(
+                                        enrichAuditContextForEvent(
                                                 auditEvent, mfaMethodCreateRequest, baseContext));
         if (maybeAuditContext.isFailure()) {
             LOG.error(
