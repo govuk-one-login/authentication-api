@@ -289,7 +289,6 @@ class MFAMethodsCreateHandlerTest {
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
                             .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("phone_number_country_code", "44"))
                             .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                             .withMetadataItem(pair("notification-type", MFA_SMS.name()));
 
@@ -303,8 +302,7 @@ class MFAMethodsCreateHandlerTest {
                     BASE_AUDIT_CONTEXT
                             .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"));
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -316,8 +314,7 @@ class MFAMethodsCreateHandlerTest {
                     BASE_AUDIT_CONTEXT
                             .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"));
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -475,7 +472,6 @@ class MFAMethodsCreateHandlerTest {
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
                             .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("phone_number_country_code", "44"))
                             .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
                             .withMetadataItem(pair("notification-type", MFA_SMS.name()));
 
@@ -659,8 +655,7 @@ class MFAMethodsCreateHandlerTest {
                     BASE_AUDIT_CONTEXT
                             .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.toString()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"));
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -760,8 +755,7 @@ class MFAMethodsCreateHandlerTest {
                     BASE_AUDIT_CONTEXT
                             .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.toString()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"));
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -794,8 +788,7 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(
                                     pair("mfa-type", requestDetail.mfaMethodType().toString()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("phone_number_country_code", "44"));
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
