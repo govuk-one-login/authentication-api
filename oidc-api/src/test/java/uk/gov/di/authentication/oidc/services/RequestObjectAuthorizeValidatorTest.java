@@ -212,6 +212,33 @@ class RequestObjectAuthorizeValidatorTest {
             assertThat(
                     baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
         }
+
+        @Test
+        void validatorLogsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod()
+                throws ClientSignatureValidationException, JwksException, JOSEException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.P2")).build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
+            var clientRegistry =
+                    generateClientRegistry(
+                                    ClientType.APP.getValue(),
+                                    new Scope(
+                                            OIDCScopeValue.OPENID.getValue(),
+                                            CustomScopeValue.DOC_CHECKING_APP.getValue()))
+                            .withIdentityVerificationSupported(true)
+                            .withTokenAuthMethod("client_secret_post");
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertFalse(requestObjectError.isPresent());
+            String expectedLogMessage =
+                    "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.";
+            assertThat(
+                    baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
+        }
     }
 
     @Nested
@@ -1012,6 +1039,7 @@ class RequestObjectAuthorizeValidatorTest {
                 .withRedirectUrls(singletonList(REDIRECT_URI))
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise")
+                .withTokenAuthMethod("private_key_jwt")
                 .withClientLoCs(singletonList(LevelOfConfidence.MEDIUM_LEVEL.getValue()))
                 .withClientType(clientType)
                 .withClaims(

@@ -167,6 +167,7 @@ public abstract class BaseAuthorizeValidator {
             if (vtrError.isPresent()) {
                 return vtrError;
             }
+            logIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(vtrList, client);
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
@@ -204,6 +205,26 @@ public abstract class BaseAuthorizeValidator {
                             OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
         }
         return Optional.empty();
+    }
+
+    protected void logIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
+            List<VectorOfTrust> vtrList, ClientRegistry client) {
+        List<LevelOfConfidence> identityLoCs =
+                List.of(
+                        LevelOfConfidence.LOW_LEVEL,
+                        LevelOfConfidence.MEDIUM_LEVEL,
+                        LevelOfConfidence.HIGH_LEVEL,
+                        LevelOfConfidence.VERY_HIGH_LEVEL);
+        boolean hasRequestedIdentityLoC =
+                vtrList.stream()
+                        .map(VectorOfTrust::getLevelOfConfidence)
+                        .filter(Objects::nonNull)
+                        .anyMatch(identityLoCs::contains);
+        if ((hasRequestedIdentityLoC)
+                && (client.getTokenAuthMethod().equals("client_secret_post"))) {
+            LOG.info(
+                    "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.");
+        }
     }
 
     protected void validateResponseMode(String responseMode) throws InvalidResponseModeException {
