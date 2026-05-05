@@ -99,11 +99,11 @@ Resources:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS:
+          AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              useStronglyConsistentReads,
+              authSessionUseStronglyConsistentReads,
             ]
       LoggingConfig:
         LogGroup: !Ref MfaResetAuthorizeFunctionLogGroup

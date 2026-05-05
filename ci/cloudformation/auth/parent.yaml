@@ -240,7 +240,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
+      authSessionUseStronglyConsistentReads: true
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 590183679200
       OrchAccountID: 816047645251
@@ -293,7 +293,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
+      authSessionUseStronglyConsistentReads: true
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 590183679200
       OrchAccountID: 816047645251
@@ -346,7 +346,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
+      authSessionUseStronglyConsistentReads: true
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 590183679200
       OrchAccountID: 816047645251
@@ -413,7 +413,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
+      authSessionUseStronglyConsistentReads: true
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 590183679200
       OrchAccountID: 816047645251
@@ -476,7 +476,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
+      authSessionUseStronglyConsistentReads: true
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 851725166715
       OrchAccountID: 767397776536
@@ -545,7 +545,7 @@ Mappings:
       supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
-      useStronglyConsistentReads: true
+      authSessionUseStronglyConsistentReads: true
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 891377189576
       OrchAccountID: 590183975515
@@ -614,7 +614,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3fd823db-5980-4853-bd9b-ed674ea8719e
-      useStronglyConsistentReads: false
+      authSessionUseStronglyConsistentReads: true
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 211125427676
       OrchAccountID: 058264132019
@@ -683,7 +683,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6269785d-3811-487d-af5a-a732d318c6ca
-      useStronglyConsistentReads: false
+      authSessionUseStronglyConsistentReads: true
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 637423504848
       OrchAccountID: 533266965190
