@@ -54,7 +54,6 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_OTP;
@@ -418,17 +417,9 @@ public class MFAMethodsCreateHandler
 
         var updatedContext = context.withPhoneNumber(formattedPhoneNumber);
 
-        var maybeCountryCodePair =
-                PhoneNumberHelper.maybeGetCountry(smsDetail.phoneNumber())
-                        .map(
-                                country ->
-                                        pair(
-                                                AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
-                                                country));
-
-        if (maybeCountryCodePair.isPresent()) {
-            updatedContext = updatedContext.withMetadataItem(maybeCountryCodePair.get());
-        }
+        // Note: we do not need to explicitly add the phone number country code metadata pair as
+        // this is handled
+        // already by the audit service
 
         if (auditEvent.equals(AUTH_CODE_VERIFIED) && smsDetail.otp() != null) {
             return updatedContext

@@ -196,6 +196,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
             codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
             codeVerifiedAttributes.put(EXTENSIONS_NOTIFICATION_TYPE, "MFA_SMS");
             eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
