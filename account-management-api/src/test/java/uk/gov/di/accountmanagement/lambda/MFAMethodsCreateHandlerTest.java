@@ -288,10 +288,10 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
+                            .withMetadataItem(pair("account-recovery", "false"))
                             .withMetadataItem(pair("phone_number_country_code", "44"))
                             .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
-                            .withMetadataItem(pair("notification-type", MFA_SMS.name()))
-                            .withMetadataItem(pair("account-recovery", "false"));
+                            .withMetadataItem(pair("notification-type", MFA_SMS.name()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -474,10 +474,10 @@ class MFAMethodsCreateHandlerTest {
                             .withPhoneNumber(TEST_E164_PHONE_NUMBER)
                             .withMetadataItem(pair("mfa-type", SMS.name()))
                             .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
+                            .withMetadataItem(pair("account-recovery", "false"))
                             .withMetadataItem(pair("phone_number_country_code", "44"))
                             .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
-                            .withMetadataItem(pair("notification-type", MFA_SMS.name()))
-                            .withMetadataItem(pair("account-recovery", "false"));
+                            .withMetadataItem(pair("notification-type", MFA_SMS.name()));
 
             verify(auditService)
                     .submitAuditEvent(

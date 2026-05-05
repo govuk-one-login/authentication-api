@@ -382,22 +382,23 @@ public class MFAMethodsCreateHandler
             AccountManagementAuditableEvent auditEvent,
             MfaMethodCreateRequest mfaMethodCreateRequest,
             AuditContext baseAuditContext) {
-        AuditContext context = baseAuditContext;
         var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
         var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
-        context =
-                context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType))
-                        .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority));
+
+        var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType);
+        var mfaMethodPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority);
+        var accountRecoveryPair = pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
+
+        var context =
+                baseAuditContext.withMetadataItem(mfaTypePair).withMetadataItem(mfaMethodPair);
+
+        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
+            context = context.withMetadataItem(accountRecoveryPair);
+        }
 
         if (mfaMethodCreateRequest.mfaMethod().method()
                 instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
             context = enrichWithSmsDetails(context, auditEvent, requestSmsMfaDetail);
-        }
-
-        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-            context =
-                    context.withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
         }
 
         return context;
