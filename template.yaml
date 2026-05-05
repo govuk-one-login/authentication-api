@@ -140,6 +140,7 @@ Conditions:
       ],
     ]
   ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
+  UseCloudfront: !Equals [dev, !Ref Environment]
   ProvisionNewApiClientRegistryApiKey:
     !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
   UseStoredOldIdTokenPublicKeys:
@@ -183,6 +184,7 @@ Mappings:
         "y": "nd02oQv8Uz9mjy3-EUG6nzuzdhW4TwYh6RA94n8RAJc",
         "alg": "ES256"
         }]'
+      oidcDomainName: "oidc.dev.account.gov.uk"
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -5991,6 +5993,7 @@ Resources:
       Tags:
         Name: orchestration-oidc-api
         CheckovRulesToSkip: CKV_AWS_120
+        FMSRegionalPolicy: "false"
 
   OidcApiAccessLogGroup:
     Condition: ProvisionNewApiGateway
@@ -6013,6 +6016,70 @@ Resources:
       StageKeys:
         - RestApiId: !Ref OrchestrationOidcApi
           StageName: !Sub "${Environment}"
+
+  OrchestrationOidcApiWafAssociation:
+    Type: "AWS::WAFv2::WebACLAssociation"
+    Condition: UseCloudfront
+    Properties:
+      WebACLArn:
+        Fn::ImportValue: !Sub "${Environment}-oidc-cloudfront-CloakingOriginWebACLArn"
+      ResourceArn: !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${OrchestrationOidcApi}/stages/${Environment}"
+    DependsOn:
+      - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
+
+  OrchestrationOidcApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: UseCloudfront
+    Properties:
+      DomainName:
+        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
+      DomainNameConfigurations:
+        - CertificateArn: "{{resolve:ssm:/deploy/hosted-zone/oidc/certificate-Arn}}"
+          SecurityPolicy: TLS_1_2
+
+  OrchestrationOidcApiBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Condition: UseCloudfront
+    Properties:
+      DomainName:
+        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
+      RestApiId: !Ref OrchestrationOidcApi
+      Stage: !Sub "${Environment}"
+    DependsOn:
+      - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
+
+  OrchestrationOidcOriginRecordSet:
+    Type: AWS::Route53::RecordSet
+    Condition: UseCloudfront
+    Properties:
+      Name: !Sub
+        - "origin.${oidcDomain}"
+        - oidcDomain:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              oidcDomainName,
+            ]
+      Type: A
+      HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc/hosted-zone-id}}"
+      AliasTarget:
+        DNSName: !GetAtt OrchestrationOidcApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt OrchestrationOidcApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false
+
+  OrchestrationOidcCloudFrontRecordSet:
+    Type: AWS::Route53::RecordSet
+    Condition: UseCloudfront
+    Properties:
+      Name:
+        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
+      Type: A
+      HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc/hosted-zone-id}}"
+      AliasTarget:
+        DNSName:
+          Fn::ImportValue: !Sub "${Environment}-oidc-cloudfront-DistributionDomain"
+        HostedZoneId: "Z2FDTNDATAQYW2" # Cloudfront Hosted Zone ID: https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-route53-recordset-aliastarget.html#:~:text=vpc%2Dendpoints.-,CloudFront%20distribution,-Specify%20Z2FDTNDATAQYW2.%20This
+        EvaluateTargetHealth: false
 
   #endregion
 
