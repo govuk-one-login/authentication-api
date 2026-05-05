@@ -380,49 +380,54 @@ public class MFAMethodsCreateHandler
 
     private Result<ErrorResponse, AuditContext> buildAuditContext(
             AccountManagementAuditableEvent auditEvent,
-            UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest,
             AuditContext baseAuditContext) {
-        if (auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)) {
-            return getDefaultMethod(userProfile)
-                    .map(
-                            method ->
-                                    updateAuditContextForFailedMFACreation(
-                                            method, baseAuditContext));
-        } else {
-            AuditContext context = baseAuditContext;
-            var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
-            var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
-            context =
-                    context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType))
-                            .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority));
+        AuditContext context = baseAuditContext;
+        var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
+        var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
+        context =
+                context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType))
+                        .withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority));
 
-            if (mfaMethodCreateRequest.mfaMethod().method()
-                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-                context = enrichWithSmsDetails(context, auditEvent, requestSmsMfaDetail);
-            }
-
-            if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-                context =
-                        context.withMetadataItem(
-                                pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
-            }
-
-            return Result.success(context);
+        if (mfaMethodCreateRequest.mfaMethod().method()
+                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+            context = enrichWithSmsDetails(context, auditEvent, requestSmsMfaDetail);
         }
+
+        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
+            context =
+                    context.withMetadataItem(
+                            pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
+        }
+
+        return Result.success(context);
     }
 
     private AuditContext enrichWithSmsDetails(
             AuditContext context,
             AccountManagementAuditableEvent auditEvent,
             RequestSmsMfaDetail smsDetail) {
-        var updatedContext =
-                context.withPhoneNumber(
-                                PhoneNumberHelper.formatPhoneNumber(smsDetail.phoneNumber()))
-                        .withMetadataItem(
-                                pair(
-                                        AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
-                                        PhoneNumberHelper.getCountry(smsDetail.phoneNumber())));
+        String formattedPhoneNumber;
+        try {
+            formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(smsDetail.phoneNumber());
+        } catch (RuntimeException e) {
+            LOG.warn("Couldn't format phone number, audit event using raw number from request");
+            formattedPhoneNumber = smsDetail.phoneNumber();
+        }
+
+        var updatedContext = context.withPhoneNumber(formattedPhoneNumber);
+
+        var maybeCountryCodePair =
+                PhoneNumberHelper.maybeGetCountry(smsDetail.phoneNumber())
+                        .map(
+                                country ->
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
+                                                country));
+
+        if (maybeCountryCodePair.isPresent()) {
+            updatedContext = updatedContext.withMetadataItem(maybeCountryCodePair.get());
+        }
 
         if (auditEvent.equals(AUTH_CODE_VERIFIED) && smsDetail.otp() != null) {
             return updatedContext
@@ -446,10 +451,7 @@ public class MFAMethodsCreateHandler
                         .flatMap(
                                 baseContext ->
                                         buildAuditContext(
-                                                auditEvent,
-                                                userProfile,
-                                                mfaMethodCreateRequest,
-                                                baseContext));
+                                                auditEvent, mfaMethodCreateRequest, baseContext));
         if (maybeAuditContext.isFailure()) {
             LOG.error(
                     "Error when building audit context for {} audit event with error code {}. No event raised",
@@ -468,49 +470,6 @@ public class MFAMethodsCreateHandler
 
         LOG.info("Successfully submitted audit event: {}", auditEvent.name());
         return Result.success(null);
-    }
-
-    private Result<ErrorResponse, MFAMethod> getDefaultMethod(UserProfile userProfile) {
-        var maybeMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
-
-        if (maybeMfaMethods.isFailure()) {
-            LOG.error("No MFA methods found for user");
-            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
-        }
-
-        var mfaMethods = maybeMfaMethods.getSuccess();
-
-        var defaultMfaMethod =
-                mfaMethods.stream()
-                        .filter(
-                                method ->
-                                        method.getPriority()
-                                                .equalsIgnoreCase(
-                                                        PriorityIdentifier.DEFAULT.name()))
-                        .findFirst();
-
-        if (defaultMfaMethod.isEmpty()) {
-            LOG.error("No default MFA method found for user");
-            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
-        } else return Result.success(defaultMfaMethod.get());
-    }
-
-    private static AuditContext updateAuditContextForFailedMFACreation(
-            MFAMethod defaultMethod, AuditContext auditContext) {
-        var phoneNumber =
-                defaultMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())
-                        ? defaultMethod.getDestination()
-                        : null;
-        var mfaTypeExtension =
-                pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, defaultMethod.getMfaMethodType());
-        var priorityExtension =
-                pair(
-                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                        PriorityIdentifier.DEFAULT.name().toLowerCase());
-        return auditContext
-                .withPhoneNumber(phoneNumber)
-                .withMetadataItem(mfaTypeExtension)
-                .withMetadataItem(priorityExtension);
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {

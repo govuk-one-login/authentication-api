@@ -58,7 +58,6 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
-import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
@@ -551,7 +550,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             Map<String, String> addFailedAttributes = new HashMap<>();
             addFailedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addFailedAttributes.put(EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.name());
-            addFailedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            addFailedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
             eventExpectations.put(AUTH_MFA_METHOD_ADD_FAILED.name(), addFailedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
@@ -608,8 +607,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             Map<String, String> addFailedAttributes = new HashMap<>();
             addFailedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addFailedAttributes.put(EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.name());
-            addFailedAttributes.put(
-                    EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name().toLowerCase());
+            addFailedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
             eventExpectations.put(AUTH_MFA_METHOD_ADD_FAILED.name(), addFailedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
@@ -767,8 +765,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             Map<String, String> addFailedAttributes = new HashMap<>();
             addFailedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
-            addFailedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
-            addFailedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            addFailedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            addFailedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
             eventExpectations.put(AUTH_MFA_METHOD_ADD_FAILED.name(), addFailedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
