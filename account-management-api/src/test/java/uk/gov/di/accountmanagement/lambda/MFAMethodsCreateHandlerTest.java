@@ -550,7 +550,6 @@ class MFAMethodsCreateHandlerTest {
         void shouldReturn400WhenInternationalNumberAndFeatureFlagDisabled() {
             when(configurationService.isAccountManagementInternationalSmsEnabled())
                     .thenReturn(false);
-            when(mfaMethodsService.getMfaMethods(TEST_EMAIL)).thenReturn(Result.success(List.of()));
 
             var event =
                     generateApiGatewayEvent(
@@ -563,7 +562,6 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED));
             verifyNoInteractions(sqsClient);
-            verifyNoInteractions(auditService);
         }
 
         @Test
@@ -652,13 +650,6 @@ class MFAMethodsCreateHandlerTest {
                                     MfaCreateFailureReason
                                             .BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
 
-            var defaultMfa =
-                    MFAMethod.authAppMfaMethod(
-                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
-
-            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
-                    .thenReturn(Result.success(List.of(defaultMfa)));
-
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
@@ -666,9 +657,10 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedMfaMethodAddFailedAuditContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
+                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
+                            .withMetadataItem(pair("mfa-type", SMS.toString()))
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
+                            .withMetadataItem(pair("phone_number_country_code", "44"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -691,12 +683,6 @@ class MFAMethodsCreateHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.failure(MfaCreateFailureReason.INVALID_PHONE_NUMBER));
-            var defaultMfa =
-                    MFAMethod.authAppMfaMethod(
-                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
-
-            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
-                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var result = handler.handleRequest(event, context);
 
@@ -705,9 +691,9 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedMfaMethodAddFailedAuditContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
+                            .withPhoneNumber("not a real phone number")
+                            .withMetadataItem(pair("mfa-type", SMS.toString()))
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -727,13 +713,6 @@ class MFAMethodsCreateHandlerTest {
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
 
-            var defaultMfa =
-                    MFAMethod.authAppMfaMethod(
-                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
-
-            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
-                    .thenReturn(Result.success(List.of(defaultMfa)));
-
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
@@ -741,9 +720,9 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedMfaMethodAddFailedAuditContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
+                            .withPhoneNumber(invalidPhoneNumber)
+                            .withMetadataItem(pair("mfa-type", SMS.toString()))
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -751,8 +730,6 @@ class MFAMethodsCreateHandlerTest {
                             expectedMfaMethodAddFailedAuditContext,
                             AUDIT_EVENT_COMPONENT_ID_HOME);
 
-            // Verify that getMfaMethods was called but addBackupMfa was not
-            verify(mfaMethodsService).getMfaMethods(TEST_EMAIL);
             verify(mfaMethodsService, org.mockito.Mockito.never()).addBackupMfa(any(), any());
         }
 
@@ -797,22 +774,15 @@ class MFAMethodsCreateHandlerTest {
 
         @Test
         void shouldReturn400WhenMfaMethodServiceReturnsSmsMfaAlreadyExistsError() {
+            var requestDetail = new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP);
             var event =
                     generateApiGatewayEvent(
-                            PriorityIdentifier.BACKUP,
-                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
-                            TEST_INTERNAL_SUBJECT);
+                            PriorityIdentifier.BACKUP, requestDetail, TEST_INTERNAL_SUBJECT);
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
             when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
-            var defaultMfa =
-                    MFAMethod.authAppMfaMethod(
-                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
-
-            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
-                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var result = handler.handleRequest(event, context);
 
@@ -821,9 +791,11 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedMfaMethodAddFailedAuditContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
+                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
+                            .withMetadataItem(
+                                    pair("mfa-type", requestDetail.mfaMethodType().toString()))
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
+                            .withMetadataItem(pair("phone_number_country_code", "44"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -843,12 +815,6 @@ class MFAMethodsCreateHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.failure(MfaCreateFailureReason.AUTH_APP_EXISTS));
-            var defaultMfa =
-                    MFAMethod.authAppMfaMethod(
-                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
-
-            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
-                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var result = handler.handleRequest(event, context);
 
@@ -859,7 +825,7 @@ class MFAMethodsCreateHandlerTest {
                     BASE_AUDIT_CONTEXT
                             .withPhoneNumber(null)
                             .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -882,16 +848,6 @@ class MFAMethodsCreateHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.success(mfaMethodWithInvalidMfaType));
-            var defaultMfa =
-                    MFAMethod.smsMfaMethod(
-                            true,
-                            true,
-                            TEST_PHONE_NUMBER,
-                            PriorityIdentifier.DEFAULT,
-                            TEST_SMS_MFA_ID);
-
-            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
-                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var result = handler.handleRequest(event, context);
 
@@ -901,9 +857,9 @@ class MFAMethodsCreateHandlerTest {
 
             var expectedMfaMethodAddFailedAuditContext =
                     BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.toString()))
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
+                            .withPhoneNumber(null)
+                            .withMetadataItem(pair("mfa-type", AUTH_APP.toString()))
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verify(auditService)
                     .submitAuditEvent(
