@@ -12,7 +12,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -98,6 +97,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
@@ -705,32 +705,17 @@ class SendNotificationHandlerTest {
                             "{ \"email\": \"%s\", \"phoneNumber\": \"%s\", \"notificationType\": \"%s\",  \"journeyType\": \"%s\" }",
                             EMAIL, UK_MOBILE_NUMBER, notificationType, REGISTRATION);
             var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-            var expectedMetadataPairForMfaMethod =
-                    new AuditService.MetadataPair("mfa-method", "default", false);
-            var expectedMetadataPairForJourneyType =
-                    new AuditService.MetadataPair("journey-type", REGISTRATION, false);
 
             handler.handleRequest(event, context);
 
-            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_PHONE_CODE_SENT), captor.capture());
-            AuditContext capturedObject = captor.getValue();
-
-            assertEquals(UK_MOBILE_NUMBER, capturedObject.phoneNumber());
-            capturedObject
-                    .getMetadataItemByKey("mfa-method")
-                    .ifPresent(
-                            actualMetadataPairForMfaMethod ->
-                                    assertEquals(
-                                            expectedMetadataPairForMfaMethod,
-                                            actualMetadataPairForMfaMethod));
-            capturedObject
-                    .getMetadataItemByKey("journey-type")
-                    .ifPresent(
-                            actualMetadataPairForJourneyType ->
-                                    assertEquals(
-                                            expectedMetadataPairForJourneyType,
-                                            actualMetadataPairForJourneyType));
+            var priorityPair = pair("mfa-method", "default");
+            var journeyTypePair = pair("journey-type", REGISTRATION);
+            var expectedAuditContext =
+                    auditContext
+                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
+                            .withMetadataItem(priorityPair)
+                            .withMetadataItem(journeyTypePair);
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
         }
 
         @Test
@@ -748,32 +733,17 @@ class SendNotificationHandlerTest {
                             "{ \"email\": \"%s\", \"phoneNumber\": \"%s\", \"notificationType\": \"%s\",  \"journeyType\": \"%s\" }",
                             EMAIL, UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, REGISTRATION);
             var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-            var expectedMetadataPairForMfaMethod =
-                    new AuditService.MetadataPair("mfa-method", "default", false);
-            var expectedMetadataPairForJourneyType =
-                    new AuditService.MetadataPair("journey-type", REGISTRATION, false);
 
             handler.handleRequest(event, context);
 
-            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_PHONE_CODE_SENT), captor.capture());
-            AuditContext capturedObject = captor.getValue();
-
-            assertEquals(UK_MOBILE_NUMBER, capturedObject.phoneNumber());
-            capturedObject
-                    .getMetadataItemByKey("mfa-method")
-                    .ifPresent(
-                            actualMetadataPairForMfaMethod ->
-                                    assertEquals(
-                                            expectedMetadataPairForMfaMethod,
-                                            actualMetadataPairForMfaMethod));
-            capturedObject
-                    .getMetadataItemByKey("journey-type")
-                    .ifPresent(
-                            actualMetadataPairForJourneyType ->
-                                    assertEquals(
-                                            expectedMetadataPairForJourneyType,
-                                            actualMetadataPairForJourneyType));
+            var priorityPair = pair("mfa-method", "default");
+            var journeyTypePair = pair("journey-type", REGISTRATION);
+            var expectedAuditContext =
+                    auditContext
+                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
+                            .withMetadataItem(priorityPair)
+                            .withMetadataItem(journeyTypePair);
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
         }
 
         @Test
@@ -787,28 +757,14 @@ class SendNotificationHandlerTest {
 
             handler.handleRequest(event, context);
 
-            ArgumentCaptor<AuditContext> auditContextCaptor =
-                    ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService)
-                    .submitAuditEvent(eq(AUTH_PHONE_CODE_SENT), auditContextCaptor.capture());
-
-            AuditContext capturedContext = auditContextCaptor.getValue();
-            assertTrue(capturedContext.getMetadataItemByKey("mfa-method").isPresent());
-            assertTrue(capturedContext.getMetadataItemByKey("journey-type").isPresent());
-            assertEquals(
-                    "default", capturedContext.getMetadataItemByKey("mfa-method").get().value());
-            assertEquals(
-                    REGISTRATION,
-                    capturedContext.getMetadataItemByKey("journey-type").get().value());
-            assertEquals(UK_MOBILE_NUMBER, capturedContext.phoneNumber());
-            assertEquals(CLIENT_ID, capturedContext.clientId());
-            assertEquals(CLIENT_SESSION_ID, capturedContext.clientSessionId());
-            assertEquals(SESSION_ID, capturedContext.sessionId());
-            assertEquals(INTERNAL_COMMON_SUBJECT_ID, capturedContext.subjectId());
-            assertEquals(EMAIL, capturedContext.email());
-            assertEquals(IP_ADDRESS, capturedContext.ipAddress());
-            assertEquals(DI_PERSISTENT_SESSION_ID, capturedContext.persistentSessionId());
-            assertEquals(Optional.of(ENCODED_DEVICE_DETAILS), capturedContext.txmaAuditEncoded());
+            var priorityPair = pair("mfa-method", "default");
+            var journeyTypePair = pair("journey-type", REGISTRATION);
+            var expectedAuditContext =
+                    auditContext
+                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
+                            .withMetadataItem(priorityPair)
+                            .withMetadataItem(journeyTypePair);
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
         }
 
         @Test
@@ -862,16 +818,16 @@ class SendNotificationHandlerTest {
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
 
-            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_PHONE_CODE_SENT), captor.capture());
-            AuditContext capturedContext = captor.getValue();
-
-            assertEquals(newPhoneNumber, capturedContext.phoneNumber());
             // Business rule: new phone numbers should be reported as the default mfa method in
             // audit events
-            capturedContext
-                    .getMetadataItemByKey("mfa-method")
-                    .ifPresent(metadata -> assertEquals("default", metadata.value()));
+            var priorityPair = pair("mfa-method", "default");
+            var journeyTypePair = pair("journey-type", REGISTRATION);
+            var expectedAuditContext =
+                    auditContext
+                            .withPhoneNumber(newPhoneNumber)
+                            .withMetadataItem(priorityPair)
+                            .withMetadataItem(journeyTypePair);
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
         }
     }
 
