@@ -448,11 +448,7 @@ public class MFAMethodsCreateHandler
             MfaMethodCreateRequest mfaMethodCreateRequest) {
         var maybeAuditContext =
                 accountManagementAuditContext(
-                                configurationService, dynamoService, input, userProfile)
-                        .map(
-                                baseContext ->
-                                        enrichAuditContextForEvent(
-                                                auditEvent, mfaMethodCreateRequest, baseContext));
+                        configurationService, dynamoService, input, userProfile);
         if (maybeAuditContext.isFailure()) {
             LOG.error(
                     "Error when building audit context for {} audit event with error code {}. No event raised",
@@ -461,16 +457,15 @@ public class MFAMethodsCreateHandler
             return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
         }
 
-        var result =
-                AuditHelper.sendAuditEvent(
-                        auditEvent, maybeAuditContext.getSuccess(), auditService, LOG);
-
-        if (result.isFailure()) {
-            return Result.failure(result.getFailure());
-        }
-
-        LOG.info("Successfully submitted audit event: {}", auditEvent.name());
-        return Result.success(null);
+        var baseAuditContext = maybeAuditContext.getSuccess();
+        var enrichedAuditContext =
+                enrichAuditContextForEvent(auditEvent, mfaMethodCreateRequest, baseAuditContext);
+        return AuditHelper.sendAuditEvent(auditEvent, enrichedAuditContext, auditService, LOG)
+                .map(
+                        sucess -> {
+                            LOG.info("Successfully submitted audit event: {}", auditEvent.name());
+                            return sucess;
+                        });
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
