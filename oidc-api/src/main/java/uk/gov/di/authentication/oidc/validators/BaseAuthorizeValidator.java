@@ -149,6 +149,13 @@ public abstract class BaseAuthorizeValidator {
         return Optional.empty();
     }
 
+    private boolean requestContainsIdentityLoC(List<VectorOfTrust> vtrList) {
+        return vtrList.stream()
+                .map(VectorOfTrust::getLevelOfConfidence)
+                .filter(Objects::nonNull)
+                .anyMatch(LevelOfConfidence.listOfIdentityLoCs()::contains);
+    }
+
     protected Optional<ErrorObject> validateVtr(
             List<String> authRequestVtr, ClientRegistry client) {
         try {
@@ -186,18 +193,7 @@ public abstract class BaseAuthorizeValidator {
 
     protected Optional<ErrorObject> errorIfIdentityLoCAndIdentityUnsupported(
             List<VectorOfTrust> vtrList, ClientRegistry client) {
-        List<LevelOfConfidence> identityLoCs =
-                List.of(
-                        LevelOfConfidence.LOW_LEVEL,
-                        LevelOfConfidence.MEDIUM_LEVEL,
-                        LevelOfConfidence.HIGH_LEVEL,
-                        LevelOfConfidence.VERY_HIGH_LEVEL);
-        boolean hasRequestedIdentityLoC =
-                vtrList.stream()
-                        .map(VectorOfTrust::getLevelOfConfidence)
-                        .filter(Objects::nonNull)
-                        .anyMatch(identityLoCs::contains);
-        if (hasRequestedIdentityLoC && !client.isIdentityVerificationSupported()) {
+        if (requestContainsIdentityLoC(vtrList) && !client.isIdentityVerificationSupported()) {
             logErrorInProdElseWarn(
                     "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.");
             return Optional.of(
@@ -209,18 +205,7 @@ public abstract class BaseAuthorizeValidator {
 
     protected void logIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
             List<VectorOfTrust> vtrList, ClientRegistry client) {
-        List<LevelOfConfidence> identityLoCs =
-                List.of(
-                        LevelOfConfidence.LOW_LEVEL,
-                        LevelOfConfidence.MEDIUM_LEVEL,
-                        LevelOfConfidence.HIGH_LEVEL,
-                        LevelOfConfidence.VERY_HIGH_LEVEL);
-        boolean hasRequestedIdentityLoC =
-                vtrList.stream()
-                        .map(VectorOfTrust::getLevelOfConfidence)
-                        .filter(Objects::nonNull)
-                        .anyMatch(identityLoCs::contains);
-        if ((hasRequestedIdentityLoC)
+        if (requestContainsIdentityLoC(vtrList)
                 && (client.getTokenAuthMethod().equals("client_secret_post"))) {
             LOG.info(
                     "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.");
