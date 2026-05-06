@@ -12,7 +12,6 @@ import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.Passke
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -30,14 +29,13 @@ import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.context
 class PasskeysDeleteHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeysService passkeysService = mock(PasskeysService.class);
 
     private PasskeysDeleteHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new PasskeysDeleteHandler(configurationService, passkeysService);
+        handler = new PasskeysDeleteHandler(passkeysService);
     }
 
     @Nested

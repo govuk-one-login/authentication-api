@@ -24,7 +24,6 @@ public class PasskeysDeleteHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(PasskeysDeleteHandler.class);
-    private final ConfigurationService configurationService;
     private final PasskeysService passkeysService;
 
     public PasskeysDeleteHandler() {
@@ -32,13 +31,10 @@ public class PasskeysDeleteHandler
     }
 
     public PasskeysDeleteHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.passkeysService = new PasskeysService(configurationService);
     }
 
-    public PasskeysDeleteHandler(
-            ConfigurationService configurationService, PasskeysService passkeysService) {
-        this.configurationService = configurationService;
+    public PasskeysDeleteHandler(PasskeysService passkeysService) {
         this.passkeysService = passkeysService;
     }
 
