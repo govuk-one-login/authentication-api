@@ -1,7 +1,8 @@
 package uk.gov.di.authentication.accountdata.entity.passkey.failurereasons;
 
 public enum PasskeysDeleteFailureReason {
-    PASSKEY_NOT_FOUND("passkey_not_found");
+    PASSKEY_NOT_FOUND("passkey_not_found"),
+    FAILED_TO_DELETE_PASSKEY("failed_to_delete_passkey");
 
     private final String value;
 
