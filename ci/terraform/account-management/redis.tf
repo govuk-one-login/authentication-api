@@ -5,10 +5,6 @@ locals {
 resource "aws_elasticache_subnet_group" "account_management_redis_session_store" {
   name       = "${var.environment}-acct-mgmt-redis-session-store-cache-subnet"
   subnet_ids = local.private_subnet_ids
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 
@@ -20,10 +16,6 @@ resource "random_password" "redis_password" {
   min_numeric      = 3
   min_special      = 3
   min_upper        = 3
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_elasticache_replication_group" "account_management_sessions_store" {
@@ -56,6 +48,5 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
     ignore_changes = [
       engine_version
     ]
-    prevent_destroy = true
   }
 }

@@ -2,6 +2,10 @@ locals {
   redis_key = "account-management"
 }
 
+data "aws_ssm_parameter" "international_sms_number_send_limit" {
+  name = "${var.environment}-sms-international-number-send-limit"
+}
+
 data "aws_iam_policy_document" "key_policy" {
   policy_id = "key-policy-ssm"
   statement {
@@ -32,19 +36,11 @@ resource "aws_kms_key" "parameter_store_key" {
 
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_kms_alias" "parameter_store_key_alias" {
   name          = "alias/${var.environment}-acct-mgmt-lambda-parameter-store-encryption-key"
   target_key_id = aws_kms_key.parameter_store_key.id
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_ssm_parameter" "redis_master_host" {
@@ -52,10 +48,6 @@ resource "aws_ssm_parameter" "redis_master_host" {
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
   value  = aws_elasticache_replication_group.account_management_sessions_store.primary_endpoint_address
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_ssm_parameter" "redis_replica_host" {
@@ -63,10 +55,6 @@ resource "aws_ssm_parameter" "redis_replica_host" {
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
   value  = aws_elasticache_replication_group.account_management_sessions_store.reader_endpoint_address
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_ssm_parameter" "redis_tls" {
@@ -74,10 +62,6 @@ resource "aws_ssm_parameter" "redis_tls" {
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
   value  = "true"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_ssm_parameter" "redis_password" {
@@ -85,10 +69,6 @@ resource "aws_ssm_parameter" "redis_password" {
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
   value  = random_password.redis_password.result
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_ssm_parameter" "redis_port" {
@@ -96,10 +76,6 @@ resource "aws_ssm_parameter" "redis_port" {
   type   = "SecureString"
   key_id = aws_kms_alias.parameter_store_key_alias.id
   value  = aws_elasticache_replication_group.account_management_sessions_store.port
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 data "aws_iam_policy_document" "redis_parameter_policy" {
@@ -139,8 +115,4 @@ resource "aws_iam_policy" "parameter_policy" {
   policy      = data.aws_iam_policy_document.redis_parameter_policy.json
   path        = "/${var.environment}/redis/${local.redis_key}/"
   name_prefix = "parameter-store-policy"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }

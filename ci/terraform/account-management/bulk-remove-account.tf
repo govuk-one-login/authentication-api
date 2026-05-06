@@ -1,0 +1,90 @@
+module "account_management_bulk_remove_account_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "account-management-bulk-remove-account-role"
+  vpc_arn     = local.vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.dynamo_am_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_am_user_delete_access_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    module.account_management_txma_audit.access_policy_arn,
+    aws_iam_policy.dynamo_am_account_modifiers_read_access_policy.arn,
+    aws_iam_policy.dynamo_am_account_modifiers_delete_access_policy.arn,
+    local.account_modifiers_encryption_policy_arn,
+    aws_iam_policy.legacy_account_deletion_topic.arn
+  ]
+  extra_tags = {
+    Service = "bulk-remove-account"
+  }
+}
+
+module "bulk_remove_account" {
+  source = "../modules/endpoint-lambda"
+
+  endpoint_name         = "bulk-remove-account"
+  handler_function_name = "uk.gov.di.accountmanagement.lambda.BulkRemoveAccountHandler::handleRequest"
+
+  memory_size                 = lookup(var.performance_tuning, "bulk-remove-account", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "bulk-remove-account", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "bulk-remove-account", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "bulk-remove-account", local.default_performance_parameters).scaling_trigger
+
+  source_bucket           = aws_s3_bucket.source_bucket.bucket
+  lambda_zip_file         = aws_s3_object.account_management_api_release_zip.key
+  lambda_zip_file_version = aws_s3_object.account_management_api_release_zip.version_id
+  code_signing_config_arn = local.lambda_code_signing_configuration_arn
+
+  security_group_ids = concat([
+    local.allow_aws_service_access_security_group_id,
+  ], var.environment == "production" ? [aws_security_group.allow_access_to_am_redis.id] : [])
+  subnet_id = local.private_subnet_ids
+
+  environment                            = var.environment
+  lambda_role_arn                        = module.account_management_bulk_remove_account_role.arn
+  logging_endpoint_arns                  = var.logging_endpoint_arns
+  cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  cloudwatch_log_retention               = var.cloudwatch_log_retention
+  lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
+
+  runbook_link                          = "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+  lambda_log_alarm_error_rate_threshold = 25
+
+  handler_environment_variables = {
+    JAVA_TOOL_OPTIONS                 = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+    ENVIRONMENT                       = var.environment
+    EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
+    TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI               = var.internal_sector_uri
+    LEGACY_ACCOUNT_DELETION_TOPIC_ARN = local.bulk_remove_account_deletion_topic_arn
+  }
+  depends_on = [module.account_management_bulk_remove_account_role]
+}
+
+data "aws_iam_policy_document" "invoke_bulk_remove_account_lambda" {
+  statement {
+    sid       = "permitInvokeBulkRemoveAccountLambda"
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
+    resources = [module.bulk_remove_account.invoke_arn]
+
+  }
+}
+
+resource "aws_iam_policy" "invoke_bulk_remove_account_lambda" {
+  count       = local.should_create_bulk_remove_account_policy ? 1 : 0
+  name        = "bulk-remove-account-user-policy"
+  path        = "/control-tower/am/"
+  description = "Policy for use in Control Tower to be attached to the role assumed by support users to bulk account deletions"
+  policy      = data.aws_iam_policy_document.invoke_bulk_remove_account_lambda.json
+}
+
+locals {
+  bulk_remove_mock_topic_arn               = try(aws_sns_topic.mock_account_deletion_topic[0].arn, "")
+  bulk_remove_account_deletion_topic_arn   = coalesce(var.legacy_account_deletion_topic_arn, local.bulk_remove_mock_topic_arn)
+  should_create_bulk_remove_account_policy = contains(["production", "integration", "staging"], var.environment)
+}
