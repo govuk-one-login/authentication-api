@@ -4,6 +4,7 @@ import uk.gov.di.authentication.accountdata.constants.AccountDataConstants;
 import uk.gov.di.authentication.accountdata.entity.Authenticator;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.BaseDynamoService;
@@ -52,8 +53,14 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
                 .orElseGet(() -> Result.failure(PasskeysUpdateFailureReason.PASSKEY_NOT_FOUND));
     }
 
-    public void deletePasskey(String publicSubjectId, String passkeyId) {
-        var sortKey = buildSortKey(passkeyId);
-        delete(publicSubjectId, sortKey);
+    public Result<PasskeysDeleteFailureReason, Void> deletePasskey(
+            String publicSubjectId, String passkeyId) {
+        return getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId)
+                .map(
+                        passkey -> {
+                            delete(passkey);
+                            return Result.<PasskeysDeleteFailureReason, Void>success(null);
+                        })
+                .orElseGet(() -> Result.failure(PasskeysDeleteFailureReason.PASSKEY_NOT_FOUND));
     }
 }

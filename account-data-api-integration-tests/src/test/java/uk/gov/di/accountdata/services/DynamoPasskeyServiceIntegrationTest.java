@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountdata.extensions.AuthenticatorExtension;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -295,16 +296,38 @@ class DynamoPasskeyServiceIntegrationTest {
                             CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID));
 
             // When
-            dynamoPasskeyService.deletePasskey(
-                    CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+            var result =
+                    dynamoPasskeyService.deletePasskey(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
 
             // Then
+            assertTrue(result.isSuccess());
             var usersPasskeys =
                     dynamoPasskeyService.getPasskeysForUser(CommonTestVariables.PUBLIC_SUBJECT_ID);
             assertThat(usersPasskeys.size(), equalTo(1));
             assertThat(
                     usersPasskeys.get(0).getCredentialId(),
                     equalTo(CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID));
+        }
+
+        @Test
+        void shouldReturnFailureIfPasskeyDoesNotExists() {
+            // Given
+            var existingPasskey =
+                    buildGenericPasskeyForUserWithSubjectId(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(existingPasskey);
+
+            // When
+            var result =
+                    dynamoPasskeyService.deletePasskey(
+                            CommonTestVariables.PUBLIC_SUBJECT_ID, "a-different-id");
+
+            // Then
+            assertEquals(Result.failure(PasskeysDeleteFailureReason.PASSKEY_NOT_FOUND), result);
+            var usersPasskeys =
+                    dynamoPasskeyService.getPasskeysForUser(CommonTestVariables.PUBLIC_SUBJECT_ID);
+            assertThat(usersPasskeys.size(), equalTo(1));
+            assertEquals(existingPasskey.getCredentialId(), usersPasskeys.get(0).getCredentialId());
         }
     }
 }
