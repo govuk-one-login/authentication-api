@@ -58,8 +58,12 @@ public class PasskeysDeleteHandler
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
         var passkeyId = input.getPathParameters().get("passkeyId");
 
-        if (Objects.isNull(publicSubjectId)) {
-            return generateApiGatewayProxyResponse(400, "");
+        if (Objects.isNull(publicSubjectId) || publicSubjectId.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MISSING_SUBJECT_ID);
+        }
+
+        if (Objects.isNull(passkeyId) || passkeyId.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MISSING_PASSKEY_ID);
         }
 
         if (!isSubjectIdAuthorized(
@@ -75,10 +79,10 @@ public class PasskeysDeleteHandler
     private APIGatewayProxyResponseEvent mapDeleteFailure(
             PasskeysDeleteFailureReason failureReason) {
         return switch (failureReason) {
-            case PASSKEY_NOT_FOUND ->
-                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.PASSKEY_NOT_FOUND);
-            case FAILED_TO_DELETE_PASSKEY ->
-                generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
+            case PASSKEY_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
+                    404, ErrorResponse.PASSKEY_NOT_FOUND);
+            case FAILED_TO_DELETE_PASSKEY -> generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.INTERNAL_SERVER_ERROR);
         };
     }
 }

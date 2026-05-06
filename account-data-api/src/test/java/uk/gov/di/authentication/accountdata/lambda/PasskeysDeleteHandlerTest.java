@@ -5,6 +5,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -12,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -85,7 +89,8 @@ class PasskeysDeleteHandlerTest {
                     Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
             var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
             when(passkeysService.deletePasskey(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID))
-                    .thenReturn(Result.failure(PasskeysDeleteFailureReason.FAILED_TO_DELETE_PASSKEY));
+                    .thenReturn(
+                            Result.failure(PasskeysDeleteFailureReason.FAILED_TO_DELETE_PASSKEY));
 
             // When
             var result =
@@ -97,25 +102,46 @@ class PasskeysDeleteHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
         }
 
-        @Test
-        void shouldReturn400WhenPublicSubjectIdNotPresent() {
+        private static Stream<Arguments> pathParamsWithMissingFields() {
+            return Stream.of(
+                    Arguments.of(
+                            Map.of("passkeyId", PRIMARY_PASSKEY_ID),
+                            ErrorResponse.MISSING_SUBJECT_ID),
+                    Arguments.of(
+                            Map.of("publicSubjectId", "", "passkeyId", PRIMARY_PASSKEY_ID),
+                            ErrorResponse.MISSING_SUBJECT_ID),
+                    Arguments.of(
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            ErrorResponse.MISSING_PASSKEY_ID),
+                    Arguments.of(
+                            Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", ""),
+                            ErrorResponse.MISSING_PASSKEY_ID));
+        }
+
+        @ParameterizedTest
+        @MethodSource("pathParamsWithMissingFields")
+        void shouldReturn400WhenPathParamsHaveMissingFields(
+                Map<String, String> pathParamsWithMissingFields,
+                ErrorResponse expectedErrorResponse) {
             // Given
-            var pathParams = Map.of("passkeyId", PRIMARY_PASSKEY_ID);
             var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
 
             // When
             var result =
                     handler.handleRequest(
-                            passkeysDeleteRequest(pathParams, authorizerParams), context);
+                            passkeysDeleteRequest(pathParamsWithMissingFields, authorizerParams),
+                            context);
 
             // Then
             assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(expectedErrorResponse));
         }
 
         @Test
         void shouldReturn401WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams() {
             // Given
-            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
+            var pathParams =
+                    Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
             var authorizerParams = Map.<String, Object>of("principalId", "another-subject-id");
 
             // When
