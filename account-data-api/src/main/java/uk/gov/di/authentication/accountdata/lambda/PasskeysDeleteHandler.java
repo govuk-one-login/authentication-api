@@ -7,13 +7,17 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Objects;
 
 import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class PasskeysDeleteHandler
@@ -63,8 +67,17 @@ public class PasskeysDeleteHandler
             return generateApiGatewayProxyResponse(401, "");
         }
 
-        passkeysService.deletePasskey(publicSubjectId, passkeyId);
+        return passkeysService
+                .deletePasskey(publicSubjectId, passkeyId)
+                .fold(this::mapDeleteFailure, success -> generateEmptySuccessApiGatewayResponse());
+    }
 
-        return generateApiGatewayProxyResponse(204, "");
+    private APIGatewayProxyResponseEvent mapDeleteFailure(
+            PasskeysDeleteFailureReason failureReason) {
+        return switch (failureReason) {
+            case PASSKEY_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
+                    404, ErrorResponse.PASSKEY_NOT_FOUND);
+            default -> throw new RuntimeException("To come in subsequent commit");
+        };
     }
 }

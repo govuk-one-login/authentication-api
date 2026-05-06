@@ -60,16 +60,16 @@ class PasskeysDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
             assertEquals(2, passkeysBeforeDelete.size());
 
             // When
+            var pathParams =
+                    Map.ofEntries(
+                            Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            Map.entry("passkeyId", PRIMARY_PASSKEY_ID));
             var response =
                     makeRequest(
                             Optional.empty(),
                             new HashMap<>(),
                             Collections.emptyMap(),
-                            Map.of(
-                                    "publicSubjectId",
-                                    PUBLIC_SUBJECT_ID,
-                                    "passkeyId",
-                                    PRIMARY_PASSKEY_ID),
+                            pathParams,
                             AUTHORIZER_PARAMS);
 
             // Then
@@ -81,6 +81,46 @@ class PasskeysDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
             var savedPasskey = passkeysAfterDelete.get(0);
 
             assertThat(savedPasskey.getCredentialId(), equalTo(otherPasskey.getCredentialId()));
+        }
+    }
+
+    @Nested
+    class Failure {
+        @Test
+        void shouldReturn404WhenPasskeyNotFound() {
+            // Given
+            Passkey existingPasskey =
+                    buildGenericPasskeyForUserWithSubjectId(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+            dynamoPasskeyService.savePasskeyIfUnique(existingPasskey);
+
+            // Check that we definitely have both a passkey saved before we proceed with the request
+            // to delete
+            var passkeysBeforeDelete = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
+            assertEquals(1, passkeysBeforeDelete.size());
+
+            // When
+            var pathParams =
+                    Map.ofEntries(
+                            Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID),
+                            Map.entry("passkeyId", SECONDARY_PASSKEY_ID));
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            new HashMap<>(),
+                            Collections.emptyMap(),
+                            pathParams,
+                            AUTHORIZER_PARAMS);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(404));
+
+            var passkeysAfterDelete = dynamoPasskeyService.getPasskeysForUser(PUBLIC_SUBJECT_ID);
+            assertEquals(passkeysBeforeDelete.size(), passkeysAfterDelete.size());
+
+            var passkeyAfterDelete = passkeysAfterDelete.get(0);
+            assertThat(
+                    passkeyAfterDelete.getCredentialId(),
+                    equalTo(existingPasskey.getCredentialId()));
         }
     }
 }
