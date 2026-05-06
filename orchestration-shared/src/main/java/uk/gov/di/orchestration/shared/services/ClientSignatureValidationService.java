@@ -14,7 +14,7 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
@@ -63,7 +63,7 @@ public class ClientSignatureValidationService {
         this.lambdaClient =
                 LambdaClient.builder()
                         .region(Region.of(configurationService.getAwsRegion()))
-                        .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .build();
         this.oidcAPI = new OidcAPI(configurationService);
     }
