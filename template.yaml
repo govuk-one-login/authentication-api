@@ -6003,6 +6003,16 @@ Resources:
       LogGroupName: !Sub "${Environment}-orchestration-oidc-api-access-logs"
       RetentionInDays: 30
 
+  OidcApiExecutionLogGroup:
+    Condition: ProvisionNewApiGateway
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${OrchestrationOidcApi}/${StageName}
+        - StageName: !Ref Environment
+      RetentionInDays: 30
+
   ClientRegistryApiKey:
     Condition: ProvisionNewApiClientRegistryApiKey
     DependsOn:
