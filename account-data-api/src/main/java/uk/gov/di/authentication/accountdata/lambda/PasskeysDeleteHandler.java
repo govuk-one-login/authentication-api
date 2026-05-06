@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Objects;
@@ -20,6 +21,7 @@ public class PasskeysDeleteHandler
 
     private static final Logger LOG = LogManager.getLogger(PasskeysDeleteHandler.class);
     private final ConfigurationService configurationService;
+    private final PasskeysService passkeysService;
 
     public PasskeysDeleteHandler() {
         this(ConfigurationService.getInstance());
@@ -27,6 +29,13 @@ public class PasskeysDeleteHandler
 
     public PasskeysDeleteHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        this.passkeysService = new PasskeysService(configurationService);
+    }
+
+    public PasskeysDeleteHandler(
+            ConfigurationService configurationService, PasskeysService passkeysService) {
+        this.configurationService = configurationService;
+        this.passkeysService = passkeysService;
     }
 
     @Override
@@ -42,7 +51,10 @@ public class PasskeysDeleteHandler
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("PasskeysDeleteHandler called");
 
-        if (Objects.isNull(input.getPathParameters().get("publicSubjectId"))) {
+        var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+        var passkeyId = input.getPathParameters().get("passkeyId");
+
+        if (Objects.isNull(publicSubjectId)) {
             return generateApiGatewayProxyResponse(400, "");
         }
 
@@ -50,6 +62,8 @@ public class PasskeysDeleteHandler
                 input.getPathParameters().get("publicSubjectId"), input.getRequestContext())) {
             return generateApiGatewayProxyResponse(401, "");
         }
+
+        passkeysService.deletePasskey(publicSubjectId, passkeyId);
 
         return generateApiGatewayProxyResponse(204, "");
     }

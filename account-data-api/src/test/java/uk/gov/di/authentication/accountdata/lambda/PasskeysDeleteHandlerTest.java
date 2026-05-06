@@ -5,14 +5,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.accountdata.services.PasskeysService;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PRIMARY_PASSKEY_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.contextWithSourceIp;
 
@@ -20,21 +24,25 @@ class PasskeysDeleteHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final PasskeysService passkeysService = mock(PasskeysService.class);
 
     private PasskeysDeleteHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new PasskeysDeleteHandler(configurationService);
+        handler = new PasskeysDeleteHandler(configurationService, passkeysService);
     }
 
     @Nested
     class Success {
         @Test
-        void shouldReturn204ForValidRequest() {
+        void shouldReturn204WhenPasskeyCanBeDeleted() {
             // Given
-            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+            var pathParams =
+                    Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
             var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
+            when(passkeysService.deletePasskey(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID))
+                    .thenReturn(Result.success(null));
 
             // When
             var result =
@@ -51,7 +59,7 @@ class PasskeysDeleteHandlerTest {
         @Test
         void shouldReturn400WhenPublicSubjectIdNotPresent() {
             // Given
-            var pathParams = Map.<String, String>of();
+            var pathParams = Map.of("passkeyId", PRIMARY_PASSKEY_ID);
             var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
 
             // When
@@ -66,7 +74,7 @@ class PasskeysDeleteHandlerTest {
         @Test
         void shouldReturn401WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams() {
             // Given
-            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
             var authorizerParams = Map.<String, Object>of("principalId", "another-subject-id");
 
             // When
