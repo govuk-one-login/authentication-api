@@ -75,9 +75,10 @@ public class PasskeysDeleteHandler
     private APIGatewayProxyResponseEvent mapDeleteFailure(
             PasskeysDeleteFailureReason failureReason) {
         return switch (failureReason) {
-            case PASSKEY_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
-                    404, ErrorResponse.PASSKEY_NOT_FOUND);
-            default -> throw new RuntimeException("To come in subsequent commit");
+            case PASSKEY_NOT_FOUND ->
+                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.PASSKEY_NOT_FOUND);
+            case FAILED_TO_DELETE_PASSKEY ->
+                generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         };
     }
 }

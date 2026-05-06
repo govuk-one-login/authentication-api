@@ -79,6 +79,25 @@ class PasskeysDeleteHandlerTest {
         }
 
         @Test
+        void shouldReturn500WhenDatabaseOperationFails() {
+            // Given
+            var pathParams =
+                    Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
+            var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
+            when(passkeysService.deletePasskey(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID))
+                    .thenReturn(Result.failure(PasskeysDeleteFailureReason.FAILED_TO_DELETE_PASSKEY));
+
+            // When
+            var result =
+                    handler.handleRequest(
+                            passkeysDeleteRequest(pathParams, authorizerParams), context);
+
+            // Then
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
+        }
+
+        @Test
         void shouldReturn400WhenPublicSubjectIdNotPresent() {
             // Given
             var pathParams = Map.of("passkeyId", PRIMARY_PASSKEY_ID);
