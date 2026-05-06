@@ -3,6 +3,7 @@ package uk.gov.di.authentication.accountdata.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -27,31 +28,55 @@ class PasskeysDeleteHandlerTest {
         handler = new PasskeysDeleteHandler(configurationService);
     }
 
-    @Test
-    void shouldReturn204ForValidRequest() {
-        var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
-        var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
-        var result =
-                handler.handleRequest(passkeysDeleteRequest(pathParams, authorizerParams), context);
-        assertThat(result, hasStatus(204));
+    @Nested
+    class Success {
+        @Test
+        void shouldReturn204ForValidRequest() {
+            // Given
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+            var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
+
+            // When
+            var result =
+                    handler.handleRequest(
+                            passkeysDeleteRequest(pathParams, authorizerParams), context);
+
+            // Then
+            assertThat(result, hasStatus(204));
+        }
     }
 
-    @Test
-    void shouldReturn400WhenPublicSubjectIdNotPresent() {
-        var pathParams = Map.<String, String>of();
-        var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
-        var result =
-                handler.handleRequest(passkeysDeleteRequest(pathParams, authorizerParams), context);
-        assertThat(result, hasStatus(400));
-    }
+    @Nested
+    class Failure {
+        @Test
+        void shouldReturn400WhenPublicSubjectIdNotPresent() {
+            // Given
+            var pathParams = Map.<String, String>of();
+            var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
 
-    @Test
-    void shouldReturn401WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams() {
-        var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
-        var authorizerParams = Map.<String, Object>of("principalId", "another-subject-id");
-        var result =
-                handler.handleRequest(passkeysDeleteRequest(pathParams, authorizerParams), context);
-        assertThat(result, hasStatus(401));
+            // When
+            var result =
+                    handler.handleRequest(
+                            passkeysDeleteRequest(pathParams, authorizerParams), context);
+
+            // Then
+            assertThat(result, hasStatus(400));
+        }
+
+        @Test
+        void shouldReturn401WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams() {
+            // Given
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+            var authorizerParams = Map.<String, Object>of("principalId", "another-subject-id");
+
+            // When
+            var result =
+                    handler.handleRequest(
+                            passkeysDeleteRequest(pathParams, authorizerParams), context);
+
+            // Then
+            assertThat(result, hasStatus(401));
+        }
     }
 
     private APIGatewayProxyRequestEvent passkeysDeleteRequest(
