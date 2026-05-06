@@ -2,7 +2,6 @@ package uk.gov.di.accountmanagement.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
@@ -25,10 +24,9 @@ public class AwsSnsClient {
         var builder =
                 SnsClient.builder()
                         .region(Region.of(region))
-                        .credentialsProvider(DefaultCredentialsProvider.builder().build());
+                        .credentialsProvider(EnvironmentVariableCredentialsProvider.create());
         if (endpointUri != null && !endpointUri.isEmpty()) {
-            builder.endpointOverride(URI.create(endpointUri))
-                    .credentialsProvider(EnvironmentVariableCredentialsProvider.create());
+            builder.endpointOverride(URI.create(endpointUri));
         }
         this.snsClient = builder.build();
         this.topicArn = topicArn;
