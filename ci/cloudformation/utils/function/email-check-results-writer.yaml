@@ -8,10 +8,21 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.EmailCheckResultsWriterHandler::handleRequest
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref EmailCheckResultsWriteAccessPolicy
-        - !Ref SourceCodeBucketReadAccessPolicy
         - !Ref EmailCheckResultsSqsAccessPolicy
         - !Ref EmailCheckResultsTableKmsAccessPolicy
         - !Ref SqsQueueKmsAccessPolicy

@@ -15,7 +15,6 @@ Resources:
         - !Ref DynamoBulkEmailTablesAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoCredentialReadAccessPolicy
-        - !Ref SourceCodeBucketReadAccessPolicy
         - !Ref SecretsManagerNotifyAccessPolicy
         - !Ref EmailCheckResultsTableKmsAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
@@ -24,6 +23,14 @@ Resources:
         LogGroup: !Ref BulkUserEmailSendLogGroup
       Environment:
         Variables:
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           ENVIRONMENT:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           NOTIFY_URL: !If

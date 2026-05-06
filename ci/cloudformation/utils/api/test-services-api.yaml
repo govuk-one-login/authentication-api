@@ -1,0 +1,199 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+  TestServicesApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub
+        - ${Env}-di-authentication-test-services-api
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      Description: Test Services API for authentication
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  TestServicesApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !If
+        - UseSubEnvironment
+        - !Ref SubEnvironment
+        - !Ref Environment
+      RestApiId: !Ref TestServicesApi
+      DeploymentId: !Ref TestServicesApiDeployment
+      TracingEnabled: true
+      AccessLogSetting:
+        DestinationArn: !GetAtt TestServicesApiAccessLogGroup.Arn
+        Format:
+          Fn::ToJsonString:
+            requestId: $context.requestId
+            ip: $context.identity.sourceIp
+            userAgent: $context.identity.userAgent
+            requestTime: $context.requestTime
+            httpMethod: $context.httpMethod
+            resourcePath: $context.resourcePath
+            status: $context.status
+            protocol: $context.protocol
+            responseLength: $context.responseLength
+            integrationStatus: $context.integration.integrationStatus
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          MetricsEnabled: true
+          DataTraceEnabled: false
+          LoggingLevel: INFO
+      Variables:
+        Environment: !If
+          - UseSubEnvironment
+          - !Ref SubEnvironment
+          - !Ref Environment
+
+  TestServicesApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - DeleteSyntheticsUserMethod
+    Properties:
+      RestApiId: !Ref TestServicesApi
+
+  DeleteSyntheticsUserResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TestServicesApi
+      ParentId: !GetAtt TestServicesApi.RootResourceId
+      PathPart: synthetics-user
+
+  DeleteSyntheticsUserMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TestServicesApi
+      ResourceId: !Ref DeleteSyntheticsUserResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionName}:active/invocations
+          - FunctionName: !GetAtt DeleteSyntheticsUserFunction.Arn
+
+  DeleteSyntheticsUserLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DeleteSyntheticsUserFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TestServicesApi}/*/*"
+
+  TestServicesApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn:
+      - TestServicesApiStage
+    Properties:
+      Enabled: true
+      Name: !Sub
+        - ${Env}-di-authentication-test-services-api-key
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      StageKeys:
+        - RestApiId: !Ref TestServicesApi
+          StageName: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+
+  TestServicesApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - TestServicesApiStage
+    Properties:
+      UsagePlanName: !Sub
+        - ${Env}-di-authentication-test-services-api-usage-plan
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      ApiStages:
+        - ApiId: !Ref TestServicesApi
+          Stage: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+
+  TestServicesApiUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref TestServicesApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref TestServicesApiUsagePlan
+
+  TestServicesApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - "${Env}-test-services-api-access-logs"
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          logRetentionDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-TestServicesApiAccessLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/utils/api/test-services-api.yaml
+
+  TestServicesApiAccessLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TestServicesApiAccessLogGroup
+
+  TestServicesApiExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${TestServicesApi}/${StageName}
+        - StageName: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          logRetentionDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-TestServicesApiExecutionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/utils/api/test-services-api.yaml
+
+  TestServicesExecutionLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TestServicesApiExecutionLogGroup

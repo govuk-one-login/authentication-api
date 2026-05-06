@@ -1,13 +1,15 @@
 Resources:
-  MfaMethodAnalysisLambda:
+  DeleteSyntheticsUserFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - "${EnvironmentName}-mfa-method-analysis-lambda"
-        - EnvironmentName:
-            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      CodeUri: ./utils/build/distributions/utils.zip
-      Handler: uk.gov.di.authentication.utils.lambda.MfaMethodAnalysisHandler::handleRequest
+        - "${EnvironmentName}-test-services-delete-synthetics-user"
+        - EnvironmentName: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      CodeUri: ./test-services-api/build/distributions/test-services-api.zip
+      Handler: uk.gov.di.authentication.testservices.lambda.DeleteSyntheticsUserHandler::handleRequest
       Environment:
         Variables:
           ENVIRONMENT:
@@ -22,12 +24,12 @@ Resources:
                 ]
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref DynamoUserReadAccessPolicy
-        - !Ref DynamoCredentialReadAccessPolicy
-        - !Ref CloudWatchLogsKmsAccessPolicy
-      AutoPublishAlias: live
+        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref DynamoCredentialReadWriteAccessPolicy
+        - !Ref TestServicesApiTxMAAuditQueueAccessPolicy
+      AutoPublishAlias: active
       LoggingConfig:
-        LogGroup: !Ref MfaMethodAnalysisLogGroup
+        LogGroup: !Ref DeleteSyntheticsUserLogGroup
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -36,19 +38,25 @@ Resources:
           - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
       Tags:
         Name: !Sub
-          - "${EnvironmentName}-mfa-method-analysis-lambda"
-          - EnvironmentName:
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-        Environment:
-          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - "${EnvironmentName}-test-services-delete-synthetics-user"
+          - EnvironmentName: !If
+              - UseSubEnvironment
+              - !Ref SubEnvironment
+              - !Ref Environment
+        Environment: !If
+          - UseSubEnvironment
+          - !Ref SubEnvironment
+          - !Ref Environment
 
-  MfaMethodAnalysisLogGroup:
+  DeleteSyntheticsUserLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
-        - "/aws/lambda/${EnvironmentName}-mfa-method-analysis-lambda"
-        - EnvironmentName:
-            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - "/aws/lambda/${EnvironmentName}-test-services-delete-synthetics-user"
+        - EnvironmentName: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
       RetentionInDays: !If
         - UseSubEnvironment
         - !FindInMap [
@@ -63,22 +71,24 @@ Resources:
           ]
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
-  MfaMethodAnalysisLogSubscription:
+  DeleteSyntheticsUserLogSubscription:
     Type: AWS::Logs::SubscriptionFilter
     Condition: IsSplunkEnabled
     Properties:
-      LogGroupName: !Ref MfaMethodAnalysisLogGroup
+      LogGroupName: !Ref DeleteSyntheticsUserLogGroup
       FilterPattern: ""
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
 
-  MfaMethodAnalysisErrorAlarm:
+  DeleteSyntheticsUserErrorAlarm:
     Type: AWS::CloudWatch::Alarm
     Condition: UseAlarmActions
     Properties:
       AlarmName: !Sub
-        - "${EnvironmentName}-mfa-method-analysis-lambda-errors"
-        - EnvironmentName:
-            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - "${EnvironmentName}-test-services-delete-synthetics-user-errors"
+        - EnvironmentName: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
       AlarmDescription: Triggers when MFA method analysis Lambda error rate exceeds threshold
       MetricName: Errors
       Namespace: AWS/Lambda
@@ -100,5 +110,5 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: FunctionName
-          Value: !Ref MfaMethodAnalysisLambda
+          Value: !Ref DeleteSyntheticsUserFunction
       TreatMissingData: notBreaching
