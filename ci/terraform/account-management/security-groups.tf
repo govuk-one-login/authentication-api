@@ -5,7 +5,6 @@ resource "aws_security_group" "am_redis_security_group" {
 
   lifecycle {
     create_before_destroy = true
-    prevent_destroy       = true
   }
 }
 
@@ -18,10 +17,6 @@ resource "aws_security_group_rule" "allow_incoming_am_redis_from_private_subnet"
   cidr_blocks = local.private_subnet_cidr_blocks
   to_port     = local.redis_port_number
   type        = "ingress"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_security_group" "allow_access_to_am_redis" {
@@ -31,7 +26,6 @@ resource "aws_security_group" "allow_access_to_am_redis" {
 
   lifecycle {
     create_before_destroy = true
-    prevent_destroy       = true
   }
 }
 
@@ -43,10 +37,6 @@ resource "aws_security_group_rule" "allow_connection_to_am_redis" {
   source_security_group_id = aws_security_group.am_redis_security_group.id
   to_port                  = local.redis_port_number
   type                     = "egress"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_security_group_rule" "allow_incoming_session_redis_from_new_auth" {
@@ -60,10 +50,6 @@ resource "aws_security_group_rule" "allow_incoming_session_redis_from_new_auth" 
   cidr_blocks = var.new_auth_protectedsub_cidr_blocks
   to_port     = local.redis_port_number
   type        = "ingress"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_security_group_rule" "allow_incoming_session_redis_from_new_auth_private_subnet" {
@@ -77,8 +63,4 @@ resource "aws_security_group_rule" "allow_incoming_session_redis_from_new_auth_p
   cidr_blocks = var.new_auth_privatesub_cidr_blocks
   to_port     = local.redis_port_number
   type        = "ingress"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }

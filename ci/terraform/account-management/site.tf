@@ -14,12 +14,19 @@ provider "aws" {
   }
 
   endpoints {
+    apigateway  = var.aws_endpoint
+    ecr         = var.aws_endpoint
+    iam         = var.aws_endpoint
+    lambda      = var.aws_endpoint
+    s3          = var.aws_endpoint
+    ec2         = var.aws_endpoint
+    sqs         = var.aws_endpoint
+    sts         = var.aws_endpoint
+    ssm         = var.aws_endpoint
     elasticache = var.aws_endpoint
     kms         = var.aws_endpoint
-    ssm         = var.aws_endpoint
-    sts         = var.aws_endpoint
-    iam         = var.aws_endpoint
-    s3          = var.aws_endpoint
+    dynamodb    = var.aws_dynamodb_endpoint
+    sns         = var.aws_endpoint
   }
 
   default_tags {
@@ -33,6 +40,30 @@ provider "aws" {
       application = "account-management-api"
     }
   }
+}
+locals {
+  request_tracing_allowed = contains(["build", "sandpit"], var.environment)
+
+  access_logging_template = jsonencode({
+    requestId                    = "$context.requestId"
+    ip                           = "$context.identity.sourceIp"
+    userAgent                    = "$context.identity.userAgent"
+    requestTime                  = "$context.requestTime"
+    httpMethod                   = "$context.httpMethod"
+    resourcePath                 = "$context.resourcePath"
+    status                       = "$context.status"
+    protocol                     = "$context.protocol"
+    responseLength               = "$context.responseLength"
+    integrationStatus            = "$context.integration.integrationStatus"
+    integrationLatency           = "$context.integration.latency"
+    integrationRequestId         = "$context.integration.requestId"
+    authorizerError              = "$context.authorizer.error"
+    authorizerIntegrationLatency = "$context.authorizer.integrationLatency"
+    authorizerIntegrationStatus  = "$context.authorizer.integrationStatus"
+    authorizerLatency            = "$context.authorizer.latency"
+    authorizerRequestId          = "$context.authorizer.requestId"
+    authorizerStatus             = "$context.authorizer.status"
+  })
 }
 
 data "aws_caller_identity" "current" {}
