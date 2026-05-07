@@ -13,6 +13,9 @@ PROVISION_CLOUDFRONT_TLS_CERT=false
 PROVISION_CLOUDFRONT=false
 PROVISION_CLOUDFRONT_MONITORING=false
 PROVISION_CLOUDFRONT_NOTIFICATION_STACK=false
+SYNC_SECRETS=false
+# Matches the dev-platform stack default
+PREVIOUS_ORIGIN_CLOAKING_SECRET="none"
 
 PROVISION_COMMAND="../../../devplatform-deploy/stack-orchestration-tool/provisioner.sh"
 
@@ -39,6 +42,8 @@ function usage {
     -m, --monitoring         Deploys CloudFront Extended Monitoring stack in us-east-1
     -n, --notification        Deploys a stack which allows us to forward our Cloudfront alarms to Slack in our non-prod envs, or PagerDuty in
                              the production environment. This requires us to setup some manual secrets for the relevant webhooks/slack channel IDs.
+   -s, --sync-secrets        Attempts to fetch the current origin cloaking secret from the auth account and apply it as the previous origin cloaking
+                             secret on the new Cloudfront. Requires you to provide a valid AWS profile name to retrieve the secret.
 USAGE
 }
 
@@ -68,6 +73,11 @@ while [[ $# -gt 0 ]]; do
     -n | --notification)
       PROVISION_CLOUDFRONT_NOTIFICATION_STACK=true
       ;;
+    -s | --sync-secrets)
+      SYNC_SECRETS=true
+      PROFILE_TO_SYNC_SECRET_WITH="${2}"
+      shift
+      ;;
     *)
       usage
       exit 1
@@ -79,19 +89,66 @@ done
 TAGS_FILE="$(pwd)/configuration/${ENVIRONMENT}/tags.json"
 export TAGS_FILE
 
+function sync_secret_from_auth_account() {
+  local current_aws_profile="${AWS_PROFILE}"
+  local expected_managed_secret_name="${ENVIRONMENT}-oidc-cloudfront-origin-cloaking-header-managed"
+
+  AWS_PROFILE="${PROFILE_TO_SYNC_SECRET_WITH}" aws sso login
+
+  # shellcheck disable=SC2155
+  local account_id=$(aws sts get-caller-identity | jq ".Account")
+
+  echo "Logged into account ${account_id}"
+
+  local secret_value=""
+  secret_value=$(AWS_PROFILE="${PROFILE_TO_SYNC_SECRET_WITH}" aws secrets-manager get-secret-value --secret-id "${expected_managed_secret_name}" | jq ".SecretString" || exit 1)
+
+  if [ -z "${secret_value}" ]; then
+    echo "Failed to get previous origin cloaking secret"
+    exit 1
+  fi
+
+  PREVIOUS_ORIGIN_CLOAKING_SECRET="${secret_value}"
+  echo "Retrieved secret value"
+
+  echo "Logging back into previous AWS profile"
+
+  export AWS_PROFILE="${current_aws_profile}"
+  aws sso login
+
+  # shellcheck disable=SC2155
+  local current_account_id=$(aws sts get-caller-identity | jq ".Account")
+
+  echo "Logged into account ${current_account_id}"
+}
+
 function provision_cloudfront_distribution() {
   export AWS_REGION="eu-west-2"
   echo "Provisioning cloudfront stack"
 
-  STACK_TAGS_FILE="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/tags.json"
+  # shellcheck disable=SC2155
+  local stack_tags_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/tags.json"
   # shellcheck disable=SC2155
   local params_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/parameters.json"
 
-  if [ -f "${STACK_TAGS_FILE}" ]; then
-    tmp_tags_file="$(mktemp)"
-    jq -s 'add | group_by(.Key) | map(last)' "${TAGS_FILE}" "${STACK_TAGS_FILE}" > "${tmp_tags_file}"
+  if [ -f "${stack_tags_file}" ]; then
+    # shellcheck disable=SC2155
+    local tmp_tags_file="$(mktemp)"
+    jq -s 'add | group_by(.Key) | map(last)' "${TAGS_FILE}" "${stack_tags_file}" > "${tmp_tags_file}"
   fi
-  TAGS_FILE="${tmp_tags_file}" PARAMETERS_FILE="${params_file}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${ENVIRONMENT}-oidc-cloudfront" "cloudfront-distribution" "${CLOUDFRONT_DISTRIBUTION_STACK_VERSION}"
+
+  if [ "${SYNC_SECRETS}" == "true" ]; then
+    echo "Syncing secrets from auth account"
+    sync_secret_from_auth_account
+  fi
+
+  tmp_params_file="$(mktemp)"
+  jq "map(if .ParameterKey == \"PreviousOriginCloakingHeader\" then .ParameterValue = \"${PREVIOUS_ORIGIN_CLOAKING_SECRET}\" else . end)" "${params_file}" > "${tmp_params_file}"
+
+  TAGS_FILE="${tmp_tags_file}" PARAMETERS_FILE="${tmp_params_file}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${ENVIRONMENT}-oidc-cloudfront" "cloudfront-distribution" "${CLOUDFRONT_DISTRIBUTION_STACK_VERSION}"
+
+  # Remove temp params file
+  rm -f "${tmp_params_file}"
 
   echo "Provisioned cloudfront stack"
 }
