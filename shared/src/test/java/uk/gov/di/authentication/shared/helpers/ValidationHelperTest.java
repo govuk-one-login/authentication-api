@@ -476,4 +476,79 @@ class ValidationHelperTest {
             }
         }
     }
+
+    @Nested
+    class PureCodeComparisonTests {
+
+        @Test
+        void shouldReturnEmptyWhenCodeMatchesForMfaSms() {
+            assertEquals(
+                    Optional.empty(),
+                    ValidationHelper.validateVerificationCode(
+                            MFA_SMS, Optional.of("123456"), "123456"));
+        }
+
+        @Test
+        void shouldReturnEmptyWhenCodeMatchesForVerifyEmail() {
+            assertEquals(
+                    Optional.empty(),
+                    ValidationHelper.validateVerificationCode(
+                            VERIFY_EMAIL, Optional.of("123456"), "123456"));
+        }
+
+        @Test
+        void shouldReturnEmptyWhenCodeMatchesForVerifyPhoneNumber() {
+            assertEquals(
+                    Optional.empty(),
+                    ValidationHelper.validateVerificationCode(
+                            VERIFY_PHONE_NUMBER, Optional.of("123456"), "123456"));
+        }
+
+        @Test
+        void shouldReturnEmptyWhenCodeMatchesForResetPassword() {
+            assertEquals(
+                    Optional.empty(),
+                    ValidationHelper.validateVerificationCode(
+                            RESET_PASSWORD_WITH_CODE, Optional.of("123456"), "123456"));
+        }
+
+        @Test
+        void shouldReturnInvalidMfaCodeWhenCodeDoesNotMatchForMfaSms() {
+            assertEquals(
+                    Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED),
+                    ValidationHelper.validateVerificationCode(
+                            MFA_SMS, Optional.of("123456"), "654321"));
+        }
+
+        @Test
+        void shouldReturnInvalidEmailCodeWhenCodeDoesNotMatchForVerifyEmail() {
+            assertEquals(
+                    Optional.of(ErrorResponse.INVALID_EMAIL_CODE_ENTERED),
+                    ValidationHelper.validateVerificationCode(
+                            VERIFY_EMAIL, Optional.of("123456"), "654321"));
+        }
+
+        @Test
+        void shouldReturnInvalidPhoneCodeWhenCodeDoesNotMatchForVerifyPhoneNumber() {
+            assertEquals(
+                    Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED),
+                    ValidationHelper.validateVerificationCode(
+                            VERIFY_PHONE_NUMBER, Optional.of("123456"), "654321"));
+        }
+
+        @Test
+        void shouldReturnInvalidPwResetCodeWhenCodeDoesNotMatchForResetPassword() {
+            assertEquals(
+                    Optional.of(ErrorResponse.INVALID_PW_RESET_CODE),
+                    ValidationHelper.validateVerificationCode(
+                            RESET_PASSWORD_WITH_CODE, Optional.of("123456"), "654321"));
+        }
+
+        @Test
+        void shouldReturnInvalidCodeWhenNoCodeStored() {
+            assertEquals(
+                    Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED),
+                    ValidationHelper.validateVerificationCode(MFA_SMS, Optional.empty(), "123456"));
+        }
+    }
 }
