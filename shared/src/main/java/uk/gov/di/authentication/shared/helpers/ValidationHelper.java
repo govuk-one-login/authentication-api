@@ -147,20 +147,12 @@ public class ValidationHelper {
             ConfigurationService configurationService,
             boolean incrementCountOnFailure) {
 
-        if (code.filter(input::equals).isPresent()) {
+        var codeCheckResult = validateVerificationCode(notificationType, code, input);
+        if (codeCheckResult.isEmpty()) {
             if (journeyType != JourneyType.REAUTHENTICATION) {
                 codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
             }
-
-            switch (notificationType) {
-                case MFA_SMS:
-                case VERIFY_EMAIL:
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                case VERIFY_PHONE_NUMBER:
-                case RESET_PASSWORD_WITH_CODE:
-                    return Optional.empty();
-            }
-            return Optional.of(ErrorResponse.INVALID_NOTIFICATION_TYPE);
+            return Optional.empty();
         }
 
         return getErrorResponse(
@@ -206,6 +198,29 @@ public class ValidationHelper {
             }
         }
 
+        return getErrorResponse(notificationType);
+    }
+
+    public static Optional<ErrorResponse> validateVerificationCode(
+            NotificationType notificationType, Optional<String> code, String input) {
+
+        if (code.filter(input::equals).isPresent()) {
+            switch (notificationType) {
+                case MFA_SMS:
+                case VERIFY_EMAIL:
+                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                case VERIFY_PHONE_NUMBER:
+                case RESET_PASSWORD_WITH_CODE:
+                    return Optional.empty();
+            }
+            return Optional.of(ErrorResponse.INVALID_NOTIFICATION_TYPE);
+        }
+
+        return getErrorResponse(notificationType);
+    }
+
+    private static @NotNull Optional<ErrorResponse> getErrorResponse(
+            NotificationType notificationType) {
         switch (notificationType) {
             case MFA_SMS:
                 return Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED);
