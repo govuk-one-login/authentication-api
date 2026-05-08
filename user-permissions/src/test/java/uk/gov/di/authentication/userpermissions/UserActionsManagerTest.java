@@ -22,6 +22,7 @@ import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolde
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -413,19 +414,70 @@ class UserActionsManagerTest {
 
     @Nested
     class CorrectSmsOtpReceived {
+
         @Test
-        void correctSmsOtpReceivedShouldSetHasVerifiedMfaToTrue() {
-            // Arrange
+        void shouldReturnErrorWhenPermissionContextIsNull() {
+            var result = userActionsManager.correctSmsOtpReceived(JourneyType.SIGN_IN, null);
+            assertTrue(result.isFailure());
+            assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+        }
+
+        @Test
+        void shouldSetHasVerifiedMfaAndClearCountForStandardJourney() {
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
-            // Act
-            var result = userActionsManager.correctSmsOtpReceived(null, permissionContext);
+            var result =
+                    userActionsManager.correctSmsOtpReceived(
+                            JourneyType.SIGN_IN, permissionContext);
 
-            // Assert
             verify(authSessionService).updateSession(captor.capture());
-            AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedMfa());
+            assertTrue(captor.getValue().getHasVerifiedMfa());
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldClearReauthCountsAndSetHasVerifiedMfaForReauth() {
+            var context =
+                    PermissionContext.builder()
+                            .withInternalSubjectId("subject-123")
+                            .withRpPairwiseId("rp-pairwise-456")
+                            .withAuthSessionItem(authSession)
+                            .build();
+
+            var result =
+                    userActionsManager.correctSmsOtpReceived(JourneyType.REAUTHENTICATION, context);
+
+            for (CountType countType : CountType.values()) {
+                verify(authenticationAttemptsService)
+                        .deleteCount("subject-123", JourneyType.REAUTHENTICATION, countType);
+                verify(authenticationAttemptsService)
+                        .deleteCount("rp-pairwise-456", JourneyType.REAUTHENTICATION, countType);
+            }
+            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(anyString());
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldPreserveReauthCountsForAuditWhenFeatureFlagsEnabled() {
+            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+            when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+            var counts = Map.of(CountType.ENTER_PASSWORD, 2, CountType.ENTER_SMS_CODE, 1);
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            "subject-123", "rp-pairwise-456", JourneyType.REAUTHENTICATION))
+                    .thenReturn(counts);
+            var context =
+                    PermissionContext.builder()
+                            .withInternalSubjectId("subject-123")
+                            .withRpPairwiseId("rp-pairwise-456")
+                            .withAuthSessionItem(authSession)
+                            .build();
+
+            userActionsManager.correctSmsOtpReceived(JourneyType.REAUTHENTICATION, context);
+
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+            verify(authSessionService).updateSession(captor.capture());
+            assertEquals(counts, captor.getValue().getPreservedReauthCountsForAuditMap());
         }
     }
 

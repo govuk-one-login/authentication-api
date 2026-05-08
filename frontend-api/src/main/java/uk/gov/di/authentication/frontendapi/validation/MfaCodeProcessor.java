@@ -45,10 +45,6 @@ public abstract class MfaCodeProcessor {
         this.mfaMethodsService = mfaMethodsService;
     }
 
-    void resetCodeIncorrectEntryCount() {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
-    }
-
     void submitAuditEvent(
             AuditableEvent auditableEvent,
             MFAMethodType mfaMethodType,

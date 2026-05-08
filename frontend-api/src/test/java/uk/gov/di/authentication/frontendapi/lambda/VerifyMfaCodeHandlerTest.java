@@ -24,7 +24,6 @@ import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -56,7 +55,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -70,7 +68,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -92,7 +89,6 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
@@ -211,6 +207,10 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Result.success(null));
         when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
                 .thenReturn(Result.success(null));
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
+        when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -220,7 +220,6 @@ class VerifyMfaCodeHandlerTest {
                         auditService,
                         mfaCodeProcessorFactory,
                         cloudwatchMetricsService,
-                        authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
                         userActionsManager,
@@ -1006,75 +1005,6 @@ class VerifyMfaCodeHandlerTest {
             verifyNoInteractions(auditService);
             verifyNoInteractions(cloudwatchMetricsService);
         }
-    }
-
-    @Test
-    void
-            shouldDeleteAuthAppAuthenticationAttemptsCountAndStoreCountsInSessionIfCorrectCodeEnteredForReauthJourney()
-                    throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
-        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
-                .thenReturn(existingCounts);
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
-        makeCallWithCode(codeRequest);
-
-        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSubjectId)
-                .forEach(
-                        identifier ->
-                                verify(
-                                                authenticationAttemptsService,
-                                                times(CountType.values().length))
-                                        .deleteCount(
-                                                eq(identifier),
-                                                eq(JourneyType.REAUTHENTICATION),
-                                                any()));
-
-        verify(authSessionService, atLeastOnce())
-                .updateSession(
-                        argThat(
-                                s ->
-                                        s.getPreservedReauthCountsForAuditMap()
-                                                .equals(existingCounts)));
-    }
-
-    @Test
-    void
-            shouldDeleteAuthAppAuthenticationAttemptsCountAndNotStoreCountsInSessionIfCorrectCodeEnteredForSigninJourney()
-                    throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
-        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
-                .thenReturn(existingCounts);
-
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
-        makeCallWithCode(codeRequest);
-
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, ENTER_MFA_CODE);
-
-        verify(authSessionService, never())
-                .updateSession(
-                        argThat(
-                                s ->
-                                        Objects.equals(
-                                                s.getPreservedReauthCountsForAuditMap(),
-                                                existingCounts)));
     }
 
     @Test

@@ -21,7 +21,6 @@ import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -39,7 +38,6 @@ import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -56,7 +54,6 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -92,7 +89,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final AuditService auditService;
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
     private final UserActionsManager userActionsManager;
     private final PermissionDecisionManager permissionDecisionManager;
@@ -105,7 +101,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuditService auditService,
             MfaCodeProcessorFactory mfaCodeProcessorFactory,
             CloudwatchMetricsService cloudwatchMetricsService,
-            AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             UserActionsManager userActionsManager,
@@ -120,7 +115,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.auditService = auditService;
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
         this.userActionsManager = userActionsManager;
         this.permissionDecisionManager = permissionDecisionManager;
@@ -147,8 +141,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         this.mfaMethodsService,
                         this.testUserHelper);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
@@ -170,8 +162,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         this.mfaMethodsService,
                         this.testUserHelper);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
@@ -452,14 +442,18 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         } else {
             auditSuccess(codeRequest, authSession, auditContext, activeMfaMethod);
 
-            processSuccessfulCodeSession(
-                    userContext.getAuthSession(),
-                    input,
-                    subjectId,
-                    codeRequest,
-                    mfaCodeProcessor,
-                    maybeRpPairwiseId,
-                    userProfile);
+            var maybeError =
+                    processSuccessfulCodeSession(
+                            userContext.getAuthSession(),
+                            input,
+                            codeRequest,
+                            mfaCodeProcessor,
+                            maybeRpPairwiseId,
+                            userProfile,
+                            permissionContext);
+            if (maybeError.isPresent()) {
+                return maybeError.get();
+            }
         }
 
         authSessionService.updateSession(authSession);
@@ -588,25 +582,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         return ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse();
     }
 
-    private void processSuccessfulCodeSession(
+    private Optional<APIGatewayProxyResponseEvent> processSuccessfulCodeSession(
             AuthSessionItem authSession,
             APIGatewayProxyRequestEvent input,
-            String subjectId,
             VerifyMfaCodeRequest codeRequest,
             MfaCodeProcessor mfaCodeProcessor,
             Optional<String> maybeRpPairwiseId,
-            UserProfile userProfile) {
+            UserProfile userProfile,
+            PermissionContext permissionContext) {
 
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
-                && subjectId != null) {
-            preserveReauthCountsForAuditIfJourneyIsReauth(
-                    codeRequest.getJourneyType(), subjectId, authSession, maybeRpPairwiseId);
-            clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
-            maybeRpPairwiseId.ifPresentOrElse(
-                    this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
-                    () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
-        }
         mfaCodeProcessor.processSuccessfulCodeRequest(
                 IpAddressHelper.extractIpAddress(input),
                 extractPersistentIdFromHeaders(input.getHeaders()),
@@ -618,15 +602,28 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
 
         LOG.info("Setting hasVerifiedMfa to true");
-        PermissionContext permissionContext =
-                PermissionContext.builder().withAuthSessionItem(authSession).build();
         if (codeRequest.getMfaMethodType() == MFAMethodType.SMS) {
-            userActionsManager.correctSmsOtpReceived(
-                    codeRequest.getJourneyType(), permissionContext);
+            var result =
+                    userActionsManager.correctSmsOtpReceived(
+                            codeRequest.getJourneyType(), permissionContext);
+            if (result.isFailure()) {
+                LOG.error("Failed to record correct SMS OTP: {}", result.getFailure());
+                return Optional.of(
+                        TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                                result.getFailure()));
+            }
         } else if (codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
-            userActionsManager.correctAuthAppOtpReceived(
-                    codeRequest.getJourneyType(), permissionContext);
+            var result =
+                    userActionsManager.correctAuthAppOtpReceived(
+                            codeRequest.getJourneyType(), permissionContext);
+            if (result.isFailure()) {
+                LOG.error("Failed to record correct Auth App OTP: {}", result.getFailure());
+                return Optional.of(
+                        TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                                result.getFailure()));
+            }
         }
+        return Optional.empty();
     }
 
     private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(
@@ -644,34 +641,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         entry(ErrorResponse.INVALID_PHONE_CODE_ENTERED, AUTH_INVALID_CODE_SENT));
 
         return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
-    }
-
-    private void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String uniqueIdentifier) {
-        Arrays.stream(CountType.values())
-                .forEach(
-                        countType ->
-                                authenticationAttemptsService.deleteCount(
-                                        uniqueIdentifier, REAUTHENTICATION, countType));
-    }
-
-    void preserveReauthCountsForAuditIfJourneyIsReauth(
-            JourneyType journeyType,
-            String subjectId,
-            AuthSessionItem authSession,
-            Optional<String> maybeRpPairwiseId) {
-        if (journeyType == REAUTHENTICATION
-                && configurationService.supportReauthSignoutEnabled()
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            var counts =
-                    maybeRpPairwiseId.isPresent()
-                            ? authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId, maybeRpPairwiseId.get(), REAUTHENTICATION)
-                            : authenticationAttemptsService.getCountsByJourney(
-                                    subjectId, REAUTHENTICATION);
-            var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
-            authSessionService.updateSession(updatedAuthSession);
-        }
     }
 
     private AuditService.MetadataPair[] metadataPairsForEvent(
