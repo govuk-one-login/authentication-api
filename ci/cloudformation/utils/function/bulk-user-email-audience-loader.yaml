@@ -14,7 +14,6 @@ Resources:
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoCredentialReadAccessPolicy
         - !Ref DynamoBulkEmailTablesAccessPolicy
-        - !Ref SourceCodeBucketReadAccessPolicy
         - !Ref EmailCheckResultsTableKmsAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
       AutoPublishAlias: live
@@ -22,6 +21,14 @@ Resources:
         LogGroup: !Ref BulkUserEmailAudienceLoaderLogGroup
       Environment:
         Variables:
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           ENVIRONMENT:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT: !If

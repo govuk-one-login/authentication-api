@@ -52,7 +52,7 @@ confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authentication-api-pipeline-AppProgrammaticPermissionsBoundary-06d1005edc1f\" Environment=\"dev\" SubEnvironment=\"none\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
-signing_profiles = "AccountMetricsLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserCreateLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserDeleteLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailAudienceLoaderLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailSendLambda=\"SigningProfile_bdzyxbYzrSD8\" CommonPasswordsUpdateLambda=\"SigningProfile_bdzyxbYzrSD8\" EmailCheckResultsWriterLambda=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodAnalysisLambda=\"SigningProfile_bdzyxbYzrSD8\""
+signing_profiles = "DeleteSyntheticsUserFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountMetricsLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserCreateLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserDeleteLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailAudienceLoaderLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailSendLambda=\"SigningProfile_bdzyxbYzrSD8\" CommonPasswordsUpdateLambda=\"SigningProfile_bdzyxbYzrSD8\" EmailCheckResultsWriterLambda=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodAnalysisLambda=\"SigningProfile_bdzyxbYzrSD8\""
 
 [authdev1utils.deploy.parameters]
 stack_name = "authdev1-utils"
@@ -63,7 +63,7 @@ confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-02724be8887ae9448\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev1-api-pipeline-AppProgrammaticPermissionsBoundary-06077d801cdf\" Environment=\"dev\" SubEnvironment=\"authdev1\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
-signing_profiles = "AccountMetricsLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserCreateLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserDeleteLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailAudienceLoaderLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailSendLambda=\"SigningProfile_bdzyxbYzrSD8\" CommonPasswordsUpdateLambda=\"SigningProfile_bdzyxbYzrSD8\" EmailCheckResultsWriterLambda=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodAnalysisLambda=\"SigningProfile_bdzyxbYzrSD8\""
+signing_profiles = "DeleteSyntheticsUserFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountMetricsLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserCreateLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserDeleteLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailAudienceLoaderLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailSendLambda=\"SigningProfile_bdzyxbYzrSD8\" CommonPasswordsUpdateLambda=\"SigningProfile_bdzyxbYzrSD8\" EmailCheckResultsWriterLambda=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodAnalysisLambda=\"SigningProfile_bdzyxbYzrSD8\""
 
 [authdev2utils.deploy.parameters]
 stack_name = "authdev2-utils"
@@ -74,7 +74,7 @@ confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-0725ac7ac42622250\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev2-api-pipeline-AppProgrammaticPermissionsBoundary-06d4fe8cd0ad\" Environment=\"dev\" SubEnvironment=\"authdev2\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
-signing_profiles = "AccountMetricsLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserCreateLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserDeleteLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailAudienceLoaderLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailSendLambda=\"SigningProfile_bdzyxbYzrSD8\" CommonPasswordsUpdateLambda=\"SigningProfile_bdzyxbYzrSD8\" EmailCheckResultsWriterLambda=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodAnalysisLambda=\"SigningProfile_bdzyxbYzrSD8\""
+signing_profiles = "DeleteSyntheticsUserFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountMetricsLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserCreateLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserDeleteLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailAudienceLoaderLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailSendLambda=\"SigningProfile_bdzyxbYzrSD8\" CommonPasswordsUpdateLambda=\"SigningProfile_bdzyxbYzrSD8\" EmailCheckResultsWriterLambda=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodAnalysisLambda=\"SigningProfile_bdzyxbYzrSD8\""
 
 [authdev3utils.deploy.parameters]
 stack_name = "authdev3-utils"
@@ -85,7 +85,7 @@ confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-0725ac7ac42622250\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev3-api-pipeline-AppProgrammaticPermissionsBoundary-0a6c41b02b2b\" Environment=\"dev\" SubEnvironment=\"authdev3\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
-signing_profiles = "AccountMetricsLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserCreateLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserDeleteLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailAudienceLoaderLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailSendLambda=\"SigningProfile_bdzyxbYzrSD8\" CommonPasswordsUpdateLambda=\"SigningProfile_bdzyxbYzrSD8\" EmailCheckResultsWriterLambda=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodAnalysisLambda=\"SigningProfile_bdzyxbYzrSD8\""
+signing_profiles = "DeleteSyntheticsUserFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountMetricsLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserCreateLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkTestUserDeleteLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailAudienceLoaderLambda=\"SigningProfile_bdzyxbYzrSD8\" BulkUserEmailSendLambda=\"SigningProfile_bdzyxbYzrSD8\" CommonPasswordsUpdateLambda=\"SigningProfile_bdzyxbYzrSD8\" EmailCheckResultsWriterLambda=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodAnalysisLambda=\"SigningProfile_bdzyxbYzrSD8\""
 
 [devam.deploy.parameters]
 stack_name = "am-api"

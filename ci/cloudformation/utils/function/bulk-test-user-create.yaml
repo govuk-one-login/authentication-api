@@ -9,12 +9,23 @@ Resources:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
       Handler: uk.gov.di.authentication.utils.lambda.BulkTestUserCreateHandler::handleRequest
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoCredentialReadWriteAccessPolicy
         - !Ref BulkTestUserBucketReadAccessPolicy
-        - !Ref SourceCodeBucketReadAccessPolicy
         - !Ref S3BucketKmsAccessPolicyForBulkTestUsers
         - !Ref CloudWatchLogsKmsAccessPolicyForBulkTestUsers
       AutoPublishAlias: live
@@ -22,7 +33,7 @@ Resources:
         LogGroup: !Ref BulkTestUserCreateLogGroup
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: !Sub "${VpcStackName}-AWSServicesEndpointSecurityGroupId"
+          - !Ref LambdaSecurityGroup
         SubnetIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
           - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
