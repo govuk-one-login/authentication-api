@@ -85,7 +85,7 @@ Resources:
   DeleteSyntheticsUserLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref DeleteSyntheticsUserFunction
+      FunctionName: !Sub "${DeleteSyntheticsUserFunction}:active"
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TestServicesApi}/*/*"
