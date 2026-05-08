@@ -58,7 +58,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         super(
                 userContext,
                 codeStorageService,
-                configurationService.getCodeMaxRetries(),
                 authenticationService,
                 auditService,
                 dynamoAccountModifiersService,
@@ -88,7 +87,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         super(
                 userContext,
                 codeStorageService,
-                configurationService.getCodeMaxRetries(),
                 authenticationService,
                 auditService,
                 dynamoAccountModifiersService,
@@ -133,7 +131,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         codeRequest.getCode(),
                         codeStorageService,
                         emailAddress,
-                        configurationService);
+                        configurationService,
+                        false);
 
         if (errorResponse.isEmpty()) {
             codeStorageService.deleteOtpCode(codeIdentifier, notificationType);

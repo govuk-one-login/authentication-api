@@ -23,7 +23,6 @@ public abstract class MfaCodeProcessor {
     protected final Logger LOG = LogManager.getLogger(this.getClass());
     public final CodeStorageService codeStorageService;
     public final DynamoAccountModifiersService accountModifiersService;
-    private final int maxRetries;
     public final String emailAddress;
     private final UserContext userContext;
     protected final AuthenticationService authenticationService;
@@ -33,7 +32,6 @@ public abstract class MfaCodeProcessor {
     MfaCodeProcessor(
             UserContext userContext,
             CodeStorageService codeStorageService,
-            int maxRetries,
             AuthenticationService authenticationService,
             AuditService auditService,
             DynamoAccountModifiersService accountModifiersService,
@@ -41,24 +39,10 @@ public abstract class MfaCodeProcessor {
         this.emailAddress = userContext.getAuthSession().getEmailAddress();
         this.userContext = userContext;
         this.codeStorageService = codeStorageService;
-        this.maxRetries = maxRetries;
         this.authenticationService = authenticationService;
         this.auditService = auditService;
         this.accountModifiersService = accountModifiersService;
         this.mfaMethodsService = mfaMethodsService;
-    }
-
-    boolean isCodeBlockedForSession(String codeBlockedKeyPrefix) {
-        return codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix);
-    }
-
-    boolean hasExceededRetryLimit() {
-        LOG.info("Max retries: {}", maxRetries);
-        return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) >= maxRetries;
-    }
-
-    void incrementRetryCount() {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
     void resetCodeIncorrectEntryCount() {

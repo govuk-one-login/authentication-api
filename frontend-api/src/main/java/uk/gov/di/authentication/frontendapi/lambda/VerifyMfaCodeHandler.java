@@ -12,6 +12,7 @@ import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapper;
+import uk.gov.di.authentication.frontendapi.errormapper.TrackingErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
@@ -26,13 +27,13 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -52,8 +53,8 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -81,7 +82,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 
 public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeRequest>
@@ -238,7 +238,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input, codeRequest, userContext, subjectID, maybeRpPairwiseId, userProfile);
+                    input,
+                    codeRequest,
+                    userContext,
+                    subjectID,
+                    maybeRpPairwiseId,
+                    userProfile,
+                    permissionContext);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
@@ -337,7 +343,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             String subjectId,
             Optional<String> maybeRpPairwiseId,
-            UserProfile userProfile) {
+            UserProfile userProfile,
+            PermissionContext permissionContext) {
 
         var authSession = userContext.getAuthSession();
         var auditContext =
@@ -410,27 +417,35 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         400, ErrorResponse.INVALID_AUTH_APP_SECRET);
             }
 
-            if (errorResponse.equals(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)
-                    || errorResponse.equals(
-                            ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED)) {
-                blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-                        userContext.getAuthSession().getEmailAddress(),
+            Result<TrackingError, Void> trackingResult = Result.success(null);
+            if (errorResponse.equals(ErrorResponse.INVALID_PHONE_CODE_ENTERED)) {
+                trackingResult =
+                        userActionsManager.incorrectSmsOtpReceived(
+                                codeRequest.getJourneyType(), permissionContext);
+            }
+            if (errorResponse.equals(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED)) {
+                trackingResult =
+                        userActionsManager.incorrectAuthAppOtpReceived(
+                                codeRequest.getJourneyType(), permissionContext);
+            }
+            if (trackingResult.isFailure()) {
+                LOG.error(
+                        "Failed to record incorrect {} OTP: {}",
                         codeRequest.getMfaMethodType(),
-                        codeRequest.getJourneyType());
+                        trackingResult.getFailure());
+                return TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                        trackingResult.getFailure());
             }
 
-            if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
-                    && configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && subjectId != null) {
-                authenticationAttemptsService.createOrIncrementCount(
-                        subjectId,
-                        NowHelper.nowPlus(
-                                        configurationService.getReauthEnterAuthAppCodeCountTTL(),
-                                        ChronoUnit.SECONDS)
-                                .toInstant()
-                                .getEpochSecond(),
-                        REAUTHENTICATION,
-                        CountType.ENTER_MFA_CODE);
+            var permissionCheckAfterIncrement =
+                    getResponseIfNotPermitted(
+                            codeRequest.getJourneyType(),
+                            codeRequest.getMfaMethodType(),
+                            permissionContext,
+                            auditContext,
+                            maybeRpPairwiseId);
+            if (permissionCheckAfterIncrement.isPresent()) {
+                return permissionCheckAfterIncrement.get();
             }
 
             auditFailure(codeRequest, errorResponse, authSession, auditContext, activeMfaMethod);
@@ -657,47 +672,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
             authSessionService.updateSession(updatedAuthSession);
         }
-    }
-
-    private static boolean isInvalidReauthAuthAppAttempt(
-            ErrorResponse errorResponse, VerifyMfaCodeRequest codeRequest) {
-        return errorResponse == ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED
-                && codeRequest.getJourneyType() == REAUTHENTICATION;
-    }
-
-    private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-            String emailAddress, MFAMethodType mfaMethodType, JourneyType journeyType) {
-
-        var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        if (codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix)) {
-            return;
-        }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(mfaMethodType, journeyType);
-        if (codeStorageService.isBlockedForEmail(
-                emailAddress, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            return;
-        }
-
-        boolean reducedLockout =
-                List.of(CodeRequestType.MFA_REGISTRATION, CodeRequestType.MFA_ACCOUNT_RECOVERY)
-                        .contains(CodeRequestType.getCodeRequestType(mfaMethodType, journeyType));
-        long blockDuration =
-                reducedLockout
-                        ? configurationService.getReducedLockoutDuration()
-                        : configurationService.getLockoutDuration();
-
-        if (!configurationService.supportReauthSignoutEnabled()
-                || journeyType != REAUTHENTICATION) {
-            codeStorageService.saveBlockedForEmail(
-                    emailAddress, codeBlockedKeyPrefix, blockDuration);
-        }
-
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
     private AuditService.MetadataPair[] metadataPairsForEvent(

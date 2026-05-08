@@ -256,7 +256,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         codeRequest.code(),
                         codeStorageService,
                         authSession.getEmailAddress(),
-                        configurationService);
+                        configurationService,
+                        true);
 
         if (errorResponse.stream().anyMatch(ErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
             return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
