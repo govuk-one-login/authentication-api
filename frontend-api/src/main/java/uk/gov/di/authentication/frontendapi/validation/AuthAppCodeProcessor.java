@@ -36,7 +36,6 @@ import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVER
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
@@ -72,27 +71,12 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     public Optional<ErrorResponse> validateCode() {
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(AUTH_APP, codeRequest.getJourneyType());
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         var nonRegistrationJourneyTypes =
                 List.of(
                         JourneyType.SIGN_IN,
                         JourneyType.PASSWORD_RESET_MFA,
                         JourneyType.REAUTHENTICATION);
-
-        if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
-        }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(
-                        AUTH_APP, codeRequest.getJourneyType());
-        if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
-        }
 
         if (codeRequestType.getJourneyType() != JourneyType.REAUTHENTICATION) {
             incrementRetryCount();

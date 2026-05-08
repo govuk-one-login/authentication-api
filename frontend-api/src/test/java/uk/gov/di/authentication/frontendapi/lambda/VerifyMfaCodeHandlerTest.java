@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -14,18 +13,15 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetType;
-import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -52,7 +48,10 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -94,14 +93,11 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
@@ -177,6 +173,8 @@ class VerifyMfaCodeHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
 
     @RegisterExtension
@@ -212,6 +210,8 @@ class VerifyMfaCodeHandlerTest {
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -225,6 +225,7 @@ class VerifyMfaCodeHandlerTest {
                         authSessionService,
                         mfaMethodsService,
                         userActionsManager,
+                        permissionDecisionManager,
                         testUserHelper);
     }
 
@@ -1402,80 +1403,64 @@ class VerifyMfaCodeHandlerTest {
                                                 existingCounts)));
     }
 
-    private static Stream<Arguments> reauthCountTypesAndMetadata() {
-        return Stream.of(
-                Arguments.arguments(
-                        ENTER_EMAIL,
-                        MAX_RETRIES,
-                        0,
-                        0,
-                        ReauthFailureReasons.INCORRECT_EMAIL.getValue()),
-                Arguments.arguments(
-                        ENTER_PASSWORD,
-                        0,
-                        MAX_RETRIES,
-                        0,
-                        ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
-                Arguments.arguments(
-                        ENTER_MFA_CODE,
-                        0,
-                        0,
-                        MAX_RETRIES,
-                        ReauthFailureReasons.INCORRECT_OTP.getValue()));
+    @Test
+    void shouldReturn400WhenReauthLockedOutViaPermissionDecisionManager()
+            throws Json.JsonException {
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.ReauthLockedOut(
+                                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                        5,
+                                        null,
+                                        false,
+                                        Map.of(),
+                                        List.of())));
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null);
+        var result = makeCallWithCode(codeRequest);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
-    @ParameterizedTest
-    @MethodSource("reauthCountTypesAndMetadata")
-    void shouldReturnErrorIfUserHasTooManyReauthAttemptCountsOfAnyType(
-            CountType countType,
-            int expectedEmailAttemptCount,
-            int expectedPasswordAttemptCount,
-            int expectedOtpAttemptCount,
-            String expectedFailureReason)
-            throws Json.JsonException {
-        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
-                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
-            when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            any(), any(), eq(REAUTHENTICATION)))
-                    .thenReturn(Map.of(countType, MAX_RETRIES));
-            when(configurationService.getInternalSectorUri())
-                    .thenReturn("https://test.account.gov.uk");
-            Subject subject = new Subject(TEST_SUBJECT_ID);
-            mockedClientSubjectHelperClass
-                    .when(
-                            () ->
-                                    ClientSubjectHelper.getSubject(
-                                            eq(userProfile),
-                                            any(AuthSessionItem.class),
-                                            any(AuthenticationService.class)))
-                    .thenReturn(subject);
+    @Test
+    void shouldReturn400WithAuthAppErrorWhenTemporarilyLockedOut() throws Json.JsonException {
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(
+                        Result.success(new Decision.TemporarilyLockedOut(null, 5, null, false)));
 
-            var codeRequest =
-                    new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null);
-            var result = makeCallWithCode(codeRequest);
+        var codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
+        var result = makeCallWithCode(codeRequest);
 
-            verify(auditService, times(1))
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                            AUDIT_CONTEXT,
-                            pair("rpPairwiseId", subject.getValue()),
-                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
-                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
-                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
-                            pair("failure-reason", expectedFailureReason));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    FAILURE_REASON.getValue(),
-                                    expectedFailureReason));
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
+    }
 
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
-        }
+    @Test
+    void shouldReturn400WithSmsErrorWhenTemporarilyLockedOut() throws Json.JsonException {
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(
+                        Result.success(new Decision.TemporarilyLockedOut(null, 5, null, false)));
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        CODE,
+                        JourneyType.SIGN_IN,
+                        DEFAULT_SMS_METHOD.getDestination());
+        var result = makeCallWithCode(codeRequest);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)

@@ -262,55 +262,6 @@ class PhoneNumberCodeProcessorTest {
                 equalTo(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED)));
     }
 
-    @ParameterizedTest
-    @MethodSource("codeRequestTypes")
-    void shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodes(
-            CodeRequestType codeRequestType, JourneyType journeyType) {
-        setUpBlockedPhoneNumberCode(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @Test
-    void
-            shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodesWithDeprecatedPrefix() {
-        var codeRequestType = CodeRequestType.MFA_PW_RESET_MFA;
-        var journeyType = JourneyType.PASSWORD_RESET_MFA;
-        var mfaMethodType = MFAMethodType.SMS;
-
-        setUpBlockedPhoneNumberCode(
-                new VerifyMfaCodeRequest(
-                        mfaMethodType,
-                        INVALID_CODE,
-                        journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
-
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(false);
-
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
-                        CODE_BLOCKED_KEY_PREFIX
-                                + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                        mfaMethodType, journeyType)))
-                .thenReturn(true);
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
-    }
-
     @Test
     void shouldThrowExceptionForSignInPhoneNumberCode() {
         setupPhoneNumberCode(
