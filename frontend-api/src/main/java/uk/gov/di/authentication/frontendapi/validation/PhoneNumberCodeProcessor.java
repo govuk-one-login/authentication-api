@@ -6,7 +6,6 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -110,8 +109,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                                 .contains(journeyType)
                         ? NotificationType.MFA_SMS
                         : NotificationType.VERIFY_PHONE_NUMBER;
-
-        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
 
         boolean isTestClient = testUserHelper.isTestJourney(userContext);
 

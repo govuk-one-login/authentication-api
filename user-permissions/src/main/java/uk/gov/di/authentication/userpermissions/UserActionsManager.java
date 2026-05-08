@@ -165,6 +165,27 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectEmailOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        /*
+         * REAUTHENTICATION journey type: Currently a no-op.
+         *
+         * AuthenticationAttemptsService supports tracking email OTP attempts via
+         * CountType.ENTER_EMAIL_CODE (wired into ReauthAuthenticationAttemptsHelper),
+         * but this is not currently used.
+         *
+         * Previously, ValidationHelper.getErrorResponse() explicitly skipped count
+         * increment when journeyType was REAUTHENTICATION, expecting
+         * authenticationAttemptsService to be used instead (as done for MFA_SMS).
+         *
+         * However, email OTP notifications (VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE, etc.)
+         * are never sent with journeyType=REAUTHENTICATION. Even during a reauth flow,
+         * RESET_PASSWORD_WITH_CODE uses PASSWORD_RESET as the journey type because the
+         * frontend does not send a journeyType, so the backend defaults based on
+         * notification type.
+         *
+         * When lockout data storage is consolidated, consider what should happen for
+         * password reset sub-journeys within a reauthentication flow, and whether the
+         * existing CountType.ENTER_EMAIL_CODE should be utilised.
+         */
         if (journeyType == JourneyType.REAUTHENTICATION) {
             return Result.success(null);
         }
