@@ -10,6 +10,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.errormapper.TrackingErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
@@ -325,17 +326,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
         }
 
-        processSuccessfulCodeRequest(
-                codeRequest,
-                userContext,
-                subjectId,
-                journeyType,
-                auditContext,
-                maybeRpPairwiseId,
-                maybeRequestedSmsMfaMethod,
-                retrievedMfaMethods);
+        var maybeErrorResponse =
+                processSuccessfulCodeRequest(
+                        codeRequest,
+                        userContext,
+                        subjectId,
+                        journeyType,
+                        auditContext,
+                        maybeRpPairwiseId,
+                        maybeRequestedSmsMfaMethod,
+                        retrievedMfaMethods);
 
-        return generateEmptySuccessApiGatewayResponse();
+        return maybeErrorResponse.orElseGet(() -> generateEmptySuccessApiGatewayResponse());
     }
 
     private boolean userHasExceededAllowedAttemptsForReauthenticationJourney(
@@ -479,7 +481,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         LOG.info("IncorrectMfaCodeAttemptsCount reset");
     }
 
-    private void processSuccessfulCodeRequest(
+    private Optional<APIGatewayProxyResponseEvent> processSuccessfulCodeRequest(
             VerifyCodeRequest codeRequest,
             UserContext userContext,
             String subjectId,
@@ -538,8 +540,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             LOG.info("Setting hasVerifiedMfa to true");
             var permissionContext =
-                    PermissionContext.builder().withAuthSessionItem(authSession).build();
-            userActionsManager.correctSmsOtpReceived(journeyType, permissionContext);
+                    PermissionContext.builder()
+                            .withAuthSessionItem(authSession)
+                            .withEmailAddress(authSession.getEmailAddress())
+                            .withInternalSubjectId(subjectId)
+                            .withRpPairwiseId(maybeRpPairwiseId.orElse(null))
+                            .build();
+            var result = userActionsManager.correctSmsOtpReceived(journeyType, permissionContext);
+            if (result.isFailure()) {
+                LOG.error("Failed to record correct SMS OTP: {}", result.getFailure());
+                return Optional.of(
+                        TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                                result.getFailure()));
+            }
 
             authSessionService.updateSession(
                     authSession
@@ -576,6 +589,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
+
+        return Optional.empty();
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(

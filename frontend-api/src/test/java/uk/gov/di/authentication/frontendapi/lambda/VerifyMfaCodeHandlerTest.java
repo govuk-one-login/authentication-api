@@ -39,7 +39,6 @@ import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -51,6 +50,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
@@ -59,7 +59,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -73,7 +72,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -95,7 +93,6 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_RESET_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.FORCED_MFA_RESET_INITIATED;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
@@ -139,9 +136,6 @@ class VerifyMfaCodeHandlerTest {
     private static final String TEST_SUBJECT_ID = "test-subject-id";
     private static final int MAX_RETRIES = 6;
 
-    private final String expectedRpPairwiseSubjectId =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -166,8 +160,6 @@ class VerifyMfaCodeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
@@ -214,6 +206,10 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Result.success(null));
         when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
                 .thenReturn(Result.success(null));
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
+        when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -223,7 +219,6 @@ class VerifyMfaCodeHandlerTest {
                         auditService,
                         mfaCodeProcessorFactory,
                         cloudwatchMetricsService,
-                        authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
                         userActionsManager,
@@ -1011,75 +1006,6 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Test
-    void
-            shouldDeleteAuthAppAuthenticationAttemptsCountAndStoreCountsInSessionIfCorrectCodeEnteredForReauthJourney()
-                    throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
-        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
-                .thenReturn(existingCounts);
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
-        makeCallWithCode(codeRequest);
-
-        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSubjectId)
-                .forEach(
-                        identifier ->
-                                verify(
-                                                authenticationAttemptsService,
-                                                times(CountType.values().length))
-                                        .deleteCount(
-                                                eq(identifier),
-                                                eq(JourneyType.REAUTHENTICATION),
-                                                any()));
-
-        verify(authSessionService, atLeastOnce())
-                .updateSession(
-                        argThat(
-                                s ->
-                                        s.getPreservedReauthCountsForAuditMap()
-                                                .equals(existingCounts)));
-    }
-
-    @Test
-    void
-            shouldDeleteAuthAppAuthenticationAttemptsCountAndNotStoreCountsInSessionIfCorrectCodeEnteredForSigninJourney()
-                    throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
-        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
-                .thenReturn(existingCounts);
-
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
-        makeCallWithCode(codeRequest);
-
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, ENTER_MFA_CODE);
-
-        verify(authSessionService, never())
-                .updateSession(
-                        argThat(
-                                s ->
-                                        Objects.equals(
-                                                s.getPreservedReauthCountsForAuditMap(),
-                                                existingCounts)));
-    }
-
-    @Test
     void shouldReturn400WhenReauthLockedOutViaPermissionDecisionManager()
             throws Json.JsonException {
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1149,11 +1075,6 @@ class VerifyMfaCodeHandlerTest {
     private void assertAuditEventSubmittedWithMetadata(
             AuditableEvent event, AuditService.MetadataPair... pairs) {
         verify(auditService).submitAuditEvent(event, AUDIT_CONTEXT, pairs);
-    }
-
-    private void withReauthTurnedOn() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
     }
 
     @Test
@@ -1294,6 +1215,74 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Test
+    void shouldReturn500WhenPermissionDecisionManagerFails() throws Json.JsonException {
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+
+        var result =
+                makeCallWithCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "123456", JourneyType.SIGN_IN, null));
+
+        assertThat(result, hasStatus(500));
+    }
+
+    @Test
+    void shouldReturn500WhenIncorrectOtpTrackingFails() throws Json.JsonException {
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode())
+                .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
+        when(userActionsManager.incorrectAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+        var result =
+                makeCallWithCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "123456", JourneyType.SIGN_IN, null));
+
+        assertThat(result, hasStatus(500));
+    }
+
+    @Test
+    void shouldReturn500WhenCorrectSmsOtpTrackingFails() throws Json.JsonException {
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+        var result =
+                makeCallWithCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.SMS, "123456", JourneyType.SIGN_IN, null));
+
+        assertThat(result, hasStatus(500));
+    }
+
+    @Test
+    void shouldReturn500WhenCorrectAuthAppOtpTrackingFails() throws Json.JsonException {
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(userActionsManager.correctAuthAppOtpReceived(any(), any()))
+                .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+        var result =
+                makeCallWithCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "123456", JourneyType.SIGN_IN, null));
+
+        assertThat(result, hasStatus(500));
+    }
+
+    @Test
     void shouldCallIncorrectSmsOtpReceivedWhenSmsCodeIsInvalid() throws Json.JsonException {
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
@@ -1410,7 +1399,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
-        var detailedCounts = Map.of(ENTER_MFA_CODE, MAX_RETRIES);
+        var detailedCounts = Map.of(CountType.ENTER_MFA_CODE, MAX_RETRIES);
         when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(5)))
                 .thenReturn(
@@ -1421,7 +1410,7 @@ class VerifyMfaCodeHandlerTest {
                                         Instant.now(),
                                         false,
                                         detailedCounts,
-                                        List.of(ENTER_MFA_CODE))));
+                                        List.of(CountType.ENTER_MFA_CODE))));
 
         var result =
                 makeCallWithCode(

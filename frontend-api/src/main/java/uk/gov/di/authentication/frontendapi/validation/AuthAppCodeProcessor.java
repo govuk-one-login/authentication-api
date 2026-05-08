@@ -91,8 +91,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             LOG.info("Auth code is not valid");
             return Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED);
         }
-        LOG.info("Auth code valid. Resetting code request count");
-        resetCodeIncorrectEntryCount();
+        LOG.info("Auth code valid");
 
         return Optional.empty();
     }
