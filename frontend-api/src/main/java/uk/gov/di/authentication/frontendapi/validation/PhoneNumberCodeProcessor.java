@@ -34,7 +34,6 @@ import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
@@ -115,21 +114,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         : NotificationType.VERIFY_PHONE_NUMBER;
 
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
-        }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(
-                        notificationType.getMfaMethodType(), journeyType);
-        if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
-        }
 
         boolean isTestClient = testUserHelper.isTestJourney(userContext);
 
