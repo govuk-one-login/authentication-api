@@ -44,6 +44,14 @@ Parameters:
     AllowedValues:
       - "Yes"
       - "No"
+  DeployOriginCert:
+    Description: >
+      (Optional) Deploys the origin.oidc certificate
+    Type: String
+    Default: "No"
+    AllowedValues:
+      - "Yes"
+      - "No"
 
 Conditions:
   DeployDevSubDomains:
@@ -52,6 +60,7 @@ Conditions:
       !Equals [!Ref DeploySubEnvDomains, "Yes"],
     ]
   DeployCertificate: !Equals [!Ref DeployCertificate, "Yes"]
+  DeployOriginCertificate: !Equals [!Ref DeployOriginCert, "Yes"]
 
 Mappings:
   EnvironmentConfiguration:
@@ -168,6 +177,50 @@ Resources:
       Name: !Sub "/deploy/hosted-zone/oidc${EndpointSuffix}/certificate-Arn"
       Type: String
       Value: !Ref OidcHostedZoneRootCertificate
+
+  OidcOriginHostedZoneCertificate:
+    Condition: DeployOriginCert
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub
+        - origin.oidc${EndpointSuffix}.${DomainSuffix}
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+      ValidationMethod: "DNS"
+      DomainValidationOptions:
+        - DomainName: !Sub
+            - origin.oidc${EndpointSuffix}.${DomainSuffix}
+            - DomainSuffix:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  domainSuffix,
+                ]
+          HostedZoneId: !Ref OidcHostedZone
+
+  OidcOriginCertificateArnSSMParam:
+    Condition: DeployCertificate
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: !Sub
+        - "SSM parameter to store the ARN of the ACM certificate for the oidc${EndpointSuffix}.${DomainSuffix} domain"
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              domainSuffix,
+            ]
+      Name: !Sub "/deploy/hosted-zone/oidc${EndpointSuffix}/origin/certificate-Arn"
+      Type: String
+      Value: !Ref OidcOriginHostedZoneCertificate
 
   Orchdev1HostedZone:
     Condition: DeployDevSubDomains

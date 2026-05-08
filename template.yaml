@@ -6031,18 +6031,30 @@ Resources:
     Type: AWS::ApiGatewayV2::DomainName
     Condition: UseCloudfront
     Properties:
-      DomainName:
-        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
+      DomainName: !Sub
+        - "origin.${DomainSuffix}"
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              oidcDomainName,
+            ]
       DomainNameConfigurations:
-        - CertificateArn: "{{resolve:ssm:/deploy/hosted-zone/oidc/certificate-Arn}}"
+        - CertificateArn: "{{resolve:ssm:/deploy/hosted-zone/oidc/origin/certificate-Arn}}"
           SecurityPolicy: TLS_1_2
 
   OrchestrationOidcApiBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Condition: UseCloudfront
     Properties:
-      DomainName:
-        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
+      DomainName: !Sub
+        - "origin.${DomainSuffix}"
+        - DomainSuffix:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              oidcDomainName,
+            ]
       RestApiId: !Ref OrchestrationOidcApi
       Stage: !Sub "${Environment}"
     DependsOn:
