@@ -38,7 +38,6 @@ class AuthAppStubTest {
                         mock(CodeStorageService.class),
                         configurationService,
                         mock(DynamoService.class),
-                        99999,
                         mock(CodeRequest.class),
                         mock(AuditService.class),
                         mock(DynamoAccountModifiersService.class),

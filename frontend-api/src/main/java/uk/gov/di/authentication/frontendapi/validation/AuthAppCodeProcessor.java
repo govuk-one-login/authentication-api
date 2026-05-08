@@ -4,7 +4,6 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -49,7 +48,6 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
-            int maxRetries,
             CodeRequest codeRequest,
             AuditService auditService,
             DynamoAccountModifiersService accountModifiersService,
@@ -57,7 +55,6 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         super(
                 userContext,
                 codeStorageService,
-                maxRetries,
                 authenticationService,
                 auditService,
                 accountModifiersService,
@@ -69,23 +66,11 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public Optional<ErrorResponse> validateCode() {
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(AUTH_APP, codeRequest.getJourneyType());
-
         var nonRegistrationJourneyTypes =
                 List.of(
                         JourneyType.SIGN_IN,
                         JourneyType.PASSWORD_RESET_MFA,
                         JourneyType.REAUTHENTICATION);
-
-        if (codeRequestType.getJourneyType() != JourneyType.REAUTHENTICATION) {
-            incrementRetryCount();
-        }
-
-        if (hasExceededRetryLimit()) {
-            LOG.info("Exceeded code retry limit");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
-        }
 
         var authAppSecret =
                 nonRegistrationJourneyTypes.contains(codeRequest.getJourneyType())

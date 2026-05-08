@@ -144,7 +144,8 @@ public class ValidationHelper {
             String input,
             CodeStorageService codeStorageService,
             String emailAddress,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            boolean incrementCountOnFailure) {
 
         if (code.filter(input::equals).isPresent()) {
             if (journeyType != JourneyType.REAUTHENTICATION) {
@@ -167,7 +168,8 @@ public class ValidationHelper {
                 journeyType,
                 codeStorageService,
                 emailAddress,
-                configurationService);
+                configurationService,
+                incrementCountOnFailure);
     }
 
     private static @NotNull Optional<ErrorResponse> getErrorResponse(
@@ -175,8 +177,9 @@ public class ValidationHelper {
             JourneyType journeyType,
             CodeStorageService codeStorageService,
             String emailAddress,
-            ConfigurationService configurationService) {
-        if (journeyType != JourneyType.REAUTHENTICATION) {
+            ConfigurationService configurationService,
+            boolean incrementCountOnFailure) {
+        if (incrementCountOnFailure && journeyType != JourneyType.REAUTHENTICATION) {
             if (configurationService.supportAccountCreationTTL()
                     && notificationType == VERIFY_EMAIL) {
                 codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(

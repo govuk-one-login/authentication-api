@@ -437,7 +437,8 @@ class ValidationHelperTest {
                         input,
                         codeStorageService,
                         EMAIL_ADDRESS,
-                        configurationServiceMock));
+                        configurationServiceMock,
+                        true));
     }
 
     @ParameterizedTest
@@ -463,7 +464,8 @@ class ValidationHelperTest {
                 input,
                 codeStorageService,
                 EMAIL_ADDRESS,
-                configurationServiceMock);
+                configurationServiceMock,
+                true);
 
         if (journeyType != JourneyType.REAUTHENTICATION) {
             if (notificationType == VERIFY_EMAIL) {
