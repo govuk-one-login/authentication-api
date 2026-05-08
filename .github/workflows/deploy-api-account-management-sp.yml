@@ -8,6 +8,7 @@ on:
       - "ci/cloudformation/auth/**"
       - "ci/cloudformation/stubs/**"
       - "ci/cloudformation/account-data/**"
+      - "ci/cloudformation/utils/**"
       - "template.yaml"
       - "docs/**"
       - "**/README.md"
@@ -16,6 +17,15 @@ on:
       - "local-running/**"
       - "notifications/**"
       - "quality-gate.manifest.json"
+      - "frontend-api/**"
+      - "account-data-api/**"
+      - "account-data-api-integration-tests/**"
+      - "test-services-api/**"
+      - "utils/**"
+      - "ipv-api/**"
+      - "oidc-api/**"
+      - "ticf-cri-stub/**"
+      - "interventions-api-stub/**"
 
 env:
   AWS_REGION: eu-west-2

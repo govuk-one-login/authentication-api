@@ -18,6 +18,15 @@ on:
       - "local-running/**"
       - "notifications/**"
       - "quality-gate.manifest.json"
+      - "frontend-api/**"
+      - "account-management-api/**"
+      - "account-management-integration-tests/**"
+      - "account-data-api/**"
+      - "account-data-api-integration-tests/**"
+      - "ticf-cri-stub/**"
+      - "interventions-api-stub/**"
+      - "ipv-api/**"
+      - "oidc-api/**"
 
 env:
   AWS_REGION: eu-west-2
