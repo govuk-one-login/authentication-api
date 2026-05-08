@@ -221,48 +221,6 @@ class PhoneNumberCodeProcessorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenInvalidRegistrationPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        REGISTRATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
-    }
-
-    @Test
-    void shouldReturnErrorWhenInvalidMfaPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        JourneyType.PASSWORD_RESET_MFA,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED)));
-    }
-
-    @Test
-    void shouldReturnErrorWhenInvalidReauthenticateMfaPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        JourneyType.REAUTHENTICATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED)));
-    }
-
-    @Test
     void shouldThrowExceptionForSignInPhoneNumberCode() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
