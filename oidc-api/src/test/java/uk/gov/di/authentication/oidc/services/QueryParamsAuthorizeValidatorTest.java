@@ -531,35 +531,6 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void validatorLogsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod() {
-        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
-        List<String> clientLoCs = List.of("P0", "P2");
-        var vtr = jsonArrayOf("Cl.Cm.P2");
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                                REDIRECT_URI.toString(),
-                                                clientLoCs,
-                                                CLIENT_ID.toString())
-                                        .withIdentityVerificationSupported(true)
-                                        .withTokenAuthMethod("client_secret_post")));
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
-                        .state(STATE)
-                        .nonce(new Nonce())
-                        .customParameter("vtr", vtr)
-                        .build();
-        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
-
-        assertFalse(errorObject.isPresent());
-        String expectedLogMessage =
-                "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.";
-        assertThat(baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
-    }
-
-    @Test
     void shouldNotReturnErrorWhenPkceIsNotEnforcedAndCodeChallengeAndMethodAreMissing() {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
@@ -864,7 +835,6 @@ class QueryParamsAuthorizeValidatorTest {
                 .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .withPublicKey(null)
                 .withTestClient(testClient)
-                .withTokenAuthMethod("private_key_jwt")
                 .withClientLoCs(clientLoCs)
                 .withScopes(scopes)
                 .withIdentityVerificationSupported(true);

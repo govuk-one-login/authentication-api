@@ -59,12 +59,4 @@ public enum LevelOfConfidence {
                 .map(LevelOfConfidence::getValue)
                 .toList();
     }
-
-    public static List<LevelOfConfidence> listOfIdentityLoCs() {
-        return List.of(
-                LevelOfConfidence.LOW_LEVEL,
-                LevelOfConfidence.MEDIUM_LEVEL,
-                LevelOfConfidence.HIGH_LEVEL,
-                LevelOfConfidence.VERY_HIGH_LEVEL);
-    }
 }
