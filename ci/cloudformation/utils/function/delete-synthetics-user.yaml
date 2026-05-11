@@ -28,6 +28,7 @@ Resources:
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoCredentialReadWriteAccessPolicy
         - !Ref TestServicesApiTxMAAuditQueueAccessPolicy
+        - !Ref DynamoUserDeleteAccessPolicy
       AutoPublishAlias: active
       LoggingConfig:
         LogGroup: !Ref DeleteSyntheticsUserLogGroup
