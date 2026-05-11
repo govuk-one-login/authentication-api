@@ -176,7 +176,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = UserMfaDetail.noMfa();
-            var hasActivePasskey = false;
+            Optional<Boolean> hasActivePasskey = Optional.empty();
             var needsForcedMFAResetAfterMFACheck = false;
 
             AuthSessionItem authSession = userContext.getAuthSession();
@@ -232,7 +232,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.mfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation,
-                            hasActivePasskey,
+                            hasActivePasskey.orElse(null),
                             needsForcedMFAResetAfterMFACheck);
 
             authSessionService.updateSession(authSession);
@@ -246,20 +246,23 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         }
     }
 
-    private boolean hasActivePasskey(String publicSubjectId, AuthSessionItem authSession) {
+    private Optional<Boolean> hasActivePasskey(
+            String publicSubjectId, AuthSessionItem authSession) {
         if (configurationService.supportPasskeys()) {
             LOG.info("Checking if user has active passkey");
 
             var hasActivePasskeyResult =
                     passkeysService.hasActivePasskey(publicSubjectId, authSession.getSessionId());
-            if (hasActivePasskeyResult.isFailure()) {
+            if (hasActivePasskeyResult.isSuccess()) {
+                return Optional.of(hasActivePasskeyResult.getSuccess());
+            } else {
                 LOG.warn(
                         "Error retrieving passkey information for user. Error: {}",
                         hasActivePasskeyResult.getFailure());
-                return false;
             }
-            return hasActivePasskeyResult.getSuccess();
-        } else return false;
+        }
+
+        return Optional.empty();
     }
 
     private boolean requiresMfaResetForInternationalNumber(
