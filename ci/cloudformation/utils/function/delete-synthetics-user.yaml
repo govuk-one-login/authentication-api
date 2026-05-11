@@ -14,7 +14,10 @@ Resources:
         Variables:
           ENVIRONMENT:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          SYNTHETICS_USERS: simulate-delivered@notifications.service.gov.uk
+          SYNTHETICS_USERS: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/synthetics_user}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
