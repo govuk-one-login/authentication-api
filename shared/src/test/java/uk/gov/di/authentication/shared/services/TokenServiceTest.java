@@ -50,10 +50,8 @@ class TokenServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private final TokenService tokenService =
-            new TokenService(configurationService, redisConnectionService, kmsConnectionService);
+            new TokenService(configurationService, kmsConnectionService);
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject FIXED_INTERNAL_PAIRWISE_SUBJECT =
             new Subject("urn:fdc:gov.uk:2022:TJLt3WaiGkLh8UqeisH2zVKGAP0");

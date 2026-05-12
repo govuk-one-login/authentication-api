@@ -32,16 +32,12 @@ import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256Strin
 public class TokenService {
 
     private final ConfigurationService configService;
-    private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private static final Logger LOG = LogManager.getLogger(TokenService.class);
 
     public TokenService(
-            ConfigurationService configService,
-            RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            ConfigurationService configService, KmsConnectionService kmsConnectionService) {
         this.configService = configService;
-        this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
     }
 

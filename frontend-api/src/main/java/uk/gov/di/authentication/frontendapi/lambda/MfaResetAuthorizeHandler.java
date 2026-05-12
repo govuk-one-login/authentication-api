@@ -12,7 +12,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
-import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -26,12 +25,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.state.UserContext;
-
-import java.net.MalformedURLException;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -74,21 +68,6 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.idReverificationStateService = new IDReverificationStateService(configurationService);
         this.ipvReverificationService = new IPVReverificationService(configurationService);
-    }
-
-    public MfaResetAuthorizeHandler(RedisConnectionService redisConnectionService)
-            throws MalformedURLException {
-        super(MfaResetRequest.class, ConfigurationService.getInstance());
-        KmsConnectionService kmsConnectionService = new KmsConnectionService(configurationService);
-        JwtService jwtService = new JwtService(kmsConnectionService);
-        TokenService tokenService =
-                new TokenService(
-                        configurationService, redisConnectionService, kmsConnectionService);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.ipvReverificationService =
-                new IPVReverificationService(configurationService, jwtService, tokenService);
-        this.idReverificationStateService = new IDReverificationStateService(configurationService);
     }
 
     public MfaResetAuthorizeHandler() {

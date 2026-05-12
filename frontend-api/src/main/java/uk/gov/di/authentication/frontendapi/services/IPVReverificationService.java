@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.net.MalformedURLException;
@@ -61,14 +60,10 @@ public class IPVReverificationService {
     public IPVReverificationService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         try {
-            RedisConnectionService redisConnectionService =
-                    new RedisConnectionService(configurationService);
             KmsConnectionService kmsConnectionService =
                     new KmsConnectionService(configurationService);
             this.jwtService = new JwtService(kmsConnectionService);
-            this.tokenService =
-                    new TokenService(
-                            configurationService, redisConnectionService, kmsConnectionService);
+            this.tokenService = new TokenService(configurationService, kmsConnectionService);
             this.nowClock = new NowClock(Clock.systemUTC());
             this.jwkSource =
                     configurationService.isIpvJwksCallEnabled()
