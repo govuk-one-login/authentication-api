@@ -174,7 +174,12 @@ public abstract class BaseAuthorizeValidator {
             if (vtrError.isPresent()) {
                 return vtrError;
             }
-            logIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(vtrList, client);
+            var tokenAuthMethodError =
+                    errorForIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
+                            vtrList, client);
+            if (tokenAuthMethodError.isPresent()) {
+                return tokenAuthMethodError;
+            }
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
@@ -203,13 +208,18 @@ public abstract class BaseAuthorizeValidator {
         return Optional.empty();
     }
 
-    protected void logIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
-            List<VectorOfTrust> vtrList, ClientRegistry client) {
+    protected Optional<ErrorObject>
+            errorForIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
+                    List<VectorOfTrust> vtrList, ClientRegistry client) {
         if (requestContainsIdentityLoC(vtrList)
                 && ("client_secret_post".equals(client.getTokenAuthMethod()))) {
-            LOG.info(
+            logErrorInProdElseWarn(
                     "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.");
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
         }
+        return Optional.empty();
     }
 
     protected void validateResponseMode(String responseMode) throws InvalidResponseModeException {

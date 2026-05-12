@@ -531,7 +531,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void validatorLogsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod() {
+    void validatorErorsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod() {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         List<String> clientLoCs = List.of("P0", "P2");
         var vtr = jsonArrayOf("Cl.Cm.P2");
@@ -553,7 +553,14 @@ class QueryParamsAuthorizeValidatorTest {
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
-        assertFalse(errorObject.isPresent());
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request vtr is not permitted")
+                                .toJSONObject()));
         String expectedLogMessage =
                 "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.";
         assertThat(baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
