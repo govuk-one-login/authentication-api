@@ -204,7 +204,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void shouldAuthenticateMfaReset(boolean isIpvJwksCallEnabled) throws MalformedURLException {
+    void shouldAuthenticateMfaReset(boolean isIpvJwksCallEnabled) {
         environment.set("IPV_JWKS_CALL_ENABLED", String.valueOf(isIpvJwksCallEnabled));
 
         handler = new MfaResetAuthorizeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
