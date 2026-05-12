@@ -305,10 +305,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return false;
     }
 
-    public long getIDTokenExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
-    }
-
     public Optional<String> getNotifyApiUrl() {
         return Optional.ofNullable(System.getenv("NOTIFY_URL"));
     }
@@ -360,10 +356,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 && stringToSearch != null
                 && !stringToSearch.isBlank()
                 && Arrays.stream(stringToSearch.split(",")).anyMatch(id -> id.equals(searchTerm)));
-    }
-
-    public Optional<String> getOidcApiBaseURL() {
-        return Optional.ofNullable(System.getenv("OIDC_API_BASE_URL"));
     }
 
     public Optional<String> getPasswordPepper() {
