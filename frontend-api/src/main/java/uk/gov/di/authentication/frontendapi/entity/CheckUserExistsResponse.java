@@ -13,6 +13,6 @@ public record CheckUserExistsResponse(
         @SerializedName("mfaMethodType") @Expose MFAMethodType mfaMethodType,
         @SerializedName("phoneNumberLastThree") @Expose String phoneNumberLastThree,
         @SerializedName("lockoutInformation") @Expose List<LockoutInformation> lockoutInformation,
-        @SerializedName("hasActivePasskey") @Expose boolean hasActivePasskey,
+        @SerializedName("hasActivePasskey") @Expose Boolean hasActivePasskey,
         @SerializedName("needsForcedMFAResetAfterMFACheck") @Expose
                 boolean needsForcedMFAResetAfterMFACheck) {}

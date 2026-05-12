@@ -197,7 +197,7 @@ class CheckUserExistsHandlerTest {
                     "mfaMethodType":"SMS",
                     "phoneNumberLastThree":"%s",
                     "lockoutInformation":[],
-                    "hasActivePasskey":false,
+                    "hasActivePasskey":null,
                     "needsForcedMFAResetAfterMFACheck":false}
                     """,
                             EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
@@ -254,7 +254,7 @@ class CheckUserExistsHandlerTest {
                     "mfaMethodType":"%s",
                     "phoneNumberLastThree": %s,
                     "lockoutInformation":[],
-                    "hasActivePasskey":false,
+                    "hasActivePasskey":null,
                     "needsForcedMFAResetAfterMFACheck":false}
                     """,
                             EMAIL_ADDRESS,
@@ -352,7 +352,7 @@ class CheckUserExistsHandlerTest {
                                             MFAMethodType.AUTH_APP,
                                             lockoutExpiry.getEpochSecond(),
                                             JourneyType.PASSWORD_RESET_MFA)),
-                            false,
+                            null,
                             false);
             assertThat(result, hasJsonBody(expectedResponse));
         }
@@ -639,7 +639,7 @@ class CheckUserExistsHandlerTest {
         }
 
         @Test
-        void shouldReturnFalseForHasActivePasskeyIfPasskeysServiceReturnsFailure()
+        void shouldReturnNullForHasActivePasskeyIfPasskeysServiceReturnsFailure()
                 throws Json.JsonException {
             when(configurationService.supportPasskeys()).thenReturn(true);
             var userProfile = generateUserProfile();
@@ -659,7 +659,7 @@ class CheckUserExistsHandlerTest {
             assertThat(result, hasStatus(200));
             var checkUserExistsResponse =
                     objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-            assertFalse(checkUserExistsResponse.hasActivePasskey());
+            assertNull(checkUserExistsResponse.hasActivePasskey());
         }
 
         @Test
@@ -701,7 +701,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
-        assertFalse(checkUserExistsResponse.hasActivePasskey());
+        assertNull(checkUserExistsResponse.hasActivePasskey());
         assertNull(authSession.getInternalCommonSubjectId());
         verify(authSessionService).updateSession(any(AuthSessionItem.class));
         verify(auditService)
