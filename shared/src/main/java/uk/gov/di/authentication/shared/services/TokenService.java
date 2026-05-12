@@ -140,33 +140,6 @@ public class TokenService {
         }
     }
 
-    public OIDCTokenResponse generateRefreshTokenResponse(
-            String clientID,
-            Subject internalSubject,
-            List<String> scopes,
-            Subject rpPaiwiseSubject,
-            Subject internalPairwiseSubject,
-            JWSAlgorithm signingAlgorithm) {
-        AccessToken accessToken =
-                generateAndStoreAccessToken(
-                        clientID,
-                        internalSubject,
-                        scopes,
-                        rpPaiwiseSubject,
-                        internalPairwiseSubject,
-                        null,
-                        signingAlgorithm);
-        RefreshToken refreshToken =
-                generateAndStoreRefreshToken(
-                        clientID,
-                        internalSubject,
-                        scopes,
-                        rpPaiwiseSubject,
-                        internalPairwiseSubject,
-                        signingAlgorithm);
-        return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
-    }
-
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
         Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(tokenRequestBody);
         if (!requestBody.containsKey("grant_type")) {
