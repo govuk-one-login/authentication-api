@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -72,6 +73,7 @@ public class UserInfoHandler
                 new UserInfoService(
                         new DynamoService(configurationService),
                         new MFAMethodsService(configurationService),
+                        new AccessTokenConstructorService(configurationService),
                         configurationService);
         this.accessTokenStoreService =
                 new AccessTokenStoreService(

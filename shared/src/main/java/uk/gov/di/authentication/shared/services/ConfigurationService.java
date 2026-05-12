@@ -703,6 +703,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("AMC_CLIENT_ID", "");
     }
 
+    public String getHomeClientId() {
+        return System.getenv().getOrDefault("HOME_CLIENT_ID", "");
+    }
+
     public String getAuthToAccountDataSigningKey() {
         return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", "");
     }

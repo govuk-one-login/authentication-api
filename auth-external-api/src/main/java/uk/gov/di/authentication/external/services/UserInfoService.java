@@ -6,17 +6,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.nio.ByteBuffer;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Objects;
 
@@ -25,14 +29,17 @@ public class UserInfoService {
     private final AuthenticationService authenticationService;
     private final MFAMethodsService mfaMethodsService;
     private final ConfigurationService configurationService;
+    private final AccessTokenConstructorService accessTokenConstructorService;
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
             AuthenticationService authenticationService,
             MFAMethodsService mfaMethodsService,
+            AccessTokenConstructorService accessTokenConstructorService,
             ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
         this.mfaMethodsService = mfaMethodsService;
+        this.accessTokenConstructorService = accessTokenConstructorService;
         this.configurationService = configurationService;
     }
 
@@ -49,7 +56,7 @@ public class UserInfoService {
                         authenticationService);
 
         var userInfo = new UserInfo(internalPairwiseId);
-        addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
+        addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, authSession, userInfo);
         addClaimsFromSession(accessTokenInfo, authSession, userInfo);
         return userInfo;
     }
@@ -58,6 +65,7 @@ public class UserInfoService {
             AccessTokenStore accessTokenInfo,
             String internalSubjectId,
             UserProfile userProfile,
+            AuthSessionItem authSession,
             UserInfo userInfo) {
         var rpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -97,6 +105,28 @@ public class UserInfoService {
         }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_VERIFIED.getValue())) {
             userInfo.setPhoneNumberVerified(phoneData.phoneNumberVerified());
+        }
+
+        if (accessTokenInfo
+                .getClaims()
+                .contains(AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue())) {
+            var result =
+                    accessTokenConstructorService.createSignedAccessToken(
+                            userProfile.getPublicSubjectID(),
+                            AccountDataScope.PASSKEY_CREATE,
+                            authSession.getSessionId(),
+                            NowHelper.now(),
+                            NowHelper.nowPlus(2, ChronoUnit.HOURS),
+                            configurationService.getAuthToAccountDataApiAudience(),
+                            configurationService.getAuthIssuerClaim(),
+                            configurationService.getHomeClientId(),
+                            configurationService.getAuthToAccountDataSigningKey());
+
+            if (result.isSuccess()) {
+                userInfo.setClaim(
+                        AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue(),
+                        result.getSuccess().getValue());
+            }
         }
     }
 
