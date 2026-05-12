@@ -3,9 +3,12 @@ package uk.gov.di.authentication.accountdata.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
@@ -15,6 +18,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -131,6 +135,28 @@ class PasskeysServiceTest {
                         result.getFailure(),
                         equalTo(PasskeysCreateFailureReason.FAILED_TO_SAVE_PASSKEY));
             }
+        }
+
+        private PasskeysCreateRequest buildPasskeysCreateRequest(
+                String credential,
+                String passkeyId,
+                String aaguid,
+                boolean isAttested,
+                int signCount,
+                List<String> transports,
+                boolean isBackUpEligible,
+                boolean isBackedUp,
+                boolean isResidentKey) {
+            return new PasskeysCreateRequest(
+                    credential,
+                    passkeyId,
+                    aaguid,
+                    isAttested,
+                    signCount,
+                    transports,
+                    isBackUpEligible,
+                    isBackedUp,
+                    isResidentKey);
         }
     }
 
@@ -249,25 +275,55 @@ class PasskeysServiceTest {
         }
     }
 
-    public PasskeysCreateRequest buildPasskeysCreateRequest(
-            String credential,
-            String passkeyId,
-            String aaguid,
-            boolean isAttested,
-            int signCount,
-            List<String> transports,
-            boolean isBackUpEligible,
-            boolean isBackedUp,
-            boolean isResidentKey) {
-        return new PasskeysCreateRequest(
-                credential,
-                passkeyId,
-                aaguid,
-                isAttested,
-                signCount,
-                transports,
-                isBackUpEligible,
-                isBackedUp,
-                isResidentKey);
+    @Nested
+    class DeletePasskey {
+
+        @Nested
+        class Success {
+            private static Stream<Result<PasskeysDeleteFailureReason, Void>> deleteResults() {
+                return Stream.of(
+                        Result.success(null),
+                        Result.failure(PasskeysDeleteFailureReason.PASSKEY_NOT_FOUND));
+            }
+
+            @MethodSource("deleteResults")
+            @ParameterizedTest
+            void shouldReturnResultFromDynamoServiceWhenNoErrorOccurs(
+                    Result<PasskeysDeleteFailureReason, Void> passkeyDeleteResult) {
+                // Given
+                when(persistentService.deletePasskey(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID))
+                        .thenReturn(passkeyDeleteResult);
+
+                // When
+                var result =
+                        passkeysService.deletePasskey(
+                                CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+
+                // Then
+                assertEquals(passkeyDeleteResult, result);
+            }
+        }
+
+        @Nested
+        class Failure {
+            @Test
+            void shouldReturnFailedToDeletePasskeysIfExceptionThrown() {
+                // Given
+                when(persistentService.deletePasskey(
+                                CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID))
+                        .thenThrow(RuntimeException.class);
+
+                // When
+                var result =
+                        passkeysService.deletePasskey(
+                                CommonTestVariables.PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
+
+                // Then
+                assertTrue(result.isFailure());
+                assertThat(
+                        result.getFailure(),
+                        equalTo(PasskeysDeleteFailureReason.FAILED_TO_DELETE_PASSKEY));
+            }
+        }
     }
 }

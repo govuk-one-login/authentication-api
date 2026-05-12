@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
+import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -92,6 +93,16 @@ public class PasskeysService {
         } catch (Exception e) {
             LOG.error("Failed to retrieve passkeys", e);
             return Result.failure(PasskeysRetrieveFailureReasons.FAILED_TO_GET_PASSKEYS);
+        }
+    }
+
+    public Result<PasskeysDeleteFailureReason, Void> deletePasskey(
+            String publicSubjectId, String passkeyIdentifier) {
+        try {
+            return dynamoPasskeyService.deletePasskey(publicSubjectId, passkeyIdentifier);
+        } catch (Exception e) {
+            LOG.error("An exception occurred when attempting to delete passkey", e);
+            return Result.failure(PasskeysDeleteFailureReason.FAILED_TO_DELETE_PASSKEY);
         }
     }
 }

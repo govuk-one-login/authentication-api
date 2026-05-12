@@ -216,6 +216,17 @@ paths:
       responses:
         "204":
           description: Passkey deleted successfully
+        "400":
+          description: Bad request - path params missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_request_body:
+                  value:
+                    code: 4000
+                    message: "Invalid request body"
         "404":
           description: Not found
           content:
