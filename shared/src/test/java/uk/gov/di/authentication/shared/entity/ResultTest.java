@@ -9,6 +9,7 @@ import java.util.List;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,6 +34,15 @@ class ResultTest {
         assertFalse(success.isFailure());
         assertTrue(success.isSuccess());
         assertThrows(IllegalStateException.class, success::getFailure);
+    }
+
+    @Test
+    void anEmptySuccessShouldActAppropriately() {
+        var ok = Result.emptySuccess();
+
+        assertNull(ok.getSuccess());
+        assertTrue(ok.isSuccess());
+        assertFalse(ok.isFailure());
     }
 
     @Nested

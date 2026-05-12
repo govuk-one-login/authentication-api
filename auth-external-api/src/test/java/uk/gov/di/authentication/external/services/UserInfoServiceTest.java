@@ -12,6 +12,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -148,7 +149,9 @@ public class UserInfoServiceTest {
                         Result.success(new BearerAccessToken(TEST_ACCOUNT_DATA_API_ACCESS_TOKEN)));
 
         UserInfo actual =
-                userInfoService.populateUserInfo(mockAccessTokenStore, generateAuthSessionItem());
+                userInfoService
+                        .populateUserInfo(mockAccessTokenStore, generateAuthSessionItem())
+                        .getSuccess();
 
         assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
@@ -245,9 +248,12 @@ public class UserInfoServiceTest {
                                         generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
 
         UserInfo actual =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
-                        generateAuthSessionItem());
+                userInfoService
+                        .populateUserInfo(
+                                getMockAccessTokenStore(
+                                        List.of("phone_number", "phone_number_verified")),
+                                generateAuthSessionItem())
+                        .getSuccess();
 
         assertEquals(TEST_PHONE, actual.getPhoneNumber());
         assertTrue(actual.getPhoneNumberVerified());
@@ -265,9 +271,12 @@ public class UserInfoServiceTest {
                                         generatePhoneNumberMFAMethod(PriorityIdentifier.BACKUP))));
 
         UserInfo actual =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
-                        generateAuthSessionItem());
+                userInfoService
+                        .populateUserInfo(
+                                getMockAccessTokenStore(
+                                        List.of("phone_number", "phone_number_verified")),
+                                generateAuthSessionItem())
+                        .getSuccess();
 
         assertNull(actual.getPhoneNumber());
         assertFalse(actual.getPhoneNumberVerified());
@@ -284,12 +293,46 @@ public class UserInfoServiceTest {
                                         .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP));
 
         UserInfo actual =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
-                        generateAuthSessionItem());
+                userInfoService
+                        .populateUserInfo(
+                                getMockAccessTokenStore(
+                                        List.of("phone_number", "phone_number_verified")),
+                                generateAuthSessionItem())
+                        .getSuccess();
 
         assertNull(actual.getPhoneNumber());
         assertFalse(actual.getPhoneNumberVerified());
+    }
+
+    @Test
+    void shouldNotSetAccountDataApiAccessTokenClaimWhenTokenCreationFails() {
+        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
+                .thenReturn(generateUserProfile().withMfaMethodsMigrated(false));
+        when(authenticationService.getUserCredentialsFromSubject(TEST_SUBJECT.getValue()))
+                .thenReturn(generateUserCredentials());
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
+                .thenReturn(
+                        Result.success(
+                                List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
+        when(accessTokenConstructorService.createSignedAccessToken(
+                        eq(TEST_PUBLIC_SUBJECT_ID),
+                        eq(AccountDataScope.PASSKEY_CREATE),
+                        any(),
+                        any(),
+                        any(),
+                        eq(TEST_ACCOUNT_DATA_API_AUDIENCE),
+                        eq(TEST_AUTH_ISSUER_CLAIM),
+                        eq(TEST_HOME_CLIENT_ID),
+                        eq(TEST_ACCOUNT_DATA_SIGNING_KEY)))
+                .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
+
+        var result =
+                userInfoService.populateUserInfo(
+                        getMockAccessTokenStore(List.of("account_data_api_access_token")),
+                        generateAuthSessionItem());
+
+        assertTrue(result.isFailure());
+        assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
     }
 
     @Test
@@ -300,9 +343,12 @@ public class UserInfoServiceTest {
                 .thenReturn(Result.success(List.of()));
 
         UserInfo actual =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
-                        generateAuthSessionItem());
+                userInfoService
+                        .populateUserInfo(
+                                getMockAccessTokenStore(
+                                        List.of("phone_number", "phone_number_verified")),
+                                generateAuthSessionItem())
+                        .getSuccess();
 
         assertNull(actual.getPhoneNumber());
         assertFalse(actual.getPhoneNumberVerified());

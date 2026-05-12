@@ -152,7 +152,16 @@ public class UserInfoHandler
                         "Invalid bearer token", BearerTokenError.INVALID_TOKEN);
             }
             logNewAccountValues(accessTokenStore, authSession);
-            userInfo = userInfoService.populateUserInfo(accessTokenStore, authSession);
+
+            var result = userInfoService.populateUserInfo(accessTokenStore, authSession);
+            if (result.isFailure()) {
+                LOG.error(
+                        "Failed to populate user info due to ADAPI Access Token Signing Failure: {}",
+                        result.getFailure().getValue());
+                return generateApiGatewayProxyResponse(500, "ADAPI Access Token Signing Failure");
+            }
+            userInfo = result.getSuccess();
+
         } catch (AccessTokenException e) {
             LOG.warn(
                     "AccessTokenException: {}. Sending back UserInfoErrorResponse", e.getMessage());

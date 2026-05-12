@@ -8,7 +8,9 @@ import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
@@ -43,7 +45,7 @@ public class UserInfoService {
         this.configurationService = configurationService;
     }
 
-    public UserInfo populateUserInfo(
+    public Result<JwtFailureReason, UserInfo> populateUserInfo(
             AccessTokenStore accessTokenInfo, AuthSessionItem authSession) {
         LOG.info("Populating Authentication UserInfo");
         String internalSubjectId = accessTokenInfo.getSubjectID();
@@ -56,12 +58,17 @@ public class UserInfoService {
                         authenticationService);
 
         var userInfo = new UserInfo(internalPairwiseId);
-        addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, authSession, userInfo);
+        var result =
+                addClaimsFromToken(
+                        accessTokenInfo, internalSubjectId, userProfile, authSession, userInfo);
+        if (result.isFailure()) {
+            return Result.failure(result.getFailure());
+        }
         addClaimsFromSession(accessTokenInfo, authSession, userInfo);
-        return userInfo;
+        return Result.success(userInfo);
     }
 
-    private void addClaimsFromToken(
+    private Result<JwtFailureReason, Void> addClaimsFromToken(
             AccessTokenStore accessTokenInfo,
             String internalSubjectId,
             UserProfile userProfile,
@@ -122,12 +129,14 @@ public class UserInfoService {
                             configurationService.getHomeClientId(),
                             configurationService.getAuthToAccountDataSigningKey());
 
-            if (result.isSuccess()) {
-                userInfo.setClaim(
-                        AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue(),
-                        result.getSuccess().getValue());
+            if (result.isFailure()) {
+                return Result.failure(result.getFailure());
             }
+            userInfo.setClaim(
+                    AuthUserInfoClaims.ACCOUNT_DATA_API_ACCESS_TOKEN.getValue(),
+                    result.getSuccess().getValue());
         }
+        return Result.emptySuccess();
     }
 
     public record PhoneData(String phoneNumber, boolean phoneNumberVerified) {}

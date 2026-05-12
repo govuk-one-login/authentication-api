@@ -16,6 +16,7 @@ import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
@@ -102,7 +103,7 @@ class UserInfoHandlerTest {
         when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
         when(userInfoService.populateUserInfo(eq(accessTokenStore), any()))
-                .thenReturn(TEST_SUBJECT_USER_INFO);
+                .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -140,7 +141,8 @@ class UserInfoHandlerTest {
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
         when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(any(), any())).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(userInfoService.populateUserInfo(any(), any()))
+                .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -197,7 +199,7 @@ class UserInfoHandlerTest {
         when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
         when(userInfoService.populateUserInfo(accessTokenStore, authSession))
-                .thenReturn(TEST_SUBJECT_USER_INFO);
+                .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -218,7 +220,7 @@ class UserInfoHandlerTest {
         when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
         when(userInfoService.populateUserInfo(accessTokenStore, authSession))
-                .thenReturn(TEST_SUBJECT_USER_INFO);
+                .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
 
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
