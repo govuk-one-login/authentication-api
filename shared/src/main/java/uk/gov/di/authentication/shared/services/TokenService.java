@@ -79,67 +79,6 @@ public class TokenService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public OIDCTokenResponse generateTokenResponse(
-            String clientID,
-            Subject internalSubject,
-            Scope authRequestScopes,
-            Map<String, Object> additionalTokenClaims,
-            Subject rpPairwiseSubject,
-            Subject internalPairwiseSubject,
-            OIDCClaimsRequest claimsRequest,
-            boolean isDocAppJourney,
-            JWSAlgorithm signingAlgorithm,
-            String journeyId,
-            String vot) {
-        List<String> scopesForToken = authRequestScopes.toStringList();
-        AccessToken accessToken =
-                segmentedFunctionCall(
-                        "generateAndStoreAccessToken",
-                        () ->
-                                generateAndStoreAccessToken(
-                                        clientID,
-                                        internalSubject,
-                                        scopesForToken,
-                                        rpPairwiseSubject,
-                                        internalPairwiseSubject,
-                                        claimsRequest,
-                                        signingAlgorithm));
-        AccessTokenHash accessTokenHash =
-                segmentedFunctionCall(
-                        "AccessTokenHash.compute",
-                        () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
-
-        SignedJWT idToken =
-                segmentedFunctionCall(
-                        "generateIDToken",
-                        () ->
-                                generateIDToken(
-                                        clientID,
-                                        rpPairwiseSubject,
-                                        additionalTokenClaims,
-                                        accessTokenHash,
-                                        vot,
-                                        isDocAppJourney,
-                                        signingAlgorithm,
-                                        journeyId));
-        if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
-            RefreshToken refreshToken =
-                    segmentedFunctionCall(
-                            "generateAndStoreRefreshToken",
-                            () ->
-                                    generateAndStoreRefreshToken(
-                                            clientID,
-                                            internalSubject,
-                                            scopesForToken,
-                                            rpPairwiseSubject,
-                                            internalPairwiseSubject,
-                                            signingAlgorithm));
-            return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
-        } else {
-            return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
-        }
-    }
-
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
         Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(tokenRequestBody);
         if (!requestBody.containsKey("grant_type")) {

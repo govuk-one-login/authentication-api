@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.google.gson.Gson;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -18,15 +17,11 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
-import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
-import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import net.minidev.json.JSONArray;
 import org.approvaltests.JsonApprovals;
 import org.approvaltests.core.Options;
 import org.approvaltests.scrubbers.GuidScrubber;
@@ -36,7 +31,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
@@ -45,8 +39,6 @@ import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
@@ -61,7 +53,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -70,12 +61,9 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -142,53 +130,6 @@ public class TokenServiceTest {
     }
 
     @Test
-    void shouldGenerateTokenResponseWithRefreshToken()
-            throws ParseException, JOSEException, Json.JsonException {
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        createSignedIdToken();
-        createSignedToken();
-        Map<String, Object> additionalTokenClaims = new HashMap<>();
-        additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
-
-        OIDCTokenResponse tokenResponse =
-                tokenService.generateTokenResponse(
-                        CLIENT_ID,
-                        INTERNAL_SUBJECT,
-                        SCOPES_OFFLINE_ACCESS,
-                        additionalTokenClaims,
-                        PUBLIC_SUBJECT,
-                        INTERNAL_PAIRWISE_SUBJECT,
-                        null,
-                        false,
-                        JWSAlgorithm.ES256,
-                        "client-session-id",
-                        VOT);
-
-        assertSuccessfulTokenResponse(tokenResponse);
-
-        assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
-        RefreshTokenStore refreshTokenStore =
-                new RefreshTokenStore(
-                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
-        ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        redisKey.capture(),
-                        eq(objectMapper.writeValueAsString(refreshTokenStore)),
-                        eq(300L));
-
-        var refreshToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue());
-        var jti = refreshToken.getJWTClaimsSet().getJWTID();
-        assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
-        assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
-    }
-
-    @Test
     void shouldGenerateWellFormedStorageTokenForMfaReset() throws JOSEException, ParseException {
         when(configurationService.getEVCSAudience()).thenReturn(EVCS_AUDIENCE);
         when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
@@ -208,146 +149,6 @@ public class TokenServiceTest {
                 new Options(Scrubbers.scrubAll(unixTimestampScrubber, guidScrubber)));
     }
 
-    @Test
-    void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
-            throws ParseException,
-                    JOSEException,
-                    Json.JsonException,
-                    com.nimbusds.oauth2.sdk.ParseException {
-        var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
-        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
-
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        createSignedIdToken();
-        createSignedToken();
-        Map<String, Object> additionalTokenClaims = new HashMap<>();
-        additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
-
-        OIDCTokenResponse tokenResponse =
-                tokenService.generateTokenResponse(
-                        CLIENT_ID,
-                        INTERNAL_SUBJECT,
-                        SCOPES_OFFLINE_ACCESS,
-                        additionalTokenClaims,
-                        PUBLIC_SUBJECT,
-                        INTERNAL_PAIRWISE_SUBJECT,
-                        oidcClaimsRequest,
-                        false,
-                        JWSAlgorithm.ES256,
-                        "client-session-id",
-                        VOT);
-
-        assertSuccessfulTokenResponse(tokenResponse);
-
-        assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
-        assertNull(
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue())
-                        .getJWTClaimsSet()
-                        .getClaim("claims"));
-        JSONArray jsonarray =
-                JSONArrayUtils.parse(
-                        new Gson()
-                                .toJson(
-                                        SignedJWT.parse(
-                                                        tokenResponse
-                                                                .getOIDCTokens()
-                                                                .getAccessToken()
-                                                                .getValue())
-                                                .getJWTClaimsSet()
-                                                .getClaim("claims")));
-
-        assertTrue(jsonarray.contains("nickname"));
-        assertTrue(jsonarray.contains("birthdate"));
-
-        RefreshTokenStore refreshTokenStore =
-                new RefreshTokenStore(
-                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
-
-        ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        redisKey.capture(),
-                        eq(objectMapper.writeValueAsString(refreshTokenStore)),
-                        eq(300L));
-
-        var refreshToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue());
-        var jti = refreshToken.getJWTClaimsSet().getJWTID();
-        assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
-        assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
-    }
-
-    @Test
-    void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
-            throws ParseException, JOSEException, Json.JsonException {
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
-        createSignedIdToken();
-        createSignedToken();
-        Map<String, Object> additionalTokenClaims = new HashMap<>();
-        additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
-        OIDCTokenResponse tokenResponse =
-                tokenService.generateTokenResponse(
-                        CLIENT_ID,
-                        INTERNAL_SUBJECT,
-                        SCOPES,
-                        additionalTokenClaims,
-                        PUBLIC_SUBJECT,
-                        INTERNAL_PAIRWISE_SUBJECT,
-                        null,
-                        false,
-                        JWSAlgorithm.ES256,
-                        "client-session-id",
-                        VOT);
-
-        assertSuccessfulTokenResponse(tokenResponse);
-
-        assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
-    }
-
-    @Test
-    void shouldNotIncludeInternalIdentifiersInTokens() throws ParseException, JOSEException {
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
-        createSignedIdToken();
-        createSignedToken();
-        Map<String, Object> additionalTokenClaims = new HashMap<>();
-        additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
-        OIDCTokenResponse tokenResponse =
-                tokenService.generateTokenResponse(
-                        CLIENT_ID,
-                        INTERNAL_SUBJECT,
-                        SCOPES_OFFLINE_ACCESS,
-                        additionalTokenClaims,
-                        PUBLIC_SUBJECT,
-                        INTERNAL_PAIRWISE_SUBJECT,
-                        null,
-                        false,
-                        JWSAlgorithm.ES256,
-                        "client-session-id",
-                        VOT);
-
-        var parsedAccessToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue())
-                        .getPayload()
-                        .toString();
-        assertFalse(parsedAccessToken.contains(INTERNAL_SUBJECT.getValue()));
-        assertFalse(parsedAccessToken.contains(INTERNAL_PAIRWISE_SUBJECT.getValue()));
-        var parsedRefreshToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue())
-                        .getPayload()
-                        .toString();
-        assertFalse(parsedRefreshToken.contains(INTERNAL_SUBJECT.getValue()));
-        assertFalse(parsedRefreshToken.contains(INTERNAL_PAIRWISE_SUBJECT.getValue()));
-    }
 
     @Test
     void shouldSuccessfullyValidateTokenRequest() {
