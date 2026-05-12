@@ -87,9 +87,9 @@ class AMCCallbackHandlerTest {
                               "email": "user@example.com",
                               "scope": "account-delete",
                               "success": true,
-                              "journeys": [
+                              "actions": [
                                 {
-                                  "journey": "account-delete",
+                                  "action": "account-delete",
                                   "timestamp": 1760718467000,
                                   "success": true,
                                   "details": {}
