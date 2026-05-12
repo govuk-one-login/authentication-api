@@ -147,21 +147,6 @@ public class UserInfoHandler
                                                     "Bearer token not found in database",
                                                     BearerTokenError.INVALID_TOKEN));
 
-            if (!isAccessStoreValid(accessTokenStore)) {
-                throw new AccessTokenException(
-                        "Invalid bearer token", BearerTokenError.INVALID_TOKEN);
-            }
-            logNewAccountValues(accessTokenStore, authSession);
-
-            var result = userInfoService.populateUserInfo(accessTokenStore, authSession);
-            if (result.isFailure()) {
-                LOG.error(
-                        "Failed to populate user info due to ADAPI Access Token Signing Failure: {}",
-                        result.getFailure().getValue());
-                return generateApiGatewayProxyResponse(500, "ADAPI Access Token Signing Failure");
-            }
-            userInfo = result.getSuccess();
-
         } catch (AccessTokenException e) {
             LOG.warn(
                     "AccessTokenException: {}. Sending back UserInfoErrorResponse", e.getMessage());
@@ -170,6 +155,26 @@ public class UserInfoHandler
                     "",
                     new UserInfoErrorResponse(e.getError()).toHTTPResponse().getHeaderMap());
         }
+
+        if (!isAccessStoreValid(accessTokenStore)) {
+            LOG.warn("Invalid bearer token. Sending back UserInfoErrorResponse");
+            return generateApiGatewayProxyResponse(
+                    401,
+                    "",
+                    new UserInfoErrorResponse(BearerTokenError.INVALID_TOKEN)
+                            .toHTTPResponse()
+                            .getHeaderMap());
+        }
+        logNewAccountValues(accessTokenStore, authSession);
+
+        var result = userInfoService.populateUserInfo(accessTokenStore, authSession);
+        if (result.isFailure()) {
+            LOG.error(
+                    "Failed to populate user info due to ADAPI Access Token Signing Failure: {}",
+                    result.getFailure().getValue());
+            return generateApiGatewayProxyResponse(500, "ADAPI Access Token Signing Failure");
+        }
+        userInfo = result.getSuccess();
 
         LOG.info(
                 "Successfully processed UserInfo request. Setting token status to used and sending back UserInfo response");
