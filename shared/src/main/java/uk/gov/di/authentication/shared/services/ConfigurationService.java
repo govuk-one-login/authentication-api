@@ -62,7 +62,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         this.systemService = systemService;
     }
 
-    // Please keep the method names in alphabetical order so we can find stuff more easily.
     public long getAccessTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "180"));
     }
