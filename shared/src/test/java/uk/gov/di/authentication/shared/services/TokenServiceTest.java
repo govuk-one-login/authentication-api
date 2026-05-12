@@ -32,7 +32,6 @@ import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.text.ParseException;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -69,11 +68,6 @@ class TokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(BASE_URL));
-        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
-        when(configurationService.getIDTokenExpiry()).thenReturn(120L);
-        when(configurationService.getSessionExpiry()).thenReturn(300L);
-        when(configurationService.getEnvironment()).thenReturn("test");
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
     }
