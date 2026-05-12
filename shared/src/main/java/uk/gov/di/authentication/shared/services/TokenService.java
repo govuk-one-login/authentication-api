@@ -79,36 +79,6 @@ public class TokenService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
-        Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(tokenRequestBody);
-        if (!requestBody.containsKey("grant_type")) {
-            return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Request is missing grant_type parameter"));
-        }
-        if (!ALLOWED_GRANTS.contains(requestBody.get("grant_type"))) {
-            return Optional.of(OAuth2Error.UNSUPPORTED_GRANT_TYPE);
-        }
-        if (requestBody.get("grant_type").equals(GrantType.AUTHORIZATION_CODE.getValue())) {
-            if (!requestBody.containsKey("redirect_uri")) {
-                return Optional.of(
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE,
-                                "Request is missing redirect_uri parameter"));
-            }
-            if (!requestBody.containsKey("code")) {
-                return Optional.of(
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE,
-                                "Request is missing code parameter"));
-            }
-        } else if (requestBody.get("grant_type").equals(GrantType.REFRESH_TOKEN.getValue())) {
-            return validateRefreshRequestParams(requestBody);
-        }
-        return Optional.empty();
-    }
-
     private Optional<ErrorObject> validateRefreshRequestParams(Map<String, String> requestBody) {
         if (!requestBody.containsKey("refresh_token")) {
             return Optional.of(
