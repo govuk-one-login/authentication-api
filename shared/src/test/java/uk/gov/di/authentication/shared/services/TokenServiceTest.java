@@ -11,7 +11,6 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.approvaltests.JsonApprovals;
 import org.approvaltests.core.Options;
@@ -57,7 +56,6 @@ class TokenServiceTest {
             new Subject("urn:fdc:gov.uk:2022:TJLt3WaiGkLh8UqeisH2zVKGAP0");
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-    private Nonce nonce;
     private static final String CLIENT_ID = "client-id";
     private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
@@ -78,8 +76,6 @@ class TokenServiceTest {
         when(configurationService.getEnvironment()).thenReturn("test");
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
-
-        nonce = new Nonce();
     }
 
     @AfterEach
