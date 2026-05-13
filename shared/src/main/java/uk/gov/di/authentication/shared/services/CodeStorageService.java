@@ -50,15 +50,15 @@ public class CodeStorageService {
         this.redisConnectionService = redisConnectionService;
     }
 
-    public void increaseIncorrectMfaCodeAttemptsCount(String email) {
-        increaseCount(
+    public int increaseIncorrectMfaCodeAttemptsCount(String email) {
+        return increaseCount(
                 email,
                 MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX,
                 configurationService.getLockoutCountTTL());
     }
 
-    public void increaseIncorrectMfaCodeAttemptsCountAccountCreation(String email) {
-        increaseCount(
+    public int increaseIncorrectMfaCodeAttemptsCountAccountCreation(String email) {
+        return increaseCount(
                 email,
                 MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX,
                 configurationService.getAccountCreationLockoutCountTTL());
