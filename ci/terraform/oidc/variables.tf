@@ -735,3 +735,9 @@ variable "ipv_jwks_call_enabled" {
   type    = bool
   default = false
 }
+
+
+variable "deploy_oidc_api_gateway_domain" {
+  type    = bool
+  default = true
+}
