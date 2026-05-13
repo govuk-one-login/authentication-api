@@ -8,8 +8,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -23,9 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -37,12 +32,8 @@ class ValidationHelperTest {
     public static final Optional<String> STORED_VALID_CODE = Optional.of(VALID_CODE);
     public static final String INVALID_CODE = "654321";
     private static final Optional<String> NO_CODE_STORED = Optional.empty();
-    private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String PRODUCTION = "production";
     private static final String INTEGRATION = "integration";
-
-    private static final ConfigurationService configurationServiceMock =
-            mock(ConfigurationService.class);
 
     @Nested
     class PhoneNumberValidatorTests {
@@ -366,42 +357,42 @@ class ValidationHelperTest {
                 arguments(
                         VERIFY_EMAIL,
                         JourneyType.PASSWORD_RESET,
-                        Optional.of(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED),
+                        Optional.of(ErrorResponse.INVALID_EMAIL_CODE_ENTERED),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
                         JourneyType.REGISTRATION,
-                        Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED),
+                        Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         MFA_SMS,
                         JourneyType.PASSWORD_RESET_MFA,
-                        Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
+                        Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
                         JourneyType.PASSWORD_RESET,
-                        Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED),
+                        Optional.of(ErrorResponse.INVALID_PW_RESET_CODE),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
                         JourneyType.PASSWORD_RESET_MFA,
-                        Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED),
+                        Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED),
                         INVALID_CODE,
                         100,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
                         JourneyType.PASSWORD_RESET_MFA,
-                        Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED),
+                        Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED),
                         INVALID_CODE,
                         100,
                         STORED_VALID_CODE));
@@ -417,138 +408,8 @@ class ValidationHelperTest {
             int previousAttempts,
             Optional<String> storedCode) {
 
-        var codeStorageService = mock(CodeStorageService.class);
-
-        // This simulates the Redis increment counter's side effect which isn't captured
-        previousAttempts++;
-
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS))
-                .thenReturn(previousAttempts);
-
-        when(configurationServiceMock.getCodeMaxRetries()).thenReturn(5);
-        when(configurationServiceMock.supportAccountCreationTTL()).thenReturn(false);
-
         assertEquals(
                 expectedResult,
-                ValidationHelper.validateVerificationCode(
-                        notificationType,
-                        journeyType,
-                        storedCode,
-                        input,
-                        codeStorageService,
-                        EMAIL_ADDRESS,
-                        configurationServiceMock,
-                        true));
-    }
-
-    @ParameterizedTest
-    @MethodSource("validateCodeTestParameters")
-    void shouldIncreaseRetryCountWithCorrectTTL(
-            NotificationType notificationType,
-            JourneyType journeyType,
-            Optional<ErrorResponse> expectedResult,
-            String input,
-            int previousAttempts,
-            Optional<String> storedCode) {
-
-        var codeStorageService = mock(CodeStorageService.class);
-
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS)).thenReturn(1);
-        when(configurationServiceMock.getCodeMaxRetries()).thenReturn(5);
-        when(configurationServiceMock.supportAccountCreationTTL()).thenReturn(true);
-
-        ValidationHelper.validateVerificationCode(
-                notificationType,
-                journeyType,
-                Optional.empty(),
-                input,
-                codeStorageService,
-                EMAIL_ADDRESS,
-                configurationServiceMock,
-                true);
-
-        if (journeyType != JourneyType.REAUTHENTICATION) {
-            if (notificationType == VERIFY_EMAIL) {
-                verify(codeStorageService)
-                        .increaseIncorrectMfaCodeAttemptsCountAccountCreation(EMAIL_ADDRESS);
-            } else {
-                verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS);
-            }
-        }
-    }
-
-    @Nested
-    class PureCodeComparisonTests {
-
-        @Test
-        void shouldReturnEmptyWhenCodeMatchesForMfaSms() {
-            assertEquals(
-                    Optional.empty(),
-                    ValidationHelper.validateVerificationCode(
-                            MFA_SMS, Optional.of("123456"), "123456"));
-        }
-
-        @Test
-        void shouldReturnEmptyWhenCodeMatchesForVerifyEmail() {
-            assertEquals(
-                    Optional.empty(),
-                    ValidationHelper.validateVerificationCode(
-                            VERIFY_EMAIL, Optional.of("123456"), "123456"));
-        }
-
-        @Test
-        void shouldReturnEmptyWhenCodeMatchesForVerifyPhoneNumber() {
-            assertEquals(
-                    Optional.empty(),
-                    ValidationHelper.validateVerificationCode(
-                            VERIFY_PHONE_NUMBER, Optional.of("123456"), "123456"));
-        }
-
-        @Test
-        void shouldReturnEmptyWhenCodeMatchesForResetPassword() {
-            assertEquals(
-                    Optional.empty(),
-                    ValidationHelper.validateVerificationCode(
-                            RESET_PASSWORD_WITH_CODE, Optional.of("123456"), "123456"));
-        }
-
-        @Test
-        void shouldReturnInvalidMfaCodeWhenCodeDoesNotMatchForMfaSms() {
-            assertEquals(
-                    Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED),
-                    ValidationHelper.validateVerificationCode(
-                            MFA_SMS, Optional.of("123456"), "654321"));
-        }
-
-        @Test
-        void shouldReturnInvalidEmailCodeWhenCodeDoesNotMatchForVerifyEmail() {
-            assertEquals(
-                    Optional.of(ErrorResponse.INVALID_EMAIL_CODE_ENTERED),
-                    ValidationHelper.validateVerificationCode(
-                            VERIFY_EMAIL, Optional.of("123456"), "654321"));
-        }
-
-        @Test
-        void shouldReturnInvalidPhoneCodeWhenCodeDoesNotMatchForVerifyPhoneNumber() {
-            assertEquals(
-                    Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED),
-                    ValidationHelper.validateVerificationCode(
-                            VERIFY_PHONE_NUMBER, Optional.of("123456"), "654321"));
-        }
-
-        @Test
-        void shouldReturnInvalidPwResetCodeWhenCodeDoesNotMatchForResetPassword() {
-            assertEquals(
-                    Optional.of(ErrorResponse.INVALID_PW_RESET_CODE),
-                    ValidationHelper.validateVerificationCode(
-                            RESET_PASSWORD_WITH_CODE, Optional.of("123456"), "654321"));
-        }
-
-        @Test
-        void shouldReturnInvalidCodeWhenNoCodeStored() {
-            assertEquals(
-                    Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED),
-                    ValidationHelper.validateVerificationCode(MFA_SMS, Optional.empty(), "123456"));
-        }
+                ValidationHelper.validateVerificationCode(notificationType, storedCode, input));
     }
 }
