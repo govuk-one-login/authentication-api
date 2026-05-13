@@ -7093,7 +7093,7 @@ Resources:
       CodeUri: ./orchestration-alerting
       Handler: slackNotifications.handler
       ReservedConcurrentExecutions: 1
-      Runtime: "nodejs20.x"
+      Runtime: "nodejs24.x"
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -7213,7 +7213,7 @@ Resources:
       CodeUri: ./orchestration-alerting
       Handler: slackNotifications.handler
       ReservedConcurrentExecutions: 1
-      Runtime: "nodejs20.x"
+      Runtime: "nodejs24.x"
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -7315,7 +7315,7 @@ Resources:
       CodeUri: ./orchestration-alerting
       Handler: slackNotifications.handler
       ReservedConcurrentExecutions: 1
-      Runtime: "nodejs20.x"
+      Runtime: "nodejs24.x"
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.

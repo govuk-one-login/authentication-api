@@ -19,7 +19,7 @@ repos:
       - id: destroyed-symlinks
 
   - repo: https://github.com/aws-cloudformation/cfn-lint
-    rev: v1.25.1
+    rev: v1.51.0
     hooks:
       - id: cfn-lint
         exclude: "\
