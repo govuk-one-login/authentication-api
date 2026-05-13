@@ -15,12 +15,9 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -60,20 +57,6 @@ class TokenValidationServiceTest {
         when(accessTokenJwksService.retrieveJwkFromURLWithKeyId(any()))
                 .thenReturn(ecJWK.toPublicJWK());
         when(configurationService.getEnvironment()).thenReturn("dev");
-    }
-
-    @Test
-    void shouldSuccessfullyValidateIDToken() {
-        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-        SignedJWT signedIdToken = createSignedIdToken(expiryDate);
-        assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
-    }
-
-    @Test
-    void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
-        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
-        SignedJWT signedIdToken = createSignedIdToken(expiryDate);
-        assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
     @Test
@@ -167,11 +150,6 @@ class TokenValidationServiceTest {
         } catch (JOSEException e) {
             throw new RuntimeException();
         }
-    }
-
-    private SignedJWT createSignedIdToken(Date expiryDate) {
-        return TokenGeneratorHelper.generateIDToken(
-                CLIENT_ID, SUBJECT, BASE_URL, ecJWK, expiryDate);
     }
 
     private SignedJWT createSignedAccessToken(JWSSigner signer) {

@@ -9,6 +9,8 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.text.ParseException;
+
 public class TokenValidationService {
 
     private final JwksService jwksService;
@@ -26,10 +28,7 @@ public class TokenValidationService {
     }
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
-        return isTokenSignatureValid(accessToken.getValue());
-    }
-
-    public boolean isTokenSignatureValid(String tokenValue) {
+        String tokenValue = accessToken.getValue();
         try {
             var jwt = SignedJWT.parse(tokenValue);
 
@@ -55,7 +54,7 @@ public class TokenValidationService {
                                         .retrieveJwkFromURLWithKeyId(jwt.getHeader().getKeyID())
                                         .toECKey()));
             }
-        } catch (JOSEException | java.text.ParseException e) {
+        } catch (JOSEException | ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
         }
