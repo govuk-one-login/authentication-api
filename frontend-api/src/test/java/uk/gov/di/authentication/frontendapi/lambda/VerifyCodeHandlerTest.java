@@ -48,7 +48,10 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -102,7 +105,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DEFAULT_SMS_METHOD;
@@ -162,6 +164,8 @@ class VerifyCodeHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
 
     private final AuditContext AUDIT_CONTEXT =
@@ -207,6 +211,7 @@ class VerifyCodeHandlerTest {
                         authSessionService,
                         mfaMethodsService,
                         userActionsManager,
+                        permissionDecisionManager,
                         testUserHelper);
 
         when(authenticationService.getUserProfileFromEmail(EMAIL))
@@ -225,6 +230,10 @@ class VerifyCodeHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
         when(userActionsManager.correctSmsOtpReceived(any(), any()))
                 .thenReturn(Result.success(null));
     }
@@ -481,66 +490,60 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMaxReachedAndNotSetBlockWhenAccountRecoveryEmailCodeIsBlocked() {
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
-        when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(true);
+        when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                                        0,
+                                        null,
+                                        false)));
 
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
         verifyNoInteractions(accountModifiersService);
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
     void shouldReturnMaxReachedAndNotSetBlockWhenPasswordResetEmailCodeIsBlocked() {
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_PASSWORD_RESET;
-        when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(true);
+        when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                                        0,
+                                        null,
+                                        false)));
 
         var result = makeCallWithCode(CODE, RESET_PASSWORD_WITH_CODE.name());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
         verifyNoInteractions(accountModifiersService);
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
     @MethodSource("codeRequestTypes")
     void shouldReturnMaxReachedAndNotSetBlockWhenSignInCodeIsBlocked(
             CodeRequestType codeRequestType, JourneyType journeyType) {
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(true);
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                        0,
+                                        null,
+                                        false)));
 
         var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         verifyNoInteractions(accountModifiersService);
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(authenticationAttemptsService);
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @Test
-    void shouldReturnMaxReachedAndNotSetBlockWhenSignInCodeIsBlockedUsingDeprecatedKey() {
-        JourneyType journeyType = JourneyType.SIGN_IN;
-
-        var codeBlockedKeyPrefix =
-                CODE_BLOCKED_KEY_PREFIX
-                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                MFAMethodType.SMS, journeyType);
-        when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(true);
-
-        var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
-        verifyNoInteractions(accountModifiersService);
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -902,76 +905,6 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
     }
 
-    private static Stream<Arguments> expectedMfaCodeBlocks() {
-        return Stream.of(
-                Arguments.of(
-                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_PW_RESET_MFA,
-                        ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
-                Arguments.of(
-                        CODE_BLOCKED_KEY_PREFIX + "PW_RESET_MFA_" + MFAMethodType.SMS,
-                        ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
-                Arguments.of(
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_PW_RESET_MFA,
-                        ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS),
-                Arguments.of(
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX + "PW_RESET_MFA_" + MFAMethodType.SMS,
-                        ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS));
-    }
-
-    @ParameterizedTest
-    @MethodSource("expectedMfaCodeBlocks")
-    void shouldReturn400ForValidResetPasswordRequestWhenUserHasAnMFACodeBlock(
-            String blockKeyPrefix, ErrorResponse expectedError) {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
-        when(configurationService.getTestClientVerifyEmailOTP())
-                .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(
-                        TEST_CLIENT_EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()),
-                        RESET_PASSWORD_WITH_CODE))
-                .thenReturn(Optional.of(CODE));
-        when(mfaMethodsService.getMfaMethods(TEST_CLIENT_EMAIL))
-                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        when(codeStorageService.isBlockedForEmail(TEST_CLIENT_EMAIL, blockKeyPrefix))
-                .thenReturn(true);
-
-        authSession.setEmailAddress(TEST_CLIENT_EMAIL);
-        authSession.setClientId(TEST_CLIENT_ID);
-        String body =
-                format(
-                        "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
-                        TEST_CLIENT_CODE, RESET_PASSWORD_WITH_CODE);
-        APIGatewayProxyResponseEvent result = makeCallWithCode(body, Optional.of(authSession));
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(expectedError));
-    }
-
-    @Test
-    void shouldNotCheckForMFACodeBlocksOnANonePasswordResetJourney() {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(configurationService.getTestClientVerifyEmailOTP())
-                .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(
-                        TEST_CLIENT_EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
-        when(mfaMethodsService.getMfaMethods(TEST_CLIENT_EMAIL))
-                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-
-        authSession.setEmailAddress(TEST_CLIENT_EMAIL);
-        authSession.setClientId(TEST_CLIENT_ID);
-        String body =
-                format(
-                        "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
-                        TEST_CLIENT_CODE, SIGN_IN);
-        makeCallWithCode(body, Optional.of(authSession));
-
-        verify(codeStorageService, never())
-                .isBlockedForEmail(
-                        TEST_CLIENT_EMAIL,
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_PW_RESET_MFA);
-    }
-
     @ParameterizedTest
     @MethodSource("codeRequestTypes")
     void shouldDeleteCountOnSuccessfulSMSCodeRequest(
@@ -1076,9 +1009,25 @@ class VerifyCodeHandlerTest {
         try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
             withReauthTurnedOn();
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            any(), any(), eq(REAUTHENTICATION)))
-                    .thenReturn(Map.of(countType, MAX_RETRIES));
+            var detailedCounts = Map.of(countType, MAX_RETRIES);
+            var forbiddenReason =
+                    switch (countType) {
+                        case ENTER_EMAIL -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
+                        case ENTER_PASSWORD -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
+                        default -> ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+                    };
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            forbiddenReason,
+                                            0,
+                                            null,
+                                            false,
+                                            detailedCounts,
+                                            List.of(countType))));
             when(configurationService.getInternalSectorUri())
                     .thenReturn("https://test.account.gov.uk");
             Subject subject = new Subject(TEST_SUBJECT_ID);
