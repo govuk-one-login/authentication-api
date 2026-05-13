@@ -26,6 +26,7 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
+          TXMA_AUDIT_QUEUE_URL: !GetAtt TestServicesApiTxMAAuditQueue.QueueUrl
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
