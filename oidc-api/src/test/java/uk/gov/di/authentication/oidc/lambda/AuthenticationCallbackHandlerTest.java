@@ -160,12 +160,11 @@ class AuthenticationCallbackHandlerTest {
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
     private final Metrics metrics = mock(Metrics.class);
-    private final OrchAuthCodeService orchAuthCodeService =
-            mock(OrchAuthCodeService.class, withSettings().verboseLogging());
+    private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
-            mock(AccountInterventionService.class);
+            mock(AccountInterventionService.class, withSettings().verboseLogging());
     private static final CrossBrowserOrchestrationService CROSS_BROWSER_ORCHESTRATION_SERVICE =
             mock(CrossBrowserOrchestrationService.class);
     private static final LogoutService logoutService = mock(LogoutService.class);
@@ -772,7 +771,7 @@ class AuthenticationCallbackHandlerTest {
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);
-            handler.handleRequest(event, CONTEXT);
+            var response = handler.handleRequest(event, CONTEXT);
 
             var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
             verify(orchSessionService, times(3)).updateSession(captor.capture());
@@ -1126,6 +1125,11 @@ class AuthenticationCallbackHandlerTest {
         void setup() {
             usingValidClientSession();
             usingValidClient();
+            // HACK: Leaky test state from above
+            when(accountInterventionService.getAccountIntervention(anyString(), anyLong(), any()))
+                    .thenReturn(
+                            new AccountIntervention(
+                                    new AccountInterventionState(false, false, false, false)));
         }
 
         @Test
