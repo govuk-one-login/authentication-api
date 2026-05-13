@@ -25,6 +25,7 @@ Mappings:
       CHANGEDAUTHENTICATORAPPTEMPLATEID: "de419864-17bf-488c-93e5-da791352e2db"
       CHANGEDDEFAULTMFATEMPLATEID: "2d17c6db-8d2d-42af-95f1-5d096cd74212"
       SWITCHEDMFAMETHODSTEMPLATEID: "0b856ef8-07d6-4dca-ab6a-8a45044182cc"
+      PASSKEYDELETEDTEMPLATEID: "68f8d029-d23c-470a-a044-2fecb71a6fa9"
 
   NonProdNotifyTemplateMap:
     Templates:
@@ -52,6 +53,7 @@ Mappings:
       CHANGEDAUTHENTICATORAPPTEMPLATEID: "b0bb3667-985b-428c-9eb3-6b778b50fb6b"
       CHANGEDDEFAULTMFATEMPLATEID: "ab62d5fa-79a8-4dba-beb0-283118d2450f"
       SWITCHEDMFAMETHODSTEMPLATEID: "be78564b-b9a6-4b3d-b438-7b30e45caf54"
+      PASSKEYDELETEDTEMPLATEID: "2d7df21e-9c46-4c31-bde0-310631cbd57e"
 
 Resources:
   NotifyCallbackFunction:
@@ -296,6 +298,16 @@ Resources:
               ],
               Templates,
               SWITCHEDMFAMETHODSTEMPLATEID,
+            ]
+          PASSKEY_DELETED_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              PASSKEYDELETEDTEMPLATEID,
             ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
