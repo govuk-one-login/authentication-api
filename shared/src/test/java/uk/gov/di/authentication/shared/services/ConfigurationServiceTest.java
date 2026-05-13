@@ -309,11 +309,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getIDTokenExpiryShouldDefault() {
-        assertEquals(120, configurationService.getIDTokenExpiry());
-    }
-
-    @Test
     void getNotifyApiUrlShouldDefault() {
         assertFalse(configurationService.getNotifyApiUrl().isPresent());
     }
@@ -389,11 +384,6 @@ class ConfigurationServiceTest {
                 Optional.of(DeliveryReceiptsNotificationType.REPORT_SUSPICIOUS_ACTIVITY),
                 configurationServiceWithSystemService.getNotificationTypeFromTemplateId(
                         "report-template-id"));
-    }
-
-    @Test
-    void getOidcApiBaseURLShouldNotDefault() {
-        assertTrue(configurationService.getOidcApiBaseURL().isEmpty());
     }
 
     @Test

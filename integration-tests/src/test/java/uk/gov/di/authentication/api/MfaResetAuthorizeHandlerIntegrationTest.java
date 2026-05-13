@@ -27,12 +27,9 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IDReverificationStateExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
@@ -91,10 +88,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     @RegisterExtension
     private static final KmsKeyExtension ipvReverificationRequestsSigningKey =
             new KmsKeyExtension("mfa-reset-jar-signing-key", KeyUsageType.SIGN_VERIFY);
-
-    @RegisterExtension
-    public static final RedisExtension redisExtension =
-            new RedisExtension(new SerializationService(), new ConfigurationService());
 
     @RegisterExtension
     private static final IDReverificationStateExtension idReverificationStateExtension =
@@ -211,10 +204,10 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void shouldAuthenticateMfaReset(boolean isIpvJwksCallEnabled) throws MalformedURLException {
+    void shouldAuthenticateMfaReset(boolean isIpvJwksCallEnabled) {
         environment.set("IPV_JWKS_CALL_ENABLED", String.valueOf(isIpvJwksCallEnabled));
 
-        handler = new MfaResetAuthorizeHandler(redisConnectionService);
+        handler = new MfaResetAuthorizeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
 
         idReverificationStateExtension.store("orch-redirect-url", "client-session-id");
 
