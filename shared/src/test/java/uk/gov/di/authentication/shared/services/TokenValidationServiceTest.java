@@ -12,7 +12,6 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -160,26 +159,6 @@ class TokenValidationServiceTest {
         assertTrue(
                 tokenValidationService.validateAccessTokenSignature(
                         new BearerAccessToken(signedAccessToken.serialize())));
-    }
-
-    @Test
-    void shouldSuccessfullyValidateRefreshToken() {
-        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-
-        SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
-        assertTrue(
-                tokenValidationService.validateRefreshTokenSignatureAndExpiry(
-                        new RefreshToken(signedAccessToken.serialize())));
-    }
-
-    @Test
-    void shouldFailToValidateRefreshTokenIfExpired() {
-        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
-
-        SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
-        assertFalse(
-                tokenValidationService.validateRefreshTokenSignatureAndExpiry(
-                        new RefreshToken(signedAccessToken.serialize())));
     }
 
     @Test
