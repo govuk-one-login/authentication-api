@@ -120,6 +120,15 @@ public class UserActionsManager implements UserActions {
             return Result.success(null);
         }
 
+        if (journeyType == JourneyType.REGISTRATION) {
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(SupportedCodeType.EMAIL, journeyType);
+            getCodeStorageService()
+                    .deleteBlockForEmail(
+                            permissionContext.emailAddress(),
+                            CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType);
+        }
+
         var updatedSession =
                 permissionContext
                         .authSessionItem()
@@ -156,6 +165,45 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectEmailOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            return Result.success(null);
+        }
+
+        int updatedCount;
+        if (configurationService.supportAccountCreationTTL()
+                && journeyType == JourneyType.REGISTRATION) {
+            updatedCount =
+                    getCodeStorageService()
+                            .increaseIncorrectMfaCodeAttemptsCountAccountCreation(
+                                    permissionContext.emailAddress());
+        } else {
+            updatedCount =
+                    getCodeStorageService()
+                            .increaseIncorrectMfaCodeAttemptsCount(
+                                    permissionContext.emailAddress());
+        }
+        if (updatedCount >= configurationService.getCodeMaxRetries()) {
+            LOG.info("Setting block for email as user has exceeded max email OTP retries");
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            CodeRequestType.SupportedCodeType.EMAIL, journeyType);
+
+            boolean reducedLockout =
+                    journeyType == JourneyType.REGISTRATION
+                            || journeyType == JourneyType.ACCOUNT_RECOVERY;
+            long blockDuration =
+                    reducedLockout
+                            ? configurationService.getReducedLockoutDuration()
+                            : configurationService.getLockoutDuration();
+
+            getCodeStorageService()
+                    .saveBlockedForEmail(
+                            permissionContext.emailAddress(),
+                            CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType,
+                            blockDuration);
+            getCodeStorageService()
+                    .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        }
         return Result.success(null);
     }
 
