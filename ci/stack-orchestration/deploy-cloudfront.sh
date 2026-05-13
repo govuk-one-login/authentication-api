@@ -37,7 +37,7 @@ function usage {
 
   Options:
     -e, --environment        The environment you wish to deploy to i.e dev, build, staging, integration, or production
-    -c, --certificate        Creates certificate in us-east-1 region for CloudFront Distribution.
+    -c, --certificate         Creates certificate in us-east-1 region for CloudFront Distribution.
     -d, --distribution       Creates the CloudFront distribution
     -m, --monitoring         Deploys CloudFront Extended Monitoring stack in us-east-1
     -n, --notification        Deploys a stack which allows us to forward our Cloudfront alarms to Slack in our non-prod envs, or PagerDuty in
