@@ -1,4 +1,4 @@
-name: "Build and deploy API Account Data"
+name: "SP - Build and deploy API Account Data"
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
       - "ci/cloudformation/auth/**"
       - "ci/cloudformation/account-management/**"
       - "ci/cloudformation/stubs/**"
+      - "ci/cloudformation/utils/**"
       - "template.yaml"
       - "docs/**"
       - "**/README.md"
@@ -19,6 +20,12 @@ on:
       - "frontend-api/**"
       - "account-management-api/**"
       - "account-management-integration-tests/**"
+      - "test-services-api/**"
+      - "utils/**"
+      - "ipv-api/**"
+      - "oidc-api/**"
+      - "ticf-cri-stub/**"
+      - "interventions-api-stub/**"
 
 env:
   AWS_REGION: eu-west-2
