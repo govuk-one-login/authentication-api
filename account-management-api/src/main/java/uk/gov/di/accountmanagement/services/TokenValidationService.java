@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.accountmanagement.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -8,6 +8,9 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 
 import java.text.ParseException;
 

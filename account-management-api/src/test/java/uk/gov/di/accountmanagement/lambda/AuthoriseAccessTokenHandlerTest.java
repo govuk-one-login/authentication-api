@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.accountmanagement.services.TokenValidationService;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.time.temporal.ChronoUnit;
