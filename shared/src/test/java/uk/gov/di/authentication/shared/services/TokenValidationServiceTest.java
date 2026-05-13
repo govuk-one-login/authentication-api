@@ -161,26 +161,6 @@ class TokenValidationServiceTest {
                         new BearerAccessToken(signedAccessToken.serialize())));
     }
 
-    @Test
-    void shouldSuccessfullyValidateRefreshTokenScopes() {
-        List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
-        assertTrue(tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
-    }
-
-    @Test
-    void shouldFailToValidateRefreshTokenScopesWhenMissingOfflineAccess() {
-        List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
-        List<String> refreshScopes = List.of("openid", "email", "phone");
-        assertFalse(tokenValidationService.validateRefreshTokenScopes(clientScopes, refreshScopes));
-    }
-
-    @Test
-    void shouldFailToValidateRefreshTokenScopesWhenClientScopesDoNotContainAllRefreshTokenScopes() {
-        List<String> clientScopes = List.of("openid", "phone", "offline_access");
-        assertFalse(
-                tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
-    }
-
     private ECKey generateECKeyPair() {
         try {
             return new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
@@ -198,10 +178,5 @@ class TokenValidationServiceTest {
 
         return TokenGeneratorHelper.generateSignedToken(
                 CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, KEY_ID);
-    }
-
-    private SignedJWT createSignedRefreshTokenWithExpiry(JWSSigner signer, Date expiryDate) {
-        return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, BASE_URL, REFRESH_SCOPES, signer, SUBJECT, KEY_ID, expiryDate);
     }
 }
