@@ -52,6 +52,16 @@ Resources:
           - UseSubEnvironment
           - !Ref SubEnvironment
           - !Ref Environment
+      Tags:
+        - Key: FMSRegionalPolicy
+          Value: "false"
+        - Key: CustomPolicy
+          Value:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendApiFMSTagValue,
+            ]
 
   TestServicesApiDeployment:
     Type: AWS::ApiGateway::Deployment
