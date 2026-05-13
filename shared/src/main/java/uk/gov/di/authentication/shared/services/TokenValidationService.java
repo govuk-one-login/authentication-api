@@ -6,11 +6,8 @@ import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.List;
 
 public class TokenValidationService {
 
@@ -62,18 +59,5 @@ public class TokenValidationService {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
         }
-    }
-
-    public boolean validateRefreshTokenScopes(
-            List<String> clientScopes, List<String> refreshTokenScopes) {
-        if (!clientScopes.containsAll(refreshTokenScopes)) {
-            LOG.warn("Scopes in Client Registry does not contain all scopes in Refresh Token");
-            return false;
-        }
-        if (!refreshTokenScopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
-            LOG.warn("Scopes in Refresh Token does not contain OFFLINE_ACCESS scope");
-            return false;
-        }
-        return true;
     }
 }
