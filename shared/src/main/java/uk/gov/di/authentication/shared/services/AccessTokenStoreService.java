@@ -23,20 +23,20 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.ACCESS_TO
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.ACCESS_TOKEN_SERVICE_INITIAL_QUERY_ATTEMPT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.ACCESS_TOKEN_SERVICE_INITIAL_QUERY_SUCCESS;
 
-public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
-    private static final Logger LOG = LogManager.getLogger(AccessTokenService.class);
+public class AccessTokenStoreService extends BaseDynamoService<AccessTokenStore> {
+    private static final Logger LOG = LogManager.getLogger(AccessTokenStoreService.class);
     private final long timeToExist;
     private CloudwatchMetricsService cloudwatchMetricsService;
     private ConfigurationService configurationService;
 
-    public AccessTokenService(ConfigurationService configurationService) {
+    public AccessTokenStoreService(ConfigurationService configurationService) {
         super(AccessTokenStore.class, "access-token-store", configurationService);
         this.timeToExist = configurationService.getAccessTokenExpiry();
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
-    public AccessTokenService(
+    public AccessTokenStoreService(
             ConfigurationService configurationService,
             CloudwatchMetricsService cloudwatchMetricsService) {
         this(configurationService);
@@ -44,7 +44,7 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
         this.configurationService = configurationService;
     }
 
-    public AccessTokenService(
+    public AccessTokenStoreService(
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
             DynamoDbClient dynamoDbClient,
