@@ -279,7 +279,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldReturnMaxReachedButNotSetBlockWhenVerifyEmailCodeAttemptsExceedMaxRetryCount() {
+    void shouldReturnMaxReachedAndSetBlockWhenVerifyEmailCodeAttemptsExceedMaxRetryCount() {
         setUpTestWithoutSignUp(sessionId);
         for (int i = 0; i < ConfigurationService.getInstance().getCodeMaxRetries(); i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
@@ -301,7 +301,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED));
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(false));
+                equalTo(true));
         assertAuditEventExpectations(
                 txmaAuditQueue,
                 List.of(
