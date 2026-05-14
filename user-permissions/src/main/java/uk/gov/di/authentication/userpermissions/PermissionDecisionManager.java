@@ -386,11 +386,13 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public boolean canIssueAuthCode(AuthSessionItem authSession) {
         if (!authSession.getHasVerifiedPassword()) {
+            LOG.info("Auth code failed to issue due to session not having a verified password");
             return false;
         }
 
         if (authSession.getRequestedCredentialStrength() == CredentialTrustLevel.MEDIUM_LEVEL) {
             if (!authSession.getHasVerifiedMfa()) {
+                LOG.info("Auth code failed to issue due to session not having a verified MFA");
                 return false;
             }
         }
@@ -398,6 +400,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
         if (authSession
                 .getAchievedCredentialStrength()
                 .isLowerThan(authSession.getRequestedCredentialStrength())) {
+            LOG.info(
+                    "Auth code failed to issue due to session not having an achieved credential strength");
             return false;
         }
 
