@@ -19,7 +19,8 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
+import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -45,19 +46,19 @@ public class UserInfoHandler
     private static final Logger LOG = LogManager.getLogger(UserInfoHandler.class);
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
-    private final AccessTokenService accessTokenService;
+    private final AccessTokenStoreService accessTokenStoreService;
     private final AuditService auditService;
     private final AuthSessionService authSessionService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
-            AccessTokenService accessTokenService,
+            AccessTokenStoreService accessTokenStoreService,
             AuditService auditService,
             AuthSessionService authSessionService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
-        this.accessTokenService = accessTokenService;
+        this.accessTokenStoreService = accessTokenStoreService;
         this.auditService = auditService;
         this.authSessionService = authSessionService;
     }
@@ -72,9 +73,10 @@ public class UserInfoHandler
                 new UserInfoService(
                         new DynamoService(configurationService),
                         new MFAMethodsService(configurationService),
+                        new AccessTokenConstructorService(configurationService),
                         configurationService);
-        this.accessTokenService =
-                new AccessTokenService(
+        this.accessTokenStoreService =
+                new AccessTokenStoreService(
                         configurationService, new CloudwatchMetricsService(configurationService));
         this.auditService = new AuditService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
@@ -133,11 +135,11 @@ public class UserInfoHandler
         try {
 
             accessToken =
-                    accessTokenService.getAccessTokenFromAuthorizationHeader(
+                    accessTokenStoreService.getAccessTokenFromAuthorizationHeader(
                             authorisationHeader.get());
 
             accessTokenStore =
-                    accessTokenService
+                    accessTokenStoreService
                             .getAccessTokenStore(accessToken.getValue())
                             .orElseThrow(
                                     () ->
@@ -145,12 +147,6 @@ public class UserInfoHandler
                                                     "Bearer token not found in database",
                                                     BearerTokenError.INVALID_TOKEN));
 
-            if (!isAccessStoreValid(accessTokenStore)) {
-                throw new AccessTokenException(
-                        "Invalid bearer token", BearerTokenError.INVALID_TOKEN);
-            }
-            logNewAccountValues(accessTokenStore, authSession);
-            userInfo = userInfoService.populateUserInfo(accessTokenStore, authSession);
         } catch (AccessTokenException e) {
             LOG.warn(
                     "AccessTokenException: {}. Sending back UserInfoErrorResponse", e.getMessage());
@@ -159,6 +155,26 @@ public class UserInfoHandler
                     "",
                     new UserInfoErrorResponse(e.getError()).toHTTPResponse().getHeaderMap());
         }
+
+        if (!isAccessStoreValid(accessTokenStore)) {
+            LOG.warn("Invalid bearer token. Sending back UserInfoErrorResponse");
+            return generateApiGatewayProxyResponse(
+                    401,
+                    "",
+                    new UserInfoErrorResponse(BearerTokenError.INVALID_TOKEN)
+                            .toHTTPResponse()
+                            .getHeaderMap());
+        }
+        logNewAccountValues(accessTokenStore, authSession);
+
+        var result = userInfoService.populateUserInfo(accessTokenStore, authSession);
+        if (result.isFailure()) {
+            LOG.error(
+                    "Failed to populate user info due to ADAPI Access Token Signing Failure: {}",
+                    result.getFailure().getValue());
+            return generateApiGatewayProxyResponse(500, "ADAPI Access Token Signing Failure");
+        }
+        userInfo = result.getSuccess();
 
         LOG.info(
                 "Successfully processed UserInfo request. Setting token status to used and sending back UserInfo response");
@@ -179,7 +195,7 @@ public class UserInfoHandler
         auditService.submitAuditEvent(AUTH_USERINFO_SENT_TO_ORCHESTRATION, auditContext);
 
         Optional<AccessTokenStore> updatedTokenStore =
-                accessTokenService.setAccessTokenStoreUsed(accessToken.getValue(), true);
+                accessTokenStoreService.setAccessTokenStoreUsed(accessToken.getValue(), true);
 
         if (updatedTokenStore.isEmpty() || !updatedTokenStore.get().isUsed()) {
             LOG.error(

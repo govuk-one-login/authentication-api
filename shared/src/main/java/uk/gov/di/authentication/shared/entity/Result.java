@@ -21,6 +21,10 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
         return new Success<>(value);
     }
 
+    static <F> Result<F, Void> emptySuccess() {
+        return new Success<>(null);
+    }
+
     static <F, S> Result<F, List<S>> sequenceSuccess(List<Result<F, S>> results) {
         List<S> values = new ArrayList<>();
         for (Result<F, S> result : results) {

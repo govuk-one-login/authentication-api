@@ -2,7 +2,7 @@ package uk.gov.di.authentication.services;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.AccessTokenStoreExtension;
 
@@ -12,7 +12,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class DynamoAccessTokenServiceIntegrationTest {
+public class DynamoAccessTokenStoreServiceIntegrationTest {
 
     @RegisterExtension
     protected static final AccessTokenStoreExtension accessTokenStoreExtension =
@@ -26,15 +26,15 @@ public class DynamoAccessTokenServiceIntegrationTest {
     public static final String ACCESS_TOKEN_STRING_4 = "access-token-string-4";
     private static final Long PASSWORD_RESET_TIME = 1696869005821L;
 
-    AccessTokenService accessTokenService =
-            new AccessTokenService(ConfigurationService.getInstance());
+    AccessTokenStoreService accessTokenStoreService =
+            new AccessTokenStoreService(ConfigurationService.getInstance());
 
     @Test
     void shouldRetrieveAccessTokenForKey() {
         accessTokenStoreExtension.addAccessTokenStore(
                 ACCESS_TOKEN_STRING, SUBJECT_ID_1, List.of("scope1"));
 
-        var accessToken = accessTokenService.getAccessTokenStore(ACCESS_TOKEN_STRING);
+        var accessToken = accessTokenStoreService.getAccessTokenStore(ACCESS_TOKEN_STRING);
 
         assertThat(accessToken.isPresent(), equalTo(true));
         accessToken.ifPresent(
@@ -52,16 +52,16 @@ public class DynamoAccessTokenServiceIntegrationTest {
         accessTokenStoreExtension.addAccessTokenStore(
                 ACCESS_TOKEN_STRING_2, SUBJECT_ID_2, List.of("scope1", "scope2"));
 
-        var accessToken = accessTokenService.getAccessTokenStore(ACCESS_TOKEN_STRING_2);
+        var accessToken = accessTokenStoreService.getAccessTokenStore(ACCESS_TOKEN_STRING_2);
         assertThat(accessToken.isPresent(), equalTo(true));
         accessToken.ifPresent(
                 t -> {
                     assertThat(t.isUsed(), equalTo(false));
                 });
-        accessToken = accessTokenService.setAccessTokenStoreUsed(ACCESS_TOKEN_STRING_2, true);
+        accessToken = accessTokenStoreService.setAccessTokenStoreUsed(ACCESS_TOKEN_STRING_2, true);
         assertThat(accessToken.isPresent(), equalTo(true));
 
-        var updatedAccessToken = accessTokenService.getAccessTokenStore(ACCESS_TOKEN_STRING_2);
+        var updatedAccessToken = accessTokenStoreService.getAccessTokenStore(ACCESS_TOKEN_STRING_2);
         assertThat(updatedAccessToken.isPresent(), equalTo(true));
         updatedAccessToken.ifPresent(
                 t -> {
@@ -74,14 +74,15 @@ public class DynamoAccessTokenServiceIntegrationTest {
         accessTokenStoreExtension.addAccessTokenStore(
                 ACCESS_TOKEN_STRING_3, SUBJECT_ID_2, List.of("scope1", "scope2", "scope3"));
 
-        var accessToken = accessTokenService.getAccessTokenStore(ACCESS_TOKEN_STRING_3);
+        var accessToken = accessTokenStoreService.getAccessTokenStore(ACCESS_TOKEN_STRING_3);
         assertThat(accessToken.isPresent(), equalTo(true));
 
         long newTtl = 4090552069L;
-        accessToken = accessTokenService.setAccessTokenTtlTestOnly(ACCESS_TOKEN_STRING_3, newTtl);
+        accessToken =
+                accessTokenStoreService.setAccessTokenTtlTestOnly(ACCESS_TOKEN_STRING_3, newTtl);
         assertThat(accessToken.isPresent(), equalTo(true));
 
-        var updatedAccessToken = accessTokenService.getAccessTokenStore(ACCESS_TOKEN_STRING_3);
+        var updatedAccessToken = accessTokenStoreService.getAccessTokenStore(ACCESS_TOKEN_STRING_3);
         assertThat(updatedAccessToken.isPresent(), equalTo(true));
         updatedAccessToken.ifPresent(
                 t -> {
@@ -93,7 +94,7 @@ public class DynamoAccessTokenServiceIntegrationTest {
     void shouldStoreAndRetrieveAnAccessTokenWithAPasswordResetTime() {
         accessTokenStoreExtension.addAccessTokenStore(ACCESS_TOKEN_STRING_4, PASSWORD_RESET_TIME);
 
-        var accessToken = accessTokenService.getAccessTokenStore(ACCESS_TOKEN_STRING_4).get();
+        var accessToken = accessTokenStoreService.getAccessTokenStore(ACCESS_TOKEN_STRING_4).get();
 
         assertEquals(PASSWORD_RESET_TIME, accessToken.getPasswordResetTime());
     }

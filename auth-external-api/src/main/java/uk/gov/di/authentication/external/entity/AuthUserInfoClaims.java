@@ -17,7 +17,8 @@ public enum AuthUserInfoClaims {
     CURRENT_CREDENTIAL_STRENGTH("current_credential_strength"),
     NEW_ACCOUNT("new_account"),
     UPLIFT_REQUIRED("uplift_required"),
-    ACHIEVED_CREDENTIAL_STRENGTH("achieved_credential_strength");
+    ACHIEVED_CREDENTIAL_STRENGTH("achieved_credential_strength"),
+    ACCOUNT_DATA_API_ACCESS_TOKEN("account_data_api_access_token");
 
     private final String value;
 

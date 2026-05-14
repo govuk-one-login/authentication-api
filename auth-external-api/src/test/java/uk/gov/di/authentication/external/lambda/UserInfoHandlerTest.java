@@ -16,10 +16,11 @@ import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
-import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -49,7 +50,7 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 class UserInfoHandlerTest {
     private ConfigurationService configurationService;
     private UserInfoService userInfoService;
-    private AccessTokenService accessTokenService;
+    private AccessTokenStoreService accessTokenStoreService;
     private UserInfoHandler userInfoHandler;
     private AuthSessionService authSessionService;
     private static final AccessTokenStore accessTokenStore = mock(AccessTokenStore.class);
@@ -71,15 +72,15 @@ class UserInfoHandlerTest {
 
         configurationService = mock(ConfigurationService.class);
         userInfoService = mock(UserInfoService.class);
-        accessTokenService = mock(AccessTokenService.class);
+        accessTokenStoreService = mock(AccessTokenStoreService.class);
         authSessionService = mock(AuthSessionService.class);
-        when(accessTokenService.getAccessTokenStore(any()))
+        when(accessTokenStoreService.getAccessTokenStore(any()))
                 .thenReturn(Optional.of(accessTokenStore));
         userInfoHandler =
                 new UserInfoHandler(
                         configurationService,
                         userInfoService,
-                        accessTokenService,
+                        accessTokenStoreService,
                         auditService,
                         authSessionService);
 
@@ -99,10 +100,10 @@ class UserInfoHandlerTest {
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
         when(userInfoService.populateUserInfo(eq(accessTokenStore), any()))
-                .thenReturn(TEST_SUBJECT_USER_INFO);
+                .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -112,7 +113,8 @@ class UserInfoHandlerTest {
                         .contains(String.format("\"sub\":\"%s\"", TEST_SUBJECT.getValue())));
         assertClaimsInResponse(response.getBody());
 
-        verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
+        verify(accessTokenStoreService, times(1))
+                .setAccessTokenStoreUsed(validToken.getValue(), true);
         verify(auditService)
                 .submitAuditEvent(
                         AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION,
@@ -137,9 +139,10 @@ class UserInfoHandlerTest {
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(any(), any())).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(userInfoService.populateUserInfo(any(), any()))
+                .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -149,7 +152,8 @@ class UserInfoHandlerTest {
                         .contains(String.format("\"sub\":\"%s\"", TEST_SUBJECT.getValue())));
         assertClaimsInResponse(response.getBody());
 
-        verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
+        verify(accessTokenStoreService, times(1))
+                .setAccessTokenStoreUsed(validToken.getValue(), true);
         verify(authSessionService)
                 .updateSession(
                         argThat(t -> t.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
@@ -182,7 +186,7 @@ class UserInfoHandlerTest {
         var authChallengeHeader = multiValueHeaders.get("WWW-Authenticate");
         assertEquals("Bearer", authChallengeHeader.get(0));
 
-        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
+        verify(accessTokenStoreService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     @Test
@@ -192,10 +196,10 @@ class UserInfoHandlerTest {
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
         request.setHeaders(Map.of("Authorization", validTokenHeader));
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
         when(userInfoService.populateUserInfo(accessTokenStore, authSession))
-                .thenReturn(TEST_SUBJECT_USER_INFO);
+                .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -204,7 +208,7 @@ class UserInfoHandlerTest {
                 objectMapper.writeValueAsString(ErrorResponse.SESSION_ID_MISSING),
                 response.getBody());
         verify(authSessionService).getSessionFromRequestHeaders(request.getHeaders());
-        verifyNoInteractions(accessTokenService, userInfoService, auditService);
+        verifyNoInteractions(accessTokenStoreService, userInfoService, auditService);
     }
 
     @Test
@@ -213,10 +217,10 @@ class UserInfoHandlerTest {
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
 
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
         when(userInfoService.populateUserInfo(accessTokenStore, authSession))
-                .thenReturn(TEST_SUBJECT_USER_INFO);
+                .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
 
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
@@ -228,7 +232,7 @@ class UserInfoHandlerTest {
                 objectMapper.writeValueAsString(ErrorResponse.SESSION_ID_MISSING),
                 response.getBody());
         verify(authSessionService).getSessionFromRequestHeaders(request.getHeaders());
-        verifyNoInteractions(accessTokenService, userInfoService, auditService);
+        verifyNoInteractions(accessTokenStoreService, userInfoService, auditService);
     }
 
     @Test
@@ -238,7 +242,7 @@ class UserInfoHandlerTest {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String invalidToken = "Bearer this-is-not-a-valid-token";
         request.setHeaders(Map.of("Authorization", invalidToken, SESSION_ID_HEADER, sessionId));
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenThrow(new AccessTokenException("test", BearerTokenError.INVALID_TOKEN));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
@@ -250,7 +254,7 @@ class UserInfoHandlerTest {
         assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
 
-        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
+        verify(accessTokenStoreService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     @Test
@@ -260,9 +264,9 @@ class UserInfoHandlerTest {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String invalidToken = "Bearer this-is-not-a-valid-token";
         request.setHeaders(Map.of("Authorization", invalidToken, SESSION_ID_HEADER, sessionId));
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(AccessToken.parse(invalidToken, AccessTokenType.BEARER));
-        when(accessTokenService.getAccessTokenStore(any())).thenReturn(Optional.empty());
+        when(accessTokenStoreService.getAccessTokenStore(any())).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -273,7 +277,7 @@ class UserInfoHandlerTest {
         assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
 
-        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
+        verify(accessTokenStoreService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     @Test
@@ -283,12 +287,12 @@ class UserInfoHandlerTest {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validToken = "Bearer valid-token";
         request.setHeaders(Map.of("Authorization", validToken, SESSION_ID_HEADER, sessionId));
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(AccessToken.parse(validToken, AccessTokenType.BEARER));
 
         AccessTokenStore mockAccessTokenStore = mock(AccessTokenStore.class);
         when(mockAccessTokenStore.isUsed()).thenReturn(true);
-        when(accessTokenService.getAccessTokenStore(any()))
+        when(accessTokenStoreService.getAccessTokenStore(any()))
                 .thenReturn(Optional.of(mockAccessTokenStore));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
@@ -300,7 +304,7 @@ class UserInfoHandlerTest {
         assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
 
-        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
+        verify(accessTokenStoreService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     @Test
@@ -310,7 +314,7 @@ class UserInfoHandlerTest {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validToken = "Bearer valid-token";
         request.setHeaders(Map.of("Authorization", validToken, SESSION_ID_HEADER, sessionId));
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(AccessToken.parse(validToken, AccessTokenType.BEARER));
 
         when(accessTokenStore.getTimeToExist()).thenReturn(0L);
@@ -324,7 +328,7 @@ class UserInfoHandlerTest {
         assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
 
-        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
+        verify(accessTokenStoreService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     private void withAuthSession() {
