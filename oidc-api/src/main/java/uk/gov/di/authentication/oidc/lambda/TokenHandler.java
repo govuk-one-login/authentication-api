@@ -338,18 +338,32 @@ public class TokenHandler
         Subject rpPairwiseSubject;
         List<String> scopes;
         String jwtId;
+        String refreshTokenClientId;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
-            rpPairwiseSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
-            scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
-            jwtId = signedJwt.getJWTClaimsSet().getJWTID();
+            var jwtClaimSet = signedJwt.getJWTClaimsSet();
+            rpPairwiseSubject = new Subject(jwtClaimSet.getSubject());
+            scopes = (List<String>) jwtClaimSet.getClaim("scope");
+            jwtId = jwtClaimSet.getJWTID();
+            refreshTokenClientId = jwtClaimSet.getStringClaim("client_id");
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse RefreshToken");
             return ApiResponse.badRequest(
                     new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
+
+        if (!clientId.equals(refreshTokenClientId)) {
+            LOG.warn(
+                    "Refresh Token Client ID does not match authenticated client ID. Authenticated Client ID: {}, Client ID from token: {}",
+                    clientId,
+                    refreshTokenClientId);
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
+        }
+
         boolean areScopesValid =
                 tokenValidationService.validateRefreshTokenScopes(clientScopes, scopes);
+
         if (!areScopesValid) {
             return ApiResponse.badRequest(OAuth2Error.INVALID_SCOPE);
         }
