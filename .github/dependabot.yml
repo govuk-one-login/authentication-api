@@ -92,8 +92,6 @@ updates:
     target-branch: main
     commit-message:
       prefix: BAU
-    labels:
-      - dependabot
 
   - package-ecosystem: pre-commit
     directory: "/"
@@ -105,5 +103,3 @@ updates:
     target-branch: main
     commit-message:
       prefix: BAU
-    labels:
-      - dependabot
