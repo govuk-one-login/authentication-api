@@ -9,11 +9,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccountDataScope;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
-import uk.gov.di.authentication.shared.entity.AccountDataScope;
-import uk.gov.di.authentication.shared.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.io.IOException;

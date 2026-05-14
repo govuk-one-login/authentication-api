@@ -32,7 +32,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
+import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
@@ -60,7 +60,7 @@ import static org.mockito.Mockito.when;
 class TokenHandlerTest {
     private TokenHandler tokenHandler;
     private static ConfigurationService configurationService;
-    private AccessTokenStoreService accessTokenStoreService;
+    private AccessTokenService accessTokenService;
     private TokenRequestValidator tokenRequestValidator;
     private static final ClientSubjectHelper clientSubjectHelper = mock(ClientSubjectHelper.class);
     private static final TokenService tokenUtilityService = mock(TokenService.class);
@@ -140,14 +140,14 @@ class TokenHandlerTest {
                 .thenReturn(URI.create("https://orch-test-backend.com"));
         when(configurationService.getInternalSectorUri()).thenReturn("https://test-backend.com");
 
-        accessTokenStoreService = mock(AccessTokenStoreService.class);
+        accessTokenService = mock(AccessTokenService.class);
         tokenRequestValidator = mock(TokenRequestValidator.class);
 
         tokenHandler =
                 new TokenHandler(
                         configurationService,
                         authCodeService,
-                        accessTokenStoreService,
+                        accessTokenService,
                         tokenUtilityService,
                         tokenRequestValidator,
                         auditService,
@@ -291,7 +291,7 @@ class TokenHandlerTest {
         assertEquals(200, response.getStatusCode());
         assertTrue(response.getBody().contains(SUCCESS_TOKEN_RESPONSE_ACCESS_TOKEN.getValue()));
         assertTrue(response.getBody().contains("\"token_type\":\"Bearer\""));
-        verify(accessTokenStoreService)
+        verify(accessTokenService)
                 .addAccessTokenStore(
                         SUCCESS_TOKEN_RESPONSE_ACCESS_TOKEN.getValue(),
                         VALID_AUTH_CODE_STORE.getSubjectID(),

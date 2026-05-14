@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.authentication.frontendapi.entity.amc;
 
 public interface AccessTokenScope {
 

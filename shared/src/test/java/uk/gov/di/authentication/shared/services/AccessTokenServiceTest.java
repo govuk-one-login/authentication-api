@@ -16,22 +16,22 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class AccessTokenStoreServiceTest {
+class AccessTokenServiceTest {
     private final DynamoDbTable<AccessTokenStore> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AccessTokenStore accessTokenStore = mock(AccessTokenStore.class);
-    public AccessTokenStoreService accessTokenStoreService;
+    public AccessTokenService accessTokenService;
     private final Key testPartitionKey = Key.builder().partitionValue("test").build();
     private static final String TEST_ENVIRONMENT = "test-environment";
     private static final String TEST_PARTITION = "test";
 
     @BeforeEach
     void beforeEach() {
-        accessTokenStoreService =
-                new AccessTokenStoreService(
+        accessTokenService =
+                new AccessTokenService(
                         cloudwatchMetricsService,
                         configurationService,
                         dynamoDbClient,
@@ -45,7 +45,7 @@ class AccessTokenStoreServiceTest {
     void shouldCallGetItemTwiceIfInitialQueryReturnsNull() {
         when(table.getItem(testPartitionKey)).thenReturn(null);
 
-        accessTokenStoreService.get(TEST_PARTITION);
+        accessTokenService.get(TEST_PARTITION);
 
         verify(table, times(1)).getItem(any(Key.class));
         verify(table, times(1)).getItem(any(GetItemEnhancedRequest.class));
@@ -56,7 +56,7 @@ class AccessTokenStoreServiceTest {
         when(table.getItem(testPartitionKey)).thenReturn(null);
         when(table.getItem(any(GetItemEnhancedRequest.class))).thenReturn(accessTokenStore);
 
-        accessTokenStoreService.get(TEST_PARTITION);
+        accessTokenService.get(TEST_PARTITION);
 
         verify(cloudwatchMetricsService, times(1))
                 .incrementCounter(
@@ -76,7 +76,7 @@ class AccessTokenStoreServiceTest {
     void shouldIncrementInitialAttemptAndInitialSuccessCounterWhenGetSucceeds() {
         when(table.getItem(testPartitionKey)).thenReturn(accessTokenStore);
 
-        accessTokenStoreService.get(TEST_PARTITION);
+        accessTokenService.get(TEST_PARTITION);
 
         verify(cloudwatchMetricsService, times(1))
                 .incrementCounter(

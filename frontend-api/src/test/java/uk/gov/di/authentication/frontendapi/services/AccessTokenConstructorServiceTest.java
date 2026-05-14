@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObjectType;
@@ -16,10 +16,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.shared.entity.AccessTokenScope;
-import uk.gov.di.authentication.shared.entity.AccountDataScope;
-import uk.gov.di.authentication.shared.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccountDataScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccountManagementScope;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.text.ParseException;
 import java.time.Instant;
@@ -66,7 +68,7 @@ class AccessTokenConstructorServiceTest {
     private static Stream<Arguments> validScopes() {
         return Stream.of(
                 Arguments.of(AccountDataScope.PASSKEY_CREATE, "passkey-create"),
-                Arguments.of(AccountDataScope.PASSKEY_RETRIEVE, "passkey-retrieve"));
+                Arguments.of(AccountManagementScope.ACCOUNT_DELETE, "account-delete"));
     }
 
     @ParameterizedTest

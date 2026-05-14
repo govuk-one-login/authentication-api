@@ -9,7 +9,7 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
-import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
+import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
@@ -21,7 +21,7 @@ public class AccessTokenStoreExtension extends DynamoExtension implements AfterE
     public static final String ACCESS_TOKEN_FIELD = "AccessToken";
     public static final String ACCESS_TOKEN_STORE_TABLE = "local-access-token-store";
 
-    private AccessTokenStoreService dynamoService;
+    private AccessTokenService dynamoService;
     private final ConfigurationService configuration;
 
     public AccessTokenStoreExtension(long ttl) {
@@ -33,14 +33,14 @@ public class AccessTokenStoreExtension extends DynamoExtension implements AfterE
                         return ttl;
                     }
                 };
-        dynamoService = new AccessTokenStoreService(configuration);
+        dynamoService = new AccessTokenService(configuration);
     }
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
 
-        dynamoService = new AccessTokenStoreService(configuration);
+        dynamoService = new AccessTokenService(configuration);
     }
 
     @Override

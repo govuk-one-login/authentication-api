@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.frontendapi.entity.amc;
 
-import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;

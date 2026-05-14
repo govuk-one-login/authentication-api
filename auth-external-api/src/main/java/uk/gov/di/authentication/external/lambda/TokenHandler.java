@@ -26,7 +26,7 @@ import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
-import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
+import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -55,7 +55,7 @@ public class TokenHandler
     private static final Logger LOG = LogManager.getLogger(TokenHandler.class);
     private final ConfigurationService configurationService;
     private final DynamoAuthCodeService authorisationCodeService;
-    private final AccessTokenStoreService accessTokenStoreService;
+    private final AccessTokenService accessTokenStoreService;
     private final TokenService tokenUtilityService;
     private final TokenRequestValidator tokenRequestValidator;
     private final AuditService auditService;
@@ -65,7 +65,7 @@ public class TokenHandler
     public TokenHandler(
             ConfigurationService configurationService,
             DynamoAuthCodeService authorisationCodeService,
-            AccessTokenStoreService accessTokenStoreService,
+            AccessTokenService accessTokenService,
             TokenService tokenUtilityService,
             TokenRequestValidator tokenRequestValidator,
             AuditService auditService,
@@ -73,7 +73,7 @@ public class TokenHandler
             RemoteJwksService authJwksService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
-        this.accessTokenStoreService = accessTokenStoreService;
+        this.accessTokenStoreService = accessTokenService;
         this.tokenUtilityService = tokenUtilityService;
         this.tokenRequestValidator = tokenRequestValidator;
         this.auditService = auditService;
@@ -89,7 +89,7 @@ public class TokenHandler
     public TokenHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = new DynamoAuthCodeService(configurationService);
-        this.accessTokenStoreService = new AccessTokenStoreService(configurationService);
+        this.accessTokenStoreService = new AccessTokenService(configurationService);
         this.tokenUtilityService = new TokenService();
 
         String orchestratorCallbackRedirectUri =

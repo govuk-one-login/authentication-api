@@ -1,12 +1,14 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-import uk.gov.di.authentication.shared.entity.AccessTokenScope;
-import uk.gov.di.authentication.shared.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenScope;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.util.Date;
 import java.util.UUID;

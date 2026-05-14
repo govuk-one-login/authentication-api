@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.external.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,10 +8,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.SdkBytes;
-import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -21,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -39,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
@@ -48,7 +43,6 @@ public class UserInfoServiceTest {
     private UserInfoService userInfoService;
     private ConfigurationService configurationService;
     private AuthenticationService authenticationService;
-    private AccessTokenConstructorService accessTokenConstructorService;
     private MFAMethodsService mfaMethodsService;
     public static final ByteBuffer TEST_SALT = ByteBuffer.allocate(10);
     private static final Subject TEST_SUBJECT = new Subject();
@@ -79,36 +73,18 @@ public class UserInfoServiceTest {
     private static final boolean TEST_UPLIFT_REQUIRED = true;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
-    private static final String TEST_ACCOUNT_DATA_API_ACCESS_TOKEN =
-            "test_account_data_api_access_token";
-    private static final String TEST_ACCOUNT_DATA_API_AUDIENCE =
-            "https://account-data-api.example.com";
-    private static final String TEST_AUTH_ISSUER_CLAIM = "https://signin.account.gov.uk/";
-    private static final String TEST_HOME_CLIENT_ID = "home-client-id";
-    private static final String TEST_ACCOUNT_DATA_SIGNING_KEY = "account-data-signing-key";
 
     @BeforeEach
     public void setUp() {
         authenticationService = mock(DynamoService.class);
         mfaMethodsService = mock(MFAMethodsService.class);
         configurationService = mock(ConfigurationService.class);
-        accessTokenConstructorService = mock(AccessTokenConstructorService.class);
         userInfoService =
-                new UserInfoService(
-                        authenticationService,
-                        mfaMethodsService,
-                        accessTokenConstructorService,
-                        configurationService);
+                new UserInfoService(authenticationService, mfaMethodsService, configurationService);
 
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class)))
                 .thenReturn(SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
         when(configurationService.getInternalSectorUri()).thenReturn(TEST_INTERNAL_SECTOR_URI);
-        when(configurationService.getAuthToAccountDataApiAudience())
-                .thenReturn(TEST_ACCOUNT_DATA_API_AUDIENCE);
-        when(configurationService.getAuthIssuerClaim()).thenReturn(TEST_AUTH_ISSUER_CLAIM);
-        when(configurationService.getHomeClientId()).thenReturn(TEST_HOME_CLIENT_ID);
-        when(configurationService.getAuthToAccountDataSigningKey())
-                .thenReturn(TEST_ACCOUNT_DATA_SIGNING_KEY);
     }
 
     @ParameterizedTest
@@ -125,8 +101,7 @@ public class UserInfoServiceTest {
             String expectedSalt,
             MFAMethodType expectedVerifiedMfaMethod,
             Boolean expectedUpliftRequired,
-            CredentialTrustLevel expectedAchievedCredentialStrength,
-            String expectedAccountDataAPIAccessToken) {
+            CredentialTrustLevel expectedAchievedCredentialStrength) {
         when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(generateUserProfile().withMfaMethodsMigrated(false));
         when(authenticationService.getUserCredentialsFromSubject(TEST_SUBJECT.getValue()))
@@ -135,23 +110,9 @@ public class UserInfoServiceTest {
                 .thenReturn(
                         Result.success(
                                 List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
-        when(accessTokenConstructorService.createSignedAccessToken(
-                        eq(TEST_PUBLIC_SUBJECT_ID),
-                        eq(AccountDataScope.PASSKEY_CREATE),
-                        any(),
-                        any(),
-                        any(),
-                        eq(TEST_ACCOUNT_DATA_API_AUDIENCE),
-                        eq(TEST_AUTH_ISSUER_CLAIM),
-                        eq(TEST_HOME_CLIENT_ID),
-                        eq(TEST_ACCOUNT_DATA_SIGNING_KEY)))
-                .thenReturn(
-                        Result.success(new BearerAccessToken(TEST_ACCOUNT_DATA_API_ACCESS_TOKEN)));
 
         UserInfo actual =
-                userInfoService
-                        .populateUserInfo(mockAccessTokenStore, generateAuthSessionItem())
-                        .getSuccess();
+                userInfoService.populateUserInfo(mockAccessTokenStore, generateAuthSessionItem());
 
         assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
@@ -171,9 +132,6 @@ public class UserInfoServiceTest {
         assertEquals(
                 expectedAchievedCredentialStrength,
                 actual.getClaim(ACHIEVED_CREDENTIAL_STRENGTH.getValue()));
-        assertEquals(
-                expectedAccountDataAPIAccessToken,
-                actual.getClaim("account_data_api_access_token"));
     }
 
     private static Stream<Arguments> provideTestData() {
@@ -183,7 +141,6 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         TEST_SUBJECT.getValue(),
-                        null,
                         null,
                         null,
                         null,
@@ -205,7 +162,6 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         null,
-                        null,
                         null),
                 Arguments.of(
                         getMockAccessTokenStore(
@@ -220,8 +176,7 @@ public class UserInfoServiceTest {
                                         "salt",
                                         "verified_mfa_method_type",
                                         "uplift_required",
-                                        "achieved_credential_strength",
-                                        "account_data_api_access_token")),
+                                        "achieved_credential_strength")),
                         TEST_LEGACY_SUBJECT_ID,
                         TEST_PUBLIC_SUBJECT_ID,
                         TEST_SUBJECT.getValue(),
@@ -232,8 +187,7 @@ public class UserInfoServiceTest {
                         bytesToBase64(TEST_SALT),
                         TEST_VERIFIED_MFA_METHOD_TYPE,
                         TEST_UPLIFT_REQUIRED,
-                        TEST_ACHIEVED_CREDENTIAL_STRENGTH,
-                        TEST_ACCOUNT_DATA_API_ACCESS_TOKEN));
+                        TEST_ACHIEVED_CREDENTIAL_STRENGTH));
     }
 
     @Test
@@ -248,12 +202,9 @@ public class UserInfoServiceTest {
                                         generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
 
         UserInfo actual =
-                userInfoService
-                        .populateUserInfo(
-                                getMockAccessTokenStore(
-                                        List.of("phone_number", "phone_number_verified")),
-                                generateAuthSessionItem())
-                        .getSuccess();
+                userInfoService.populateUserInfo(
+                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
+                        generateAuthSessionItem());
 
         assertEquals(TEST_PHONE, actual.getPhoneNumber());
         assertTrue(actual.getPhoneNumberVerified());
@@ -271,12 +222,9 @@ public class UserInfoServiceTest {
                                         generatePhoneNumberMFAMethod(PriorityIdentifier.BACKUP))));
 
         UserInfo actual =
-                userInfoService
-                        .populateUserInfo(
-                                getMockAccessTokenStore(
-                                        List.of("phone_number", "phone_number_verified")),
-                                generateAuthSessionItem())
-                        .getSuccess();
+                userInfoService.populateUserInfo(
+                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
+                        generateAuthSessionItem());
 
         assertNull(actual.getPhoneNumber());
         assertFalse(actual.getPhoneNumberVerified());
@@ -293,46 +241,12 @@ public class UserInfoServiceTest {
                                         .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP));
 
         UserInfo actual =
-                userInfoService
-                        .populateUserInfo(
-                                getMockAccessTokenStore(
-                                        List.of("phone_number", "phone_number_verified")),
-                                generateAuthSessionItem())
-                        .getSuccess();
+                userInfoService.populateUserInfo(
+                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
+                        generateAuthSessionItem());
 
         assertNull(actual.getPhoneNumber());
         assertFalse(actual.getPhoneNumberVerified());
-    }
-
-    @Test
-    void shouldNotSetAccountDataApiAccessTokenClaimWhenTokenCreationFails() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(false));
-        when(authenticationService.getUserCredentialsFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserCredentials());
-        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
-                .thenReturn(
-                        Result.success(
-                                List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
-        when(accessTokenConstructorService.createSignedAccessToken(
-                        eq(TEST_PUBLIC_SUBJECT_ID),
-                        eq(AccountDataScope.PASSKEY_CREATE),
-                        any(),
-                        any(),
-                        any(),
-                        eq(TEST_ACCOUNT_DATA_API_AUDIENCE),
-                        eq(TEST_AUTH_ISSUER_CLAIM),
-                        eq(TEST_HOME_CLIENT_ID),
-                        eq(TEST_ACCOUNT_DATA_SIGNING_KEY)))
-                .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
-
-        var result =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("account_data_api_access_token")),
-                        generateAuthSessionItem());
-
-        assertTrue(result.isFailure());
-        assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
     }
 
     @Test
@@ -343,12 +257,9 @@ public class UserInfoServiceTest {
                 .thenReturn(Result.success(List.of()));
 
         UserInfo actual =
-                userInfoService
-                        .populateUserInfo(
-                                getMockAccessTokenStore(
-                                        List.of("phone_number", "phone_number_verified")),
-                                generateAuthSessionItem())
-                        .getSuccess();
+                userInfoService.populateUserInfo(
+                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
+                        generateAuthSessionItem());
 
         assertNull(actual.getPhoneNumber());
         assertFalse(actual.getPhoneNumberVerified());

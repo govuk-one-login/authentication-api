@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
@@ -24,8 +24,9 @@ import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.shared.entity.JwtFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
