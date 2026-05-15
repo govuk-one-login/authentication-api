@@ -68,6 +68,12 @@ Conditions:
               - !Ref SubEnvironment
               - none
 
+  IsNotProduction:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref Environment
+          - production
+
   UseCodeSigning:
     Fn::Not:
       - Fn::Equals:
