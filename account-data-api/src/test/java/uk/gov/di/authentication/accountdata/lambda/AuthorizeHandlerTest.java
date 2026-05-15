@@ -49,11 +49,13 @@ class AuthorizeHandlerTest {
     private static final String KEY_ID = "14342354354353";
     private final Context context = mock(Context.class);
     private final RemoteJwksService remoteJwksService = mock(RemoteJwksService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private static final Date expiryDateFiveMinutesFromNow =
             Date.from(Instant.now().plus(5, ChronoUnit.MINUTES));
     private static final String METHOD_ARN =
             "arn:aws:execute-api:eu-west-2:123456789:abc123/dev/GET/accounts";
     private static final String SUBJECT = "some-subject";
+    private static final String ISSUER = "https://example.com";
 
     private static ECKey ecSigningKey;
     private APIGatewayCustomAuthorizerEvent event;
@@ -69,6 +71,7 @@ class AuthorizeHandlerTest {
         event.setMethodArn(METHOD_ARN);
         when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
                 .thenReturn(Result.success(ecSigningKey.toPublicJWK()));
+        when(configurationService.getAuthIssuerClaim()).thenReturn(ISSUER);
     }
 
     @AfterEach
@@ -91,7 +94,7 @@ class AuthorizeHandlerTest {
         @MethodSource("validScopes")
         void authorizeHandlerShouldAllowNonExpiredTokenWithValidScope(String scope)
                 throws JOSEException {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var bearerAccessToken =
                     createBearerAccessTokenWithExpiry(
@@ -130,7 +133,7 @@ class AuthorizeHandlerTest {
 
         @Test
         void authorizeHandlerShouldRejectInvalidScope() throws JOSEException {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var bearerAccessToken =
                     createBearerAccessTokenWithExpiry(
@@ -149,7 +152,7 @@ class AuthorizeHandlerTest {
 
         @Test
         void authorizeHandlerShouldRejectIfScopeIsNotPresent() throws JOSEException {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var bearerAccessToken =
                     createBearerAccessTokenWithExpiry(
@@ -168,7 +171,7 @@ class AuthorizeHandlerTest {
 
         @Test
         void authorizeHandlerShouldRejectMissingToken() {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             event.setAuthorizationToken("");
 
@@ -183,7 +186,7 @@ class AuthorizeHandlerTest {
 
         @Test
         void authorizeHandlerShouldRejectExpiredToken() throws JOSEException {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var yesterdayInstant = Instant.now().minus(1, ChronoUnit.DAYS);
             var bearerAccessToken =
@@ -206,7 +209,7 @@ class AuthorizeHandlerTest {
             when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
                     .thenReturn(Result.success(differentKeyPair.toPublicJWK()));
 
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var bearerAccessToken =
                     createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
@@ -227,7 +230,7 @@ class AuthorizeHandlerTest {
             when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
                     .thenReturn(Result.failure("Failed to retrieve jwks key"));
 
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var bearerAccessToken =
                     createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
@@ -245,7 +248,7 @@ class AuthorizeHandlerTest {
 
         @Test
         void authorizeHandlerShouldRejectUnparseableToken() {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             event.setAuthorizationToken("Bearer not-a-valid-jwt");
 
@@ -260,7 +263,7 @@ class AuthorizeHandlerTest {
 
         @Test
         void authorizeHandlerShouldRejectAnUnsupportedAlgorithm() throws JOSEException {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             RSAKey rsaKey = new RSAKeyGenerator(2048).keyID(KEY_ID).generate();
             JWSSigner signer = new RSASSASigner(rsaKey);
@@ -282,7 +285,7 @@ class AuthorizeHandlerTest {
 
         @Test
         void authorizeHandlerShouldRejectMissingSubjectId() throws JOSEException {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var claimsWithoutSubject = claimsSetBuilderWithoutSubject(expiryDateFiveMinutesFromNow);
             var signedToken = createBearerAccessToken(ecSigningKey, claimsWithoutSubject);
@@ -299,7 +302,7 @@ class AuthorizeHandlerTest {
 
         @Test
         void authorizeHandlerShouldRejectEmptySubjectId() throws JOSEException {
-            var handler = new AuthorizeHandler(remoteJwksService);
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var claimsWithEmptySubject = claimsSetBuilder("", expiryDateFiveMinutesFromNow);
             var signedToken = createBearerAccessToken(ecSigningKey, claimsWithEmptySubject);
@@ -315,15 +318,36 @@ class AuthorizeHandlerTest {
         }
 
         @Test
+        void authorizeHandlerShouldRejectInvalidIssuer() throws JOSEException {
+            when(configurationService.getAuthIssuerClaim())
+                    .thenReturn("https://expected-issuer.com");
+
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
+
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
+
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
+
+            assertEquals("Unauthorized", exception.getMessage());
+        }
+
+        @Test
         void authorizeHandlerFailsToInitialiseWhenAccountDataJwksUrlMalformed()
                 throws MalformedURLException {
-            var configurationService = mock(ConfigurationService.class);
-            when(configurationService.getAccountDataJwksUrl())
+            var malformedConfig = mock(ConfigurationService.class);
+            when(malformedConfig.getAccountDataJwksUrl())
                     .thenThrow(new MalformedURLException("uh oh"));
 
             assertThrows(
                     AuthorizeException.class,
-                    () -> new AuthorizeHandler(configurationService),
+                    () -> new AuthorizeHandler(malformedConfig),
                     "Expected to throw exception");
         }
     }
