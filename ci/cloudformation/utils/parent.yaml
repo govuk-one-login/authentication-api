@@ -251,7 +251,7 @@ Mappings:
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
       bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
@@ -284,7 +284,7 @@ Mappings:
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
       bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
@@ -317,7 +317,7 @@ Mappings:
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
       bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
