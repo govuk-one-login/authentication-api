@@ -144,7 +144,8 @@ class FinishPasskeyAssertionHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent finishPasskeyAssertionRequest() {
-        return finishPasskeyAssertionRequest("""
+        return finishPasskeyAssertionRequest(
+                """
             {"pkc": ""}
             """);
     }

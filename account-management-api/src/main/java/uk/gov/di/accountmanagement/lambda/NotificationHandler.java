@@ -130,8 +130,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
             case BACKUP_METHOD_ADDED -> sendBackupAddedNotification(notifyRequest);
             case BACKUP_METHOD_REMOVED -> sendBackupRemovedNotification(notifyRequest);
-            case CHANGED_AUTHENTICATOR_APP -> sendChangedAuthenticatorAppNotification(
-                    notifyRequest);
+            case CHANGED_AUTHENTICATOR_APP ->
+                    sendChangedAuthenticatorAppNotification(notifyRequest);
             case CHANGED_DEFAULT_MFA -> sendChangedDefaultMFANotification(notifyRequest);
             case SWITCHED_MFA_METHODS -> sendSwitchedMFAMethodsNotification(notifyRequest);
         }

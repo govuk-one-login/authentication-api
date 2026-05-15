@@ -313,16 +313,21 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             }
         }
         return switch (e.getHttpCode()) {
-            case 429 -> generateApiGatewayProxyErrorResponse(
-                    429, ErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED);
-            case 500 -> generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR);
-            case 502 -> generateApiGatewayProxyErrorResponse(
-                    502, ErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY);
-            case 504 -> generateApiGatewayProxyErrorResponse(
-                    504, ErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT);
-            default -> generateApiGatewayProxyErrorResponse(
-                    e.getHttpCode(), ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR);
+            case 429 ->
+                    generateApiGatewayProxyErrorResponse(
+                            429, ErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED);
+            case 500 ->
+                    generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR);
+            case 502 ->
+                    generateApiGatewayProxyErrorResponse(
+                            502, ErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY);
+            case 504 ->
+                    generateApiGatewayProxyErrorResponse(
+                            504, ErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT);
+            default ->
+                    generateApiGatewayProxyErrorResponse(
+                            e.getHttpCode(), ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR);
         };
     }
 

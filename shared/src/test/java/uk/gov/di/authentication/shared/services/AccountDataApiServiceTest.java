@@ -269,8 +269,8 @@ class AccountDataApiServiceTest {
                 throws UnsuccessfulAccountDataApiResponseException {
             switch (this) {
                 case RETRIEVE_PASSKEYS -> service.retrievePasskeys("testPublicSubjectId", TOKEN);
-                case DELETE_PASSKEY -> service.deletePasskey(
-                        "testPublicSubjectId", "testPasskeyId", TOKEN);
+                case DELETE_PASSKEY ->
+                        service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
             }
         }
     }

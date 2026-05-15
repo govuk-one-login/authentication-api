@@ -232,7 +232,7 @@ allprojects {
 spotless {
     java {
         target "**/*.java"
-        googleJavaFormat("1.18.0").aosp()
+        googleJavaFormat("1.35.0").aosp()
         importOrder "", "javax", "java", "\\#"
     }
 

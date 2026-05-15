@@ -40,10 +40,11 @@ public sealed interface MfaMethodResponse permits SmsMfaMethodResponse, AuthAppM
                                 priority,
                                 phoneNumber != null ? redactPhoneNumber(phoneNumber) : null));
             }
-            case AUTH_APP -> Result.success(
-                    new AuthAppMfaMethodResponse(id, MFAMethodType.AUTH_APP, priority));
-            default -> Result.failure(
-                    "Unsupported MFA method type: " + mfaMethod.getMfaMethodType());
+            case AUTH_APP ->
+                    Result.success(
+                            new AuthAppMfaMethodResponse(id, MFAMethodType.AUTH_APP, priority));
+            default ->
+                    Result.failure("Unsupported MFA method type: " + mfaMethod.getMfaMethodType());
         };
     }
 }

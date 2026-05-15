@@ -133,27 +133,31 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
 
     private Map<String, Object> getPersonalisation(NotifyRequest notifyRequest) {
         return switch (notifyRequest.getNotificationType()) {
-            case ACCOUNT_CREATED_CONFIRMATION -> Map.of(
-                    "contact-us-link",
-                    buildContactUsUrl(),
-                    "gov-uk-accounts-url",
-                    configurationService.getGovUKAccountsURL().toString());
-            case VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE -> Map.of(
-                    "validation-code", notifyRequest.getCode(),
-                    "email-address", notifyRequest.getDestination(),
-                    "contact-us-link", buildContactUsUrl());
+            case ACCOUNT_CREATED_CONFIRMATION ->
+                    Map.of(
+                            "contact-us-link",
+                            buildContactUsUrl(),
+                            "gov-uk-accounts-url",
+                            configurationService.getGovUKAccountsURL().toString());
+            case VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE ->
+                    Map.of(
+                            "validation-code", notifyRequest.getCode(),
+                            "email-address", notifyRequest.getDestination(),
+                            "contact-us-link", buildContactUsUrl());
             case VERIFY_PHONE_NUMBER, MFA_SMS -> Map.of("validation-code", notifyRequest.getCode());
             case PASSWORD_RESET_CONFIRMATION,
                     CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
-                    PASSWORD_RESET_CONFIRMATION_SMS -> Map.of(
-                    "contact-us-link", buildContactUsUrl());
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> Map.of(
-                    "validation-code",
-                    notifyRequest.getCode(),
-                    "email-address",
-                    notifyRequest.getDestination());
+                    PASSWORD_RESET_CONFIRMATION_SMS ->
+                    Map.of("contact-us-link", buildContactUsUrl());
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES ->
+                    Map.of(
+                            "validation-code",
+                            notifyRequest.getCode(),
+                            "email-address",
+                            notifyRequest.getDestination());
             case TERMS_AND_CONDITIONS_BULK_EMAIL,
-                    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL -> Collections.emptyMap();
+                    INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL ->
+                    Collections.emptyMap();
         };
     }
 

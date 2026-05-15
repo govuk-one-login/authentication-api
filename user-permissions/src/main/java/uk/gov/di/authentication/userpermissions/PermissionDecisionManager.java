@@ -502,8 +502,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
             case ENTER_EMAIL -> ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
             case ENTER_EMAIL_CODE -> ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
             case ENTER_PASSWORD -> ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
-            case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
-                    .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+            case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE ->
+                    ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
         };
     }
 

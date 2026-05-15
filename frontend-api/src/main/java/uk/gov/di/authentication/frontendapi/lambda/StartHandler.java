@@ -259,8 +259,8 @@ public class StartHandler
                         && permissionResult.getSuccess()
                                 instanceof
                                 uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .ReauthLockedOut
-                                lockedOut) {
+                                                .ReauthLockedOut
+                                        lockedOut) {
                     isBlockedForReauth = true;
                     if (maybeInternalSubject.isPresent()) {
                         var reauthCountTypesToCounts = lockedOut.detailedCounts();

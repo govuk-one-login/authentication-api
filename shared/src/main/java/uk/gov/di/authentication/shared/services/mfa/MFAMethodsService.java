@@ -343,14 +343,16 @@ public class MFAMethodsService {
             List<MFAMethod> allMfaMethods,
             MfaMethodUpdateRequest request) {
         return switch (PriorityIdentifier.valueOf(mfaMethodToUpdate.getPriority())) {
-            case DEFAULT -> handleDefaultMethodUpdate(
-                    mfaMethodToUpdate,
-                    request.mfaMethod(),
-                    email,
-                    mfaMethodToUpdate.getMfaIdentifier(),
-                    allMfaMethods);
-            case BACKUP -> handleBackupMethodUpdate(
-                    mfaMethodToUpdate, request.mfaMethod(), email, allMfaMethods);
+            case DEFAULT ->
+                    handleDefaultMethodUpdate(
+                            mfaMethodToUpdate,
+                            request.mfaMethod(),
+                            email,
+                            mfaMethodToUpdate.getMfaIdentifier(),
+                            allMfaMethods);
+            case BACKUP ->
+                    handleBackupMethodUpdate(
+                            mfaMethodToUpdate, request.mfaMethod(), email, allMfaMethods);
         };
     }
 
@@ -664,8 +666,8 @@ public class MFAMethodsService {
                         nonMigratedMfaMethod.getMfaIdentifier());
                 yield Result.success(hadPartial);
             }
-            default -> Result.failure(
-                    MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
+            default ->
+                    Result.failure(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
         };
     }
 

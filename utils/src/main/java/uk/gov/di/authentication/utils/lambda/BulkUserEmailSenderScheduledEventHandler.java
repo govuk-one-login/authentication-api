@@ -121,25 +121,28 @@ public class BulkUserEmailSenderScheduledEventHandler
             MFAMethodsService maybeMfaMethodsService) {
         String senderType = configurationService.getBulkUserEmailSenderType();
         return switch (senderType) {
-            case "TERMS_AND_CONDITIONS" -> new TermsAndConditionsBulkEmailSender(
-                    bulkEmailUsersService,
-                    cloudwatchMetricsService,
-                    configurationService,
-                    notificationService,
-                    auditService,
-                    dynamoService);
-            case "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET" -> new InternationalNumbersForcedMfaResetBulkEmailSender(
-                    bulkEmailUsersService,
-                    cloudwatchMetricsService,
-                    configurationService,
-                    notificationService,
-                    auditService,
-                    dynamoService,
-                    maybeMfaMethodsService != null
-                            ? maybeMfaMethodsService
-                            : new MFAMethodsService(configurationService));
-            default -> throw new IllegalArgumentException(
-                    "Unknown bulk email sender type: " + senderType);
+            case "TERMS_AND_CONDITIONS" ->
+                    new TermsAndConditionsBulkEmailSender(
+                            bulkEmailUsersService,
+                            cloudwatchMetricsService,
+                            configurationService,
+                            notificationService,
+                            auditService,
+                            dynamoService);
+            case "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET" ->
+                    new InternationalNumbersForcedMfaResetBulkEmailSender(
+                            bulkEmailUsersService,
+                            cloudwatchMetricsService,
+                            configurationService,
+                            notificationService,
+                            auditService,
+                            dynamoService,
+                            maybeMfaMethodsService != null
+                                    ? maybeMfaMethodsService
+                                    : new MFAMethodsService(configurationService));
+            default ->
+                    throw new IllegalArgumentException(
+                            "Unknown bulk email sender type: " + senderType);
         };
     }
 
@@ -230,12 +233,14 @@ public class BulkUserEmailSenderScheduledEventHandler
             Integer limit,
             Map<String, AttributeValue> exclusiveStartKey) {
         return switch (sendMode) {
-            case PENDING -> bulkEmailUsersService.getNSubjectIdsByStatus(
-                    limit, BulkEmailStatus.PENDING, exclusiveStartKey);
-            case NOTIFY_ERROR_RETRIES -> bulkEmailUsersService.getNSubjectIdsByStatus(
-                    limit, BulkEmailStatus.ERROR_SENDING_EMAIL, exclusiveStartKey);
-            case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES -> bulkEmailUsersService
-                    .getNSubjectIdsByDeliveryReceiptStatus(
+            case PENDING ->
+                    bulkEmailUsersService.getNSubjectIdsByStatus(
+                            limit, BulkEmailStatus.PENDING, exclusiveStartKey);
+            case NOTIFY_ERROR_RETRIES ->
+                    bulkEmailUsersService.getNSubjectIdsByStatus(
+                            limit, BulkEmailStatus.ERROR_SENDING_EMAIL, exclusiveStartKey);
+            case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES ->
+                    bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
                             limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE, exclusiveStartKey);
             default -> throw new UnrecognisedSendModeException(sendMode.getValue());
         };

@@ -103,12 +103,15 @@ public class MFAMethodsRetrieveHandler
 
         if (retrieveResult.isFailure()) {
             return switch (retrieveResult.getFailure()) {
-                case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
-                case USER_DOES_NOT_HAVE_ACCOUNT -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.ACCT_DOES_NOT_EXIST);
-                case UNKNOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.MFA_METHOD_NOT_FOUND);
+                case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP ->
+                        generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
+                case USER_DOES_NOT_HAVE_ACCOUNT ->
+                        generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.ACCT_DOES_NOT_EXIST);
+                case UNKNOWN_MFA_IDENTIFIER ->
+                        generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.MFA_METHOD_NOT_FOUND);
             };
         }
 

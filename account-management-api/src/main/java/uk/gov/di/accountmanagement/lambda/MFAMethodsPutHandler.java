@@ -295,12 +295,15 @@ public class MFAMethodsPutHandler
         var mfaMethodToBeUpdated = failure.mfaMethodToUpdate();
         var response =
                 switch (failureReason) {
-                    case CANNOT_CHANGE_TYPE_OF_MFA_METHOD -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.CANNOT_CHANGE_MFA_TYPE);
-                    case ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.CANNOT_EDIT_BACKUP_MFA);
-                    case CANNOT_EDIT_MFA_BACKUP_METHOD -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.CANNOT_EDIT_BACKUP_MFA);
+                    case CANNOT_CHANGE_TYPE_OF_MFA_METHOD ->
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.CANNOT_CHANGE_MFA_TYPE);
+                    case ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD ->
+                            generateApiGatewayProxyErrorResponse(
+                                    500, ErrorResponse.CANNOT_EDIT_BACKUP_MFA);
+                    case CANNOT_EDIT_MFA_BACKUP_METHOD ->
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.CANNOT_EDIT_BACKUP_MFA);
                     case UNEXPECTED_ERROR -> {
                         if (updateType != null
                                 && updateType.equals(
@@ -314,17 +317,23 @@ public class MFAMethodsPutHandler
                         yield generateApiGatewayProxyErrorResponse(
                                 500, ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
                     }
-                    case UNKOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
-                            404, ErrorResponse.MFA_METHOD_NOT_FOUND);
-                    case CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.CANNOT_CHANGE_DEFAULT_MFA_PRIORITY);
-                    case CANNOT_ADD_SECOND_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.CANNOT_ADD_SECOND_AUTH_APP);
-                    case REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE -> generateEmptySuccessApiGatewayResponse();
-                    case ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.CANNOT_UPDATE_PRIMARY_SMS_TO_BACKUP_NUMBER);
-                    case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.INVALID_PHONE_NUMBER);
+                    case UNKOWN_MFA_IDENTIFIER ->
+                            generateApiGatewayProxyErrorResponse(
+                                    404, ErrorResponse.MFA_METHOD_NOT_FOUND);
+                    case CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD ->
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.CANNOT_CHANGE_DEFAULT_MFA_PRIORITY);
+                    case CANNOT_ADD_SECOND_AUTH_APP ->
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.CANNOT_ADD_SECOND_AUTH_APP);
+                    case REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE ->
+                            generateEmptySuccessApiGatewayResponse();
+                    case ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER ->
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.CANNOT_UPDATE_PRIMARY_SMS_TO_BACKUP_NUMBER);
+                    case INVALID_PHONE_NUMBER ->
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.INVALID_PHONE_NUMBER);
                 };
         if (response.getStatusCode() >= 500) {
             LOG.error("Update failed due to unexpected error {}", failureReason);
@@ -476,10 +485,11 @@ public class MFAMethodsPutHandler
             case CHANGED_SMS -> NotificationType.PHONE_NUMBER_UPDATED;
             case CHANGED_DEFAULT_MFA -> NotificationType.CHANGED_DEFAULT_MFA;
             case SWITCHED_MFA_METHODS -> NotificationType.SWITCHED_MFA_METHODS;
-            default -> throw new IllegalArgumentException(
-                    "Email notification identifier '"
-                            + emailNotificationIdentifier.getValue()
-                            + "' is not supported by the PUT endpoint.");
+            default ->
+                    throw new IllegalArgumentException(
+                            "Email notification identifier '"
+                                    + emailNotificationIdentifier.getValue()
+                                    + "' is not supported by the PUT endpoint.");
         };
     }
 
@@ -516,10 +526,14 @@ public class MFAMethodsPutHandler
                         .orElseThrow();
 
         return switch (updateTypeIdentifier) {
-            case SWITCHED_MFA_METHODS -> handleSwitchedMfaMethodsAuditEvents(
-                    input, putRequest, updatedMfaMethods);
-            case CHANGED_SMS -> sendAuditEvent(
-                    AUTH_UPDATE_PHONE_NUMBER, input, putRequest, postUpdateDefaultMfaMethod);
+            case SWITCHED_MFA_METHODS ->
+                    handleSwitchedMfaMethodsAuditEvents(input, putRequest, updatedMfaMethods);
+            case CHANGED_SMS ->
+                    sendAuditEvent(
+                            AUTH_UPDATE_PHONE_NUMBER,
+                            input,
+                            putRequest,
+                            postUpdateDefaultMfaMethod);
             case CHANGED_DEFAULT_MFA -> {
                 var isDefaultMfaMethodSMS =
                         postUpdateDefaultMfaMethod

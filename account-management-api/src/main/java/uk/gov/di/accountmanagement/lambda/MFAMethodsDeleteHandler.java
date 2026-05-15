@@ -143,12 +143,15 @@ public class MFAMethodsDeleteHandler
                     mfaIdentifier,
                     failureReason.name());
             return switch (failureReason) {
-                case CANNOT_DELETE_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
-                        409, ErrorResponse.CANNOT_DELETE_DEFAULT_MFA);
-                case CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER -> generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.CANNOT_DELETE_MFA_FOR_UNMIGRATED_USER);
-                case MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST -> generateApiGatewayProxyErrorResponse(
-                        404, ErrorResponse.MFA_METHOD_NOT_FOUND);
+                case CANNOT_DELETE_DEFAULT_METHOD ->
+                        generateApiGatewayProxyErrorResponse(
+                                409, ErrorResponse.CANNOT_DELETE_DEFAULT_MFA);
+                case CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER ->
+                        generateApiGatewayProxyErrorResponse(
+                                400, ErrorResponse.CANNOT_DELETE_MFA_FOR_UNMIGRATED_USER);
+                case MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST ->
+                        generateApiGatewayProxyErrorResponse(
+                                404, ErrorResponse.MFA_METHOD_NOT_FOUND);
             };
         }
 
