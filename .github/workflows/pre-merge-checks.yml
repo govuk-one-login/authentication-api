@@ -1,6 +1,6 @@
 name: Pre-merge checks
 env:
-  JAVA_VERSION: "17"
+  JAVA_VERSION: "25"
   JAVA_DISTRIBUTION: "corretto"
 on:
   pull_request:
