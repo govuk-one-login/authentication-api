@@ -15,8 +15,8 @@ buildscript {
                 because 'CVE-2026-5598 is fixed in org.bouncycastle:bcprov-jdk18on 1.84 and higher'
             }
 
-            classpath('io.opentelemetry:opentelemetry-api:[1.62.0,)') {
-                because 'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
+            classpath('com.fasterxml.jackson.core:jackson-core:[2.21.1,)') {
+                because 'GHSA-72hv-8253-57qq is fixed in com.fasterxml.jackson.core:jackson-core:2.21.1 and higher'
             }
         }
     }
