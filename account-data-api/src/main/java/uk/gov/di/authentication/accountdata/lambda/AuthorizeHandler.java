@@ -3,6 +3,7 @@ package uk.gov.di.authentication.accountdata.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayCustomAuthorizerEvent;
+import com.amazonaws.services.lambda.runtime.events.IamPolicyResponseV1;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
@@ -18,18 +19,18 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
-import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.MalformedURLException;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 public class AuthorizeHandler
-        implements RequestHandler<APIGatewayCustomAuthorizerEvent, Map<String, Object>> {
+        implements RequestHandler<APIGatewayCustomAuthorizerEvent, IamPolicyResponseV1> {
     private static final Logger LOG = LogManager.getLogger(AuthorizeHandler.class);
+    private final ConfigurationService configurationService;
     private RemoteJwksService jwksService;
 
     public AuthorizeHandler() {
@@ -37,6 +38,7 @@ public class AuthorizeHandler
     }
 
     public AuthorizeHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         try {
             this.jwksService = new RemoteJwksService(configurationService.getAccountDataJwksUrl());
         } catch (MalformedURLException e) {
@@ -46,29 +48,33 @@ public class AuthorizeHandler
     }
 
     public AuthorizeHandler(RemoteJwksService jwksService) {
+        this.configurationService = ConfigurationService.getInstance();
+        this.jwksService = jwksService;
+    }
+
+    public AuthorizeHandler(
+            ConfigurationService configurationService, RemoteJwksService jwksService) {
+        this.configurationService = configurationService;
         this.jwksService = jwksService;
     }
 
     @Override
-    public Map<String, Object> handleRequest(
+    public IamPolicyResponseV1 handleRequest(
             APIGatewayCustomAuthorizerEvent apiGatewayCustomAuthorizerEvent, Context context) {
         var token = apiGatewayCustomAuthorizerEvent.getAuthorizationToken();
+        var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
+        var httpMethod = extractHttpMethod(methodArn);
+
         try {
             var accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
             var signedAccessToken = SignedJWT.parse(accessToken.getValue());
             var claimsSet = signedAccessToken.getJWTClaimsSet();
 
-            var validatedClaimsResult =
-                    validateAccessTokenExpiryTime(claimsSet)
-                            .flatMap(success -> verifySignature(signedAccessToken))
-                            .flatMap(success -> validateClaimsSet(claimsSet));
+            var subject =
+                    validateToken(signedAccessToken, claimsSet, httpMethod)
+                            .map(JWTClaimsSet::getSubject)
+                            .orElseThrow(UnauthorizedException::new);
 
-            if (validatedClaimsResult.isFailure()) {
-                throw validatedClaimsResult.getFailure();
-            }
-
-            var subject = validatedClaimsResult.getSuccess().getSubject();
-            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
             LOG.info("Request validated, returning access policy");
             return getAllowExecuteApiPolicyForSubject(subject, methodArn);
         } catch (ParseException | java.text.ParseException e) {
@@ -77,73 +83,110 @@ public class AuthorizeHandler
         }
     }
 
-    private Result<UnauthorizedException, Void> verifySignature(SignedJWT signedJWT) {
-        var failure = Result.<UnauthorizedException, Void>failure(new UnauthorizedException());
+    private Optional<JWTClaimsSet> validateToken(
+            SignedJWT signedAccessToken, JWTClaimsSet claimsSet, String httpMethod) {
+        if (!verifySignature(signedAccessToken)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(claimsSet)
+                .filter(c -> !DateUtils.isBefore(c.getExpirationTime(), NowHelper.now(), 0))
+                .filter(c -> c.getSubject() != null && !c.getSubject().isEmpty())
+                .filter(c -> configurationService.getAuthIssuerClaim().equals(c.getIssuer()))
+                .filter(
+                        c ->
+                                c.getAudience()
+                                        .contains(
+                                                configurationService
+                                                        .getAuthToAccountDataApiAudience()))
+                .filter(
+                        c ->
+                                c.getNotBeforeTime() == null
+                                        || !DateUtils.isAfter(
+                                                c.getNotBeforeTime(), NowHelper.now(), 0))
+                .filter(this::isClientIdValid)
+                .filter(c -> isScopeValidForMethod(c, httpMethod))
+                .filter(this::isScopePermittedForClient);
+    }
+
+    private boolean verifySignature(SignedJWT signedJWT) {
         try {
             var jwkResult =
                     jwksService.retrieveJwkFromURLWithKeyId(signedJWT.getHeader().getKeyID());
 
             if (jwkResult.isFailure()) {
                 LOG.warn("Error retrieving jwks key: {}", jwkResult.getFailure());
-                return failure;
+                return false;
             }
             var jwk = jwkResult.getSuccess();
             var algorithm = signedJWT.getHeader().getAlgorithm();
 
-            JWSVerifier verifier;
-            if (JWSAlgorithm.ES256.equals(algorithm)) {
-                verifier = new ECDSAVerifier(jwk.toECKey());
-            } else {
+            if (!JWSAlgorithm.ES256.equals(algorithm)) {
                 LOG.error("Unsupported signature algorithm: {}", algorithm);
-                return failure;
+                return false;
             }
 
-            if (!signedJWT.verify(verifier)) {
-                return failure;
-            } else {
-                return Result.success(null);
-            }
+            JWSVerifier verifier = new ECDSAVerifier(jwk.toECKey());
+            return signedJWT.verify(verifier);
         } catch (JOSEException e) {
             LOG.error("Error verifying signature: {}", e.getMessage());
-            return failure;
+            return false;
         }
     }
 
-    private Result<UnauthorizedException, Void> validateAccessTokenExpiryTime(
-            JWTClaimsSet claimsSet) {
-        Date currentDateTime = NowHelper.now();
-        if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
-            LOG.warn(
-                    "Access Token expires at: {}. CurrentDateTime is: {}",
-                    claimsSet.getExpirationTime(),
-                    currentDateTime);
-            return Result.failure(new UnauthorizedException());
-        } else {
-            return Result.success(null);
-        }
+    private boolean isClientIdValid(JWTClaimsSet claimsSet) {
+        var clientId = (String) claimsSet.getClaim("client_id");
+        return configurationService.getAMCClientId().equals(clientId)
+                || configurationService.getHomeClientId().equals(clientId);
     }
 
-    private Result<UnauthorizedException, JWTClaimsSet> validateClaimsSet(JWTClaimsSet claimsSet) {
-        if (claimsSet.getSubject() == null || claimsSet.getSubject().isEmpty()) {
-            LOG.warn("Access Token subject is missing");
-            return Result.failure(new UnauthorizedException());
-        }
-        return Result.success(claimsSet);
+    private boolean isScopeValidForMethod(JWTClaimsSet claimsSet, String httpMethod) {
+        return AccountDataScope.fromValue((String) claimsSet.getClaim("scope"))
+                .map(
+                        scope ->
+                                switch (scope) {
+                                    case PASSKEY_RETRIEVE -> "GET".equals(httpMethod);
+                                    case PASSKEY_CREATE -> "POST".equals(httpMethod);
+                                    case PASSKEY_UPDATE -> "PATCH".equals(httpMethod);
+                                    case PASSKEY_DELETE -> "DELETE".equals(httpMethod);
+                                })
+                .orElse(false);
     }
 
-    private Map<String, Object> getAllowExecuteApiPolicyForSubject(
+    private boolean isScopePermittedForClient(JWTClaimsSet claimsSet) {
+        var clientId = (String) claimsSet.getClaim("client_id");
+        if (!configurationService.getAMCClientId().equals(clientId)) {
+            return true;
+        }
+        return AccountDataScope.fromValue((String) claimsSet.getClaim("scope"))
+                .map(
+                        scope ->
+                                scope == AccountDataScope.PASSKEY_RETRIEVE
+                                        || scope == AccountDataScope.PASSKEY_CREATE)
+                .orElse(false);
+    }
+
+    private IamPolicyResponseV1 getAllowExecuteApiPolicyForSubject(
             String subject, String methodArn) {
-        var executeApiStatement =
-                Map.ofEntries(
-                        Map.entry("Action", "execute-api:Invoke"),
-                        Map.entry("Effect", "Allow"),
-                        Map.entry("Resource", methodArn));
-        return Map.ofEntries(
-                Map.entry("principalId", subject),
-                Map.entry(
-                        "policyDocument",
-                        Map.ofEntries(
-                                Map.entry("Version", "2012-10-17"),
-                                Map.entry("Statement", List.of(executeApiStatement)))));
+        var statement = IamPolicyResponseV1.allowStatement(methodArn);
+
+        var policyDocument =
+                IamPolicyResponseV1.PolicyDocument.builder()
+                        .withStatement(List.of(statement))
+                        .withVersion(IamPolicyResponseV1.VERSION_2012_10_17)
+                        .build();
+
+        return IamPolicyResponseV1.builder()
+                .withPolicyDocument(policyDocument)
+                .withPrincipalId(subject)
+                .build();
+    }
+
+    private String extractHttpMethod(String methodArn) {
+        String[] parts = methodArn.split("/");
+        if (parts.length < 3) {
+            throw new UnauthorizedException();
+        }
+        return parts[2];
     }
 }
