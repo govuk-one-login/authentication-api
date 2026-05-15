@@ -114,16 +114,19 @@ Mappings:
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d41a1b95-0291-4477-93f7-f1428ceef646
       accountDataJwksUrl: https://5fgwu5kpd2.execute-api.eu-west-2.amazonaws.com/authdev1/.well-known/ad-jwks.json
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
+      amcClientId: auth
     authdev2:
       cloudwatchLogRetentionInDays: 1
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/88707a9b-53c9-4ad6-ab54-b03b1bf21321
       accountDataJwksUrl: https://nw0dah7bxk.execute-api.eu-west-2.amazonaws.com/authdev2/.well-known/ad-jwks.json
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
+      amcClientId: auth
     authdev3:
       cloudwatchLogRetentionInDays: 1
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3a47bbdd-4144-4d1a-959f-56b928fcfe3c
       accountDataJwksUrl: https://y3s69ubaz5.execute-api.eu-west-2.amazonaws.com/authdev3/.well-known/amc-jwks.json
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
+      amcClientId: auth
     dev:
       cloudwatchLogRetentionInDays: 1
       IsSplunkEnabled: "No"
@@ -133,6 +136,7 @@ Mappings:
       dataStoreAccountId: 653994557586
       accountDataJwksUrl: https://tze402cnbk.execute-api.eu-west-2.amazonaws.com/dev/.well-known/ad-jwks.json
       frontendBaseUrl: https://signin.dev.account.gov.uk
+      amcClientId: auth
     build:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
@@ -142,6 +146,7 @@ Mappings:
       dataStoreAccountId: 761723964695
       accountDataJwksUrl: https://7ecg8e1o73.execute-api.eu-west-2.amazonaws.com/build/.well-known/ad-jwks.json
       frontendBaseUrl: https://signin.build.account.gov.uk
+      amcClientId: auth
     staging:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
@@ -152,6 +157,7 @@ Mappings:
       accountComponentsVpcEndpointId: vpce-04ae8d53b32b38278
       accountDataJwksUrl: https://z02rnzbqw8.execute-api.eu-west-2.amazonaws.com/staging/.well-known/ad-jwks.json
       frontendBaseUrl: https://signin.staging.account.gov.uk
+      amcClientId: auth
     integration:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
@@ -162,6 +168,7 @@ Mappings:
       accountComponentsVpcEndpointId: vpce-0553cfc8fc1aeb970
       accountDataJwksUrl: https://db10ia9pr6.execute-api.eu-west-2.amazonaws.com/integration/.well-known/ad-jwks.json
       frontendBaseUrl: https://signin.integration.account.gov.uk
+      amcClientId: auth
     production:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
@@ -172,6 +179,7 @@ Mappings:
       accountComponentsVpcEndpointId: vpce-0d6fa47d5c9ae876d
       accountDataJwksUrl: https://86n9innl95.execute-api.eu-west-2.amazonaws.com/production/.well-known/ad-jwks.json
       frontendBaseUrl: https://signin.account.gov.uk
+      amcClientId: auth
   LambdaConfiguration:
     passkeys-create:
       RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"

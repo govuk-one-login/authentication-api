@@ -159,6 +159,13 @@ public class AuthorizeHandler
             LOG.warn("Access Token is not yet valid (nbf: {})", claimsSet.getNotBeforeTime());
             return Result.failure(new UnauthorizedException());
         }
+        var expectedClientId = configurationService.getAMCClientId();
+        var homeClientId = configurationService.getHomeClientId();
+        var clientId = (String) claimsSet.getClaim("client_id");
+        if (!expectedClientId.equals(clientId) && !homeClientId.equals(clientId)) {
+            LOG.warn("Access Token client_id is invalid");
+            return Result.failure(new UnauthorizedException());
+        }
         return Result.success(claimsSet);
     }
 
@@ -196,7 +203,7 @@ public class AuthorizeHandler
             return Result.failure(new UnauthorizedException());
         }
 
-        boolean allowed =
+        boolean methodMatchesScope =
                 (scope.get() == AccountDataScope.PASSKEY_RETRIEVE && "GET".equals(httpMethod))
                         || (scope.get() == AccountDataScope.PASSKEY_CREATE
                                 && "POST".equals(httpMethod))
@@ -205,8 +212,17 @@ public class AuthorizeHandler
                         || (scope.get() == AccountDataScope.PASSKEY_DELETE
                                 && "DELETE".equals(httpMethod));
 
-        if (!allowed) {
+        if (!methodMatchesScope) {
             LOG.warn("Scope {} not permitted for method {}", scopeValue, httpMethod);
+            return Result.failure(new UnauthorizedException());
+        }
+
+        var clientId = (String) claimsSet.getClaim("client_id");
+        var amcClientId = configurationService.getAMCClientId();
+        if (amcClientId.equals(clientId)
+                && scope.get() != AccountDataScope.PASSKEY_RETRIEVE
+                && scope.get() != AccountDataScope.PASSKEY_CREATE) {
+            LOG.warn("Client {} not permitted scope {}", clientId, scopeValue);
             return Result.failure(new UnauthorizedException());
         }
 

@@ -63,6 +63,8 @@ class AuthorizeHandlerTest {
     private static final String SUBJECT = "some-subject";
     private static final String ISSUER = "https://example.com";
     private static final String AUDIENCE = "https://account-data.example.com";
+    private static final String CLIENT_ID = "some-client-id";
+    private static final String HOME_CLIENT_ID = "home-client-id";
 
     private static ECKey ecSigningKey;
     private APIGatewayCustomAuthorizerEvent event;
@@ -80,6 +82,8 @@ class AuthorizeHandlerTest {
                 .thenReturn(Result.success(ecSigningKey.toPublicJWK()));
         when(configurationService.getAuthIssuerClaim()).thenReturn(ISSUER);
         when(configurationService.getAuthToAccountDataApiAudience()).thenReturn(AUDIENCE);
+        when(configurationService.getAMCClientId()).thenReturn(CLIENT_ID);
+        when(configurationService.getHomeClientId()).thenReturn(HOME_CLIENT_ID);
     }
 
     @AfterEach
@@ -90,7 +94,49 @@ class AuthorizeHandlerTest {
     @Nested
     class Success {
 
-        static Stream<Arguments> scopeAndExpectedArn() {
+        static Stream<Arguments> amcClientScopeAndExpectedArn() {
+            return Stream.of(
+                    Arguments.of(AccountDataScope.PASSKEY_CREATE.getValue(), POST_METHOD_ARN),
+                    Arguments.of(AccountDataScope.PASSKEY_RETRIEVE.getValue(), GET_METHOD_ARN));
+        }
+
+        @ParameterizedTest
+        @MethodSource("amcClientScopeAndExpectedArn")
+        void authorizeHandlerShouldAllowAmcClientForCreateAndRetrieve(
+                String scope, String methodArn) throws JOSEException {
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
+
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(
+                            expiryDateFiveMinutesFromNow, ecSigningKey, scope);
+
+            event.setMethodArn(methodArn);
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+
+            var result = handler.handleRequest(event, context);
+
+            var expectedPolicyDocument =
+                    """
+                            {
+                                "principalId": "%s",
+                                "policyDocument": {
+                                    "version": "2012-10-17",
+                                    "statement": [{
+                                        "action": "execute-api:Invoke",
+                                        "effect": "Allow",
+                                        "resource": ["%s"]
+                                    }]
+                                }
+                            }
+                            """
+                            .formatted(SUBJECT, methodArn);
+
+            assertEquals(
+                    JsonParser.parseString(expectedPolicyDocument),
+                    JsonParser.parseString(new Gson().toJson(result)));
+        }
+
+        static Stream<Arguments> homeClientScopeAndExpectedArn() {
             return Stream.of(
                     Arguments.of(AccountDataScope.PASSKEY_CREATE.getValue(), POST_METHOD_ARN),
                     Arguments.of(AccountDataScope.PASSKEY_RETRIEVE.getValue(), GET_METHOD_ARN),
@@ -99,14 +145,14 @@ class AuthorizeHandlerTest {
         }
 
         @ParameterizedTest
-        @MethodSource("scopeAndExpectedArn")
-        void authorizeHandlerShouldAllowNonExpiredToken(String scope, String methodArn)
+        @MethodSource("homeClientScopeAndExpectedArn")
+        void authorizeHandlerShouldAllowHomeClientForAllScopes(String scope, String methodArn)
                 throws JOSEException {
             var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var bearerAccessToken =
                     createBearerAccessTokenWithExpiry(
-                            expiryDateFiveMinutesFromNow, ecSigningKey, scope);
+                            expiryDateFiveMinutesFromNow, ecSigningKey, scope, HOME_CLIENT_ID);
 
             event.setMethodArn(methodArn);
             event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
@@ -148,6 +194,24 @@ class AuthorizeHandlerTest {
         @ParameterizedTest
         @MethodSource("scopeAndDeniableARN")
         void authorizeHandlerShouldRejectScope(String scope, String methodArn)
+                throws JOSEException {
+            assertUnauthorizedForScopeAndArn(scope, methodArn);
+        }
+
+        static Stream<Arguments> amcRestrictedScopeAndArn() {
+            return Stream.of(
+                    Arguments.of(AccountDataScope.PASSKEY_UPDATE.getValue(), PATCH_METHOD_ARN),
+                    Arguments.of(AccountDataScope.PASSKEY_DELETE.getValue(), DELETE_METHOD_ARN));
+        }
+
+        @ParameterizedTest
+        @MethodSource("amcRestrictedScopeAndArn")
+        void authorizeHandlerShouldRejectAmcClientForUpdateAndDelete(String scope, String methodArn)
+                throws JOSEException {
+            assertUnauthorizedForScopeAndArn(scope, methodArn);
+        }
+
+        private void assertUnauthorizedForScopeAndArn(String scope, String methodArn)
                 throws JOSEException {
             var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
@@ -398,6 +462,27 @@ class AuthorizeHandlerTest {
         }
 
         @Test
+        void authorizeHandlerShouldRejectInvalidClientId() throws JOSEException {
+            when(configurationService.getAMCClientId()).thenReturn("expected-client-id");
+            when(configurationService.getHomeClientId()).thenReturn("expected-home-client-id");
+
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
+
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
+
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
+
+            assertEquals("Unauthorized", exception.getMessage());
+        }
+
+        @Test
         void authorizeHandlerFailsToInitialiseWhenAccountDataJwksUrlMalformed()
                 throws MalformedURLException {
             var malformedConfig = mock(ConfigurationService.class);
@@ -420,6 +505,16 @@ class AuthorizeHandlerTest {
     private static BearerAccessToken createBearerAccessTokenWithExpiry(
             Date expiryDate, ECKey ecSigningKey, String scope) throws JOSEException {
         var claimsBuilder = claimsSetBuilder(SUBJECT, expiryDate).claim("scope", scope);
+        return createBearerAccessToken(ecSigningKey, claimsBuilder);
+    }
+
+    private static BearerAccessToken createBearerAccessTokenWithExpiry(
+            Date expiryDate, ECKey ecSigningKey, String scope, String clientId)
+            throws JOSEException {
+        var claimsBuilder =
+                claimsSetBuilder(SUBJECT, expiryDate)
+                        .claim("scope", scope)
+                        .claim("client_id", clientId);
         return createBearerAccessToken(ecSigningKey, claimsBuilder);
     }
 
