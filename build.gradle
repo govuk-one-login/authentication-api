@@ -263,6 +263,9 @@ clean.dependsOn "composeDown"
 
 abstract class Terraform extends DefaultTask {
 
+    @Inject
+    abstract ExecOperations getExecOps()
+
     Terraform() {
         group = "terraform"
     }
@@ -287,16 +290,15 @@ abstract class Terraform extends DefaultTask {
         ] + environmentVars.get()
 
         logger.lifecycle("Running Terraform Initialise...")
-        project.exec {
+        execOps.exec {
             executable "terraform"
             workingDir terraformDirectory.asFile
             environment tfEnvironment
             args "init", "-backend-config=${environmentName.get()}.hcl"
         }
 
-        logger.lifecycle("Applying ${terraformDirectory.getAsFile().get().name} Terraform (run gradle with --info to see output)...")
-        project.exec {
-            logging.captureStandardOutput(LogLevel.INFO)
+        logger.lifecycle("Applying ${terraformDirectory.getAsFile().get().name} Terraform...")
+        execOps.exec {
             executable "terraform"
             workingDir terraformDirectory.asFile
             environment tfEnvironment
@@ -305,7 +307,7 @@ abstract class Terraform extends DefaultTask {
 
         logger.lifecycle("Getting Terraform Outputs!")
         new ByteArrayOutputStream().withStream { os ->
-            project.exec {
+            execOps.exec {
                 standardOutput os
                 executable "terraform"
                 workingDir terraformDirectory.asFile
