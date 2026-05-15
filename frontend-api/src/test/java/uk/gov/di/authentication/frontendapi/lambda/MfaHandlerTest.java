@@ -212,8 +212,6 @@ class MfaHandlerTest {
 
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
         when(userActionsManager.sentSmsOtpNotification(any(), any(), any()))
                 .thenReturn(Result.success(null));
 
@@ -792,7 +790,7 @@ class MfaHandlerTest {
             JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(
                         Result.success(
                                 new Decision.TemporarilyLockedOut(
@@ -930,26 +928,10 @@ class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenCanVerifyMfaOtpReturnsError() {
+    void shouldReturn500WhenCanSendSmsOtpNotificationReturnsReauthLockedOut() {
         usingValidSession();
 
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
-
-        var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(500));
-        verify(sqsClient, never()).send(any());
-    }
-
-    @Test
-    void shouldReturn500WhenCanVerifyMfaOtpReturnsReauthLockedOut() {
-        usingValidSession();
-
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(
                         Result.success(
                                 new Decision.ReauthLockedOut(
