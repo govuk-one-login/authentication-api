@@ -18,7 +18,7 @@ PROVISION_PIPELINE_STACK=false
 PROVISION_TXMA_STACK=false
 PROVISION_CLOUDWATCH_ALARM_STACK=false
 PROVISION_HOSTED_ZONE=false
-
+DOMAIN_TO_PROVISION="live"
 ENVIRONMENT=dev
 
 TAGS_FILE="$(pwd)/configuration/${ENVIRONMENT}/tags.json"
@@ -108,6 +108,16 @@ while [[ $# -gt 0 ]]; do
       ;;
     -h | --hosted-zone)
       PROVISION_HOSTED_ZONE=true
+      DOMAIN_TO_PROVISION=${2}
+
+      PERMITTED_VALUES="live alternative"
+
+      if ! [[ ${PERMITTED_VALUES} =~ ( |^)${DOMAIN_TO_PROVISION}( |$) ]]; then
+        echo "Hosted zone arg provided: ${DOMAIN_TO_PROVISION} is not one of ${PERMITTED_VALUES}"
+        exit 1
+      fi
+
+      shift
       ;;
     *)
       usage
@@ -187,6 +197,9 @@ function provision_pipeline_stack() {
 function provision_hosted_zone_stack() {
   export AWS_REGION="eu-west-2"
 
+  # shellcheck disable=SC2155
+  local parameters_file="$(pwd)/configuration/${ENVIRONMENT}/hosted-zone/parameters.json"
+
   echo "Provisioning hosted zone stack"
   TEMPLATE_FILE="$(pwd)/manual-stacks/domains/template.yaml"
   if [ ! -f "${TEMPLATE_FILE}" ]; then
@@ -194,7 +207,11 @@ function provision_hosted_zone_stack() {
     exit 1
   fi
 
-  ${LOCAL_PROVISION_COMMAND} "${ENVIRONMENT}" "hosted-zone" "${TEMPLATE_FILE}"
+  if [ "${DOMAIN_TO_PROVISION}" == "alternative" ]; then
+    parameters_file="$(pwd)/configuration/${ENVIRONMENT}/hosted-zone/alternative-domain-parameters.json"
+  fi
+
+  PARAMETERS_FILE="${parameters_file}" ${LOCAL_PROVISION_COMMAND} "${ENVIRONMENT}" "hosted-zone" "${TEMPLATE_FILE}"
   echo "Provisioned hosted zone stack"
 }
 

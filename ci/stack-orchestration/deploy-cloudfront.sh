@@ -16,6 +16,8 @@ PROVISION_CLOUDFRONT_NOTIFICATION_STACK=false
 SYNC_SECRETS=false
 # Matches the dev-platform stack default
 PREVIOUS_ORIGIN_CLOAKING_SECRET="none"
+CERT_TO_DEPLOY="live"
+CLOUDFRONT_PARAMS_TO_USE="live"
 
 PROVISION_COMMAND="../../../devplatform-deploy/stack-orchestration-tool/provisioner.sh"
 
@@ -37,8 +39,9 @@ function usage {
 
   Options:
     -e, --environment        The environment you wish to deploy to i.e dev, build, staging, integration, or production
-    -c, --certificate        Creates certificate in us-east-1 region for CloudFront Distribution.
-    -d, --distribution       Creates the CloudFront distribution
+    -c, --certificate         Creates certificate in us-east-1 region for CloudFront Distribution. Can choose between deploying a cert for the
+                             live or alternate domains.
+    -d, --distribution       Creates the CloudFront distribution. Must provide a parameter for the live or alternative parameters to be used.
     -m, --monitoring         Deploys CloudFront Extended Monitoring stack in us-east-1
     -n, --notification        Deploys a stack which allows us to forward our Cloudfront alarms to Slack in our non-prod envs, or PagerDuty in
                              the production environment. This requires us to setup some manual secrets for the relevant webhooks/slack channel IDs.
@@ -63,9 +66,27 @@ while [[ $# -gt 0 ]]; do
       ;;
     -c | --certificate)
       PROVISION_CLOUDFRONT_TLS_CERT=true
+      CERT_TO_DEPLOY="${2}"
+
+      PERMITTED_VALUES="live alternative"
+
+      if ! [[ ${PERMITTED_VALUES} =~ ( |^)${CERT_TO_DEPLOY}( |$) ]]; then
+        echo "Certificate arg provided: ${CERT_TO_DEPLOY} is not one of ${PERMITTED_VALUES}"
+        exit 1
+      fi
+
       ;;
     -d | --distribution)
       PROVISION_CLOUDFRONT=true
+      CLOUDFRONT_PARAMS_TO_USE="${2}"
+
+      PERMITTED_VALUES="live alternative"
+
+      if ! [[ ${PERMITTED_VALUES} =~ ( |^)${CLOUDFRONT_PARAMS_TO_USE}( |$) ]]; then
+        echo "Cloudfront distribution arg provided: ${CLOUDFRONT_PARAMS_TO_USE} is not one of ${PERMITTED_VALUES}"
+        exit 1
+      fi
+
       ;;
     -m | --monitoring)
       PROVISION_CLOUDFRONT_MONITORING=true
@@ -137,6 +158,10 @@ function provision_cloudfront_distribution() {
     jq -s 'add | group_by(.Key) | map(last)' "${TAGS_FILE}" "${stack_tags_file}" > "${tmp_tags_file}"
   fi
 
+  if [ "${CLOUDFRONT_PARAMS_TO_USE}" == "alternative" ]; then
+    params_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/alternative-parameters.json"
+  fi
+
   if [ "${SYNC_SECRETS}" == "true" ]; then
     echo "Syncing secrets from auth account"
     sync_secret_from_auth_account
@@ -164,7 +189,16 @@ function provision_cloudfront_monitoring() {
 function provision_cloudfront_certificate() {
 
   echo "Provisioning cloudfront certificate stack"
-  AWS_REGION="us-east-1" PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/cloudfront-tls-certificate/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" "cloudfront-tls-certificate" "certificate" "${CERTIFICATE_STACK_VERSION}"
+  # shellcheck disable=SC2155
+  local params_file="$(pwd)/configuration/${ENVIRONMENT}/cloudfront-tls-certificate/parameters.json"
+  local stack_name="cloudfront-tls-certificate"
+
+  if [ "${CERT_TO_DEPLOY}" == "alternative" ]; then
+    params_file="$(pwd)/configuration/${ENVIRONMENT}/cloudfront-tls-certificate/alternative-parameters.json"
+    stack_name="cloudfront-tls-certificate-alt-domain"
+  fi
+
+  AWS_REGION="us-east-1" PARAMETERS_FILE="${params_file}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${stack_name}" "certificate" "${CERTIFICATE_STACK_VERSION}"
 
   echo "Provisioned cloudfront certificate stack"
 }
