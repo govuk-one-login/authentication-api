@@ -439,7 +439,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URL getAccessTokenJwksUrl() {
         try {
-            return new URL(System.getenv().getOrDefault("ACCESS_TOKEN_JWKS_URL", ""));
+            return URI.create(System.getenv().getOrDefault("ACCESS_TOKEN_JWKS_URL", "")).toURL();
         } catch (MalformedURLException e) {
             LOG.error("Invalid JWKS URL: {}", e.getMessage());
             throw new RuntimeException(e);
@@ -447,7 +447,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public URL getAccountDataJwksUrl() throws MalformedURLException {
-        return new URL(System.getenv().getOrDefault("ACCOUNT_DATA_JWKS_URL", ""));
+        return URI.create(System.getenv().getOrDefault("ACCOUNT_DATA_JWKS_URL", "")).toURL();
     }
 
     public String getTokenSigningKeyRsaAlias() {
@@ -624,7 +624,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URL getIpvJwksUrl() throws MalformedURLException {
         try {
-            return new URL(System.getenv().getOrDefault("IPV_JWKS_URL", ""));
+            return URI.create(System.getenv().getOrDefault("IPV_JWKS_URL", "")).toURL();
         } catch (MalformedURLException e) {
             LOG.error("Invalid JWKS URL: {}", e.getMessage());
             throw new MalformedURLException(e.getMessage());
@@ -717,7 +717,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URL getAuthJwksUrl() {
         try {
-            return new URL(System.getenv().getOrDefault("AUTH_JWKS_URL", ""));
+            return URI.create(System.getenv().getOrDefault("AUTH_JWKS_URL", "")).toURL();
         } catch (MalformedURLException e) {
             LOG.error("Invalid auth JWKS URL: {}", e.getMessage());
             throw new RuntimeException(e);
@@ -751,7 +751,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URL getAmcJwksUrl() throws MalformedURLException {
         try {
-            return new URL(System.getenv().getOrDefault("AMC_JWKS_URL", ""));
+            return URI.create(System.getenv().getOrDefault("AMC_JWKS_URL", "")).toURL();
         } catch (MalformedURLException e) {
             LOG.error("Invalid AMC JWKS URL: {}", e.getMessage());
             throw new MalformedURLException(e.getMessage());

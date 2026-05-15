@@ -13,7 +13,7 @@ import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.security.KeyFactory;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
@@ -222,9 +222,9 @@ public class ClientConfigValidationService {
     private boolean areUrisValid(List<String> uris) {
         try {
             for (String uri : uris) {
-                new URL(uri);
+                URI.create(uri).toURL();
             }
-        } catch (MalformedURLException e) {
+        } catch (MalformedURLException | IllegalArgumentException e) {
             return false;
         }
         return true;
