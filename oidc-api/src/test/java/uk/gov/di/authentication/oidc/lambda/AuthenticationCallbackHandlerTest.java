@@ -136,6 +136,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
@@ -159,11 +160,11 @@ class AuthenticationCallbackHandlerTest {
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
     private final Metrics metrics = mock(Metrics.class);
-    private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
+    private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
-            mock(AccountInterventionService.class);
+            mock(AccountInterventionService.class, withSettings().verboseLogging());
     private static final CrossBrowserOrchestrationService CROSS_BROWSER_ORCHESTRATION_SERVICE =
             mock(CrossBrowserOrchestrationService.class);
     private static final LogoutService logoutService = mock(LogoutService.class);
@@ -734,6 +735,13 @@ class AuthenticationCallbackHandlerTest {
     @Nested
     class AuthTime {
 
+        @BeforeEach
+        void setup() {
+            when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                            anyString(), anyString(), anyString(), any(), anyString()))
+                    .thenReturn((AUTH_CODE_RP_TO_ORCH));
+        }
+
         private static Stream<Arguments> authenticatedAndUpliftParams() {
             return Stream.of(
                     Arguments.of(false, false, true),
@@ -763,10 +771,10 @@ class AuthenticationCallbackHandlerTest {
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);
-            handler.handleRequest(event, CONTEXT);
+            var response = handler.handleRequest(event, CONTEXT);
 
             var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
-            verify(orchSessionService, times(2)).updateSession(captor.capture());
+            verify(orchSessionService, times(3)).updateSession(captor.capture());
 
             if (authTimeSet) {
                 assertNotEquals(null, captor.getAllValues().get(0).getAuthTime());
@@ -1117,6 +1125,11 @@ class AuthenticationCallbackHandlerTest {
         void setup() {
             usingValidClientSession();
             usingValidClient();
+            // HACK: Leaky test state from above
+            when(accountInterventionService.getAccountIntervention(anyString(), anyLong(), any()))
+                    .thenReturn(
+                            new AccountIntervention(
+                                    new AccountInterventionState(false, false, false, false)));
         }
 
         @Test
