@@ -9,5 +9,5 @@ data "terraform_remote_state" "shared" {
 }
 
 locals {
-  slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
+  elasticache_alerts_sns_topic_arn = data.terraform_remote_state.shared.outputs.elasticache_alerts_sns_topic_arn
 }
