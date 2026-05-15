@@ -163,6 +163,13 @@ public class AuthorizeHandler
             LOG.warn("Access Token is not yet valid (nbf: {})", claimsSet.getNotBeforeTime());
             return Result.failure(new UnauthorizedException());
         }
+        var amcClientId = configurationService.getAMCClientId();
+        var homeClientId = configurationService.getHomeClientId();
+        var clientId = (String) claimsSet.getClaim("client_id");
+        if (!amcClientId.equals(clientId) && !homeClientId.equals(clientId)) {
+            LOG.warn("Access Token client_id is invalid");
+            return Result.failure(new UnauthorizedException());
+        }
         return Result.success(claimsSet);
     }
 

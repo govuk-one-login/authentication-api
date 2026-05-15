@@ -57,6 +57,8 @@ class AuthorizeHandlerTest {
     private static final String SUBJECT = "some-subject";
     private static final String ISSUER = "https://example.com";
     private static final String AUDIENCE = "https://account-data.example.com";
+    private static final String CLIENT_ID = "some-client-id";
+    private static final String HOME_CLIENT_ID = "home-client-id";
 
     private static ECKey ecSigningKey;
     private APIGatewayCustomAuthorizerEvent event;
@@ -74,6 +76,8 @@ class AuthorizeHandlerTest {
                 .thenReturn(Result.success(ecSigningKey.toPublicJWK()));
         when(configurationService.getAuthIssuerClaim()).thenReturn(ISSUER);
         when(configurationService.getAuthToAccountDataApiAudience()).thenReturn(AUDIENCE);
+        when(configurationService.getAMCClientId()).thenReturn(CLIENT_ID);
+        when(configurationService.getHomeClientId()).thenReturn(HOME_CLIENT_ID);
     }
 
     @AfterEach
@@ -100,7 +104,7 @@ class AuthorizeHandlerTest {
 
             var bearerAccessToken =
                     createBearerAccessTokenWithExpiry(
-                            expiryDateFiveMinutesFromNow, ecSigningKey, scope);
+                            expiryDateFiveMinutesFromNow, ecSigningKey, scope, HOME_CLIENT_ID);
 
             event.setMethodArn(METHOD_ARN);
             event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
@@ -383,6 +387,27 @@ class AuthorizeHandlerTest {
         }
 
         @Test
+        void authorizeHandlerShouldRejectInvalidClientId() throws JOSEException {
+            when(configurationService.getAMCClientId()).thenReturn("expected-client-id");
+            when(configurationService.getHomeClientId()).thenReturn("expected-home-client-id");
+
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
+
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
+
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
+
+            assertEquals("Unauthorized", exception.getMessage());
+        }
+
+        @Test
         void authorizeHandlerShouldRejectTokenWithMissingNbf() throws JOSEException {
             var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
@@ -424,6 +449,16 @@ class AuthorizeHandlerTest {
     private static BearerAccessToken createBearerAccessTokenWithExpiry(
             Date expiryDate, ECKey ecSigningKey, String scope) throws JOSEException {
         var claimsBuilder = claimsSetBuilder(SUBJECT, expiryDate).claim("scope", scope);
+        return createBearerAccessToken(ecSigningKey, claimsBuilder);
+    }
+
+    private static BearerAccessToken createBearerAccessTokenWithExpiry(
+            Date expiryDate, ECKey ecSigningKey, String scope, String clientId)
+            throws JOSEException {
+        var claimsBuilder =
+                claimsSetBuilder(SUBJECT, expiryDate)
+                        .claim("scope", scope)
+                        .claim("client_id", clientId);
         return createBearerAccessToken(ecSigningKey, claimsBuilder);
     }
 
