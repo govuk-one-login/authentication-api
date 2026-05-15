@@ -115,7 +115,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             NotifyRequest notifyRequest =
                     objectMapper.readValue(msg.getBody(), NotifyRequest.class);
             sendNotification(notifyRequest);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.error(ERROR_WHEN_MAPPING_MESSAGE_FROM_QUEUE_TO_A_NOTIFY_REQUEST);
         }
     }
@@ -130,8 +130,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
             case BACKUP_METHOD_ADDED -> sendBackupAddedNotification(notifyRequest);
             case BACKUP_METHOD_REMOVED -> sendBackupRemovedNotification(notifyRequest);
-            case CHANGED_AUTHENTICATOR_APP -> sendChangedAuthenticatorAppNotification(
-                    notifyRequest);
+            case CHANGED_AUTHENTICATOR_APP ->
+                    sendChangedAuthenticatorAppNotification(notifyRequest);
             case CHANGED_DEFAULT_MFA -> sendChangedDefaultMFANotification(notifyRequest);
             case SWITCHED_MFA_METHODS -> sendSwitchedMFAMethodsNotification(notifyRequest);
         }

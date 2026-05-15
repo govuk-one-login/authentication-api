@@ -500,11 +500,11 @@ public class IPVCallbackHandler
             return RedirectService.redirectToFrontendErrorPageWithWarnLog(frontend.errorURI(), e);
         } catch (IpvCallbackException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(frontend.errorURI(), e);
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Error("Unable to serialize SPOTRequest when placing on queue"));

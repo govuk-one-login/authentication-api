@@ -222,7 +222,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             notifyRequest.getNotificationType(),
                             notifyRequest.getUniqueNotificationReference());
                 }
-            } catch (Exception e) {
+            } catch (Exception _) {
                 return generateEmptySuccessApiGatewayResponse();
             }
             return generateEmptySuccessApiGatewayResponse();
@@ -285,10 +285,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 default:
                     return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
             }
-        } catch (SdkClientException ex) {
+        } catch (SdkClientException _) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS);
         }
     }
@@ -527,8 +527,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         return switch (notificationType) {
             case VERIFY_EMAIL -> ErrorResponse.TOO_MANY_EMAIL_CODES_SENT;
             case VERIFY_PHONE_NUMBER -> ErrorResponse.TOO_MANY_PHONE_VERIFICATION_CODES_SENT;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
-                    .TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES ->
+                    ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -540,8 +540,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         return switch (notificationType) {
             case VERIFY_EMAIL -> ErrorResponse.BLOCKED_FOR_EMAIL_VERIFICATION_CODES;
             case VERIFY_PHONE_NUMBER -> ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
-                    .BLOCKED_FOR_EMAIL_CODES_FOR_MFA_RESET;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES ->
+                    ErrorResponse.BLOCKED_FOR_EMAIL_CODES_FOR_MFA_RESET;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -553,8 +553,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         return switch (notificationType) {
             case VERIFY_EMAIL -> ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED;
             case VERIFY_PHONE_NUMBER -> ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
-                    .TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES ->
+                    ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -565,15 +565,14 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private AuditableEvent getSuccessfulAuditEventFromNotificationType(
             NotificationType notificationType, boolean isTestClient) {
         return switch (notificationType) {
-            case VERIFY_EMAIL -> isTestClient
-                    ? AUTH_EMAIL_CODE_SENT_FOR_TEST_CLIENT
-                    : AUTH_EMAIL_CODE_SENT;
-            case VERIFY_PHONE_NUMBER -> isTestClient
-                    ? AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT
-                    : AUTH_PHONE_CODE_SENT;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> isTestClient
-                    ? AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT
-                    : AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+            case VERIFY_EMAIL ->
+                    isTestClient ? AUTH_EMAIL_CODE_SENT_FOR_TEST_CLIENT : AUTH_EMAIL_CODE_SENT;
+            case VERIFY_PHONE_NUMBER ->
+                    isTestClient ? AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT : AUTH_PHONE_CODE_SENT;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES ->
+                    isTestClient
+                            ? AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT
+                            : AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
             default -> {
                 LOG.error(
                         "No successful Audit event configured for NotificationType: {}",
@@ -589,7 +588,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         return switch (notificationType) {
             case VERIFY_EMAIL -> AUTH_EMAIL_INVALID_CODE_REQUEST;
             case VERIFY_PHONE_NUMBER -> AUTH_PHONE_INVALID_CODE_REQUEST;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES ->
+                    AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
             default -> {
                 LOG.error(
                         "No invalid code request Audit event configured for NotificationType: {}",

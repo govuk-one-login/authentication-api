@@ -74,7 +74,7 @@ public class KmsInitialiser {
             var request = DescribeKeyRequest.builder().keyId(keyAlias).build();
             kmsClient.describeKey(request);
             return true;
-        } catch (NotFoundException ignored) {
+        } catch (NotFoundException _) {
             return false;
         }
     }

@@ -14,6 +14,7 @@ import uk.gov.di.orchestration.shared.utils.JwksUtils;
 import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
@@ -43,7 +44,7 @@ class JwksCacheServiceTest extends BaseDynamoServiceTest<JwksCacheItem> {
         JwksCacheService jwksCacheService =
                 new JwksCacheService(dynamoDbClient, table, configurationService);
         jwksCacheServiceSpy = Mockito.spy(jwksCacheService);
-        URL testJwksUrl = new URL(JWKS_URL);
+        URL testJwksUrl = URI.create(JWKS_URL).toURL();
         when(configurationService.getIPVJwksUrl()).thenReturn(testJwksUrl);
         when(configurationService.getDocAppJwksUrl()).thenReturn(testJwksUrl);
         when(configurationService.getJwkCacheExpirationInSeconds()).thenReturn(expiryInSeconds);
@@ -77,7 +78,7 @@ class JwksCacheServiceTest extends BaseDynamoServiceTest<JwksCacheItem> {
         Stream<JwksCacheItem> jwksCacheItemStream = Stream.of();
         doReturn(jwksCacheItemStream).when(jwksCacheServiceSpy).queryTableStream(JWKS_URL);
         jwksUtilsMockedStatic
-                .when(() -> JwksUtils.getKey(new URL(JWKS_URL), KeyUse.ENCRYPTION))
+                .when(() -> JwksUtils.getKey(URI.create(JWKS_URL).toURL(), KeyUse.ENCRYPTION))
                 .thenReturn(JWK_2);
         var jwksCacheItem = jwksCacheServiceSpy.getOrGenerateIpvJwksCacheItem();
         assertThat(jwksCacheItem.getKeyId(), equalTo(KEY_ID_2));

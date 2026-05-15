@@ -151,7 +151,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                     "Account interventions service call is disabled, returning default no interventions response");
             try {
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
-            } catch (JsonException e) {
+            } catch (JsonException _) {
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.REQUEST_MISSING_PARAMS);
             }
@@ -200,7 +200,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             return generateApiGatewayProxyResponse(200, accountInterventionsResponse, true);
         } catch (UnsuccessfulAccountInterventionsResponseException e) {
             return handleErrorForAIS(e);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
@@ -307,22 +307,27 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         "AuthAisErrorIgnored",
                         Map.of("Environment", configurationService.getEnvironment()));
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
-            } catch (JsonException ex) {
+            } catch (JsonException _) {
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.REQUEST_MISSING_PARAMS);
             }
         }
         return switch (e.getHttpCode()) {
-            case 429 -> generateApiGatewayProxyErrorResponse(
-                    429, ErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED);
-            case 500 -> generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR);
-            case 502 -> generateApiGatewayProxyErrorResponse(
-                    502, ErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY);
-            case 504 -> generateApiGatewayProxyErrorResponse(
-                    504, ErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT);
-            default -> generateApiGatewayProxyErrorResponse(
-                    e.getHttpCode(), ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR);
+            case 429 ->
+                    generateApiGatewayProxyErrorResponse(
+                            429, ErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED);
+            case 500 ->
+                    generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR);
+            case 502 ->
+                    generateApiGatewayProxyErrorResponse(
+                            502, ErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY);
+            case 504 ->
+                    generateApiGatewayProxyErrorResponse(
+                            504, ErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT);
+            default ->
+                    generateApiGatewayProxyErrorResponse(
+                            e.getHttpCode(), ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR);
         };
     }
 

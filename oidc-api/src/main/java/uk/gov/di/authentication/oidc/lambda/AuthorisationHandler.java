@@ -332,10 +332,10 @@ public class AuthorisationHandler
             }
         } catch (ClientRedirectUriValidationException | InvalidResponseModeException e) {
             return generateBadRequestResponse(user, e.getMessage(), client.getClientID());
-        } catch (ClientSignatureValidationException e) {
+        } catch (ClientSignatureValidationException _) {
             return generateApiGatewayProxyResponse(
                     VALIDATION_FAILED.getHTTPStatusCode(), VALIDATION_FAILED.getDescription());
-        } catch (JwksException e) {
+        } catch (JwksException _) {
             return generateApiGatewayProxyResponse(
                     SERVER_ERROR.getHTTPStatusCode(), SERVER_ERROR.getDescription());
         }
@@ -521,7 +521,7 @@ public class AuthorisationHandler
     private static String getRpSid(AuthenticationRequest authRequest) {
         try {
             return getCustomParameterOpt(authRequest, "rp_sid").orElse(AuditService.UNKNOWN);
-        } catch (Exception e) {
+        } catch (Exception _) {
             LOG.error("Failed to retrieve rp_sid. Passing unknown");
             return AuditService.UNKNOWN;
         }
@@ -926,7 +926,7 @@ public class AuthorisationHandler
                     error.getClientID() != null ? error.getClientID().getValue() : null);
         } catch (IncorrectRedirectUriException | ClientNotFoundException e) {
             return generateBadRequestResponse(user, e.getMessage(), error.getClientID().getValue());
-        } catch (InvalidAuthenticationRequestException e) {
+        } catch (InvalidAuthenticationRequestException _) {
             return generateErrorResponse(
                     error.getRedirectionURI(),
                     error.getState(),

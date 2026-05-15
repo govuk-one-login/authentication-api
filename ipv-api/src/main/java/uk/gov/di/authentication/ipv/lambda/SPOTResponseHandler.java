@@ -115,10 +115,10 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                     dynamoIdentityService.deleteIdentityCredentials(logIds.getClientSessionId());
                     return null;
                 }
-            } catch (JsonException e) {
+            } catch (JsonException _) {
                 LOG.error("Unable to deserialize SPOT response from SQS queue");
                 return null;
-            } catch (NoSuchElementException e) {
+            } catch (NoSuchElementException _) {
                 LOG.error("Status is OK but no credential is present in SPOTResponse");
                 return null;
             }

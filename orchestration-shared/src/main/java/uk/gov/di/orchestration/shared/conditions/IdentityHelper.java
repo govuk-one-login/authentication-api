@@ -24,7 +24,7 @@ public class IdentityHelper {
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(authRequestParams);
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             throw new RuntimeException();
         }
         List<String> vtr = authRequest.getCustomParameter("vtr");

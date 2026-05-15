@@ -266,8 +266,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var retrieveMfaMethods = mfaMethodsService.getMfaMethods(resetPasswordRequest.getEmail());
         if (retrieveMfaMethods.isFailure()) {
             return switch (retrieveMfaMethods.getFailure()) {
-                case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
+                case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP ->
+                        generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> {
                     LOG.error("Could not find user profile for reset password request");
                     yield generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
@@ -308,7 +309,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             defaultMfaPhoneNumber != null
                                     ? getLastDigitsOfPhoneNumber(defaultMfaPhoneNumber)
                                     : null));
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
@@ -408,7 +409,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private String serialiseNotifyRequest(Object request) {
         try {
             return objectMapper.writeValueAsString(request);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.error("Unexpected exception when serializing Notify request");
             throw new SerializationException(
                     "Unexpected exception when serializing Notify request");

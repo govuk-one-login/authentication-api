@@ -70,7 +70,7 @@ public class ValidationHelper {
 
         try {
             phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
-        } catch (NumberParseException e) {
+        } catch (NumberParseException _) {
             LOG.warn("Invalid phone number: parsing failure");
             return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         }

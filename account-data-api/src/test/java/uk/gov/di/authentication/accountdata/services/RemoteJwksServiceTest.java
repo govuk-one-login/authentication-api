@@ -10,6 +10,7 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
@@ -71,7 +72,7 @@ class RemoteJwksServiceTest {
 
     private static URL dummyUrl() {
         try {
-            return new URL("https://example.com/.well-known/jwks.json");
+            return URI.create("https://example.com/.well-known/jwks.json").toURL();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

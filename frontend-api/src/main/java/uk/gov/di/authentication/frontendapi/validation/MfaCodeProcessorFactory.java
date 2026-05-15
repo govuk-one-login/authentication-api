@@ -63,17 +63,18 @@ public class MfaCodeProcessorFactory {
                                 accountModifiersService,
                                 mfaMethodsService));
             }
-            case SMS -> Optional.of(
-                    new PhoneNumberCodeProcessor(
-                            codeStorageService,
-                            userContext,
-                            configurationService,
-                            codeRequest,
-                            authenticationService,
-                            auditService,
-                            accountModifiersService,
-                            mfaMethodsService,
-                            testUserHelper));
+            case SMS ->
+                    Optional.of(
+                            new PhoneNumberCodeProcessor(
+                                    codeStorageService,
+                                    userContext,
+                                    configurationService,
+                                    codeRequest,
+                                    authenticationService,
+                                    auditService,
+                                    accountModifiersService,
+                                    mfaMethodsService,
+                                    testUserHelper));
             default -> Optional.empty();
         };
     }

@@ -337,7 +337,7 @@ public class DocAppCallbackHandler
         } catch (NoSessionException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
                     authFrontend.sessionEndedURI(), e);
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));

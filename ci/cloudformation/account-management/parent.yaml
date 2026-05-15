@@ -721,7 +721,7 @@ Globals:
       - UsePermissionsBoundary
       - !Ref PermissionsBoundary
       - !Ref AWS::NoValue
-    Runtime: java17
+    Runtime: java25
     Timeout: 30
 
 Resources:

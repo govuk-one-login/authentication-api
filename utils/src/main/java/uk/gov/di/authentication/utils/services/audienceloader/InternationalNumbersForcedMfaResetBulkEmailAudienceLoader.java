@@ -34,12 +34,14 @@ public class InternationalNumbersForcedMfaResetBulkEmailAudienceLoader
 
         var sourceStream =
                 switch (tableToScan) {
-                    case USER_PROFILE -> dynamoService
-                            .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
-                                    exclusiveStartKey);
-                    case USER_CREDENTIALS -> dynamoService
-                            .getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(
-                                    exclusiveStartKey);
+                    case USER_PROFILE ->
+                            dynamoService
+                                    .getBulkUserEmailAudienceUserProfileStreamOnInternationalNumber(
+                                            exclusiveStartKey);
+                    case USER_CREDENTIALS ->
+                            dynamoService
+                                    .getBulkUserEmailAudienceUserCredentialsStreamOnInternationalNumber(
+                                            exclusiveStartKey);
                 };
 
         return sourceStream.map(BulkUserEmailAudienceUser::from);

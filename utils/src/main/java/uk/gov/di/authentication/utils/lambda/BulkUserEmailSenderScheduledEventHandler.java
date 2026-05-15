@@ -121,25 +121,28 @@ public class BulkUserEmailSenderScheduledEventHandler
             MFAMethodsService maybeMfaMethodsService) {
         String senderType = configurationService.getBulkUserEmailSenderType();
         return switch (senderType) {
-            case "TERMS_AND_CONDITIONS" -> new TermsAndConditionsBulkEmailSender(
-                    bulkEmailUsersService,
-                    cloudwatchMetricsService,
-                    configurationService,
-                    notificationService,
-                    auditService,
-                    dynamoService);
-            case "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET" -> new InternationalNumbersForcedMfaResetBulkEmailSender(
-                    bulkEmailUsersService,
-                    cloudwatchMetricsService,
-                    configurationService,
-                    notificationService,
-                    auditService,
-                    dynamoService,
-                    maybeMfaMethodsService != null
-                            ? maybeMfaMethodsService
-                            : new MFAMethodsService(configurationService));
-            default -> throw new IllegalArgumentException(
-                    "Unknown bulk email sender type: " + senderType);
+            case "TERMS_AND_CONDITIONS" ->
+                    new TermsAndConditionsBulkEmailSender(
+                            bulkEmailUsersService,
+                            cloudwatchMetricsService,
+                            configurationService,
+                            notificationService,
+                            auditService,
+                            dynamoService);
+            case "INTERNATIONAL_NUMBERS_FORCED_MFA_RESET" ->
+                    new InternationalNumbersForcedMfaResetBulkEmailSender(
+                            bulkEmailUsersService,
+                            cloudwatchMetricsService,
+                            configurationService,
+                            notificationService,
+                            auditService,
+                            dynamoService,
+                            maybeMfaMethodsService != null
+                                    ? maybeMfaMethodsService
+                                    : new MFAMethodsService(configurationService));
+            default ->
+                    throw new IllegalArgumentException(
+                            "Unknown bulk email sender type: " + senderType);
         };
     }
 
@@ -191,37 +194,38 @@ public class BulkUserEmailSenderScheduledEventHandler
                     allUserSubjectIds.size());
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(PARALLELISM);
-        TaskCounters counters = new TaskCounters();
-        long startTime = System.currentTimeMillis();
-        int taskTimeoutSeconds = configurationService.getBulkUserEmailTaskTimeoutSeconds();
-        int stopNewRequestsAfterSeconds =
-                configurationService.getBulkUserEmailStopNewRequestsAfterSeconds();
+        try (ExecutorService executor = Executors.newFixedThreadPool(PARALLELISM)) {
+            TaskCounters counters = new TaskCounters();
+            long startTime = System.currentTimeMillis();
+            int taskTimeoutSeconds = configurationService.getBulkUserEmailTaskTimeoutSeconds();
+            int stopNewRequestsAfterSeconds =
+                    configurationService.getBulkUserEmailStopNewRequestsAfterSeconds();
 
-        List<CompletableFuture<Void>> futures =
-                allUserSubjectIds.stream()
-                        .map(
-                                subjectId ->
-                                        createEmailTask(
-                                                subjectId,
-                                                bulkEmailUserSendMode,
-                                                executor,
-                                                taskTimeoutSeconds,
-                                                startTime,
-                                                stopNewRequestsAfterSeconds,
-                                                counters))
-                        .toList();
+            List<CompletableFuture<Void>> futures =
+                    allUserSubjectIds.stream()
+                            .map(
+                                    subjectId ->
+                                            createEmailTask(
+                                                    subjectId,
+                                                    bulkEmailUserSendMode,
+                                                    executor,
+                                                    taskTimeoutSeconds,
+                                                    startTime,
+                                                    stopNewRequestsAfterSeconds,
+                                                    counters))
+                            .toList();
 
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        executor.shutdownNow();
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            executor.shutdownNow();
 
-        LOG.info(
-                "Bulk user email: completed. Total users: {}, Processed: {}, Skipped: {}, Unhandled exceptions: {}, Timed out: {}",
-                allUserSubjectIds.size(),
-                counters.processed().get(),
-                counters.skipped().get(),
-                counters.exceptions().get(),
-                counters.timedOut().get());
+            LOG.info(
+                    "Bulk user email: completed. Total users: {}, Processed: {}, Skipped: {}, Unhandled exceptions: {}, Timed out: {}",
+                    allUserSubjectIds.size(),
+                    counters.processed().get(),
+                    counters.skipped().get(),
+                    counters.exceptions().get(),
+                    counters.timedOut().get());
+        }
         return null;
     }
 
@@ -230,12 +234,14 @@ public class BulkUserEmailSenderScheduledEventHandler
             Integer limit,
             Map<String, AttributeValue> exclusiveStartKey) {
         return switch (sendMode) {
-            case PENDING -> bulkEmailUsersService.getNSubjectIdsByStatus(
-                    limit, BulkEmailStatus.PENDING, exclusiveStartKey);
-            case NOTIFY_ERROR_RETRIES -> bulkEmailUsersService.getNSubjectIdsByStatus(
-                    limit, BulkEmailStatus.ERROR_SENDING_EMAIL, exclusiveStartKey);
-            case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES -> bulkEmailUsersService
-                    .getNSubjectIdsByDeliveryReceiptStatus(
+            case PENDING ->
+                    bulkEmailUsersService.getNSubjectIdsByStatus(
+                            limit, BulkEmailStatus.PENDING, exclusiveStartKey);
+            case NOTIFY_ERROR_RETRIES ->
+                    bulkEmailUsersService.getNSubjectIdsByStatus(
+                            limit, BulkEmailStatus.ERROR_SENDING_EMAIL, exclusiveStartKey);
+            case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES ->
+                    bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
                             limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE, exclusiveStartKey);
             default -> throw new UnrecognisedSendModeException(sendMode.getValue());
         };
@@ -284,7 +290,7 @@ public class BulkUserEmailSenderScheduledEventHandler
     BulkEmailUserSendMode readBulkEmailUserSendModeConfiguration(String bulkEmailUserSendMode) {
         try {
             return BulkEmailUserSendMode.valueOf(bulkEmailUserSendMode);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             throw new UnrecognisedSendModeException(bulkEmailUserSendMode);
         }
     }

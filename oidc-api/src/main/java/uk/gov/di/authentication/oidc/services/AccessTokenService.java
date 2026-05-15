@@ -53,7 +53,7 @@ public class AccessTokenService {
         AccessToken accessToken;
         try {
             accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
-        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+        } catch (com.nimbusds.oauth2.sdk.ParseException _) {
             throw new AccessTokenException(
                     "Unable to parse AccessToken", BearerTokenError.INVALID_TOKEN);
         }
@@ -107,10 +107,10 @@ public class AccessTokenService {
                 LOG.info("Identity is enabled AND client supports identity verification");
                 identityClaims = getIdentityClaims(claimsSet);
             }
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             throw new AccessTokenException(
                     "Unable to parse AccessToken to SignedJWT", BearerTokenError.INVALID_TOKEN);
-        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+        } catch (com.nimbusds.oauth2.sdk.ParseException _) {
             throw new AccessTokenException(
                     "Unable to parse ClaimSet in AccessToken", BearerTokenError.INVALID_TOKEN);
         }

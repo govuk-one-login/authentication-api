@@ -14,7 +14,7 @@ public class InputSanitiser {
         try {
             Base64.getUrlDecoder().decode(input);
 
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             LOG.warn("Unsafe base64 input");
             return Optional.empty();
         }

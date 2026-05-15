@@ -99,7 +99,7 @@ public class AccessTokenStoreService extends BaseDynamoService<AccessTokenStore>
             throws AccessTokenException {
         try {
             return AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
-        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+        } catch (com.nimbusds.oauth2.sdk.ParseException _) {
             LOG.warn("Unable to extract (opaque) bearer token");
             throw new AccessTokenException(
                     "Unable to extract (opaque) bearer token", BearerTokenError.INVALID_TOKEN);

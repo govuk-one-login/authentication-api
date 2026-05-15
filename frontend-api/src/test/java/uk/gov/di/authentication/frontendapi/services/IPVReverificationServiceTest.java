@@ -54,7 +54,6 @@ import uk.gov.di.authentication.sharedtest.helper.TestClockHelper;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
@@ -165,7 +164,8 @@ class IPVReverificationServiceTest {
             throws JOSEException, ParseException, MalformedURLException, NoSuchAlgorithmException {
         when(configurationService.isIpvJwksCallEnabled()).thenReturn(isIpvJwksCallEnabled);
         if (isIpvJwksCallEnabled) {
-            when(configurationService.getIpvJwksUrl()).thenReturn(new URL(TEST_IPV_JWKS_URL));
+            when(configurationService.getIpvJwksUrl())
+                    .thenReturn(URI.create(TEST_IPV_JWKS_URL).toURL());
 
             when(jwkSource.get(Mockito.any(JWKSelector.class), Mockito.isNull()))
                     .thenReturn(
@@ -222,7 +222,8 @@ class IPVReverificationServiceTest {
     void shouldFallbackToEnvironmentVariablesWhenJWKSCallFails()
             throws JOSEException, MalformedURLException {
         when(configurationService.isIpvJwksCallEnabled()).thenReturn(true);
-        when(configurationService.getIpvJwksUrl()).thenReturn(new URL(TEST_IPV_JWKS_URL));
+        when(configurationService.getIpvJwksUrl())
+                .thenReturn(URI.create(TEST_IPV_JWKS_URL).toURL());
         when(jwkSource.get(Mockito.any(JWKSelector.class), Mockito.isNull()))
                 .thenReturn(Collections.emptyList());
 

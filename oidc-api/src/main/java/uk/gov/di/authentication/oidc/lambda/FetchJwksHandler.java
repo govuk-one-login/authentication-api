@@ -11,7 +11,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
@@ -49,7 +49,7 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Str
                 throw new IllegalArgumentException(
                         "FetchJwksHandler invoked with invalid argument(s)");
             }
-            JWK jwk = jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId);
+            JWK jwk = jwksService.retrieveJwkFromURLWithKeyId(URI.create(url).toURL(), keyId);
             return jwk.toJSONString();
         } catch (KeySourceException e) {
             String errorMsg =

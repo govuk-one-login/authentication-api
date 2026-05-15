@@ -64,7 +64,7 @@ public class KmsConnectionService {
         GetPublicKeyRequest request = GetPublicKeyRequest.builder().keyId(keyId).build();
         try {
             kmsClient.getPublicKey(request);
-        } catch (Exception e) {
+        } catch (Exception _) {
             LOG.info("Unable to retrieve Public Key whilst warming up");
         }
     }

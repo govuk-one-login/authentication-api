@@ -418,7 +418,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                             .name(format("{0}-ipv-capacity", getEnvironment()))
                             .build();
             return Optional.of(getSsmClient().getParameter(request).parameter().value());
-        } catch (ParameterNotFoundException e) {
+        } catch (ParameterNotFoundException _) {
             return Optional.empty();
         }
     }

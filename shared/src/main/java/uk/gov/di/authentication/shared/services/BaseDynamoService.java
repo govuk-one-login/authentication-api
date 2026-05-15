@@ -61,7 +61,7 @@ public class BaseDynamoService<T> {
                                                     .putExpressionName("#key", key)
                                                     .build()));
             return true;
-        } catch (ConditionalCheckFailedException e) {
+        } catch (ConditionalCheckFailedException _) {
             return false;
         }
     }

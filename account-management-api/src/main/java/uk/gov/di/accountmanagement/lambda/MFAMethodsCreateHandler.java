@@ -367,14 +367,16 @@ public class MFAMethodsCreateHandler
     private static APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(
             MfaCreateFailureReason failureReason) {
         return switch (failureReason) {
-            case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.MFA_METHOD_COUNT_LIMIT_REACHED);
-            case PHONE_NUMBER_ALREADY_EXISTS -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.SMS_MFA_WITH_NUMBER_EXISTS);
-            case AUTH_APP_EXISTS -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.AUTH_APP_EXISTS);
-            case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.INVALID_PHONE_NUMBER);
+            case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST ->
+                    generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.MFA_METHOD_COUNT_LIMIT_REACHED);
+            case PHONE_NUMBER_ALREADY_EXISTS ->
+                    generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.SMS_MFA_WITH_NUMBER_EXISTS);
+            case AUTH_APP_EXISTS ->
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.AUTH_APP_EXISTS);
+            case INVALID_PHONE_NUMBER ->
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.INVALID_PHONE_NUMBER);
         };
     }
 

@@ -36,7 +36,7 @@ public class LambdaInvokerService implements LambdaInvoker {
 
         try {
             payload = SdkBytes.fromUtf8String(jsonPayload);
-        } catch (Exception e) {
+        } catch (Exception _) {
             LOG.error(
                     "Could not convert payload for {} into SdkBytes: {}", lambdaName, jsonPayload);
             return;

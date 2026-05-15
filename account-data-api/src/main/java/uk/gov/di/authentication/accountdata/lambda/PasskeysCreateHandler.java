@@ -70,18 +70,24 @@ public class PasskeysCreateHandler
                 .fold(
                         failure ->
                                 switch (failure) {
-                                    case INVALID_REQUEST_BODY -> generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.INVALID_REQUEST_BODY);
-                                    case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.MISSING_SUBJECT_ID);
-                                    case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
-                                            401, ErrorResponse.UNAUTHORIZED_REQUEST);
-                                    case PASSKEY_EXISTS -> generateApiGatewayProxyErrorResponse(
-                                            409, ErrorResponse.PASSKEY_ALREADY_EXISTS);
-                                    case INVALID_AAGUID -> generateApiGatewayProxyErrorResponse(
-                                            422, ErrorResponse.INVALID_AAGUID);
-                                    case FAILED_TO_SAVE_PASSKEY -> generateApiGatewayProxyErrorResponse(
-                                            500, ErrorResponse.INTERNAL_SERVER_ERROR);
+                                    case INVALID_REQUEST_BODY ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    400, ErrorResponse.INVALID_REQUEST_BODY);
+                                    case MISSING_SUBJECT_ID ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    400, ErrorResponse.MISSING_SUBJECT_ID);
+                                    case UNAUTHORIZED_REQUEST ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    401, ErrorResponse.UNAUTHORIZED_REQUEST);
+                                    case PASSKEY_EXISTS ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    409, ErrorResponse.PASSKEY_ALREADY_EXISTS);
+                                    case INVALID_AAGUID ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    422, ErrorResponse.INVALID_AAGUID);
+                                    case FAILED_TO_SAVE_PASSKEY ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    500, ErrorResponse.INTERNAL_SERVER_ERROR);
                                 },
                         passkeyCreateResult ->
                                 generateApiGatewayProxyResponse(
@@ -94,7 +100,7 @@ public class PasskeysCreateHandler
         try {
             passkeysCreateRequest =
                     objectMapper.readValue(input.getBody(), PasskeysCreateRequest.class, true);
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             return Result.failure(INVALID_REQUEST_BODY);
         }
 

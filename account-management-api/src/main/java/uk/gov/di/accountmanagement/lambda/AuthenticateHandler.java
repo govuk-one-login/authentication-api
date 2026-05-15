@@ -151,7 +151,7 @@ public class AuthenticateHandler
                         return generateApiGatewayProxyErrorResponse(
                                 403, ErrorResponse.ACCT_BLOCKED);
                     }
-                } catch (UnsuccessfulAccountInterventionsResponseException e) {
+                } catch (UnsuccessfulAccountInterventionsResponseException _) {
                     auditService.submitAuditEvent(
                             AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
                             auditContext,
@@ -169,7 +169,7 @@ public class AuthenticateHandler
                     AUDIT_EVENT_COMPONENT_ID_AUTH);
 
             return generateEmptySuccessApiGatewayResponse();
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             auditService.submitAuditEvent(
                     AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
                     auditContext,

@@ -33,7 +33,7 @@ module "ticf_cri_lambda" {
     TICF_CRI_SERVICE_URI          = var.ticf_cri_service_uri
   })
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.TicfCriHandler::handleRequest"
-  handler_runtime       = "java17"
+  handler_runtime       = "java25"
 
   memory_size                 = local.ticf_cri_performance_parameters.memory
   provisioned_concurrency     = local.ticf_cri_performance_parameters.concurrency

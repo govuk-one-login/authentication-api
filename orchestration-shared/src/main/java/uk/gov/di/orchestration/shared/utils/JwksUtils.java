@@ -63,7 +63,7 @@ public class JwksUtils {
     public static JWK getKey(URL jwksUrl, KeyUse keyUse) {
         try {
             return getKey(retrieveJwksFromUrl(jwksUrl), keyUse);
-        } catch (KeySourceException e) {
+        } catch (KeySourceException _) {
             throw new RuntimeException("Failed to source keys");
         }
     }

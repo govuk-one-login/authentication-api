@@ -12,7 +12,7 @@ import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksCacheExtension;
 
-import java.net.URL;
+import java.net.URI;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 
@@ -45,7 +45,7 @@ public class JwksCacheServiceIntegrationTest {
     void shouldGenerateFirstKeyIfNoSigningKeys() {
         try (MockedStatic<JwksUtils> mockedJwksUtilsClass = Mockito.mockStatic(JwksUtils.class)) {
             mockedJwksUtilsClass
-                    .when(() -> JwksUtils.getKey(new URL(JWKS_URL), KeyUse.ENCRYPTION))
+                    .when(() -> JwksUtils.getKey(URI.create(JWKS_URL).toURL(), KeyUse.ENCRYPTION))
                     .thenReturn(createPublicJwk("test-enc-key"));
 
             var encKey = jwksCacheExtension.getOrGenerateJwksCacheItem();

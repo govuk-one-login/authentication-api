@@ -44,10 +44,12 @@ test {
     exclude 'uk/gov/di/authentication/app/contract/**'
 }
 
-var pactDir = "$buildDir/pacts"
+var pactDir = layout.buildDirectory.dir("pacts").get().asFile.path
 
 task pactConsumerTests (type: Test, group: "verification") {
     useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
     include 'uk/gov/di/authentication/app/contract/**'
     systemProperties['pact.rootDir'] = pactDir
     outputs.dir pactDir
@@ -82,8 +84,6 @@ task buildZip(type: Zip) {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
 }
 
 jacocoTestReport {

@@ -383,7 +383,7 @@ public class SendOtpNotificationHandler
 
         try {
             emailSqsClient.send(serialiseRequest(notifyRequest));
-        } catch (SdkClientException e) {
+        } catch (SdkClientException _) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         }

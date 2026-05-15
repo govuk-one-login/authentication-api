@@ -153,7 +153,7 @@ public class IPVTokenService {
             } else {
                 return userIdentityResponse.toSuccessResponse().getUserInfo();
             }
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             LOG.error("Error when attempting to parse HTTPResponse to UserInfoResponse");
             throw new UnsuccessfulCredentialResponseException(
                     "Error when attempting to parse http response to UserInfoResponse");
