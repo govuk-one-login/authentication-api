@@ -377,6 +377,27 @@ class AuthorizeHandlerTest {
         }
 
         @Test
+        void authorizeHandlerShouldRejectTokenNotYetValid() throws JOSEException {
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
+
+            var futureNbf = Date.from(Instant.now().plus(1, ChronoUnit.DAYS));
+            var claimsBuilder =
+                    claimsSetBuilder(SUBJECT, expiryDateFiveMinutesFromNow)
+                            .notBeforeTime(futureNbf);
+            var signedToken = createBearerAccessToken(ecSigningKey, claimsBuilder);
+
+            event.setAuthorizationToken(signedToken.toAuthorizationHeader());
+
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
+
+            assertEquals("Unauthorized", exception.getMessage());
+        }
+
+        @Test
         void authorizeHandlerFailsToInitialiseWhenAccountDataJwksUrlMalformed()
                 throws MalformedURLException {
             var malformedConfig = mock(ConfigurationService.class);

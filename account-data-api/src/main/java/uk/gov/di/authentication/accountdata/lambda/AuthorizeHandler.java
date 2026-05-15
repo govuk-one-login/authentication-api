@@ -154,6 +154,11 @@ public class AuthorizeHandler
             LOG.warn("Access Token audience is invalid");
             return Result.failure(new UnauthorizedException());
         }
+        if (claimsSet.getNotBeforeTime() != null
+                && DateUtils.isAfter(claimsSet.getNotBeforeTime(), NowHelper.now(), 0)) {
+            LOG.warn("Access Token is not yet valid (nbf: {})", claimsSet.getNotBeforeTime());
+            return Result.failure(new UnauthorizedException());
+        }
         return Result.success(claimsSet);
     }
 
