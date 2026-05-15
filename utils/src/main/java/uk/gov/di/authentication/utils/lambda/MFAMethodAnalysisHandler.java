@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.utils.entity.MFAMethodAnalysisRequest;
@@ -30,7 +31,6 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static java.text.MessageFormat.format;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
 public class MFAMethodAnalysisHandler
@@ -52,8 +52,9 @@ public class MFAMethodAnalysisHandler
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         userCredentialsTableName =
-                format("{0}-user-credentials", configurationService.getEnvironment());
-        userProfileTableName = format("{0}-user-profile", configurationService.getEnvironment());
+                TableNameHelper.getFullTableName("user-credentials", configurationService);
+        userProfileTableName =
+                TableNameHelper.getFullTableName("user-profile", configurationService);
     }
 
     public MFAMethodAnalysisHandler() {
