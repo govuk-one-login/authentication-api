@@ -17,6 +17,7 @@ public class TokenGeneratorHelper {
         return new JWTClaimsSet.Builder()
                 .claim("scope", "passkey-retrieve")
                 .issuer("https://example.com")
+                .audience("https://account-data.example.com")
                 .expirationTime(expiryDate)
                 .issueTime(NowHelper.now())
                 .claim("client_id", "some-client-id")

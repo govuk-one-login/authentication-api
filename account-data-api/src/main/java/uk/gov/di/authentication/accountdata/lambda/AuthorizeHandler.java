@@ -149,6 +149,11 @@ public class AuthorizeHandler
             LOG.warn("Access Token issuer is invalid");
             return Result.failure(new UnauthorizedException());
         }
+        var expectedAudience = configurationService.getAuthToAccountDataApiAudience();
+        if (!claimsSet.getAudience().contains(expectedAudience)) {
+            LOG.warn("Access Token audience is invalid");
+            return Result.failure(new UnauthorizedException());
+        }
         return Result.success(claimsSet);
     }
 

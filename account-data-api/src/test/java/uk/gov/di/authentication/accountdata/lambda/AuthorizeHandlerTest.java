@@ -62,6 +62,7 @@ class AuthorizeHandlerTest {
             "arn:aws:execute-api:eu-west-2:123456789:abc123/dev/DELETE/accounts";
     private static final String SUBJECT = "some-subject";
     private static final String ISSUER = "https://example.com";
+    private static final String AUDIENCE = "https://account-data.example.com";
 
     private static ECKey ecSigningKey;
     private APIGatewayCustomAuthorizerEvent event;
@@ -78,6 +79,7 @@ class AuthorizeHandlerTest {
         when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
                 .thenReturn(Result.success(ecSigningKey.toPublicJWK()));
         when(configurationService.getAuthIssuerClaim()).thenReturn(ISSUER);
+        when(configurationService.getAuthToAccountDataApiAudience()).thenReturn(AUDIENCE);
     }
 
     @AfterEach
@@ -336,6 +338,27 @@ class AuthorizeHandlerTest {
         void authorizeHandlerShouldRejectInvalidIssuer() throws JOSEException {
             when(configurationService.getAuthIssuerClaim())
                     .thenReturn("https://expected-issuer.com");
+
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
+
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
+
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+
+            RuntimeException exception =
+                    assertThrows(
+                            UnauthorizedException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
+
+            assertEquals("Unauthorized", exception.getMessage());
+        }
+
+        @Test
+        void authorizeHandlerShouldRejectInvalidAudience() throws JOSEException {
+            when(configurationService.getAuthToAccountDataApiAudience())
+                    .thenReturn("https://wrong-audience.com");
 
             var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
