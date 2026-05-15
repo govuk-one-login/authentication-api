@@ -1,7 +1,7 @@
 [versions]
 awsSdk = "2.44.4"
 junit = "6.0.3"
-pact = "4.6.20"
+pact = "4.7.1"
 spotbugs = "4.9.8"
 xray = "2.21.0"
 
@@ -16,7 +16,7 @@ apacheCommonsPool = "org.apache.commons:commons-pool2:2.13.1"
 apacheCommonsValidator = "commons-validator:commons-validator:1.10.1"
 apacheHttpClient = "org.apache.httpcomponents:httpclient:4.5.14"
 apacheHttpComponents = "org.apache.httpcomponents.core5:httpcore5:5.4.2"
-approvalTests = "com.approvaltests:approvaltests:29.0.0"
+approvalTests = "com.approvaltests:approvaltests:30.1.0"
 awaitility = "org.awaitility:awaitility:4.3.0"
 awsCloudwatchEmf = "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
 awsCloudwatch = { module = "software.amazon.awssdk:cloudwatch", version.ref = "awsSdk" }
@@ -45,7 +45,7 @@ jetbrainsKotlin = "org.jetbrains.kotlin:kotlin-stdlib:2.3.21"
 jettyServer = "org.eclipse.jetty:jetty-server:12.0.32"
 jgit = "org.eclipse.jgit:org.eclipse.jgit:7.6.0.202603022253-r"
 jsonAssertJ = "net.javacrumbs.json-unit:json-unit-assertj:5.1.1"
-junitPlatform = "org.junit.platform:junit-platform-launcher:1.13.4"
+junitPlatform = "org.junit.platform:junit-platform-launcher:6.0.3"
 jupiterApi = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 jupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 jupiterParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
