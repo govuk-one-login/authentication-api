@@ -6016,6 +6016,7 @@ Resources:
       StageKeys:
         - RestApiId: !Ref OrchestrationOidcApi
           StageName: !Sub "${Environment}"
+      Value: !Sub "{{resolve:secretsmanager:/deploy/${Environment}/client-registry-api-key}}"
 
   OrchestrationOidcApiWafAssociation:
     Type: "AWS::WAFv2::WebACLAssociation"
