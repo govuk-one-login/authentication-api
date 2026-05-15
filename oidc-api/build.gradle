@@ -51,7 +51,7 @@ test {
     exclude 'uk/gov/di/authentication/oidc/contract/**'
 }
 
-var pactDir = "$buildDir/pacts"
+var pactDir = layout.buildDirectory.dir("pacts").get().asFile.path
 
 task pactConsumerTests (type: Test, group: "verification") {
     useJUnitPlatform()

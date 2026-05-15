@@ -247,7 +247,7 @@ dockerCompose {
         'dynamodb',
         'redis'
     ]
-    def logDir = new File(project.buildDir, "logs")
+    def logDir = layout.buildDirectory.dir("logs").get().asFile
     if (!logDir.exists()) {
         println("creating logs folder...")
         logDir.mkdir()
@@ -282,7 +282,7 @@ abstract class Terraform extends DefaultTask {
     @TaskAction
     void apply() {
         def tfEnvironment = [
-            "TF_DATA_DIR": "${project.buildDir}/terraform/${environmentName.get()}-${terraformDirectory.get().asFile.name}",
+            "TF_DATA_DIR": "${project.layout.buildDirectory.get().asFile}/terraform/${environmentName.get()}-${terraformDirectory.get().asFile.name}",
             "TF_IN_AUTOMATION": "1"
         ] + environmentVars.get()
 
@@ -396,7 +396,7 @@ sonar {
         property "sonar.organization", "govuk-one-login"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.coverage.exclusions", "**/shared-test/**,**/orchestration-shared-test/**,**/orchestration-shared-test/**"
-        property "sonar.coverage.jacoco.xmlReportPaths", "$project.buildDir/$jacocoBuildReportPath"
+        property "sonar.coverage.jacoco.xmlReportPaths", "${layout.buildDirectory.get().asFile}/$jacocoBuildReportPath"
     }
 }
 
