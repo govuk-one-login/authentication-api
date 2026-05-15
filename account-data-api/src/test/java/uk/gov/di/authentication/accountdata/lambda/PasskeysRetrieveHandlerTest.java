@@ -32,7 +32,7 @@ class PasskeysRetrieveHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeysService passkeysService = mock(PasskeysService.class);
     private static final Map<String, Object> AUTHORIZER_PARAMS =
-            Map.of("principalId", PUBLIC_SUBJECT_ID);
+            Map.of("principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-retrieve");
 
     private PasskeysRetrieveHandler handler;
 
@@ -93,7 +93,29 @@ class PasskeysRetrieveHandlerTest {
             // Given
             var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
             var authorizerParams =
-                    Map.<String, Object>of("principalId", "a-different-public-subject-id");
+                    Map.<String, Object>of(
+                            "principalId",
+                            "a-different-public-subject-id",
+                            "scope",
+                            "passkey-retrieve");
+
+            // When
+            var result =
+                    handler.handleRequest(
+                            passkeysRetrieveRequest(pathParams, authorizerParams), context);
+
+            // Then
+            assertThat(result, hasStatus(401));
+            assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+        }
+
+        @Test
+        void shouldReturn401WhenScopeDoesNotMatchEndpoint() {
+            // Given
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+            var authorizerParams =
+                    Map.<String, Object>of(
+                            "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-create");
 
             // When
             var result =

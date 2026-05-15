@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -26,6 +27,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 public class AuthorizeHandler
         implements RequestHandler<APIGatewayCustomAuthorizerEvent, IamPolicyResponseV1> {
@@ -63,14 +65,20 @@ public class AuthorizeHandler
                             .flatMap(success -> verifySignature(signedAccessToken))
                             .flatMap(success -> validateClaimsSet(claimsSet));
 
-            if (validatedClaimsResult.isFailure()) {
-                throw validatedClaimsResult.getFailure();
+            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
+
+            var result =
+                    validatedClaimsResult
+                            .flatMap(this::validateScope)
+                            .map(JWTClaimsSet::getSubject);
+
+            if (result.isFailure()) {
+                throw result.getFailure();
             }
 
-            var subject = validatedClaimsResult.getSuccess().getSubject();
-            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
+            var scope = (String) claimsSet.getClaim("scope");
             LOG.info("Request validated, returning access policy");
-            return getAllowExecuteApiPolicyForSubject(subject, methodArn);
+            return getAllowExecuteApiPolicyForSubject(result.getSuccess(), methodArn, scope);
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token {}", e.getMessage());
             throw new UnauthorizedException();
@@ -132,7 +140,7 @@ public class AuthorizeHandler
     }
 
     private IamPolicyResponseV1 getAllowExecuteApiPolicyForSubject(
-            String subject, String methodArn) {
+            String subject, String methodArn, String scope) {
         var statement = IamPolicyResponseV1.allowStatement(methodArn);
 
         var policyDocument =
@@ -144,6 +152,19 @@ public class AuthorizeHandler
         return IamPolicyResponseV1.builder()
                 .withPolicyDocument(policyDocument)
                 .withPrincipalId(subject)
+                .withContext(Map.of("scope", scope))
                 .build();
+    }
+
+    private Result<UnauthorizedException, JWTClaimsSet> validateScope(JWTClaimsSet claimsSet) {
+        var scopeValue = (String) claimsSet.getClaim("scope");
+        var scope = AccountDataScope.fromValue(scopeValue);
+
+        if (scope.isEmpty()) {
+            LOG.warn("Invalid or missing scope: {}", scopeValue);
+            return Result.failure(new UnauthorizedException());
+        }
+
+        return Result.success(claimsSet);
     }
 }

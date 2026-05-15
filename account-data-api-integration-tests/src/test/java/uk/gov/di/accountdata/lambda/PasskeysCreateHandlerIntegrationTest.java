@@ -34,7 +34,7 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     private final ConfigurationService configurationService = ConfigurationService.getInstance();
     DynamoPasskeyService dynamoPasskeyService = new DynamoPasskeyService(configurationService);
     private static final Map<String, Object> AUTHORIZER_PARAMS =
-            Map.of("principalId", PUBLIC_SUBJECT_ID);
+            Map.of("principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-create");
 
     @RegisterExtension
     protected static final AuthenticatorExtension authenticatorExtension =

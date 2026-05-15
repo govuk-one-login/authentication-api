@@ -11,6 +11,7 @@ import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -19,6 +20,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.List;
 
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons.UNAUTHORIZED_REQUEST;
+import static uk.gov.di.authentication.accountdata.helpers.ScopeAuthorizerHelper.isScopeAuthorized;
 import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -64,6 +66,7 @@ public class PasskeysRetrieveHandler
                 .flatMap(
                         publicSubjectIdFromPath ->
                                 validateAuthorizedSubjectId(publicSubjectIdFromPath, input))
+                .flatMap(publicSubjectId -> validateScope(publicSubjectId, input))
                 .flatMap(passkeysService::retrievePasskeys)
                 .flatMap(this::mapPasskeysListToResponse)
                 .flatMap(this::generateApiResponse)
@@ -98,6 +101,15 @@ public class PasskeysRetrieveHandler
             return Result.success(publicSubjectId);
         } else {
             LOG.warn("SubjectId in path parameter does not match Authorizer principalId");
+            return Result.failure(UNAUTHORIZED_REQUEST);
+        }
+    }
+
+    private Result<PasskeysRetrieveFailureReasons, String> validateScope(
+            String publicSubjectId, APIGatewayProxyRequestEvent input) {
+        if (isScopeAuthorized(AccountDataScope.PASSKEY_RETRIEVE, input.getRequestContext())) {
+            return Result.success(publicSubjectId);
+        } else {
             return Result.failure(UNAUTHORIZED_REQUEST);
         }
     }

@@ -9,12 +9,14 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Objects;
 
+import static uk.gov.di.authentication.accountdata.helpers.ScopeAuthorizerHelper.isScopeAuthorized;
 import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -77,6 +79,10 @@ public class PasskeysDeleteHandler
 
         if (!isSubjectIdAuthorized(
                 input.getPathParameters().get("publicSubjectId"), input.getRequestContext())) {
+            return Result.failure(PasskeysDeleteFailureReason.UNAUTHORIZED_REQUEST);
+        }
+
+        if (!isScopeAuthorized(AccountDataScope.PASSKEY_DELETE, input.getRequestContext())) {
             return Result.failure(PasskeysDeleteFailureReason.UNAUTHORIZED_REQUEST);
         }
 

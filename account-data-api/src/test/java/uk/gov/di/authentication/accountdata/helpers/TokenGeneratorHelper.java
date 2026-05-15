@@ -10,13 +10,12 @@ import com.nimbusds.jwt.SignedJWT;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 public class TokenGeneratorHelper {
     public static JWTClaimsSet.Builder claimsSetBuilderWithoutSubject(Date expiryDate) {
         return new JWTClaimsSet.Builder()
-                .claim("scope", List.of("some-scopes"))
+                .claim("scope", "passkey-retrieve")
                 .issuer("https://example.com")
                 .expirationTime(expiryDate)
                 .issueTime(NowHelper.now())
