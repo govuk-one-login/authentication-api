@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -63,14 +64,20 @@ public class AuthorizeHandler
                             .flatMap(success -> verifySignature(signedAccessToken))
                             .flatMap(success -> validateClaimsSet(claimsSet));
 
-            if (validatedClaimsResult.isFailure()) {
-                throw validatedClaimsResult.getFailure();
+            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
+            var httpMethod = extractHttpMethod(methodArn);
+
+            var result =
+                    validatedClaimsResult
+                            .flatMap(claims -> validateScope(claims, httpMethod))
+                            .map(JWTClaimsSet::getSubject);
+
+            if (result.isFailure()) {
+                throw result.getFailure();
             }
 
-            var subject = validatedClaimsResult.getSuccess().getSubject();
-            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
             LOG.info("Request validated, returning access policy");
-            return getAllowExecuteApiPolicyForSubject(subject, methodArn);
+            return getAllowExecuteApiPolicyForSubject(result.getSuccess(), methodArn);
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token {}", e.getMessage());
             throw new UnauthorizedException();
@@ -145,5 +152,40 @@ public class AuthorizeHandler
                 .withPolicyDocument(policyDocument)
                 .withPrincipalId(subject)
                 .build();
+    }
+
+    private String extractHttpMethod(String methodArn) {
+        String[] parts = methodArn.split("/");
+        if (parts.length < 3) {
+            throw new UnauthorizedException();
+        }
+        return parts[2];
+    }
+
+    private Result<UnauthorizedException, JWTClaimsSet> validateScope(
+            JWTClaimsSet claimsSet, String httpMethod) {
+        var scopeValue = (String) claimsSet.getClaim("scope");
+        var scope = AccountDataScope.fromValue(scopeValue);
+
+        if (scope.isEmpty()) {
+            LOG.warn("Invalid or missing scope: {}", scopeValue);
+            return Result.failure(new UnauthorizedException());
+        }
+
+        boolean allowed =
+                (scope.get() == AccountDataScope.PASSKEY_RETRIEVE && "GET".equals(httpMethod))
+                        || (scope.get() == AccountDataScope.PASSKEY_CREATE
+                                && "POST".equals(httpMethod))
+                        || (scope.get() == AccountDataScope.PASSKEY_UPDATE
+                                && "PATCH".equals(httpMethod))
+                        || (scope.get() == AccountDataScope.PASSKEY_DELETE
+                                && "DELETE".equals(httpMethod));
+
+        if (!allowed) {
+            LOG.warn("Scope {} not permitted for method {}", scopeValue, httpMethod);
+            return Result.failure(new UnauthorizedException());
+        }
+
+        return Result.success(claimsSet);
     }
 }

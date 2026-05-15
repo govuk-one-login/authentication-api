@@ -20,9 +20,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -30,6 +34,7 @@ import java.net.MalformedURLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,8 +51,14 @@ class AuthorizeHandlerTest {
     private final RemoteJwksService remoteJwksService = mock(RemoteJwksService.class);
     private static final Date expiryDateFiveMinutesFromNow =
             Date.from(Instant.now().plus(5, ChronoUnit.MINUTES));
-    private static final String METHOD_ARN =
+    private static final String GET_METHOD_ARN =
             "arn:aws:execute-api:eu-west-2:123456789:abc123/dev/GET/accounts";
+    private static final String POST_METHOD_ARN =
+            "arn:aws:execute-api:eu-west-2:123456789:abc123/dev/POST/accounts";
+    private static final String PATCH_METHOD_ARN =
+            "arn:aws:execute-api:eu-west-2:123456789:abc123/dev/PATCH/accounts";
+    private static final String DELETE_METHOD_ARN =
+            "arn:aws:execute-api:eu-west-2:123456789:abc123/dev/DELETE/accounts";
     private static final String SUBJECT = "some-subject";
 
     private static ECKey ecSigningKey;
@@ -61,7 +72,7 @@ class AuthorizeHandlerTest {
     @BeforeEach
     void setup() {
         event = new APIGatewayCustomAuthorizerEvent();
-        event.setMethodArn(METHOD_ARN);
+        event.setMethodArn(GET_METHOD_ARN);
         when(remoteJwksService.retrieveJwkFromURLWithKeyId(KEY_ID))
                 .thenReturn(Result.success(ecSigningKey.toPublicJWK()));
     }
@@ -73,13 +84,26 @@ class AuthorizeHandlerTest {
 
     @Nested
     class Success {
-        @Test
-        void authorizeHandlerShouldAllowNonExpiredToken() throws JOSEException {
+
+        static Stream<Arguments> scopeAndExpectedArn() {
+            return Stream.of(
+                    Arguments.of(AccountDataScope.PASSKEY_CREATE.getValue(), POST_METHOD_ARN),
+                    Arguments.of(AccountDataScope.PASSKEY_RETRIEVE.getValue(), GET_METHOD_ARN),
+                    Arguments.of(AccountDataScope.PASSKEY_UPDATE.getValue(), PATCH_METHOD_ARN),
+                    Arguments.of(AccountDataScope.PASSKEY_DELETE.getValue(), DELETE_METHOD_ARN));
+        }
+
+        @ParameterizedTest
+        @MethodSource("scopeAndExpectedArn")
+        void authorizeHandlerShouldAllowNonExpiredToken(String scope, String methodArn)
+                throws JOSEException {
             var handler = new AuthorizeHandler(remoteJwksService);
 
             var bearerAccessToken =
-                    createBearerAccessTokenWithExpiry(expiryDateFiveMinutesFromNow, ecSigningKey);
+                    createBearerAccessTokenWithExpiry(
+                            expiryDateFiveMinutesFromNow, ecSigningKey, scope);
 
+            event.setMethodArn(methodArn);
             event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 
             var result = handler.handleRequest(event, context);
@@ -98,7 +122,7 @@ class AuthorizeHandlerTest {
                                 }
                             }
                             """
-                            .formatted(SUBJECT, METHOD_ARN);
+                            .formatted(SUBJECT, methodArn);
 
             assertEquals(
                     JsonParser.parseString(expectedPolicyDocument),
@@ -108,6 +132,55 @@ class AuthorizeHandlerTest {
 
     @Nested
     class Failure {
+        static Stream<Arguments> scopeAndDeniableARN() {
+            return Stream.of(
+                    Arguments.of(AccountDataScope.PASSKEY_CREATE.getValue(), GET_METHOD_ARN),
+                    Arguments.of(AccountDataScope.PASSKEY_RETRIEVE.getValue(), POST_METHOD_ARN),
+                    Arguments.of(AccountDataScope.PASSKEY_UPDATE.getValue(), DELETE_METHOD_ARN),
+                    Arguments.of(AccountDataScope.PASSKEY_DELETE.getValue(), PATCH_METHOD_ARN));
+        }
+
+        @ParameterizedTest
+        @MethodSource("scopeAndDeniableARN")
+        void authorizeHandlerShouldRejectScope(String scope, String methodArn)
+                throws JOSEException {
+            var handler = new AuthorizeHandler(remoteJwksService);
+
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(
+                            expiryDateFiveMinutesFromNow, ecSigningKey, scope);
+
+            event.setMethodArn(methodArn);
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+
+            RuntimeException exception =
+                    assertThrows(
+                            RuntimeException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
+
+            assertEquals("Unauthorized", exception.getMessage());
+        }
+
+        @Test
+        void authorizeHandlerShouldRejectIfScopeIsNotPresent() throws JOSEException {
+            var handler = new AuthorizeHandler(remoteJwksService);
+
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(
+                            expiryDateFiveMinutesFromNow, ecSigningKey, "");
+
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+
+            RuntimeException exception =
+                    assertThrows(
+                            RuntimeException.class,
+                            () -> handler.handleRequest(event, context),
+                            "Expected to throw exception");
+
+            assertEquals("Unauthorized", exception.getMessage());
+        }
+
         @Test
         void authorizeHandlerShouldRejectMissingToken() {
             var handler = new AuthorizeHandler(remoteJwksService);
@@ -273,6 +346,12 @@ class AuthorizeHandlerTest {
     private static BearerAccessToken createBearerAccessTokenWithExpiry(
             Date expiryDate, ECKey ecSigningKey) throws JOSEException {
         var claimsBuilder = claimsSetBuilder(SUBJECT, expiryDate);
+        return createBearerAccessToken(ecSigningKey, claimsBuilder);
+    }
+
+    private static BearerAccessToken createBearerAccessTokenWithExpiry(
+            Date expiryDate, ECKey ecSigningKey, String scope) throws JOSEException {
+        var claimsBuilder = claimsSetBuilder(SUBJECT, expiryDate).claim("scope", scope);
         return createBearerAccessToken(ecSigningKey, claimsBuilder);
     }
 
