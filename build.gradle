@@ -13,6 +13,10 @@ buildscript {
             classpath('org.bouncycastle:bcprov-jdk18on:[1.84,)') {
                 because 'CVE-2026-5598 is fixed in org.bouncycastle:bcprov-jdk18on 1.84 and higher'
             }
+
+            classpath('com.fasterxml.jackson.core:jackson-core:[2.21.1,)') {
+                because 'GHSA-72hv-8253-57qq is fixed in com.fasterxml.jackson.core:jackson-core:2.21.1 and higher'
+            }
         }
     }
 }
@@ -247,7 +251,7 @@ dockerCompose {
         'dynamodb',
         'redis'
     ]
-    def logDir = new File(project.buildDir, "logs")
+    def logDir = layout.buildDirectory.dir("logs").get().asFile
     if (!logDir.exists()) {
         println("creating logs folder...")
         logDir.mkdir()
@@ -262,6 +266,9 @@ compileJava.dependsOn "spotlessApply"
 clean.dependsOn "composeDown"
 
 abstract class Terraform extends DefaultTask {
+
+    @Inject
+    abstract ExecOperations getExecOps()
 
     Terraform() {
         group = "terraform"
@@ -282,21 +289,20 @@ abstract class Terraform extends DefaultTask {
     @TaskAction
     void apply() {
         def tfEnvironment = [
-            "TF_DATA_DIR": "${project.buildDir}/terraform/${environmentName.get()}-${terraformDirectory.get().asFile.name}",
+            "TF_DATA_DIR": "${project.layout.buildDirectory.get().asFile}/terraform/${environmentName.get()}-${terraformDirectory.get().asFile.name}",
             "TF_IN_AUTOMATION": "1"
         ] + environmentVars.get()
 
         logger.lifecycle("Running Terraform Initialise...")
-        project.exec {
+        execOps.exec {
             executable "terraform"
             workingDir terraformDirectory.asFile
             environment tfEnvironment
             args "init", "-backend-config=${environmentName.get()}.hcl"
         }
 
-        logger.lifecycle("Applying ${terraformDirectory.getAsFile().get().name} Terraform (run gradle with --info to see output)...")
-        project.exec {
-            logging.captureStandardOutput(LogLevel.INFO)
+        logger.lifecycle("Applying ${terraformDirectory.getAsFile().get().name} Terraform...")
+        execOps.exec {
             executable "terraform"
             workingDir terraformDirectory.asFile
             environment tfEnvironment
@@ -305,7 +311,7 @@ abstract class Terraform extends DefaultTask {
 
         logger.lifecycle("Getting Terraform Outputs!")
         new ByteArrayOutputStream().withStream { os ->
-            project.exec {
+            execOps.exec {
                 standardOutput os
                 executable "terraform"
                 workingDir terraformDirectory.asFile
@@ -396,7 +402,7 @@ sonar {
         property "sonar.organization", "govuk-one-login"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.coverage.exclusions", "**/shared-test/**,**/orchestration-shared-test/**,**/orchestration-shared-test/**"
-        property "sonar.coverage.jacoco.xmlReportPaths", "$project.buildDir/$jacocoBuildReportPath"
+        property "sonar.coverage.jacoco.xmlReportPaths", "${layout.buildDirectory.get().asFile}/$jacocoBuildReportPath"
     }
 }
 
@@ -441,25 +447,25 @@ task searchForDependency {
         def targetGroup = project.hasProperty('targetGroup') ? project.property('targetGroup') : null
         def targetName = project.hasProperty('targetName') ? project.property('targetName') : null
         def minVersion = project.hasProperty('minVersion') ? project.property('minVersion') : null
-        def parsedMinVersion  = VersionNumber.parse(minVersion)
 
         println "searching for ${targetGroup}:${targetName} < ${minVersion}\n"
 
         def foundProjects = new LinkedHashSet<String>()
 
-        allprojects {project ->
-            project.configurations.each { config ->
+        allprojects { proj ->
+            proj.configurations.each { config ->
                 if (config.canBeResolved) {
-                    def resolvedDependencies = config.resolvedConfiguration.lenientConfiguration.allModuleDependencies
-
-                    resolvedDependencies.each { dep ->
-                        if (dep.moduleGroup == targetGroup && dep.moduleName == targetName) {
-                            def parsedResolvedVersion = VersionNumber.parse(dep.getModuleVersion())
-                            def isLower = parsedResolvedVersion < parsedMinVersion
-                            def versionString = isLower
-                                    ? "Version: \u001B[31m${dep.getModuleVersion()}\u001B[0m ⚠️"
-                                    : "Version: \u001B[32m${dep.getModuleVersion()}\u001B[0m ✅"
-                            foundProjects.add(project.path + ":" + config.name +". "  + versionString)
+                    config.incoming.artifactView { it.lenient(true) }.artifacts.each { artifact ->
+                        def id = artifact.variant.owner
+                        if (id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier) {
+                            if (id.group == targetGroup && id.module == targetName) {
+                                def resolvedVersion = id.version
+                                def isLower = compareVersions(resolvedVersion, minVersion) < 0
+                                def versionString = isLower
+                                        ? "Version: \u001B[31m${resolvedVersion}\u001B[0m ⚠️"
+                                        : "Version: \u001B[32m${resolvedVersion}\u001B[0m ✅"
+                                foundProjects.add(proj.path + ":" + config.name + ". " + versionString)
+                            }
                         }
                     }
                 }
@@ -470,4 +476,16 @@ task searchForDependency {
             println "${projectName}"
         }
     }
+}
+
+static int compareVersions(String v1, String v2) {
+    def parts1 = v1.tokenize('.-').collect { it.isInteger() ? it.toInteger() : 0 }
+    def parts2 = v2.tokenize('.-').collect { it.isInteger() ? it.toInteger() : 0 }
+    def maxLen = Math.max(parts1.size(), parts2.size())
+    for (int i = 0; i < maxLen; i++) {
+        def p1 = i < parts1.size() ? parts1[i] : 0
+        def p2 = i < parts2.size() ? parts2[i] : 0
+        if (p1 != p2) return p1 <=> p2
+    }
+    return 0
 }

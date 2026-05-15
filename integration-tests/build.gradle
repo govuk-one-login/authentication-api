@@ -98,6 +98,8 @@ pactPublish.enabled = false
 
 task pactProviderTests (type: Test, group: "verification") {
     useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
     include 'uk/gov/di/authentication/contract/**'
 
     systemProperties['pact.provider.branch'] = "${System.env.GIT_BRANCH}"
