@@ -20,6 +20,7 @@ public class TokenGeneratorHelper {
                 .audience("https://account-data.example.com")
                 .expirationTime(expiryDate)
                 .issueTime(NowHelper.now())
+                .notBeforeTime(NowHelper.now())
                 .claim("client_id", "some-client-id")
                 .jwtID(UUID.randomUUID().toString());
     }
