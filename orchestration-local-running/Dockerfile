@@ -1,4 +1,4 @@
-FROM amazoncorretto:17.0.16@sha256:e2adb8e2da6716cf3d8a4090396daa61005d070fe9ea9d9f54de7cfffc942ec0 AS build
+FROM amazoncorretto:25.0.1@sha256:6ba4f6ca82ac3f8bad2e514a1ba060e6314e8dff2d46b06c3bd6af063a7c2eb6 AS build
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY client-registry-api ./client-registry-api
 RUN --mount=type=cache,target=/root/.gradle ./gradlew :orchestration-local-running:build --no-daemon
 RUN mkdir untarred && tar -xvf orchestration-local-running/build/distributions/orchestration-local-running.tar -C ./untarred
 
-FROM amazoncorretto:17.0.16@sha256:e2adb8e2da6716cf3d8a4090396daa61005d070fe9ea9d9f54de7cfffc942ec0
+FROM amazoncorretto:25.0.1@sha256:6ba4f6ca82ac3f8bad2e514a1ba060e6314e8dff2d46b06c3bd6af063a7c2eb6
 
 WORKDIR /app
 

@@ -18,7 +18,7 @@ resource "aws_lambda_function" "common_passwords_dynamo_update_lambda" {
   handler       = "uk.gov.di.authentication.utils.lambda.S3ToDynamoDbHandler::handleRequest"
   timeout       = 900
   memory_size   = 4096
-  runtime       = "java17"
+  runtime       = "java25"
   publish       = true
 
   s3_bucket         = aws_s3_object.utils_release_zip.bucket
