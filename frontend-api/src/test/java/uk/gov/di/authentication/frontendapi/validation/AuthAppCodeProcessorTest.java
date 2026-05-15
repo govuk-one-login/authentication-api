@@ -185,7 +185,6 @@ class AuthAppCodeProcessorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
                         mockAccountModifiersService,
@@ -222,68 +221,12 @@ class AuthAppCodeProcessorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
                         mockAccountModifiersService,
                         mockMfaMethodsService);
 
         assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
-    }
-
-    @ParameterizedTest
-    @MethodSource("validatorParams")
-    void returnsCorrectErrorWhenCodeBlockedForEmailAddress(
-            JourneyType journeyType, String authAppSecret, CodeRequestType codeRequestType) {
-        setUpBlockedUser(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret),
-                codeRequestType);
-
-        assertEquals(
-                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
-                authAppCodeProcessor.validateCode());
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @Test
-    void returnsCorrectErrorWhenCodeBlockedForEmailAddressWithDeprecatedPrefix() {
-        JourneyType journeyType = JourneyType.SIGN_IN;
-        when(mockCodeStorageService.isBlockedForEmail(
-                        EMAIL,
-                        CODE_BLOCKED_KEY_PREFIX
-                                + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                        MFAMethodType.AUTH_APP, journeyType)))
-                .thenReturn(true);
-
-        this.authAppCodeProcessor =
-                new AuthAppCodeProcessor(
-                        mockUserContext,
-                        mockCodeStorageService,
-                        mockConfigurationService,
-                        mockDynamoService,
-                        MAX_RETRIES,
-                        new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "000000", journeyType, "credential"),
-                        mockAuditService,
-                        mockAccountModifiersService,
-                        mockMfaMethodsService);
-
-        assertEquals(
-                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
-                authAppCodeProcessor.validateCode());
-    }
-
-    @ParameterizedTest
-    @MethodSource("validatorParams")
-    void returnsCorrectErrorWhenRetryLimitExceeded(JourneyType journeyType, String authAppSecret) {
-        setUpRetryLimitExceededUser(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret));
-
-        assertEquals(
-                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
-                authAppCodeProcessor.validateCode());
     }
 
     @ParameterizedTest
@@ -531,7 +474,6 @@ class AuthAppCodeProcessorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
                         mockAccountModifiersService,
@@ -549,7 +491,6 @@ class AuthAppCodeProcessorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
                         mockAccountModifiersService,
@@ -568,7 +509,6 @@ class AuthAppCodeProcessorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
                         mockAccountModifiersService,
@@ -587,7 +527,6 @@ class AuthAppCodeProcessorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
                         mockAccountModifiersService,
@@ -612,7 +551,6 @@ class AuthAppCodeProcessorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
                         mockAccountModifiersService,
