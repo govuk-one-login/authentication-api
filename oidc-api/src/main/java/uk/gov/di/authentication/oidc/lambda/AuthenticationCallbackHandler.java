@@ -589,7 +589,7 @@ public class AuthenticationCallbackHandler
         } catch (AuthenticationCallbackException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(), e);
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));

@@ -100,7 +100,7 @@ public class PasskeysCreateHandler
         try {
             passkeysCreateRequest =
                     objectMapper.readValue(input.getBody(), PasskeysCreateRequest.class, true);
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             return Result.failure(INVALID_REQUEST_BODY);
         }
 

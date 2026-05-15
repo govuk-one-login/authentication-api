@@ -127,9 +127,9 @@ public class RemoveAccountHandler
                     AccountDeletionReason.USER_INITIATED);
 
             return generateEmptySuccessApiGatewayResponse();
-        } catch (UserNotFoundException e) {
+        } catch (UserNotFoundException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }

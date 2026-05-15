@@ -35,7 +35,7 @@ public class PhoneNumberHelper {
     public static Optional<String> maybeGetCountry(String phoneNumber) {
         try {
             return Optional.of(getCountry(phoneNumber));
-        } catch (Exception e) {
+        } catch (Exception _) {
             return Optional.empty();
         }
     }

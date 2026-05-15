@@ -125,7 +125,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
     private NotifyRequest parseNotifyRequest(SQSMessage msg) {
         try {
             return objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.error("Error when mapping message from queue to a NotifyRequest");
             throw new RuntimeException("Error when mapping message from queue to a NotifyRequest");
         }

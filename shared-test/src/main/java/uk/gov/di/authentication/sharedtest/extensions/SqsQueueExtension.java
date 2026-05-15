@@ -102,7 +102,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                     sqsClient
                             .getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build())
                             .toString());
-        } catch (QueueDoesNotExistException ignored) {
+        } catch (QueueDoesNotExistException _) {
             return Optional.empty();
         }
     }

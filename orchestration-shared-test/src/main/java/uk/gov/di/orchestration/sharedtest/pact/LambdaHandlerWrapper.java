@@ -38,7 +38,7 @@ class LambdaHandlerWrapper implements HttpHandler {
             var handlerConfig = findHandler(exchange);
             var response = translateRequest(exchange, handlerConfig);
             translateResponse(exchange, response);
-        } catch (Exception e) {
+        } catch (Exception _) {
             String error = "Some error occurred";
             exchange.sendResponseHeaders(500, error.length());
             try (OutputStream os = exchange.getResponseBody()) {

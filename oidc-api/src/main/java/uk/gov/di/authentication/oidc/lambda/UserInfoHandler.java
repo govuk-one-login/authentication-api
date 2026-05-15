@@ -142,7 +142,7 @@ public class UserInfoHandler
                     401,
                     "",
                     new UserInfoErrorResponse(e.getError()).toHTTPResponse().getHeaderMap());
-        } catch (ClientNotFoundException e) {
+        } catch (ClientNotFoundException _) {
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }

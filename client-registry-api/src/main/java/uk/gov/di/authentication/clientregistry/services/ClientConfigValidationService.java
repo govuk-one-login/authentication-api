@@ -224,7 +224,7 @@ public class ClientConfigValidationService {
             for (String uri : uris) {
                 URI.create(uri).toURL();
             }
-        } catch (MalformedURLException | IllegalArgumentException e) {
+        } catch (MalformedURLException | IllegalArgumentException _) {
             return false;
         }
         return true;
@@ -253,7 +253,7 @@ public class ClientConfigValidationService {
             X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
             KeyFactory kf = KeyFactory.getInstance("RSA");
             kf.generatePublic(x509publicKey);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return false;
         }
         return true;

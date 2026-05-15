@@ -262,7 +262,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private String serialiseRequest(NotifyRequest request) {
         try {
             return objectMapper.writeValueAsString(request);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.error("Unable to serialize NotifyRequest");
             throw new RuntimeException("Unable to serialize NotifyRequest");
         }

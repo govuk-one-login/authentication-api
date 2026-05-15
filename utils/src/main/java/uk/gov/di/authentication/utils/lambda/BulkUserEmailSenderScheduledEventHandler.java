@@ -290,7 +290,7 @@ public class BulkUserEmailSenderScheduledEventHandler
     BulkEmailUserSendMode readBulkEmailUserSendModeConfiguration(String bulkEmailUserSendMode) {
         try {
             return BulkEmailUserSendMode.valueOf(bulkEmailUserSendMode);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             throw new UnrecognisedSendModeException(bulkEmailUserSendMode);
         }
     }

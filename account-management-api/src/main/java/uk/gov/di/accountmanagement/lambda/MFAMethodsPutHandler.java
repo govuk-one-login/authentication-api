@@ -281,7 +281,7 @@ public class MFAMethodsPutHandler
 
         try {
             return generateApiGatewayProxyResponse(200, methodsAsResponse.getSuccess(), true);
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
@@ -460,7 +460,7 @@ public class MFAMethodsPutHandler
                             publicSubjectId, mfaIdentifier, userProfile, mfaMethodUpdateRequest);
 
             return Result.success(putRequest);
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             return Result.failure(
                     generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.REQUEST_MISSING_PARAMS));

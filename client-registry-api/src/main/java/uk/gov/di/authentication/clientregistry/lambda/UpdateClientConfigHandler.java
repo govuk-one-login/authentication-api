@@ -131,7 +131,7 @@ public class UpdateClientConfigHandler
                             clientRegistry.getLandingPageUrl());
             LOG.info("Client updated");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
-        } catch (JsonException | NullPointerException e) {
+        } catch (JsonException | NullPointerException _) {
             auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, UNKNOWN, user);
             LOG.warn("Invalid Client registration request. Missing parameters from request");
             return generateApiGatewayProxyResponse(

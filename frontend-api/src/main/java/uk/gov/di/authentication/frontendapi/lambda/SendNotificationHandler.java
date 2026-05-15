@@ -222,7 +222,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             notifyRequest.getNotificationType(),
                             notifyRequest.getUniqueNotificationReference());
                 }
-            } catch (Exception e) {
+            } catch (Exception _) {
                 return generateEmptySuccessApiGatewayResponse();
             }
             return generateEmptySuccessApiGatewayResponse();
@@ -285,10 +285,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 default:
                     return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
             }
-        } catch (SdkClientException ex) {
+        } catch (SdkClientException _) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS);
         }
     }

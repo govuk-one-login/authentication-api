@@ -87,9 +87,9 @@ public class PasskeysUpdateHandler
             passkeysUpdateRequest =
                     objectMapper.readValue(input.getBody(), PasskeysUpdateRequest.class, true);
             Instant.parse(passkeysUpdateRequest.lastUsedAt());
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             return Result.failure(PasskeysUpdateFailureReason.PARSING_PASSKEY_UPDATE_REQUEST_ERROR);
-        } catch (DateTimeException e) {
+        } catch (DateTimeException _) {
             LOG.warn("last used at time is not a valid timestamp");
             return Result.failure(PasskeysUpdateFailureReason.PARSING_PASSKEY_UPDATE_REQUEST_ERROR);
         }

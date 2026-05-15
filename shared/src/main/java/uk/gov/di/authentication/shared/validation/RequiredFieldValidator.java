@@ -49,7 +49,7 @@ public class RequiredFieldValidator implements Validator {
                                     .startsWith("uk.gov.di.authentication")) {
                         violations.addAll(validateRequiredFields(fieldValue, field.getType()));
                     }
-                } catch (IllegalAccessException e) {
+                } catch (IllegalAccessException _) {
                     LOG.warn("Could not validate field: {}", field.getName());
                 } finally {
                     if (!accessible) field.setAccessible(false);

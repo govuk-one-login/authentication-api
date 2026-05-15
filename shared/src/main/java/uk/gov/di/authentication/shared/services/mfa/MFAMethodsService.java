@@ -66,7 +66,7 @@ public class MFAMethodsService {
 
         try {
             PhoneNumberHelper.formatPhoneNumber(phoneNumber);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return Result.failure(ErrorResponse.INVALID_PHONE_NUMBER);
         }
 
@@ -690,7 +690,7 @@ public class MFAMethodsService {
     private Result<String, String> getPhoneNumberWithCountryCode(String phoneNumber) {
         try {
             return Result.success(PhoneNumberHelper.formatPhoneNumber(phoneNumber));
-        } catch (Exception e) {
+        } catch (Exception _) {
             return Result.failure(
                     format(
                             "Could not convert phone number %s to phone number with country code",

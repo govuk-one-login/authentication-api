@@ -228,9 +228,9 @@ public class AuthCodeHandler
             }
         } catch (ProcessAuthRequestException e) {
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
-        } catch (ClientNotFoundException e) {
+        } catch (ClientNotFoundException _) {
             return processClientNotFoundException(authenticationRequest);
-        } catch (AuthCodeException e) {
+        } catch (AuthCodeException _) {
             return processUserNotFoundException(authenticationRequest);
         } catch (ParseException e) {
             return processParseException(e);

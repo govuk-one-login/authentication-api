@@ -345,7 +345,7 @@ class TokenValidationServiceTest {
     private RSAKey generateCustomRsaKeyPair(String keyId) {
         try {
             return new RSAKeyGenerator(2048).keyID(keyId).generate();
-        } catch (JOSEException e) {
+        } catch (JOSEException _) {
             throw new RuntimeException();
         }
     }
@@ -353,7 +353,7 @@ class TokenValidationServiceTest {
     private ECKey generateCustomECKeyPair(String keyId) {
         try {
             return new ECKeyGenerator(Curve.P_256).keyID(keyId).generate();
-        } catch (JOSEException e) {
+        } catch (JOSEException _) {
             throw new RuntimeException();
         }
     }

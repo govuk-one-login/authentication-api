@@ -205,7 +205,7 @@ class TokenValidationServiceTest {
     private ECKey generateECKeyPair() {
         try {
             return new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
-        } catch (JOSEException e) {
+        } catch (JOSEException _) {
             throw new RuntimeException();
         }
     }

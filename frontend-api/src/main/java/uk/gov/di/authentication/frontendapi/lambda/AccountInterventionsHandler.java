@@ -151,7 +151,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                     "Account interventions service call is disabled, returning default no interventions response");
             try {
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
-            } catch (JsonException e) {
+            } catch (JsonException _) {
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.REQUEST_MISSING_PARAMS);
             }
@@ -200,7 +200,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             return generateApiGatewayProxyResponse(200, accountInterventionsResponse, true);
         } catch (UnsuccessfulAccountInterventionsResponseException e) {
             return handleErrorForAIS(e);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
@@ -307,7 +307,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         "AuthAisErrorIgnored",
                         Map.of("Environment", configurationService.getEnvironment()));
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
-            } catch (JsonException ex) {
+            } catch (JsonException _) {
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.REQUEST_MISSING_PARAMS);
             }

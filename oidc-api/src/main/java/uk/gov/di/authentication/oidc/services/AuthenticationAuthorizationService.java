@@ -240,7 +240,7 @@ public class AuthenticationAuthorizationService {
                                         .getExpirationTime()
                                         .toInstant()
                                         .getEpochSecond());
-            } catch (java.text.ParseException e) {
+            } catch (java.text.ParseException _) {
                 LOG.error("Unable to parse id_token_hint SignedJWT into claims");
                 throw new RuntimeException("Invalid id_token_hint");
             }
@@ -402,7 +402,7 @@ public class AuthenticationAuthorizationService {
                     SignedJWT.parse(
                             authenticationRequest.getCustomParameter("id_token_hint").get(0));
             aud = idToken.getJWTClaimsSet().getAudience().stream().findFirst().orElse(null);
-        } catch (java.text.ParseException e) {
+        } catch (java.text.ParseException _) {
             LOG.error("Unable to parse id_token_hint into SignedJWT");
             throw new AuthenticationAuthorisationRequestException("Invalid id_token_hint");
         }

@@ -343,7 +343,7 @@ public class TokenHandler
             rpPairwiseSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
             jwtId = signedJwt.getJWTClaimsSet().getJWTID();
-        } catch (java.text.ParseException e) {
+        } catch (java.text.ParseException _) {
             LOG.warn("Unable to parse RefreshToken");
             return ApiResponse.badRequest(
                     new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
@@ -358,7 +358,7 @@ public class TokenHandler
         Optional<OrchRefreshTokenItem> orchRefreshTokenItemMaybe;
         try {
             orchRefreshTokenItemMaybe = orchRefreshTokenService.getRefreshToken(jwtId);
-        } catch (OrchRefreshTokenException e) {
+        } catch (OrchRefreshTokenException _) {
             return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
         }
 

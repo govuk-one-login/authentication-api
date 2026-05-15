@@ -515,7 +515,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
         try {
             return CodeRequestType.getCodeRequestType(
                     CodeRequestType.SupportedCodeType.EMAIL, journeyType);
-        } catch (CodeRequestTypeNotFoundException e) {
+        } catch (CodeRequestTypeNotFoundException _) {
             return null;
         }
     }

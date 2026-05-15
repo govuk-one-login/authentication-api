@@ -140,7 +140,7 @@ public class StartHandler
         StartRequest startRequest;
         try {
             startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 

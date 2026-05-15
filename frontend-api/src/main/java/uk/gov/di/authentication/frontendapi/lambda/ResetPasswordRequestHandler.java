@@ -309,7 +309,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             defaultMfaPhoneNumber != null
                                     ? getLastDigitsOfPhoneNumber(defaultMfaPhoneNumber)
                                     : null));
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
@@ -409,7 +409,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private String serialiseNotifyRequest(Object request) {
         try {
             return objectMapper.writeValueAsString(request);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.error("Unexpected exception when serializing Notify request");
             throw new SerializationException(
                     "Unexpected exception when serializing Notify request");

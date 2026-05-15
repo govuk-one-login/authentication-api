@@ -36,7 +36,7 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
             return passkeySaved
                     ? Result.success(null)
                     : Result.failure(PasskeysCreateFailureReason.PASSKEY_EXISTS);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return Result.failure(PasskeysCreateFailureReason.FAILED_TO_SAVE_PASSKEY);
         }
     }

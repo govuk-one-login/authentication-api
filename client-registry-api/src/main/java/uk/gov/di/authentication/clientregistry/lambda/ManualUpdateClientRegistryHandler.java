@@ -102,7 +102,7 @@ public class ManualUpdateClientRegistryHandler
                             "Successfully update client with values: %s",
                             manualUpdateClientRegistryRequest.toString()));
             return response;
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             LOG.warn(
                     "Invalid Client registration request. Missing parameters or incorrect type from request");
             return getErrorResponse(

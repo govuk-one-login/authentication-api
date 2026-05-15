@@ -115,7 +115,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             NotifyRequest notifyRequest =
                     objectMapper.readValue(msg.getBody(), NotifyRequest.class);
             sendNotification(notifyRequest);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.error(ERROR_WHEN_MAPPING_MESSAGE_FROM_QUEUE_TO_A_NOTIFY_REQUEST);
         }
     }

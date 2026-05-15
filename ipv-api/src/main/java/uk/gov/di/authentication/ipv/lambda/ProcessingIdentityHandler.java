@@ -158,10 +158,10 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             }
             return generateApiGatewayProxyResponse(
                     200, new ProcessingIdentityResponse(processingStatus));
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             LOG.error("Unable to generate ProcessingIdentityResponse");
             throw new RuntimeException();
-        } catch (NoSuchElementException e) {
+        } catch (NoSuchElementException _) {
             LOG.error(
                     "Issue retrieving ClientRegistry from UserContext. ClientRegistry is present: {}",
                     userContext.getClient().isPresent());

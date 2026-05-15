@@ -367,7 +367,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                                 .build();
                 passwordPepper =
                         Optional.of(getSsmClient().getParameter(request).parameter().value());
-            } catch (ParameterNotFoundException e) {
+            } catch (ParameterNotFoundException _) {
                 passwordPepper = Optional.empty();
             }
         }

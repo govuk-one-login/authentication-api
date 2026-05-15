@@ -19,14 +19,14 @@ public sealed interface MfaMethodResponse permits SmsMfaMethodResponse, AuthAppM
         MFAMethodType type;
         try {
             type = MFAMethodType.valueOf(mfaMethod.getMfaMethodType());
-        } catch (NullPointerException | IllegalArgumentException e) {
+        } catch (NullPointerException | IllegalArgumentException _) {
             return Result.failure("Unsupported MFA method type: " + mfaMethod.getMfaMethodType());
         }
 
         PriorityIdentifier priority;
         try {
             priority = PriorityIdentifier.valueOf(mfaMethod.getPriority());
-        } catch (NullPointerException | IllegalArgumentException e) {
+        } catch (NullPointerException | IllegalArgumentException _) {
             return Result.failure("Unsupported PriorityIdentifier: " + mfaMethod.getPriority());
         }
 

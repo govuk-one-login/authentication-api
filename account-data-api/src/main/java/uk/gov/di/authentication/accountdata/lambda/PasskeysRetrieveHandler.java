@@ -116,7 +116,7 @@ public class PasskeysRetrieveHandler
         try {
             return Result.success(
                     generateApiGatewayProxyResponse(200, passkeysRetrieveResponse, true));
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             LOG.error("Failed to serialize JSON");
             return Result.failure(PasskeysRetrieveFailureReasons.FAILED_TO_SERIALIZE_RESPONSE);
         }

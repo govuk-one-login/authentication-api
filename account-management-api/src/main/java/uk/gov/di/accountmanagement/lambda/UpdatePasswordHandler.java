@@ -194,9 +194,9 @@ public class UpdatePasswordHandler
 
             return generateEmptySuccessApiGatewayResponse();
 
-        } catch (UserNotFoundException e) {
+        } catch (UserNotFoundException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
-        } catch (JsonException | IllegalArgumentException e) {
+        } catch (JsonException | IllegalArgumentException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }

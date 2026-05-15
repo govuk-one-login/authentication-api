@@ -411,7 +411,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             termsAndConditionsAccepted,
                             mfaMethodResponses,
                             isPasswordChangeRequired));
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
@@ -568,7 +568,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             boolean passwordChangeRequest = commonPasswordsService.isCommonPassword(password);
             LOG.info("Password reset required: {}", passwordChangeRequest);
             return passwordChangeRequest;
-        } catch (Exception e) {
+        } catch (Exception _) {
             LOG.error("Unable to check if password was a common password");
             return false;
         }

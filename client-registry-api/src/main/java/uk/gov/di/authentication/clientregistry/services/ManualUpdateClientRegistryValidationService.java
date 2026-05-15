@@ -22,7 +22,7 @@ public class ManualUpdateClientRegistryValidationService {
         if (!clientRateLimit.isBlank()) {
             try {
                 return Integer.parseInt(clientRateLimit) >= 0;
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 return false;
             }
         }
