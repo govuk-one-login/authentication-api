@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.accountmanagement.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSSigner;
@@ -12,16 +12,15 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -61,20 +60,6 @@ class TokenValidationServiceTest {
         when(accessTokenJwksService.retrieveJwkFromURLWithKeyId(any()))
                 .thenReturn(ecJWK.toPublicJWK());
         when(configurationService.getEnvironment()).thenReturn("dev");
-    }
-
-    @Test
-    void shouldSuccessfullyValidateIDToken() {
-        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-        SignedJWT signedIdToken = createSignedIdToken(expiryDate);
-        assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
-    }
-
-    @Test
-    void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
-        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
-        SignedJWT signedIdToken = createSignedIdToken(expiryDate);
-        assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
     }
 
     @Test
@@ -162,46 +147,6 @@ class TokenValidationServiceTest {
                         new BearerAccessToken(signedAccessToken.serialize())));
     }
 
-    @Test
-    void shouldSuccessfullyValidateRefreshToken() {
-        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-
-        SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
-        assertTrue(
-                tokenValidationService.validateRefreshTokenSignatureAndExpiry(
-                        new RefreshToken(signedAccessToken.serialize())));
-    }
-
-    @Test
-    void shouldFailToValidateRefreshTokenIfExpired() {
-        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
-
-        SignedJWT signedAccessToken = createSignedRefreshTokenWithExpiry(signer, expiryDate);
-        assertFalse(
-                tokenValidationService.validateRefreshTokenSignatureAndExpiry(
-                        new RefreshToken(signedAccessToken.serialize())));
-    }
-
-    @Test
-    void shouldSuccessfullyValidateRefreshTokenScopes() {
-        List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
-        assertTrue(tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
-    }
-
-    @Test
-    void shouldFailToValidateRefreshTokenScopesWhenMissingOfflineAccess() {
-        List<String> clientScopes = List.of("openid", "email", "phone", "offline_access");
-        List<String> refreshScopes = List.of("openid", "email", "phone");
-        assertFalse(tokenValidationService.validateRefreshTokenScopes(clientScopes, refreshScopes));
-    }
-
-    @Test
-    void shouldFailToValidateRefreshTokenScopesWhenClientScopesDoNotContainAllRefreshTokenScopes() {
-        List<String> clientScopes = List.of("openid", "phone", "offline_access");
-        assertFalse(
-                tokenValidationService.validateRefreshTokenScopes(clientScopes, REFRESH_SCOPES));
-    }
-
     private ECKey generateECKeyPair() {
         try {
             return new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
@@ -210,19 +155,9 @@ class TokenValidationServiceTest {
         }
     }
 
-    private SignedJWT createSignedIdToken(Date expiryDate) {
-        return TokenGeneratorHelper.generateIDToken(
-                CLIENT_ID, SUBJECT, BASE_URL, ecJWK, expiryDate);
-    }
-
     private SignedJWT createSignedAccessToken(JWSSigner signer) {
 
         return TokenGeneratorHelper.generateSignedToken(
                 CLIENT_ID, BASE_URL, SCOPES, signer, SUBJECT, KEY_ID);
-    }
-
-    private SignedJWT createSignedRefreshTokenWithExpiry(JWSSigner signer, Date expiryDate) {
-        return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, BASE_URL, REFRESH_SCOPES, signer, SUBJECT, KEY_ID, expiryDate);
     }
 }

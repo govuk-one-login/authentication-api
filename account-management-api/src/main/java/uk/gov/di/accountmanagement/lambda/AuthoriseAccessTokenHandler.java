@@ -19,7 +19,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RemoteJwksService;
-import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.accountmanagement.services.TokenValidationService;
 
 import java.util.Date;
 import java.util.List;
