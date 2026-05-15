@@ -31,7 +31,7 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   port                        = local.redis_port_number
   multi_az_enabled            = true
   maintenance_window          = "wed:22:00-wed:23:00"
-  notification_topic_arn      = aws_sns_topic.slack_events.arn
+  notification_topic_arn      = aws_sns_topic.elasticache_alerts.arn
 
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
@@ -50,13 +50,10 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   }
 
   depends_on = [
-    aws_sns_topic.slack_events,
+    aws_sns_topic.elasticache_alerts,
   ]
 }
 
-data "aws_sns_topic" "slack_events" {
-  name = "${var.environment}-slack-events"
-}
 
 resource "random_password" "frontend_redis_password" {
   length = 32
@@ -86,7 +83,7 @@ resource "aws_elasticache_replication_group" "frontend_sessions_store" {
   parameter_group_name        = "default.redis6.x"
   port                        = local.redis_port_number
   maintenance_window          = "sun:22:00-sun:23:00"
-  notification_topic_arn      = data.aws_sns_topic.slack_events.arn
+  notification_topic_arn      = aws_sns_topic.elasticache_alerts.arn
 
   multi_az_enabled = true
 
