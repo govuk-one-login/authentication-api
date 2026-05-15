@@ -194,37 +194,38 @@ public class BulkUserEmailSenderScheduledEventHandler
                     allUserSubjectIds.size());
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(PARALLELISM);
-        TaskCounters counters = new TaskCounters();
-        long startTime = System.currentTimeMillis();
-        int taskTimeoutSeconds = configurationService.getBulkUserEmailTaskTimeoutSeconds();
-        int stopNewRequestsAfterSeconds =
-                configurationService.getBulkUserEmailStopNewRequestsAfterSeconds();
+        try (ExecutorService executor = Executors.newFixedThreadPool(PARALLELISM)) {
+            TaskCounters counters = new TaskCounters();
+            long startTime = System.currentTimeMillis();
+            int taskTimeoutSeconds = configurationService.getBulkUserEmailTaskTimeoutSeconds();
+            int stopNewRequestsAfterSeconds =
+                    configurationService.getBulkUserEmailStopNewRequestsAfterSeconds();
 
-        List<CompletableFuture<Void>> futures =
-                allUserSubjectIds.stream()
-                        .map(
-                                subjectId ->
-                                        createEmailTask(
-                                                subjectId,
-                                                bulkEmailUserSendMode,
-                                                executor,
-                                                taskTimeoutSeconds,
-                                                startTime,
-                                                stopNewRequestsAfterSeconds,
-                                                counters))
-                        .toList();
+            List<CompletableFuture<Void>> futures =
+                    allUserSubjectIds.stream()
+                            .map(
+                                    subjectId ->
+                                            createEmailTask(
+                                                    subjectId,
+                                                    bulkEmailUserSendMode,
+                                                    executor,
+                                                    taskTimeoutSeconds,
+                                                    startTime,
+                                                    stopNewRequestsAfterSeconds,
+                                                    counters))
+                            .toList();
 
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        executor.shutdownNow();
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            executor.shutdownNow();
 
-        LOG.info(
-                "Bulk user email: completed. Total users: {}, Processed: {}, Skipped: {}, Unhandled exceptions: {}, Timed out: {}",
-                allUserSubjectIds.size(),
-                counters.processed().get(),
-                counters.skipped().get(),
-                counters.exceptions().get(),
-                counters.timedOut().get());
+            LOG.info(
+                    "Bulk user email: completed. Total users: {}, Processed: {}, Skipped: {}, Unhandled exceptions: {}, Timed out: {}",
+                    allUserSubjectIds.size(),
+                    counters.processed().get(),
+                    counters.skipped().get(),
+                    counters.exceptions().get(),
+                    counters.timedOut().get());
+        }
         return null;
     }
 
