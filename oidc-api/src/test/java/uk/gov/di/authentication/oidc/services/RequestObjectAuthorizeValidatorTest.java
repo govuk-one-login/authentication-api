@@ -214,7 +214,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void validatorLogsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod()
+        void validatorErrorsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod()
                 throws ClientSignatureValidationException, JwksException, JOSEException {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.P2")).build();
@@ -233,7 +233,15 @@ class RequestObjectAuthorizeValidatorTest {
 
             var requestObjectError = validator.validate(authRequest);
 
-            assertFalse(requestObjectError.isPresent());
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject().toJSONObject(),
+                    equalTo(
+                            new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "Request vtr is not permitted")
+                                    .toJSONObject()));
+
             String expectedLogMessage =
                     "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.";
             assertThat(
