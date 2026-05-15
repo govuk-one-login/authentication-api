@@ -101,7 +101,7 @@ function sync_secret_from_auth_account() {
   echo "Logged into account ${account_id}"
 
   local secret_value=""
-  secret_value=$(AWS_PROFILE="${PROFILE_TO_SYNC_SECRET_WITH}" aws secrets-manager get-secret-value --secret-id "${expected_managed_secret_name}" | jq ".SecretString" || exit 1)
+  secret_value=$(AWS_PROFILE="${PROFILE_TO_SYNC_SECRET_WITH}" aws secrets-manager get-secret-value --secret-id "${expected_managed_secret_name}" | jq -r ".SecretString" || exit 1)
 
   if [ -z "${secret_value}" ]; then
     echo "Failed to get previous origin cloaking secret"
