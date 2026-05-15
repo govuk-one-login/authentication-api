@@ -18,6 +18,10 @@ buildscript {
             classpath('io.opentelemetry:opentelemetry-api:[1.62.0,)') {
                 because 'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
             }
+
+            add('classpath', 'com.fasterxml.jackson.core:jackson-databind:[2.21.4,)') {
+                because 'GHSA-j3rv-43j4-c7qm is fixed in com.fasterxml.jackson.core:jackson-databind:2.21.4 and higher'
+            }
         }
     }
 }
