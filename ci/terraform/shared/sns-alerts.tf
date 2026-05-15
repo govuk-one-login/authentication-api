@@ -4,9 +4,18 @@ resource "aws_sns_topic" "slack_events" {
   kms_master_key_id                = "alias/aws/sns"
 }
 
+resource "aws_sns_topic" "elasticache_alerts" {
+  name = "${var.environment}-elasticache-alerts"
+}
+
 output "slack_event_sns_topic_arn" {
   description = "The ARN of the SNS topic for Slack events"
   value       = aws_sns_topic.slack_events.arn
+}
+
+output "elasticache_alerts_sns_topic_arn" {
+  description = "The ARN of the unencrypted SNS topic for ElastiCache notifications"
+  value       = aws_sns_topic.elasticache_alerts.arn
 }
 
 data "aws_iam_policy_document" "sns_topic_policy" {

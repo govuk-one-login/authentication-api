@@ -23,6 +23,7 @@ locals {
   test_client_allow_list_secret_access_policy_arn = var.test_clients_enabled ? data.terraform_remote_state.shared.outputs.test_client_allow_list_secret_access_policy_arn : null
 
 
-  slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
-  aws_account_alias         = data.terraform_remote_state.shared.outputs.aws_account_alias
+  slack_event_sns_topic_arn        = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
+  elasticache_alerts_sns_topic_arn = data.terraform_remote_state.shared.outputs.elasticache_alerts_sns_topic_arn
+  aws_account_alias                = data.terraform_remote_state.shared.outputs.aws_account_alias
 }
