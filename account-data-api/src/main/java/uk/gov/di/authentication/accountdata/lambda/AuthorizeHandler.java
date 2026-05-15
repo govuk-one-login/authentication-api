@@ -3,6 +3,7 @@ package uk.gov.di.authentication.accountdata.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayCustomAuthorizerEvent;
+import com.amazonaws.services.lambda.runtime.events.IamPolicyResponseV1;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
@@ -25,10 +26,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 public class AuthorizeHandler
-        implements RequestHandler<APIGatewayCustomAuthorizerEvent, Map<String, Object>> {
+        implements RequestHandler<APIGatewayCustomAuthorizerEvent, IamPolicyResponseV1> {
     private static final Logger LOG = LogManager.getLogger(AuthorizeHandler.class);
     private RemoteJwksService jwksService;
 
@@ -50,7 +50,7 @@ public class AuthorizeHandler
     }
 
     @Override
-    public Map<String, Object> handleRequest(
+    public IamPolicyResponseV1 handleRequest(
             APIGatewayCustomAuthorizerEvent apiGatewayCustomAuthorizerEvent, Context context) {
         var token = apiGatewayCustomAuthorizerEvent.getAuthorizationToken();
         try {
@@ -131,19 +131,19 @@ public class AuthorizeHandler
         return Result.success(claimsSet);
     }
 
-    private Map<String, Object> getAllowExecuteApiPolicyForSubject(
+    private IamPolicyResponseV1 getAllowExecuteApiPolicyForSubject(
             String subject, String methodArn) {
-        var executeApiStatement =
-                Map.ofEntries(
-                        Map.entry("Action", "execute-api:Invoke"),
-                        Map.entry("Effect", "Allow"),
-                        Map.entry("Resource", methodArn));
-        return Map.ofEntries(
-                Map.entry("principalId", subject),
-                Map.entry(
-                        "policyDocument",
-                        Map.ofEntries(
-                                Map.entry("Version", "2012-10-17"),
-                                Map.entry("Statement", List.of(executeApiStatement)))));
+        var statement = IamPolicyResponseV1.allowStatement(methodArn);
+
+        var policyDocument =
+                IamPolicyResponseV1.PolicyDocument.builder()
+                        .withStatement(List.of(statement))
+                        .withVersion(IamPolicyResponseV1.VERSION_2012_10_17)
+                        .build();
+
+        return IamPolicyResponseV1.builder()
+                .withPolicyDocument(policyDocument)
+                .withPrincipalId(subject)
+                .build();
     }
 }
