@@ -31,6 +31,7 @@ import java.util.List;
 public class AuthorizeHandler
         implements RequestHandler<APIGatewayCustomAuthorizerEvent, IamPolicyResponseV1> {
     private static final Logger LOG = LogManager.getLogger(AuthorizeHandler.class);
+    private final ConfigurationService configurationService;
     private RemoteJwksService jwksService;
 
     public AuthorizeHandler() {
@@ -38,6 +39,7 @@ public class AuthorizeHandler
     }
 
     public AuthorizeHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         try {
             this.jwksService = new RemoteJwksService(configurationService.getAccountDataJwksUrl());
         } catch (MalformedURLException e) {
@@ -47,6 +49,13 @@ public class AuthorizeHandler
     }
 
     public AuthorizeHandler(RemoteJwksService jwksService) {
+        this.configurationService = ConfigurationService.getInstance();
+        this.jwksService = jwksService;
+    }
+
+    public AuthorizeHandler(
+            ConfigurationService configurationService, RemoteJwksService jwksService) {
+        this.configurationService = configurationService;
         this.jwksService = jwksService;
     }
 
@@ -133,6 +142,11 @@ public class AuthorizeHandler
     private Result<UnauthorizedException, JWTClaimsSet> validateClaimsSet(JWTClaimsSet claimsSet) {
         if (claimsSet.getSubject() == null || claimsSet.getSubject().isEmpty()) {
             LOG.warn("Access Token subject is missing");
+            return Result.failure(new UnauthorizedException());
+        }
+        var expectedIssuer = configurationService.getAuthIssuerClaim();
+        if (!expectedIssuer.equals(claimsSet.getIssuer())) {
+            LOG.warn("Access Token issuer is invalid");
             return Result.failure(new UnauthorizedException());
         }
         return Result.success(claimsSet);
