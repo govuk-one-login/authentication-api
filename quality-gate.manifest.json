@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/govuk-one-login/quality-gates/refs/tags/v0.2.0/schemas/schema.json",
+  "$schema": "https://raw.githubusercontent.com/govuk-one-login/quality-gates/refs/tags/v0.4.0/schemas/schema.json",
   "services": [
     {
       "service-tag": "auth",
@@ -183,7 +183,7 @@
           }
         },
         {
-          "check-types": ["integration"],
+          "check-types": ["component", "integration"],
           "provider": "GitHub",
           "phase": "pre-merge",
           "config": {
@@ -219,7 +219,7 @@
           }
         },
         {
-          "check-types": ["integration"],
+          "check-types": ["component", "integration"],
           "provider": "GitHub",
           "phase": "pre-merge",
           "config": {
