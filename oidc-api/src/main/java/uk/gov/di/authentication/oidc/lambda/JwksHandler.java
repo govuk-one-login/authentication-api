@@ -64,11 +64,14 @@ public class JwksHandler
 
             List<JWK> signingKeys = new ArrayList<>();
 
-            signingKeys.add(jwksService.getPublicTokenJwkWithOpaqueId());
             signingKeys.add(jwksService.getPublicDocAppSigningJwkWithOpaqueId());
 
-            if (configurationService.isRsaSigningAvailable()) {
-                signingKeys.add(jwksService.getPublicTokenRsaJwkWithOpaqueId());
+            if (configurationService.isPublishOldExternalTokenSigningKeysEnabled()) {
+                signingKeys.add(jwksService.getPublicTokenJwkWithOpaqueId());
+
+                if (configurationService.isRsaSigningAvailable()) {
+                    signingKeys.add(jwksService.getPublicTokenRsaJwkWithOpaqueId());
+                }
             }
 
             if (configurationService.isPublishNextExternalTokenSigningKeysEnabledV2()) {

@@ -385,6 +385,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2");
     }
 
+    public boolean isPublishOldExternalTokenSigningKeysEnabled() {
+        return getFlagOrFalse("PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS");
+    }
+
     public boolean isRsaSigningAvailable() {
         return List.of("dev", "build", "staging", "integration", "production")
                 .contains(getEnvironment());
