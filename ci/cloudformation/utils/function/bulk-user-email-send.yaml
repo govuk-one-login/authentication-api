@@ -118,20 +118,7 @@ Resources:
                   bulkEmailSendScheduleExpression,
                 ]
             Description: Triggers bulk user email send Lambda on schedule
-            Enabled: !Equals
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    bulkEmailSendScheduleState,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    bulkEmailSendScheduleState,
-                  ]
-              - ENABLED
+            Enabled: false
       Tags:
         Name: !Sub
           - "${EnvironmentName}-bulk-user-email-send-lambda"
