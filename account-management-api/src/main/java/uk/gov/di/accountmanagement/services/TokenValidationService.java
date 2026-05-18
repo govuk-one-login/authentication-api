@@ -1,21 +1,18 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.accountmanagement.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.jwt.util.DateUtils;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
-import com.nimbusds.oauth2.sdk.token.RefreshToken;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
+import uk.gov.di.authentication.shared.services.RemoteJwksService;
 
-import java.util.Date;
-import java.util.List;
+import java.text.ParseException;
 
 public class TokenValidationService {
 
@@ -34,36 +31,7 @@ public class TokenValidationService {
     }
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {
-        return isTokenSignatureValid(accessToken.getValue());
-    }
-
-    public boolean validateRefreshTokenSignatureAndExpiry(RefreshToken refreshToken) {
-        if (!isTokenSignatureValid(refreshToken.getValue())) {
-            LOG.warn("Refresh token has invalid signature");
-            return false;
-        }
-        if (hasTokenExpired(refreshToken.getValue())) {
-            LOG.warn("Refresh token has expired");
-            return false;
-        }
-        return true;
-    }
-
-    private boolean hasTokenExpired(String tokenValue) {
-        try {
-            JWTClaimsSet claimsSet = SignedJWT.parse(tokenValue).getJWTClaimsSet();
-            Date currentDateTime = NowHelper.now();
-            if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
-                return true;
-            }
-        } catch (java.text.ParseException e) {
-            LOG.warn("Unable to parse token when checking if expired", e);
-            return true;
-        }
-        return false;
-    }
-
-    public boolean isTokenSignatureValid(String tokenValue) {
+        String tokenValue = accessToken.getValue();
         try {
             var jwt = SignedJWT.parse(tokenValue);
 
@@ -89,22 +57,9 @@ public class TokenValidationService {
                                         .retrieveJwkFromURLWithKeyId(jwt.getHeader().getKeyID())
                                         .toECKey()));
             }
-        } catch (JOSEException | java.text.ParseException e) {
+        } catch (JOSEException | ParseException e) {
             LOG.warn("Unable to validate Signature of Token", e);
             return false;
         }
-    }
-
-    public boolean validateRefreshTokenScopes(
-            List<String> clientScopes, List<String> refreshTokenScopes) {
-        if (!clientScopes.containsAll(refreshTokenScopes)) {
-            LOG.warn("Scopes in Client Registry does not contain all scopes in Refresh Token");
-            return false;
-        }
-        if (!refreshTokenScopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
-            LOG.warn("Scopes in Refresh Token does not contain OFFLINE_ACCESS scope");
-            return false;
-        }
-        return true;
     }
 }
