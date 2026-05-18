@@ -154,9 +154,7 @@ Mappings:
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
-      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
-      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
       bulkEmailBatchSize: 108
@@ -187,9 +185,7 @@ Mappings:
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
-      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
-      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
       bulkEmailBatchSize: 108
@@ -220,9 +216,7 @@ Mappings:
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
-      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
-      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
       bulkEmailBatchSize: 108
@@ -251,11 +245,9 @@ Mappings:
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
-      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
-      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
       bulkEmailBatchSize: 108
@@ -284,11 +276,9 @@ Mappings:
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
-      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI 2049)"
-      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 0
       bulkEmailMaxAudienceLoadUserBatchSize: 0
       bulkEmailBatchSize: 108
@@ -317,18 +307,16 @@ Mappings:
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
-      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
-      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 1000
       bulkEmailMaxAudienceLoadUserBatchSize: 100
       bulkEmailBatchSize: 108
       bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
-      allowBulkTestUsers: "false"
+      allowBulkTestUsers: "true"
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
@@ -350,18 +338,16 @@ Mappings:
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
-      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
-      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 5000
       bulkEmailMaxAudienceLoadUserBatchSize: 500
       bulkEmailBatchSize: 48
       bulkEmailSendMode: PENDING
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
-      allowBulkTestUsers: "false"
+      allowBulkTestUsers: "true"
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
@@ -383,11 +369,9 @@ Mappings:
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
-      bulkEmailSendingEnabled: "false"
+      bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
-      bulkEmailSendScheduleState: DISABLED
       bulkEmailAudienceLoaderScheduleExpression: "cron(0 13 ? * FRI *)"
-      bulkEmailAudienceLoaderScheduleState: DISABLED
       bulkEmailMaxAudienceLoadUserCount: 10000
       bulkEmailMaxAudienceLoadUserBatchSize: 1000
       bulkEmailBatchSize: 48

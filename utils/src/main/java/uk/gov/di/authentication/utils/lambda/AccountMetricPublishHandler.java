@@ -5,12 +5,12 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Map;
 
-import static java.text.MessageFormat.format;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
 public class AccountMetricPublishHandler implements RequestHandler<ScheduledEvent, Long> {
@@ -40,9 +40,8 @@ public class AccountMetricPublishHandler implements RequestHandler<ScheduledEven
                 client.describeTable(
                         DescribeTableRequest.builder()
                                 .tableName(
-                                        format(
-                                                "{0}-user-profile",
-                                                configurationService.getEnvironment()))
+                                        TableNameHelper.getFullTableName(
+                                                "user-profile", configurationService))
                                 .build());
         var numberOfAccounts = result.table().itemCount();
         var numberOfVerifiedAccounts =
