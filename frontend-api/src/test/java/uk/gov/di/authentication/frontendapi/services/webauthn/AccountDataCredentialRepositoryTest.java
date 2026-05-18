@@ -6,10 +6,10 @@ import com.yubico.webauthn.data.PublicKeyCredentialType;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
-import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.nio.charset.StandardCharsets;

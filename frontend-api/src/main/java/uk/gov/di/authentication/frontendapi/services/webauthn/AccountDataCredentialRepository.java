@@ -8,9 +8,9 @@ import com.yubico.webauthn.data.PublicKeyCredentialType;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.nio.charset.StandardCharsets;
