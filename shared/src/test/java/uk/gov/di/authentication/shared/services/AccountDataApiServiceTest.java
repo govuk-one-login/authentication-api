@@ -10,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
+import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.io.IOException;
 import java.net.URI;
@@ -55,7 +56,7 @@ class AccountDataApiServiceTest {
     }
 
     @Nested
-    class RetrievePasskeys {
+    class RetrievePasskeysAsJson {
         @Test
         void shouldBuildCorrectRequestUri()
                 throws IOException,
@@ -66,7 +67,7 @@ class AccountDataApiServiceTest {
             when(httpClient.send(any(), any())).thenReturn(null);
 
             // Act
-            service.retrievePasskeys("testPublicSubjectId", TOKEN);
+            service.retrievePasskeysAsJson("testPublicSubjectId", TOKEN);
 
             // Assert
             verify(httpClient).send(httpRequestCaptor.capture(), any());
@@ -93,11 +94,68 @@ class AccountDataApiServiceTest {
             when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
 
             // Act
-            var resp = service.retrievePasskeys("testPublicSubjectId", TOKEN);
+            var resp = service.retrievePasskeysAsJson("testPublicSubjectId", TOKEN);
 
             // Assert
             assertThat(resp.statusCode(), equalTo(200));
             assertThat(resp.body(), equalTo("{'test': true}"));
+        }
+    }
+
+    @Nested
+    class RetrievePasskeys {
+        @Test
+        void shouldReturnDeserializedPasskeysResponse()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException,
+                        Json.JsonException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(mockHttpResponse.statusCode()).thenReturn(200);
+            String validPasskeysJson =
+                    """
+                    {
+                        "passkeys": [
+                            {
+                                "id": "credential-id-123",
+                                "credential": "eyJhbGciOiJFUzI1NiJ9",
+                                "aaguid": "fbfc3007-154e-4ecc-8c0b-6e020557d7bd",
+                                "isAttested": true,
+                                "signCount": 5,
+                                "transports": ["internal", "hybrid"],
+                                "isBackUpEligible": true,
+                                "isBackedUp": false,
+                                "createdAt": "2025-01-15T10:30:00",
+                                "lastUsedAt": "2025-05-10T14:22:00"
+                            },
+                            {
+                                "id": "credential-id-456",
+                                "credential": "eyJhbGciOiJSUzI1NiJ9",
+                                "aaguid": "adce0002-35bc-c60a-648b-0b25f1f05503",
+                                "isAttested": false,
+                                "signCount": 12,
+                                "transports": ["usb"],
+                                "isBackUpEligible": false,
+                                "isBackedUp": false,
+                                "createdAt": "2025-03-20T08:00:00",
+                                "lastUsedAt": null
+                            }
+                        ]
+                    }
+                    """;
+            when(mockHttpResponse.body()).thenReturn(validPasskeysJson);
+            when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
+
+            // Act
+            var result = service.retrievePasskeys("testPublicSubjectId", TOKEN);
+
+            // Assert
+            assertThat(result.passkeys().size(), equalTo(2));
+            assertThat(result.passkeys().get(0).passkeyId(), equalTo("credential-id-123"));
+            assertThat(result.passkeys().get(0).signCount(), equalTo(5));
+            assertThat(result.passkeys().get(1).passkeyId(), equalTo("credential-id-456"));
+            assertThat(result.passkeys().get(1).isAttested(), equalTo(false));
         }
     }
 
@@ -163,7 +221,7 @@ class AccountDataApiServiceTest {
                     .thenReturn(successResponse);
 
             // Act
-            var result = service.retrievePasskeys("sub", TOKEN);
+            var result = service.retrievePasskeysAsJson("sub", TOKEN);
 
             // Assert
             verify(httpClient, times(2)).send(any(), any());
@@ -179,7 +237,7 @@ class AccountDataApiServiceTest {
             var exception =
                     assertThrows(
                             UnsuccessfulAccountDataApiResponseException.class,
-                            () -> service.retrievePasskeys("sub", TOKEN));
+                            () -> service.retrievePasskeysAsJson("sub", TOKEN));
 
             // Assert
             verify(httpClient, times(2)).send(any(), any());
@@ -197,7 +255,7 @@ class AccountDataApiServiceTest {
             when(httpClient.send(any(), any())).thenReturn(successResponse);
 
             // Act
-            service.retrievePasskeys("sub", TOKEN);
+            service.retrievePasskeysAsJson("sub", TOKEN);
 
             // Assert
             verify(httpClient, times(1)).send(any(), any());
@@ -268,7 +326,8 @@ class AccountDataApiServiceTest {
         void call(AccountDataApiService service)
                 throws UnsuccessfulAccountDataApiResponseException {
             switch (this) {
-                case RETRIEVE_PASSKEYS -> service.retrievePasskeys("testPublicSubjectId", TOKEN);
+                case RETRIEVE_PASSKEYS -> service.retrievePasskeysAsJson(
+                        "testPublicSubjectId", TOKEN);
                 case DELETE_PASSKEY -> service.deletePasskey(
                         "testPublicSubjectId", "testPasskeyId", TOKEN);
             }
