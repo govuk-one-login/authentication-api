@@ -151,7 +151,6 @@ Conditions:
     ]
   PublishOldExternalTokenSigningKeys:
     !Or [
-      !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
