@@ -13,6 +13,10 @@ buildscript {
             classpath('org.bouncycastle:bcprov-jdk18on:[1.84,)') {
                 because 'CVE-2026-5598 is fixed in org.bouncycastle:bcprov-jdk18on 1.84 and higher'
             }
+
+            classpath('io.opentelemetry:opentelemetry-api:[1.62.0,)') {
+                because 'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
+            }
         }
     }
 }
@@ -89,6 +93,10 @@ subprojects {
                 // Other constraints
                 classpath('com.google.protobuf:protobuf-java:[3.25.5,)') {
                     because 'CVE-2024-7254 is fixed in 3.25.5 and above'
+                }
+
+                classpath('io.opentelemetry:opentelemetry-api:[1.62.0,)') {
+                    because 'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
                 }
             }
         }
@@ -196,6 +204,10 @@ subprojects {
 
                     add(conf.name, 'org.apache.logging.log4j:log4j-core:[2.25.4,3.0.0)') {
                         because 'CVE-2026-34480 is fixed in 2.25.4 and higher'
+                    }
+
+                    add(conf.name, 'io.opentelemetry:opentelemetry-api:[1.62.0,)') {
+                        because 'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
                     }
                 }
             }
