@@ -70,13 +70,15 @@ public class PasskeysRetrieveHandler
                 .fold(
                         failure ->
                                 switch (failure) {
-                                    case REQUEST_MISSING_PARAMS -> generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.REQUEST_MISSING_PARAMS);
-                                    case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
-                                            401, ErrorResponse.UNAUTHORIZED_REQUEST);
-                                    case FAILED_TO_GET_PASSKEYS,
-                                            FAILED_TO_SERIALIZE_RESPONSE -> generateApiGatewayProxyErrorResponse(
-                                            500, ErrorResponse.INTERNAL_SERVER_ERROR);
+                                    case REQUEST_MISSING_PARAMS ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    400, ErrorResponse.REQUEST_MISSING_PARAMS);
+                                    case UNAUTHORIZED_REQUEST ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    401, ErrorResponse.UNAUTHORIZED_REQUEST);
+                                    case FAILED_TO_GET_PASSKEYS, FAILED_TO_SERIALIZE_RESPONSE ->
+                                            generateApiGatewayProxyErrorResponse(
+                                                    500, ErrorResponse.INTERNAL_SERVER_ERROR);
                                 },
                         response -> response);
     }
@@ -114,7 +116,7 @@ public class PasskeysRetrieveHandler
         try {
             return Result.success(
                     generateApiGatewayProxyResponse(200, passkeysRetrieveResponse, true));
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             LOG.error("Failed to serialize JSON");
             return Result.failure(PasskeysRetrieveFailureReasons.FAILED_TO_SERIALIZE_RESPONSE);
         }

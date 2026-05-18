@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.services.JwksService;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.text.ParseException;
 import java.util.Map;
 
@@ -32,7 +32,8 @@ class FetchJwksHandlerTest {
         String jwkJson =
                 "{\"kty\":\"EC\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":\"f27ff20940cdc6c8b34f97f44c24c8601ded9465c0713dd190ed152272d07ddb\",\"x\":\"sSdmBkED2EfjTdX-K2_cT6CfBwXQFt-DJ6v8-6tr_n8\",\"y\":\"WTXmQdqLwrmHN5tiFsTFUtNAvDYhhTQB4zyfteCrWIE\",\"alg\":\"ES256\"}";
         JWK jwk = JWK.parse(jwkJson);
-        when(jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId)).thenReturn(jwk);
+        when(jwksService.retrieveJwkFromURLWithKeyId(URI.create(url).toURL(), keyId))
+                .thenReturn(jwk);
 
         // when
         String response = handler.handleRequest(event, CONTEXT);
@@ -46,7 +47,7 @@ class FetchJwksHandlerTest {
             throws MalformedURLException, KeySourceException {
         // given
         Map<String, String> event = Map.of("url", url, "keyId", keyId);
-        when(jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId))
+        when(jwksService.retrieveJwkFromURLWithKeyId(URI.create(url).toURL(), keyId))
                 .thenThrow(new KeySourceException());
 
         // when

@@ -492,8 +492,8 @@ class CheckReAuthUserHandlerTest {
                 int differentSubjectIdCount = 0;
 
                 switch (lockoutLocation) {
-                    case USER_PROFILE_ASSOCIATED_WITH_RP_SUBMITTED_PAIRWISE_ID -> testSubjectIdCount =
-                            MAX_RETRIES;
+                    case USER_PROFILE_ASSOCIATED_WITH_RP_SUBMITTED_PAIRWISE_ID ->
+                            testSubjectIdCount = MAX_RETRIES;
                     case RP_SUBMITTED_PAIRWISE_ID -> expectedRpPairwiseCount = MAX_RETRIES;
                     case DIFFERENT_USER_PROFILE -> differentSubjectIdCount = MAX_RETRIES;
                 }
@@ -682,10 +682,10 @@ class CheckReAuthUserHandlerTest {
                                             .thenReturn(
                                                     switch (scenario.signedInState) {
                                                         case NOT_SIGNED_IN -> Optional.empty();
-                                                        case TO_USER_PROFILE_ASSOCIATED_WITH_RP_SUBMITTED_PAIRWISE_ID -> Optional
-                                                                .of(USER_PROFILE);
-                                                        case TO_DIFFERENT_USER_PROFILE -> Optional
-                                                                .of(differentUserProfile);
+                                                        case TO_USER_PROFILE_ASSOCIATED_WITH_RP_SUBMITTED_PAIRWISE_ID ->
+                                                                Optional.of(USER_PROFILE);
+                                                        case TO_DIFFERENT_USER_PROFILE ->
+                                                                Optional.of(differentUserProfile);
                                                     });
 
                                     when(authenticationService.getUserProfileByEmailMaybe(

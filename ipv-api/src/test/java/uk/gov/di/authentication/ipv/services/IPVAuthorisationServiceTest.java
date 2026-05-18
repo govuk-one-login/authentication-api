@@ -46,7 +46,6 @@ import uk.gov.di.orchestration.sharedtest.helper.TestClockHelper;
 
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URL;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -120,7 +119,7 @@ class IPVAuthorisationServiceTest {
                         .keyUse(KeyUse.ENCRYPTION)
                         .keyID(KEY_ID)
                         .build();
-        var jwksUrl = new URL("http://localhost/.well-known/jwks.json");
+        var jwksUrl = URI.create("http://localhost/.well-known/jwks.json").toURL();
         when(configurationService.getIPVJwksUrl()).thenReturn(jwksUrl);
         when(jwksCacheService.getOrGenerateIpvJwksCacheItem())
                 .thenReturn(new JwksCacheItem(jwksUrl.toString(), rsaKey, 300));

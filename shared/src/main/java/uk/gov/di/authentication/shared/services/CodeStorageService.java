@@ -145,7 +145,7 @@ public class CodeStorageService {
         String keys = prefix + encodedHash;
         try {
             redisConnectionService.deleteValue(keys);
-        } catch (Exception e) {
+        } catch (Exception _) {
             throw new IllegalArgumentException("Unable to remove the block for this value");
         }
     }

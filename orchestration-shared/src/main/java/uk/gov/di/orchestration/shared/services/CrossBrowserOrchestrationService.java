@@ -69,7 +69,7 @@ public class CrossBrowserOrchestrationService {
             try {
                 attachLogFieldToLogs(CLIENT_NAME, orchClientSession.getClientName());
                 attachLogFieldToLogs(CLIENT_ID, clientIdFromClientSession(orchClientSession));
-            } catch (Exception e) {
+            } catch (Exception _) {
                 LOG.warn("Failed to attach client details to logs");
             }
 
@@ -129,7 +129,7 @@ public class CrossBrowserOrchestrationService {
         try {
             attachLogFieldToLogs(CLIENT_NAME, orchClientSession.getClientName());
             attachLogFieldToLogs(CLIENT_ID, clientIdFromClientSession(orchClientSession));
-        } catch (Exception e) {
+        } catch (Exception _) {
             LOG.warn("Failed to attach client details to logs");
         }
 

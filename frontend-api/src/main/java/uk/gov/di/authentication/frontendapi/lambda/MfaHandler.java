@@ -325,7 +325,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             return generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS);
         }
     }

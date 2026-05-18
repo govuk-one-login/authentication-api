@@ -14,7 +14,7 @@ public class BulkEmailBatchPauseHelper {
                 Thread.sleep(pauseDurationMs);
                 LOG.info("Bulk email batch pause complete.");
             }
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             LOG.warn("Thread sleep for bulk email batch pause interrupted.");
             Thread.currentThread().interrupt();
         }

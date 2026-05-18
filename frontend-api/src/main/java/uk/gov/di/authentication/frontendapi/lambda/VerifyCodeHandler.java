@@ -639,8 +639,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         AuditableEvent auditableEvent;
         switch (errorResponse) {
             case TOO_MANY_INVALID_MFA_OTPS_ENTERED,
-                    TOO_MANY_INVALID_PW_RESET_CODES_ENTERED,
-                    TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED:
+            TOO_MANY_INVALID_PW_RESET_CODES_ENTERED,
+            TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED:
                 if (!configurationService.supportReauthSignoutEnabled()
                         || journeyType != REAUTHENTICATION) {
                     blockCodeForSession(authSession, codeBlockedKeyPrefix);
@@ -673,9 +673,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
         LOG.info("Using TestClient with NotificationType {}", notificationType);
         return switch (notificationType) {
-            case VERIFY_EMAIL,
-                    VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                    RESET_PASSWORD_WITH_CODE -> configurationService.getTestClientVerifyEmailOTP();
+            case VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, RESET_PASSWORD_WITH_CODE ->
+                    configurationService.getTestClientVerifyEmailOTP();
             case MFA_SMS -> configurationService.getTestClientVerifyPhoneNumberOTP();
             default -> {
                 LOG.error(

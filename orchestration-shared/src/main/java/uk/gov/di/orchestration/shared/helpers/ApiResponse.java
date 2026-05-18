@@ -16,7 +16,7 @@ public class ApiResponse {
             } else {
                 return generateApiGatewayProxyResponse(200, supplier);
             }
-        } catch (Exception e) {
+        } catch (Exception _) {
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
         }
@@ -29,7 +29,7 @@ public class ApiResponse {
             } else {
                 return generateApiGatewayProxyResponse(400, supplier);
             }
-        } catch (Exception e) {
+        } catch (Exception _) {
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
         }

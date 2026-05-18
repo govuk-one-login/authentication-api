@@ -11,7 +11,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.8 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | 5.75.1 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.82.0 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
@@ -21,7 +21,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.82.0 |
 
 ## Modules
 
@@ -33,10 +33,10 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 
 | Name | Type |
 |------|------|
-| [aws_api_gateway_integration.endpoint_integration](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_integration) | resource |
-| [aws_api_gateway_method.endpoint_method](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_method) | resource |
-| [aws_api_gateway_resource.endpoint_resource](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_resource) | resource |
-| [aws_lambda_permission.endpoint_execution_permission](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/lambda_permission) | resource |
+| [aws_api_gateway_integration.endpoint_integration](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_integration) | resource |
+| [aws_api_gateway_method.endpoint_method](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method) | resource |
+| [aws_api_gateway_resource.endpoint_resource](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_resource) | resource |
+| [aws_lambda_permission.endpoint_execution_permission](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
 
 ## Inputs
 
@@ -70,7 +70,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_create_endpoint"></a> [create\_endpoint](#input\_create\_endpoint) | n/a | `bool` | `true` | no |
 | <a name="input_endpoint_name_sanitized"></a> [endpoint\_name\_sanitized](#input\_endpoint\_name\_sanitized) | The name of the endpoint, required if endpoint\_name contains a period | `string` | `null` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |
-| <a name="input_handler_runtime"></a> [handler\_runtime](#input\_handler\_runtime) | n/a | `string` | `"java17"` | no |
+| <a name="input_handler_runtime"></a> [handler\_runtime](#input\_handler\_runtime) | n/a | `string` | `"java25"` | no |
 | <a name="input_integration_request_parameters"></a> [integration\_request\_parameters](#input\_integration\_request\_parameters) | n/a | `map(string)` | `{}` | no |
 | <a name="input_lambda_error_alarm_disabled"></a> [lambda\_error\_alarm\_disabled](#input\_lambda\_error\_alarm\_disabled) | n/a | `bool` | `false` | no |
 | <a name="input_lambda_error_rate_alarm_disabled"></a> [lambda\_error\_rate\_alarm\_disabled](#input\_lambda\_error\_rate\_alarm\_disabled) | n/a | `bool` | `false` | no |

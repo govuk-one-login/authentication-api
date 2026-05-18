@@ -729,7 +729,7 @@ public class DynamoService implements AuthenticationService {
         for (Thread thread : dbWriterThreads) {
             try {
                 thread.join();
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 LOG.error("Thread failed to write to DB");
                 Thread.currentThread().interrupt();
             }

@@ -54,7 +54,7 @@ public class AuthenticatorExtension implements AfterEachCallback, BeforeAllCallb
             dynamoDB.describeTable(
                     DescribeTableRequest.builder().tableName(AUTHENTICATOR_TABLE).build());
             tableExists = true;
-        } catch (ResourceNotFoundException ignored) {
+        } catch (ResourceNotFoundException _) {
             tableExists = false;
         }
         if (!tableExists) {

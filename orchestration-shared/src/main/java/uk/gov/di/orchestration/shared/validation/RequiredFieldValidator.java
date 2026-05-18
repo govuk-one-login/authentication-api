@@ -37,7 +37,7 @@ public class RequiredFieldValidator implements Validator {
                     if (field.isAnnotationPresent(Required.class) && isNull(field.get(object))) {
                         violations.add(field.getName());
                     }
-                } catch (IllegalAccessException e) {
+                } catch (IllegalAccessException _) {
                     LOG.warn("Could not validate field: {}", field.getName());
                 } finally {
                     if (!accessible) field.setAccessible(false);

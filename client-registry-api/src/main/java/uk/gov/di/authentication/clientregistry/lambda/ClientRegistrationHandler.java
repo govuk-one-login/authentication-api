@@ -152,7 +152,7 @@ public class ClientRegistrationHandler
                             clientRegistrationRequest.getLandingPageUrl());
             LOG.info("Generating successful Client registration response");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.warn("Invalid Client registration request. Missing parameters from request");
             auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, UNKNOWN, user);
 

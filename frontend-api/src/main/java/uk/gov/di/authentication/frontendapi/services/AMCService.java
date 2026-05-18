@@ -133,7 +133,7 @@ public class AMCService {
                 return Result.failure(JourneyOutcomeError.ERROR_RESPONSE_FROM_JOURNEY_OUTCOME);
             }
             return Result.success(response);
-        } catch (IOException e) {
+        } catch (IOException _) {
             return Result.failure(JourneyOutcomeError.IO_EXCEPTION);
         }
     }

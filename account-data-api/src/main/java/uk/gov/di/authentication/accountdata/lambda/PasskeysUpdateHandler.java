@@ -87,9 +87,9 @@ public class PasskeysUpdateHandler
             passkeysUpdateRequest =
                     objectMapper.readValue(input.getBody(), PasskeysUpdateRequest.class, true);
             Instant.parse(passkeysUpdateRequest.lastUsedAt());
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             return Result.failure(PasskeysUpdateFailureReason.PARSING_PASSKEY_UPDATE_REQUEST_ERROR);
-        } catch (DateTimeException e) {
+        } catch (DateTimeException _) {
             LOG.warn("last used at time is not a valid timestamp");
             return Result.failure(PasskeysUpdateFailureReason.PARSING_PASSKEY_UPDATE_REQUEST_ERROR);
         }
@@ -126,18 +126,18 @@ public class PasskeysUpdateHandler
             PasskeysUpdateFailureReason failureReason) {
         LOG.warn("Failed to update passkey for reason: {} ", failureReason.getValue());
         return switch (failureReason) {
-            case PARSING_PASSKEY_UPDATE_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.INVALID_REQUEST_BODY);
-            case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.MISSING_SUBJECT_ID);
-            case MISSING_PASSKEY_ID -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.MISSING_PASSKEY_ID);
-            case PASSKEY_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
-                    404, ErrorResponse.PASSKEY_NOT_FOUND);
-            case FAILED_TO_UPDATE_PASSKEY -> generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.INTERNAL_SERVER_ERROR);
-            case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
-                    401, ErrorResponse.UNAUTHORIZED_REQUEST);
+            case PARSING_PASSKEY_UPDATE_REQUEST_ERROR ->
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.INVALID_REQUEST_BODY);
+            case MISSING_SUBJECT_ID ->
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.MISSING_SUBJECT_ID);
+            case MISSING_PASSKEY_ID ->
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.MISSING_PASSKEY_ID);
+            case PASSKEY_NOT_FOUND ->
+                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.PASSKEY_NOT_FOUND);
+            case FAILED_TO_UPDATE_PASSKEY ->
+                    generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
+            case UNAUTHORIZED_REQUEST ->
+                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.UNAUTHORIZED_REQUEST);
         };
     }
 

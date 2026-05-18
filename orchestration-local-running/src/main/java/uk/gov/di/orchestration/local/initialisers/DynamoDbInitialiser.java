@@ -25,7 +25,7 @@ public class DynamoDbInitialiser {
         var table = enhancedClient.table(tableName, TableSchema.fromBean(modelClass));
         try {
             table.describeTable();
-        } catch (ResourceNotFoundException e) {
+        } catch (ResourceNotFoundException _) {
             table.createTable();
         }
         records.forEach(table::putItem);

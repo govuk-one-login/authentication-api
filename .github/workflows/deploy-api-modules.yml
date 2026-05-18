@@ -9,7 +9,7 @@ env:
   ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
   ARTIFACT_LOOKUP_TABLE: arn:aws:dynamodb:eu-west-2:114407264696:table/di-auth-production-artifact-lookup
 
-  JAVA_VERSION: 17
+  JAVA_VERSION: 25
   JAVA_DISTRIBUTION: corretto
 
 on:

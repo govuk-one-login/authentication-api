@@ -55,7 +55,7 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
         try {
             dynamoDB.describeTable(DescribeTableRequest.builder().tableName(tableName).build());
             return true;
-        } catch (ResourceNotFoundException ignored) {
+        } catch (ResourceNotFoundException _) {
             return false;
         }
     }

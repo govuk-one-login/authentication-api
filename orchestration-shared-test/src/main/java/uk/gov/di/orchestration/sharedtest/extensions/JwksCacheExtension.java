@@ -7,6 +7,7 @@ import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.Optional;
 
@@ -29,7 +30,7 @@ public class JwksCacheExtension extends DynamoExtension implements AfterEachCall
                     @Override
                     public URL getIPVJwksUrl() {
                         try {
-                            return new URL("http://localhost/.well-known/jwks.json");
+                            return URI.create("http://localhost/.well-known/jwks.json").toURL();
                         } catch (MalformedURLException e) {
                             throw new RuntimeException(e);
                         }
@@ -38,7 +39,7 @@ public class JwksCacheExtension extends DynamoExtension implements AfterEachCall
                     @Override
                     public URL getDocAppJwksUrl() {
                         try {
-                            return new URL("http://localhost/.well-known/jwks.json");
+                            return URI.create("http://localhost/.well-known/jwks.json").toURL();
                         } catch (MalformedURLException e) {
                             throw new RuntimeException(e);
                         }

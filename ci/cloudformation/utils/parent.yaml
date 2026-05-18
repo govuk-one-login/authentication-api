@@ -403,7 +403,7 @@ Mappings:
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Runtime: java17
+    Runtime: java25
     MemorySize: 4096
     Timeout: 900
     Architectures:

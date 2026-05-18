@@ -75,7 +75,7 @@ public class TestUserHelper {
                 } else if (Objects.equals(emailAddress, allowedEmailEntry)) {
                     return true;
                 }
-            } catch (PatternSyntaxException e) {
+            } catch (PatternSyntaxException _) {
                 LOG.warn("PatternSyntaxException for: {}", allowedEmailEntry);
             }
         }

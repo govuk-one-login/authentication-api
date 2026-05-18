@@ -52,7 +52,7 @@ resource "aws_lambda_function" "international_send_count_delete_lambda" {
   timeout                        = 900
   memory_size                    = 4096
   reserved_concurrent_executions = 1
-  runtime                        = "java17"
+  runtime                        = "java25"
   publish                        = true
 
   s3_bucket         = aws_s3_object.utils_release_zip.bucket

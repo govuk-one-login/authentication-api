@@ -152,7 +152,7 @@ public abstract class BaseFrontendHandler<T>
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.warn("Request is missing parameters.");
             onRequestValidationError(clientSessionId, txmaAuditEncoded);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);

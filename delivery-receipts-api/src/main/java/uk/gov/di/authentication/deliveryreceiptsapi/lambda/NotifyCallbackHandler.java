@@ -150,7 +150,7 @@ public class NotifyCallbackHandler
                 }
                 LOG.info("Email callback request processed");
             }
-        } catch (JsonException e) {
+        } catch (JsonException _) {
             LOG.error("Unable to parse Notify Delivery Receipt");
             ThreadContext.clearMap();
             throw new RuntimeException("Unable to parse Notify Delivery Receipt");
@@ -216,7 +216,7 @@ public class NotifyCallbackHandler
         var phoneUtil = PhoneNumberUtil.getInstance();
         try {
             return phoneUtil.parse(number, "GB").getCountryCode();
-        } catch (NumberParseException e) {
+        } catch (NumberParseException _) {
             LOG.error("Unable to parse number");
             throw new RuntimeException("Unable to parse number");
         }

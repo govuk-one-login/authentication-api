@@ -235,7 +235,7 @@ public class BulkRemoveAccountHandler
             } else {
                 return true;
             }
-        } catch (DateTimeParseException e) {
+        } catch (DateTimeParseException _) {
             LOG.warn("Invalid creation date format for user, excluding from deletion");
             return false;
         }

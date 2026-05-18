@@ -139,7 +139,7 @@ public class CookieHelper {
         HttpCookie httpCookie;
         try {
             httpCookie = HttpCookie.parse(cookie).stream().findFirst().orElse(null);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return Optional.empty();
         }
         if (httpCookie == null) {

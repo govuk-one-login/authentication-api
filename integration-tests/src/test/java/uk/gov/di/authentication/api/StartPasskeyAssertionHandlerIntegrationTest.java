@@ -217,6 +217,7 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
 
     private static String passkeysResponse(String... passkeys) {
         return """
-                {"passkeys": [%s]}""".formatted(String.join(",", passkeys));
+                {"passkeys": [%s]}"""
+                .formatted(String.join(",", passkeys));
     }
 }

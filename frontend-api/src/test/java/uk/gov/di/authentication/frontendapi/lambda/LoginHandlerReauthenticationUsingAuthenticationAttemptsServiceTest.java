@@ -320,14 +320,14 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
             ForbiddenReason forbiddenReason =
                     switch (countType) {
-                        case ENTER_EMAIL -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
-                        case ENTER_EMAIL_CODE -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
-                        case ENTER_PASSWORD -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
-                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+                        case ENTER_EMAIL ->
+                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
+                        case ENTER_EMAIL_CODE ->
+                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
+                        case ENTER_PASSWORD ->
+                                ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
+                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE ->
+                                ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
                     };
 
             when(permissionDecisionManager.canReceivePassword(any(), any()))
@@ -401,14 +401,14 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
             ForbiddenReason forbiddenReason =
                     switch (countType) {
-                        case ENTER_EMAIL -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
-                        case ENTER_EMAIL_CODE -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
-                        case ENTER_PASSWORD -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
-                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+                        case ENTER_EMAIL ->
+                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
+                        case ENTER_EMAIL_CODE ->
+                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
+                        case ENTER_PASSWORD ->
+                                ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
+                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE ->
+                                ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
                     };
 
             var detailedCounts =
@@ -719,12 +719,13 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     private void setupConfigurationServiceCountForCountType(
             CountType countType, int retriesAllowed) {
         switch (countType) {
-            case ENTER_EMAIL -> when(configurationService.getMaxEmailReAuthRetries())
-                    .thenReturn(retriesAllowed);
-            case ENTER_PASSWORD -> when(configurationService.getMaxPasswordRetries())
-                    .thenReturn(retriesAllowed);
-            case ENTER_MFA_CODE -> when(configurationService.getCodeMaxRetries())
-                    .thenReturn(retriesAllowed);
+            case ENTER_EMAIL ->
+                    when(configurationService.getMaxEmailReAuthRetries())
+                            .thenReturn(retriesAllowed);
+            case ENTER_PASSWORD ->
+                    when(configurationService.getMaxPasswordRetries()).thenReturn(retriesAllowed);
+            case ENTER_MFA_CODE ->
+                    when(configurationService.getCodeMaxRetries()).thenReturn(retriesAllowed);
         }
     }
 }

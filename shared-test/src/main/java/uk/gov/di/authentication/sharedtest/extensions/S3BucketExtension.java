@@ -92,7 +92,7 @@ public class S3BucketExtension extends BaseAwsResourceExtension
         try {
             s3Client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build());
             return true;
-        } catch (S3Exception ignored) {
+        } catch (S3Exception _) {
             return false;
         }
     }

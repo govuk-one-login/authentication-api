@@ -48,7 +48,7 @@ public class SqsPoller extends Thread {
         while (true) {
             try {
                 poll();
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 LOG.error("SQS poller interrupted");
                 this.interrupt();
                 break;

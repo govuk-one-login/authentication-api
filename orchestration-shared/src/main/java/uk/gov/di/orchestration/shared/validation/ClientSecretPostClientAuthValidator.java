@@ -45,7 +45,7 @@ public class ClientSecretPostClientAuthValidator extends TokenClientAuthValidato
                     OAuth2Error.INVALID_CLIENT,
                     ClientAuthenticationMethod.CLIENT_SECRET_POST,
                     "unknown");
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             LOG.warn("Could not parse client_secret_post");
             throw new TokenAuthInvalidException(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid client secret"),

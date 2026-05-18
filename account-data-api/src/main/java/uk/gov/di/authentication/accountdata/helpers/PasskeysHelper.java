@@ -19,7 +19,7 @@ public class PasskeysHelper {
 
         try {
             UUID.fromString(aaguid);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return false;
         }
 

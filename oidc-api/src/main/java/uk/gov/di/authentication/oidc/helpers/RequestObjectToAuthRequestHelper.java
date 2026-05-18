@@ -150,7 +150,7 @@ public class RequestObjectToAuthRequestHelper {
 
         try {
             return parseClaimsAsJson(claimsSet);
-        } catch (java.text.ParseException e) {
+        } catch (java.text.ParseException _) {
             return parseClaimsAsString(claimsSet);
         }
     }
@@ -158,7 +158,7 @@ public class RequestObjectToAuthRequestHelper {
     private static Integer getMaxAge(JWTClaimsSet claimsSet) {
         try {
             return claimsSet.getIntegerClaim("max_age");
-        } catch (java.text.ParseException e) {
+        } catch (java.text.ParseException _) {
             return parseStringMaxAge(claimsSet);
         }
     }
@@ -167,7 +167,7 @@ public class RequestObjectToAuthRequestHelper {
         try {
             var stringMaxAge = claimsSet.getStringClaim("max_age");
             return Integer.parseInt(stringMaxAge);
-        } catch (java.text.ParseException e) {
+        } catch (java.text.ParseException _) {
             throw new IllegalArgumentException("Max age claim is could not be parsed to integer");
         }
     }

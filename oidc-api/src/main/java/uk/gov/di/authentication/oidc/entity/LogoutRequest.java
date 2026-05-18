@@ -109,7 +109,7 @@ public class LogoutRequest {
                     Objects.nonNull(clientSessionId)
                             ? auditUser.withGovukSigninJourneyId(clientSessionId)
                             : auditUser;
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             LOG.warn("Unable to extract JWTClaimsSet to get the audience");
             errorObject =
                     Optional.of(
@@ -153,7 +153,7 @@ public class LogoutRequest {
 
         try {
             postLogoutRedirectUri = Optional.of(URI.create(postLogoutRedirectUriString.get()));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             LOG.warn("Invalid post logout redirect URI: {}", postLogoutRedirectUriString.get());
             errorObject =
                     Optional.of(

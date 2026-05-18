@@ -86,16 +86,16 @@ public class PasskeysDeleteHandler
     private APIGatewayProxyResponseEvent mapDeleteFailure(
             PasskeysDeleteFailureReason failureReason) {
         return switch (failureReason) {
-            case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.MISSING_SUBJECT_ID);
-            case MISSING_PASSKEY_ID -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.MISSING_PASSKEY_ID);
-            case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
-                    401, ErrorResponse.UNAUTHORIZED_REQUEST);
-            case PASSKEY_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
-                    404, ErrorResponse.PASSKEY_NOT_FOUND);
-            case FAILED_TO_DELETE_PASSKEY -> generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.INTERNAL_SERVER_ERROR);
+            case MISSING_SUBJECT_ID ->
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.MISSING_SUBJECT_ID);
+            case MISSING_PASSKEY_ID ->
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.MISSING_PASSKEY_ID);
+            case UNAUTHORIZED_REQUEST ->
+                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.UNAUTHORIZED_REQUEST);
+            case PASSKEY_NOT_FOUND ->
+                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.PASSKEY_NOT_FOUND);
+            case FAILED_TO_DELETE_PASSKEY ->
+                    generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         };
     }
 }

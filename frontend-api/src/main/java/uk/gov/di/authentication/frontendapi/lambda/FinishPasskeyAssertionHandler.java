@@ -76,12 +76,15 @@ public class FinishPasskeyAssertionHandler
         return result.fold(
                 failure ->
                         switch (failure) {
-                            case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
-                            case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
-                            case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
+                            case PARSING_ASSERTION_REQUEST_ERROR ->
+                                    generateApiGatewayProxyErrorResponse(
+                                            500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+                            case PARSING_PKC_ERROR ->
+                                    generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
+                            case ASSERTION_FAILED_ERROR ->
+                                    generateApiGatewayProxyErrorResponse(
+                                            401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
                         },
                 assertionResult -> generateApiGatewayProxyResponse(200, ""));
 

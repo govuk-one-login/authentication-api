@@ -61,7 +61,7 @@ public class AccountInterventionsApiStubHandler
                 return generateApiGatewayProxyResponse(
                         200, new InterventionsApiStubResponse(noAccountInterventionStore));
             }
-        } catch (Json.JsonException e) {
+        } catch (Json.JsonException _) {
             return generateApiGatewayProxyResponse(
                     500, "server error - unable to construct response body");
         }

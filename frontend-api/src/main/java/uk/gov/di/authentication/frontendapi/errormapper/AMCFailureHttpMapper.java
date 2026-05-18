@@ -14,37 +14,40 @@ public class AMCFailureHttpMapper {
 
     public static ErrorResponseWithStatus toHttpResponse(AMCFailureReason failureReason) {
         return switch (failureReason) {
-            case JWT_ENCODING_ERROR -> new ErrorResponseWithStatus(
-                    400, ErrorResponse.AMC_JWT_ENCODING_ERROR);
-            case TRANSCODING_ERROR -> new ErrorResponseWithStatus(
-                    400, ErrorResponse.AMC_TRANSCODING_ERROR);
+            case JWT_ENCODING_ERROR ->
+                    new ErrorResponseWithStatus(400, ErrorResponse.AMC_JWT_ENCODING_ERROR);
+            case TRANSCODING_ERROR ->
+                    new ErrorResponseWithStatus(400, ErrorResponse.AMC_TRANSCODING_ERROR);
             case SIGNING_ERROR -> new ErrorResponseWithStatus(500, ErrorResponse.AMC_SIGNING_ERROR);
-            case ENCRYPTION_ERROR -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_ENCRYPTION_ERROR);
-            case UNKNOWN_JWT_SIGNING_ERROR -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_UNKNOWN_JWT_SIGNING_ERROR);
-            case UNKNOWN_JWT_ENCRYPTING_ERROR -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_UNKNOWN_JWT_ENCRYPTING_ERROR);
-            case JWKS_RETRIEVAL_ERROR -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_JWKS_RETRIEVAL_ERROR);
+            case ENCRYPTION_ERROR ->
+                    new ErrorResponseWithStatus(500, ErrorResponse.AMC_ENCRYPTION_ERROR);
+            case UNKNOWN_JWT_SIGNING_ERROR ->
+                    new ErrorResponseWithStatus(500, ErrorResponse.AMC_UNKNOWN_JWT_SIGNING_ERROR);
+            case UNKNOWN_JWT_ENCRYPTING_ERROR ->
+                    new ErrorResponseWithStatus(
+                            500, ErrorResponse.AMC_UNKNOWN_JWT_ENCRYPTING_ERROR);
+            case JWKS_RETRIEVAL_ERROR ->
+                    new ErrorResponseWithStatus(500, ErrorResponse.AMC_JWKS_RETRIEVAL_ERROR);
         };
     }
 
     public static ErrorResponseWithStatus toHttpResponse(TokenResponseError tokenResponseError) {
         return switch (tokenResponseError) {
-            case ERROR_RESPONSE_FROM_TOKEN_REQUEST -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_TOKEN_RESPONSE_ERROR);
-            case IO_EXCEPTION, PARSE_EXCEPTION -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR);
+            case ERROR_RESPONSE_FROM_TOKEN_REQUEST ->
+                    new ErrorResponseWithStatus(500, ErrorResponse.AMC_TOKEN_RESPONSE_ERROR);
+            case IO_EXCEPTION, PARSE_EXCEPTION ->
+                    new ErrorResponseWithStatus(500, ErrorResponse.AMC_TOKEN_UNEXPECTED_ERROR);
         };
     }
 
     public static ErrorResponseWithStatus toHttpResponse(JourneyOutcomeError journeyOutcomeError) {
         return switch (journeyOutcomeError) {
-            case ERROR_RESPONSE_FROM_JOURNEY_OUTCOME -> new ErrorResponseWithStatus(
-                    400, ErrorResponse.AMC_JOURNEY_OUTCOME_RESPONSE_ERROR);
-            case IO_EXCEPTION -> new ErrorResponseWithStatus(
-                    500, ErrorResponse.AMC_JOURNEY_OUTCOME_UNEXPECTED_ERROR);
+            case ERROR_RESPONSE_FROM_JOURNEY_OUTCOME ->
+                    new ErrorResponseWithStatus(
+                            400, ErrorResponse.AMC_JOURNEY_OUTCOME_RESPONSE_ERROR);
+            case IO_EXCEPTION ->
+                    new ErrorResponseWithStatus(
+                            500, ErrorResponse.AMC_JOURNEY_OUTCOME_UNEXPECTED_ERROR);
         };
     }
 

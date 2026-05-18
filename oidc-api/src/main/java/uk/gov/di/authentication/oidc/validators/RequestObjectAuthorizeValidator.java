@@ -286,7 +286,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Max age is negative in request object"));
             } else return Optional.empty();
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             return validateStringMaxAge(jwtClaimsSet);
         }
     }
@@ -301,7 +301,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Max age is negative in request object"));
             }
-        } catch (ParseException | NumberFormatException e) {
+        } catch (ParseException | NumberFormatException _) {
             LOG.warn("Max age could not be parsed to an integer");
             return Optional.of(
                     new ErrorObject(

@@ -33,7 +33,7 @@ import uk.gov.di.orchestration.shared.utils.JwksUtils;
 import uk.gov.di.orchestration.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -247,7 +247,7 @@ public class ClientSignatureValidationService {
     private JWK fetchJwksDirect(String jwksUrl, String kid) throws JwksException {
         LOG.warn("Fetching JWKS directly in local environment");
         try {
-            return JwksUtils.retrieveJwkFromURLWithKeyId(new URL(jwksUrl), kid);
+            return JwksUtils.retrieveJwkFromURLWithKeyId(URI.create(jwksUrl).toURL(), kid);
         } catch (KeySourceException | MalformedURLException | IllegalArgumentException e) {
             LOG.error("Failed to fetch JWKS directly", e);
             throw new JwksException("Failed to fetch JWKS directly");

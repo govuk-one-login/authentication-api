@@ -122,7 +122,7 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
             var request = DescribeKeyRequest.builder().keyId(keyAlias).build();
             kms.describeKey(request);
             return true;
-        } catch (NotFoundException ignored) {
+        } catch (NotFoundException _) {
             return false;
         }
     }

@@ -17,7 +17,7 @@ public class KeyPairHelper {
             KeyPairGenerator kpg;
             try {
                 kpg = KeyPairGenerator.getInstance("RSA");
-            } catch (NoSuchAlgorithmException e) {
+            } catch (NoSuchAlgorithmException _) {
                 throw new RuntimeException();
             }
             kpg.initialize(2048);

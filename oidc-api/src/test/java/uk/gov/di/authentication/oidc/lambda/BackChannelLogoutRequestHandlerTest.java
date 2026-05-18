@@ -202,7 +202,7 @@ class BackChannelLogoutRequestHandlerTest {
                 try {
                     UUID.fromString(item);
                     return true;
-                } catch (IllegalArgumentException e) {
+                } catch (IllegalArgumentException _) {
                     return false;
                 }
             }

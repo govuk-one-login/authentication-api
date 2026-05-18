@@ -37,7 +37,7 @@ public class PasskeyAssertionService {
         AssertionRequest assertionRequest;
         try {
             assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return Result.failure(
                     FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
         }
@@ -46,7 +46,7 @@ public class PasskeyAssertionService {
                 credential;
         try {
             credential = jsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR);
         }
 
@@ -58,7 +58,7 @@ public class PasskeyAssertionService {
                                     .request(assertionRequest)
                                     .response(credential)
                                     .build());
-        } catch (AssertionFailedException e) {
+        } catch (AssertionFailedException _) {
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
 

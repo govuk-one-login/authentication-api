@@ -99,7 +99,7 @@ public class UserInfoService {
             }
 
             tmpUserInfo = userInfoFromStorage.get();
-        } catch (ParseException e) {
+        } catch (ParseException _) {
             throw new AccessTokenException(
                     "Error finding user info for subject", BearerTokenError.INVALID_TOKEN);
         }
@@ -166,7 +166,7 @@ public class UserInfoService {
                                             objectMapper.readValue(t.getValue(), JSONArray.class));
                                     incrementClaimIssuedCounter(
                                             t.getKey(), accessTokenInfo.clientID());
-                                } catch (Json.JsonException e) {
+                                } catch (Json.JsonException _) {
                                     LOG.error("Unable to deserialize additional identity claims");
                                     throw new RuntimeException();
                                 }

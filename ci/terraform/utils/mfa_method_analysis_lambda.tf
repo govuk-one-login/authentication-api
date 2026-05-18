@@ -49,7 +49,7 @@ resource "aws_lambda_function" "mfa_method_analysis_lambda" {
   handler       = "uk.gov.di.authentication.utils.lambda.MFAMethodAnalysisHandler::handleRequest"
   timeout       = 900
   memory_size   = 4096
-  runtime       = "java17"
+  runtime       = "java25"
   publish       = true
 
   s3_bucket         = aws_s3_object.utils_release_zip.bucket

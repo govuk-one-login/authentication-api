@@ -18,7 +18,7 @@ public class Argon2MatcherHelper {
         Argon2Hash decoded;
         try {
             decoded = decode(encodedPassword);
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException _) {
             return false;
         }
         byte[] hashBytes = new byte[decoded.getHash().length];
