@@ -48,6 +48,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private static final Logger LOG = LogManager.getLogger(NotificationHandler.class);
     public static final String VALIDATION_CODE_PERSONALISATION = "validation-code";
     public static final String EMAIL_ADDRESS_PERSONALISATION = "email-address";
+    public static final String HAS_PASSKEYS_REMAINING_PERSONALISATION = "has_passkeys_remaining";
+    public static final String DOES_NOT_HAVE_PASSKEYS_REMAINING_PERSONALISATION =
+            "does_not_have_passkeys_remaining";
     public static final String EXCEPTION_THROWN_WHEN_WRITING_TO_S_3_BUCKET =
             "Exception thrown when writing to S3 bucket: {}";
     private final NotificationService notificationService;
@@ -134,6 +137,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     notifyRequest);
             case CHANGED_DEFAULT_MFA -> sendChangedDefaultMFANotification(notifyRequest);
             case SWITCHED_MFA_METHODS -> sendSwitchedMFAMethodsNotification(notifyRequest);
+            case PASSKEY_DELETED_NONE_REMAINING -> sendPasskeyDeletedNoneRemainingNotification(
+                    notifyRequest);
+            case PASSKEY_DELETED_SOME_REMAINING -> sendPasskeyDeletedSomeRemainingNotification(
+                    notifyRequest);
         }
     }
 
@@ -223,6 +230,30 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 notifyRequest,
                 Collections.emptyMap(),
                 String.valueOf(NotificationType.SWITCHED_MFA_METHODS));
+    }
+
+    private void sendPasskeyDeletedNoneRemainingNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> passkeyDeletedNoneRemainingPersonalisation = new HashMap<>();
+        passkeyDeletedNoneRemainingPersonalisation.put(
+                DOES_NOT_HAVE_PASSKEYS_REMAINING_PERSONALISATION, "yes");
+        passkeyDeletedNoneRemainingPersonalisation.put(
+                HAS_PASSKEYS_REMAINING_PERSONALISATION, "no");
+        sendEmailNotification(
+                notifyRequest,
+                passkeyDeletedNoneRemainingPersonalisation,
+                String.valueOf(NotificationType.PASSKEY_DELETED_NONE_REMAINING));
+    }
+
+    private void sendPasskeyDeletedSomeRemainingNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> passkeyDeletedSomeRemainingPersonalisation = new HashMap<>();
+        passkeyDeletedSomeRemainingPersonalisation.put(
+                DOES_NOT_HAVE_PASSKEYS_REMAINING_PERSONALISATION, "no");
+        passkeyDeletedSomeRemainingPersonalisation.put(
+                HAS_PASSKEYS_REMAINING_PERSONALISATION, "yes");
+        sendEmailNotification(
+                notifyRequest,
+                passkeyDeletedSomeRemainingPersonalisation,
+                String.valueOf(NotificationType.PASSKEY_DELETED_SOME_REMAINING));
     }
 
     private void sendEmailNotification(

@@ -49,6 +49,8 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHEN
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
+import static uk.gov.di.accountmanagement.entity.NotificationType.PASSKEY_DELETED_NONE_REMAINING;
+import static uk.gov.di.accountmanagement.entity.NotificationType.PASSKEY_DELETED_SOME_REMAINING;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSWORD_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
@@ -474,6 +476,47 @@ class NotificationHandlerTest {
         verify(cloudwatchMetricsService)
                 .emitMetricForNotification(
                         SWITCHED_MFA_METHODS, TEST_EMAIL_ADDRESS, false, ONE_LOGIN_HOME);
+    }
+
+    private static Stream<Arguments> passkeyDeletedMessageExpectedPersonalisation() {
+        return Stream.of(
+                Arguments.of(PASSKEY_DELETED_NONE_REMAINING, "yes", "no"),
+                Arguments.of(PASSKEY_DELETED_SOME_REMAINING, "no", "yes"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("passkeyDeletedMessageExpectedPersonalisation")
+    void shouldSuccessfullyProcessPasskeyDeletedMessageFromSQSQueue(
+            NotificationType notificationType,
+            String expectedDoesNotHavePasskeysRemainingPersonalisation,
+            String expectedHasPasskeysRemainingPersonalisation)
+            throws Json.JsonException, NotificationClientException {
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN);
+
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put(
+                "does_not_have_passkeys_remaining",
+                expectedDoesNotHavePasskeysRemainingPersonalisation);
+        personalisation.put("has_passkeys_remaining", expectedHasPasskeysRemainingPersonalisation);
+
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, notificationType);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType))));
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(
+                        notificationType, TEST_EMAIL_ADDRESS, false, ONE_LOGIN_HOME);
     }
 
     @Test
