@@ -27,7 +27,7 @@ public class TICFCRIStubHandler
         try {
             var request = objectMapper.readValue(input.getBody(), InternalTICFCRIRequest.class);
             LOG.info(
-                    "TICF Request - govukSigninJourneyId: {}, vtr: {}, authenticated: {}, accountState: {}, resetPasswordState: {}, resetMfaState: {}, mfaMethodType: {}",
+                    "TICF Request  - govukSigninJourneyId: {}, vtr: {}, authenticated: {}, accountState: {}, resetPasswordState: {}, resetMfaState: {}, mfaMethodType: {}",
                     request.govukSigninJourneyId(),
                     request.vtr(),
                     request.authenticated(),
