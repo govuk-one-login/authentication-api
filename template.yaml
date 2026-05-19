@@ -149,6 +149,12 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  PublishOldExternalTokenSigningKeys:
+    !Or [
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3455,6 +3461,10 @@ Resources:
             - PublishNextExternalTokenSigningKeysV2
             - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
             - !Ref AWS::NoValue
+          PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: !If
+            - PublishOldExternalTokenSigningKeys
+            - true
+            - false
           DOC_APP_SIGNING_KEY_ALIAS: !Ref OrchDocAppSigningKmsKeyAlias
       Policies:
         - !Ref IdTokenKmsAccessPolicy
@@ -3967,6 +3977,10 @@ Resources:
             ]
           USE_STORED_OLD_ID_TOKEN_PUBLIC_KEYS: !If
             - UseStoredOldIdTokenPublicKeys
+            - true
+            - false
+          PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: !If
+            - PublishOldExternalTokenSigningKeys
             - true
             - false
           IDENTITY_ENABLED: true
