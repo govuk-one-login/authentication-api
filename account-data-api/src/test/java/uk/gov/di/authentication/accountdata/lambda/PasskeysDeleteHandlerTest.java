@@ -45,7 +45,9 @@ class PasskeysDeleteHandlerTest {
             // Given
             var pathParams =
                     Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
-            var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
+            var authorizerParams =
+                    Map.<String, Object>of(
+                            "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-delete");
             when(passkeysService.deletePasskey(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID))
                     .thenReturn(Result.success(null));
 
@@ -66,7 +68,9 @@ class PasskeysDeleteHandlerTest {
             // Given
             var pathParams =
                     Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
-            var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
+            var authorizerParams =
+                    Map.<String, Object>of(
+                            "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-delete");
             when(passkeysService.deletePasskey(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID))
                     .thenReturn(Result.failure(PasskeysDeleteFailureReason.PASSKEY_NOT_FOUND));
 
@@ -85,7 +89,9 @@ class PasskeysDeleteHandlerTest {
             // Given
             var pathParams =
                     Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
-            var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
+            var authorizerParams =
+                    Map.<String, Object>of(
+                            "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-delete");
             when(passkeysService.deletePasskey(PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID))
                     .thenReturn(
                             Result.failure(PasskeysDeleteFailureReason.FAILED_TO_DELETE_PASSKEY));
@@ -122,7 +128,9 @@ class PasskeysDeleteHandlerTest {
                 Map<String, String> pathParamsWithMissingFields,
                 ErrorResponse expectedErrorResponse) {
             // Given
-            var authorizerParams = Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID);
+            var authorizerParams =
+                    Map.<String, Object>of(
+                            "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-delete");
 
             // When
             var result =
@@ -140,7 +148,27 @@ class PasskeysDeleteHandlerTest {
             // Given
             var pathParams =
                     Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
-            var authorizerParams = Map.<String, Object>of("principalId", "another-subject-id");
+            var authorizerParams =
+                    Map.<String, Object>of(
+                            "principalId", "another-subject-id", "scope", "passkey-delete");
+
+            // When
+            var result =
+                    handler.handleRequest(
+                            passkeysDeleteRequest(pathParams, authorizerParams), context);
+
+            // Then
+            assertThat(result, hasStatus(401));
+        }
+
+        @Test
+        void shouldReturn401WhenScopeDoesNotMatchEndpoint() {
+            // Given
+            var pathParams =
+                    Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "passkeyId", PRIMARY_PASSKEY_ID);
+            var authorizerParams =
+                    Map.<String, Object>of(
+                            "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-create");
 
             // When
             var result =

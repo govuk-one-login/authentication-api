@@ -10,6 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysUpdateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -20,6 +21,7 @@ import java.time.DateTimeException;
 import java.time.Instant;
 
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason.UNAUTHORIZED_REQUEST;
+import static uk.gov.di.authentication.accountdata.helpers.ScopeAuthorizerHelper.isScopeAuthorized;
 import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -68,6 +70,7 @@ public class PasskeysUpdateHandler
 
         return parseUpdateRequest(input)
                 .flatMap(updateContext -> validateAuthorizedSubjectId(updateContext, input))
+                .flatMap(updateContext -> validateScope(updateContext, input))
                 .flatMap(
                         requestContext ->
                                 passkeysService.updatePasskey(
@@ -118,6 +121,15 @@ public class PasskeysUpdateHandler
             return Result.success(passkeysUpdateContext);
         } else {
             LOG.warn("SubjectId in path parameter does not match Authorizer principalId");
+            return Result.failure(UNAUTHORIZED_REQUEST);
+        }
+    }
+
+    private Result<PasskeysUpdateFailureReason, PasskeysUpdateContext> validateScope(
+            PasskeysUpdateContext passkeysUpdateContext, APIGatewayProxyRequestEvent input) {
+        if (isScopeAuthorized(AccountDataScope.PASSKEY_UPDATE, input.getRequestContext())) {
+            return Result.success(passkeysUpdateContext);
+        } else {
             return Result.failure(UNAUTHORIZED_REQUEST);
         }
     }

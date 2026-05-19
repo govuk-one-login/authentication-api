@@ -3,6 +3,7 @@ package uk.gov.di.authentication.accountdata.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayCustomAuthorizerEvent;
+import com.amazonaws.services.lambda.runtime.events.IamPolicyResponseV1;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
@@ -18,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -28,8 +30,9 @@ import java.util.List;
 import java.util.Map;
 
 public class AuthorizeHandler
-        implements RequestHandler<APIGatewayCustomAuthorizerEvent, Map<String, Object>> {
+        implements RequestHandler<APIGatewayCustomAuthorizerEvent, IamPolicyResponseV1> {
     private static final Logger LOG = LogManager.getLogger(AuthorizeHandler.class);
+    private final ConfigurationService configurationService;
     private RemoteJwksService jwksService;
 
     public AuthorizeHandler() {
@@ -37,6 +40,7 @@ public class AuthorizeHandler
     }
 
     public AuthorizeHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         try {
             this.jwksService = new RemoteJwksService(configurationService.getAccountDataJwksUrl());
         } catch (MalformedURLException e) {
@@ -46,11 +50,18 @@ public class AuthorizeHandler
     }
 
     public AuthorizeHandler(RemoteJwksService jwksService) {
+        this.configurationService = ConfigurationService.getInstance();
+        this.jwksService = jwksService;
+    }
+
+    public AuthorizeHandler(
+            ConfigurationService configurationService, RemoteJwksService jwksService) {
+        this.configurationService = configurationService;
         this.jwksService = jwksService;
     }
 
     @Override
-    public Map<String, Object> handleRequest(
+    public IamPolicyResponseV1 handleRequest(
             APIGatewayCustomAuthorizerEvent apiGatewayCustomAuthorizerEvent, Context context) {
         var token = apiGatewayCustomAuthorizerEvent.getAuthorizationToken();
         try {
@@ -63,14 +74,20 @@ public class AuthorizeHandler
                             .flatMap(success -> verifySignature(signedAccessToken))
                             .flatMap(success -> validateClaimsSet(claimsSet));
 
-            if (validatedClaimsResult.isFailure()) {
-                throw validatedClaimsResult.getFailure();
+            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
+
+            var result =
+                    validatedClaimsResult
+                            .flatMap(this::validateScope)
+                            .map(JWTClaimsSet::getSubject);
+
+            if (result.isFailure()) {
+                throw result.getFailure();
             }
 
-            var subject = validatedClaimsResult.getSuccess().getSubject();
-            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
+            var scope = (String) claimsSet.getClaim("scope");
             LOG.info("Request validated, returning access policy");
-            return getAllowExecuteApiPolicyForSubject(subject, methodArn);
+            return getAllowExecuteApiPolicyForSubject(result.getSuccess(), methodArn, scope);
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token {}", e.getMessage());
             throw new UnauthorizedException();
@@ -128,22 +145,60 @@ public class AuthorizeHandler
             LOG.warn("Access Token subject is missing");
             return Result.failure(new UnauthorizedException());
         }
+        var expectedIssuer = configurationService.getAuthIssuerClaim();
+        if (!expectedIssuer.equals(claimsSet.getIssuer())) {
+            LOG.warn("Access Token issuer is invalid");
+            return Result.failure(new UnauthorizedException());
+        }
+        var expectedAudience = configurationService.getAuthToAccountDataApiAudience();
+        if (!claimsSet.getAudience().contains(expectedAudience)) {
+            LOG.warn("Access Token audience is invalid");
+            return Result.failure(new UnauthorizedException());
+        }
+        if (claimsSet.getNotBeforeTime() == null) {
+            LOG.warn("Access Token is missing nbf claim");
+            return Result.failure(new UnauthorizedException());
+        }
+        if (DateUtils.isAfter(claimsSet.getNotBeforeTime(), NowHelper.now(), 0)) {
+            LOG.warn("Access Token is not yet valid (nbf: {})", claimsSet.getNotBeforeTime());
+            return Result.failure(new UnauthorizedException());
+        }
+        var amcClientId = configurationService.getAMCClientId();
+        var homeClientId = configurationService.getHomeClientId();
+        var clientId = (String) claimsSet.getClaim("client_id");
+        if (!amcClientId.equals(clientId) && !homeClientId.equals(clientId)) {
+            LOG.warn("Access Token client_id is invalid");
+            return Result.failure(new UnauthorizedException());
+        }
         return Result.success(claimsSet);
     }
 
-    private Map<String, Object> getAllowExecuteApiPolicyForSubject(
-            String subject, String methodArn) {
-        var executeApiStatement =
-                Map.ofEntries(
-                        Map.entry("Action", "execute-api:Invoke"),
-                        Map.entry("Effect", "Allow"),
-                        Map.entry("Resource", methodArn));
-        return Map.ofEntries(
-                Map.entry("principalId", subject),
-                Map.entry(
-                        "policyDocument",
-                        Map.ofEntries(
-                                Map.entry("Version", "2012-10-17"),
-                                Map.entry("Statement", List.of(executeApiStatement)))));
+    private IamPolicyResponseV1 getAllowExecuteApiPolicyForSubject(
+            String subject, String methodArn, String scope) {
+        var statement = IamPolicyResponseV1.allowStatement(methodArn);
+
+        var policyDocument =
+                IamPolicyResponseV1.PolicyDocument.builder()
+                        .withStatement(List.of(statement))
+                        .withVersion(IamPolicyResponseV1.VERSION_2012_10_17)
+                        .build();
+
+        return IamPolicyResponseV1.builder()
+                .withPolicyDocument(policyDocument)
+                .withPrincipalId(subject)
+                .withContext(Map.of("scope", scope))
+                .build();
+    }
+
+    private Result<UnauthorizedException, JWTClaimsSet> validateScope(JWTClaimsSet claimsSet) {
+        var scopeValue = (String) claimsSet.getClaim("scope");
+        var scope = AccountDataScope.fromValue(scopeValue);
+
+        if (scope.isEmpty()) {
+            LOG.warn("Invalid or missing scope: {}", scopeValue);
+            return Result.failure(new UnauthorizedException());
+        }
+
+        return Result.success(claimsSet);
     }
 }

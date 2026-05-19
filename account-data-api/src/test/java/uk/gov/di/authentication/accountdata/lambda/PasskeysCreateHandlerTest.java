@@ -38,7 +38,7 @@ class PasskeysCreateHandlerTest {
     private final PasskeysService passkeysService = mock(PasskeysService.class);
     private final Json objectMapper = SerializationService.getInstance();
     private static final Map<String, Object> AUTHORIZER_PARAMS =
-            Map.of("principalId", PUBLIC_SUBJECT_ID);
+            Map.of("principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-create");
 
     private PasskeysCreateHandler handler;
 
@@ -261,7 +261,38 @@ class PasskeysCreateHandlerTest {
                         false,
                         false,
                         false);
-        var authorizerParams = Map.<String, Object>of("principalId", "different-subject-id");
+        var authorizerParams =
+                Map.<String, Object>of(
+                        "principalId", "different-subject-id", "scope", "passkey-create");
+        var request =
+                passkeysCreateRequest(passkeysCreateRequestBody, pathParams, authorizerParams);
+
+        // When
+        var result = handler.handleRequest(request, context);
+
+        // Then
+        assertThat(result, hasStatus(401));
+        assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+    }
+
+    @Test
+    void shouldReturn401WhenScopeDoesNotMatchEndpoint() throws Json.JsonException {
+        // Given
+        var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+        var passkeysCreateRequestBody =
+                buildPasskeysCreateRequestBody(
+                        CREDENTIAL,
+                        PRIMARY_PASSKEY_ID,
+                        TEST_AAGUID,
+                        false,
+                        0,
+                        PASSKEY_TRANSPORTS,
+                        false,
+                        false,
+                        false);
+        var authorizerParams =
+                Map.<String, Object>of(
+                        "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-retrieve");
         var request =
                 passkeysCreateRequest(passkeysCreateRequestBody, pathParams, authorizerParams);
 

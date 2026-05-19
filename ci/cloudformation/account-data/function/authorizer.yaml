@@ -21,6 +21,26 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               accountDataJwksUrl,
             ]
+          AUTH_ISSUER_CLAIM:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendBaseUrl,
+            ]
+          AUTH_TO_ACCOUNT_DATA_API_AUDIENCE: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://account.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://account.${Environment}.account.gov.uk"
+            - "https://account.account.gov.uk"
+          AMC_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              amcClientId,
+            ]
+          HOME_CLIENT_ID: "home"
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:

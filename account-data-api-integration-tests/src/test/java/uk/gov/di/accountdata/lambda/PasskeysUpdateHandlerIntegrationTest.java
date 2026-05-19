@@ -42,7 +42,7 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     private static final String UPDATED_LAST_USED_AT =
             Instant.parse(LAST_USED_AT).plus(1, ChronoUnit.MINUTES).toString();
     private static final Map<String, Object> AUTHORIZER_PARAMS =
-            Map.of("principalId", PUBLIC_SUBJECT_ID);
+            Map.of("principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-update");
 
     @BeforeEach
     void setUp() {

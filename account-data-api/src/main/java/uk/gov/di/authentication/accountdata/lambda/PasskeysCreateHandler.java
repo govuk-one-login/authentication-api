@@ -10,6 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -21,6 +22,7 @@ import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.MISSING_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason.UNAUTHORIZED_REQUEST;
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.isAaguidValid;
+import static uk.gov.di.authentication.accountdata.helpers.ScopeAuthorizerHelper.isScopeAuthorized;
 import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -65,6 +67,7 @@ public class PasskeysCreateHandler
 
         return parseRequest(input)
                 .flatMap(createContext -> validateAuthorizedSubjectId(createContext, input))
+                .flatMap(createContext -> validateScope(createContext, input))
                 .flatMap(this::validateRequest)
                 .flatMap(this::createPasskey)
                 .fold(
@@ -113,6 +116,15 @@ public class PasskeysCreateHandler
             return Result.success(context);
         } else {
             LOG.warn("SubjectId in path parameter does not match Authorizer principalId");
+            return Result.failure(UNAUTHORIZED_REQUEST);
+        }
+    }
+
+    private Result<PasskeysCreateFailureReason, PasskeysCreateContext> validateScope(
+            PasskeysCreateContext context, APIGatewayProxyRequestEvent input) {
+        if (isScopeAuthorized(AccountDataScope.PASSKEY_CREATE, input.getRequestContext())) {
+            return Result.success(context);
+        } else {
             return Result.failure(UNAUTHORIZED_REQUEST);
         }
     }

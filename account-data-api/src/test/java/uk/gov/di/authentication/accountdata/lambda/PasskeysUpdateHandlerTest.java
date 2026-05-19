@@ -39,7 +39,7 @@ class PasskeysUpdateHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeysService passkeysService = mock(PasskeysService.class);
     private static final Map<String, Object> AUTHORIZER_PARAMS =
-            Map.of("principalId", PUBLIC_SUBJECT_ID);
+            Map.of("principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-update");
 
     private PasskeysUpdateHandler handler;
 
@@ -168,9 +168,39 @@ class PasskeysUpdateHandlerTest {
         void shouldReturn401WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams() {
             // Given
             var authorizerParamsWithDifferentPublicSubjectId =
-                    Map.<String, Object>of("principalId", "a-different-public-subject-id");
+                    Map.<String, Object>of(
+                            "principalId",
+                            "a-different-public-subject-id",
+                            "scope",
+                            "passkey-update");
             var request =
                     baseApiProxyRequest(authorizerParamsWithDifferentPublicSubjectId)
+                            .withPathParameters(
+                                    Map.of(
+                                            "publicSubjectId",
+                                            PUBLIC_SUBJECT_ID,
+                                            "passkeyId",
+                                            PRIMARY_PASSKEY_ID))
+                            .withBody(
+                                    "{\"signCount\":%d, \"lastUsedAt\":\"%s\"}"
+                                            .formatted(SIGN_COUNT, LAST_USED_AT));
+
+            // When
+            var result = handler.handleRequest(request, context);
+
+            // Then
+            assertThat(result, hasStatus(401));
+            assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+        }
+
+        @Test
+        void shouldReturn401WhenScopeDoesNotMatchEndpoint() {
+            // Given
+            var authorizerParamsWithWrongScope =
+                    Map.<String, Object>of(
+                            "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-delete");
+            var request =
+                    baseApiProxyRequest(authorizerParamsWithWrongScope)
                             .withPathParameters(
                                     Map.of(
                                             "publicSubjectId",
