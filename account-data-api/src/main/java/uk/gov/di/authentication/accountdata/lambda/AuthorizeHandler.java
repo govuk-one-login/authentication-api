@@ -32,6 +32,8 @@ import java.util.Map;
 public class AuthorizeHandler
         implements RequestHandler<APIGatewayCustomAuthorizerEvent, IamPolicyResponseV1> {
     private static final Logger LOG = LogManager.getLogger(AuthorizeHandler.class);
+    private static final String SCOPE_CLAIM = "scope";
+    private static final String CLIENT_ID_CLAIM = "client_id";
     private final ConfigurationService configurationService;
     private RemoteJwksService jwksService;
 
@@ -79,7 +81,7 @@ public class AuthorizeHandler
                 throw result.getFailure();
             }
 
-            var scope = (String) claimsSet.getClaim("scope");
+            var scope = (String) claimsSet.getClaim(SCOPE_CLAIM);
             LOG.info("Request validated, returning access policy");
             return getAllowExecuteApiPolicyForSubject(
                     result.getSuccess(), apiGatewayCustomAuthorizerEvent.getMethodArn(), scope);
@@ -140,7 +142,7 @@ public class AuthorizeHandler
             LOG.warn("Access Token subject is missing");
             return Result.failure(new UnauthorizedException());
         }
-        var scopeValue = (String) claimsSet.getClaim("scope");
+        var scopeValue = (String) claimsSet.getClaim(SCOPE_CLAIM);
         var scope = AccountDataScope.fromValue(scopeValue);
         if (scope.isEmpty()) {
             LOG.warn("Invalid or missing scope: {}", scopeValue);
@@ -166,7 +168,7 @@ public class AuthorizeHandler
         }
         var amcClientId = configurationService.getAMCClientId();
         var homeClientId = configurationService.getHomeClientId();
-        var clientId = (String) claimsSet.getClaim("client_id");
+        var clientId = (String) claimsSet.getClaim(CLIENT_ID_CLAIM);
         if (!amcClientId.equals(clientId) && !homeClientId.equals(clientId)) {
             LOG.warn("Access Token client_id is invalid");
             return Result.failure(new UnauthorizedException());
