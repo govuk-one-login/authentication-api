@@ -74,8 +74,6 @@ public class AuthorizeHandler
                             .flatMap(success -> verifySignature(signedAccessToken))
                             .flatMap(success -> validateClaimsSet(claimsSet));
 
-            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
-
             var result =
                     validatedClaimsResult
                             .flatMap(this::validateScope)
@@ -87,7 +85,8 @@ public class AuthorizeHandler
 
             var scope = (String) claimsSet.getClaim("scope");
             LOG.info("Request validated, returning access policy");
-            return getAllowExecuteApiPolicyForSubject(result.getSuccess(), methodArn, scope);
+            return getAllowExecuteApiPolicyForSubject(
+                    result.getSuccess(), apiGatewayCustomAuthorizerEvent.getMethodArn(), scope);
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token {}", e.getMessage());
             throw new UnauthorizedException();
