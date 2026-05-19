@@ -19,6 +19,9 @@ public class TICFCRIStubHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(TICFCRIStubHandler.class);
+
+    private static final String REQUEST_ID = "request-id";
+
     private final Json objectMapper = SerializationService.getInstance();
 
     @Override
