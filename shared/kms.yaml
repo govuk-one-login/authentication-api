@@ -66,8 +66,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: 'kms:*'
-            Resource: '*'
+            Action: "kms:*"
+            Resource: "*"
       KeyUsage: SIGN_VERIFY
       PendingWindowInDays: 30
       Tags:
@@ -100,8 +100,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: 'kms:*'
-            Resource: '*'
+            Action: "kms:*"
+            Resource: "*"
       KeyUsage: SIGN_VERIFY
       PendingWindowInDays: 30
       Tags:
@@ -134,8 +134,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: 'kms:*'
-            Resource: '*'
+            Action: "kms:*"
+            Resource: "*"
       KeyUsage: SIGN_VERIFY
       PendingWindowInDays: 30
       Tags:
@@ -168,8 +168,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: 'kms:*'
-            Resource: '*'
+            Action: "kms:*"
+            Resource: "*"
           - Sid: AllowCloudWatchLogs
             Effect: Allow
             Principal:
@@ -180,7 +180,7 @@ Resources:
               - "kms:Describe*"
               - "kms:ReEncrypt*"
               - "kms:GenerateDataKey*"
-            Resource: '*'
+            Resource: "*"
       KeyUsage: ENCRYPT_DECRYPT
       PendingWindowInDays: 30
       EnableKeyRotation: true
@@ -206,8 +206,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: 'kms:*'
-            Resource: '*'
+            Action: "kms:*"
+            Resource: "*"
       KeyUsage: ENCRYPT_DECRYPT
       PendingWindowInDays: 30
       Tags:

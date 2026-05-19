@@ -38,8 +38,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: 'kms:*'
-            Resource: '*'
+            Action: "kms:*"
+            Resource: "*"
       KeyUsage: ENCRYPT_DECRYPT
       PendingWindowInDays: 30
       EnableKeyRotation: true
