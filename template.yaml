@@ -9234,17 +9234,17 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref OrchProdSlackEvents
-      AlarmDescription: !Sub "Auth journey completion rate has dropped below 50% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmDescription: !Sub "Auth journey completion rate has dropped below 30% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-auth-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 5
       DatapointsToAlarm: 5
-      Threshold: 50
+      Threshold: 30
       TreatMissingData: notBreaching
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: "IF(m2 >= 160, m1/m2*100)"
+          Expression: "IF(m2 >= 250, m1/m2*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
