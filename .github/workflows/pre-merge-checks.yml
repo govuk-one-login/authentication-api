@@ -91,7 +91,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          cache-read-only: true
+          cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -108,7 +108,7 @@ jobs:
 
       - name: Run Spotless
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        run: ./gradlew --no-daemon spotlessCheck
+        run: ./gradlew spotlessCheck
 
   run-unit-tests:
     runs-on: ubuntu-24.04-arm
