@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.shared.utils.ClientUtils.getTokenAuthMethodOrDefault;
+
 public abstract class BaseAuthorizeValidator {
 
     protected static final String VTR_PARAM = "vtr";
@@ -210,8 +212,9 @@ public abstract class BaseAuthorizeValidator {
     protected Optional<ErrorObject>
             errorForIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
                     List<VectorOfTrust> vtrList, ClientRegistry client) {
-        if (requestContainsIdentityLoC(vtrList)
-                && ("client_secret_post".equals(client.getTokenAuthMethod()))) {
+        String tokenAuthMethod = getTokenAuthMethodOrDefault(client, configurationService);
+
+        if (requestContainsIdentityLoC(vtrList) && ("client_secret_post".equals(tokenAuthMethod))) {
             logErrorInProdElseWarn(
                     "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.");
             return Optional.of(
