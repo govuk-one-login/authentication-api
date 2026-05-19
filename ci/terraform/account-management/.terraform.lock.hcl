@@ -29,8 +29,7 @@ provider "registry.terraform.io/hashicorp/aws" {
 }
 
 provider "registry.terraform.io/hashicorp/local" {
-  version     = "2.5.2"
-  constraints = "2.5.2"
+  version = "2.5.2"
   hashes = [
     "h1:6NIiHWMbE9bFZaUiqC+OokdWSbW7g3+yQYnO4yvgtuY=",
     "h1:6XyefmvbkprppmYbGmMcQW5NB4w6C363SSShzuhF4R0=",
@@ -77,8 +76,7 @@ provider "registry.terraform.io/hashicorp/random" {
 }
 
 provider "registry.terraform.io/hashicorp/time" {
-  version     = "0.12.1"
-  constraints = "0.12.1"
+  version = "0.12.1"
   hashes = [
     "h1:6BhxSYBJdBBKyuqatOGkuPKVenfx6UmLdiI13Pb3his=",
     "h1:JzYsPugN8Fb7C4NlfLoFu7BBPuRVT2/fCOdCaxshveI=",
