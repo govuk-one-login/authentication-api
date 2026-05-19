@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -43,6 +44,7 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -72,6 +74,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.FraudCheckMetricsHelper.incrementUserSubmittedCredentialIfNotificationSetupJourney;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class SendNotificationHandler extends BaseFrontendHandler<SendNotificationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -316,20 +319,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return generateApiGatewayProxyResponse(400, errorResponse.get());
         }
 
-        auditContext =
-                auditContext.withMetadataItem(
-                        new AuditService.MetadataPair(
-                                AUDIT_EVENT_MFA_METHOD_FIELD,
-                                AUDIT_EVENT_DEFAULT_MFA_VALUE,
-                                false));
-
-        auditContext =
-                auditContext.withMetadataItem(
-                        new AuditService.MetadataPair(
-                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                request.getJourneyType(),
-                                false));
-
         return handleNotificationRequest(
                 PhoneNumberHelper.removeWhitespaceFromPhoneNumber(request.getPhoneNumber()),
                 request.getNotificationType(),
@@ -436,10 +425,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     notifyRequest.getUniqueNotificationReference());
         }
 
-        auditService.submitAuditEvent(
-                getSuccessfulAuditEventFromNotificationType(
-                        notificationType, testClientWithAllowedEmail),
-                auditContext);
+        var auditableEvent = getSuccessfulAuditEventFromNotificationType(
+                notificationType, testClientWithAllowedEmail);
+
+        auditService.submitAuditEvent(auditableEvent, auditContext, getMetadataPairs(auditableEvent, request));
 
         return generateEmptySuccessApiGatewayResponse();
     }
@@ -562,7 +551,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         };
     }
 
-    private AuditableEvent getSuccessfulAuditEventFromNotificationType(
+    private FrontendAuditableEvent getSuccessfulAuditEventFromNotificationType(
             NotificationType notificationType, boolean isTestClient) {
         return switch (notificationType) {
             case VERIFY_EMAIL -> isTestClient
@@ -598,5 +587,21 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         "No Invalid Code Audit event configured for NotificationType");
             }
         };
+    }
+
+    private AuditService.MetadataPair[] getMetadataPairs(FrontendAuditableEvent auditableEvent, SendNotificationRequest request) {
+        switch (auditableEvent) {
+            case AUTH_PHONE_CODE_SENT:
+                var priorityPair =
+                        pair(AUDIT_EVENT_MFA_METHOD_FIELD,
+                                AUDIT_EVENT_DEFAULT_MFA_VALUE);
+
+                var journeyTypePair =
+                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                request.getJourneyType());
+                var metadataPairs = List.of(priorityPair, journeyTypePair);
+                return metadataPairs.toArray(new AuditService.MetadataPair[0]);
+            default: return new AuditService.MetadataPair[0];
+        }
     }
 }

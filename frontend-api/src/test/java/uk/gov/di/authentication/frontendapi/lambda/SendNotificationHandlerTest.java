@@ -712,10 +712,8 @@ class SendNotificationHandlerTest {
             var journeyTypePair = pair("journey-type", REGISTRATION);
             var expectedAuditContext =
                     auditContext
-                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(journeyTypePair);
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext, priorityPair, journeyTypePair);
         }
 
         @Test
@@ -740,10 +738,8 @@ class SendNotificationHandlerTest {
             var journeyTypePair = pair("journey-type", REGISTRATION);
             var expectedAuditContext =
                     auditContext
-                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(journeyTypePair);
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext, priorityPair, journeyTypePair);
         }
 
         @Test
@@ -761,10 +757,8 @@ class SendNotificationHandlerTest {
             var journeyTypePair = pair("journey-type", REGISTRATION);
             var expectedAuditContext =
                     auditContext
-                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(journeyTypePair);
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext, priorityPair, journeyTypePair);
         }
 
         @Test
