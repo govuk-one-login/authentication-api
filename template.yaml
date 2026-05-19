@@ -6082,7 +6082,7 @@ Resources:
       Type: A
       HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc/hosted-zone-id}}"
       AliasTarget:
-        DNSName: !GetAtt OrchestrationOidcApiCustomDomain.RegionalDomainName
+        DNSName: "{{resolve:ssm:/ryan-test/api-gw-execute-endpoint}}"
         HostedZoneId: !GetAtt OrchestrationOidcApiCustomDomain.RegionalHostedZoneId
         EvaluateTargetHealth: false
 
