@@ -6,7 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
+import uk.gov.di.authentication.entity.ExternalTICFCRIRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.ticf.cri.stub.lambda.entity.TICFCRIStubResponse;
@@ -25,17 +25,18 @@ public class TICFCRIStubHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         try {
-            var request = objectMapper.readValue(input.getBody(), InternalTICFCRIRequest.class);
+            var request = objectMapper.readValue(input.getBody(), ExternalTICFCRIRequest.class);
             LOG.info(
-                    "TICF Request - govukSigninJourneyId: {}, vtr: {}, authenticated: {}, accountState: {}, resetPasswordState: {}, resetMfaState: {}, mfaMethodType: {}",
+                    "TICF Request - govuk_signin_journey_id: {}, vtr: {}, authenticated: {}, initial_registration: {}, password_reset: {}, 2fa_reset: {}, 2fa_method: {}",
                     request.govukSigninJourneyId(),
                     request.vtr(),
                     request.authenticated(),
-                    request.accountState(),
-                    request.resetPasswordState(),
-                    request.resetMfaState(),
-                    request.mfaMethodType());
+                    request.initialRegistration(),
+                    request.passwordReset(),
+                    request.mfaReset(),
+                    request.mfaMethod());
         } catch (Json.JsonException e) {
+            LOG.error("Invalid ExternalTICFCRIRequest", e.getMessage());
             throw new RuntimeException(e);
         }
         String testInternalPairwiseId = "urn:fdc:gov.uk:2022:test";

@@ -25,16 +25,26 @@ class TICFCRIStubHandlerTest {
         TICFCRIStubHandler handler = new TICFCRIStubHandler();
         var event = new APIGatewayProxyRequestEvent();
         event.setBody(
-                "{\"sub\":\"urn:fdc:gov.uk:2022:test\","
-                        + "\"vtr\":[\"Cl.Cm\"],"
-                        + "\"govuk_signin_journey_id\":\"44444444-4444-4444-4444-444444444444\","
-                        + "\"authenticated\":\"Y\"}\n");
+                """
+                        {
+                            "sub":"urn:fdc:gov.uk:2022:test",
+                            "vtr":["Cl.Cm"],
+                            "govuk_signin_journey_id":"44444444-4444-4444-4444-444444444444",
+                            "authenticated":"Y",
+                            "initial_registration":"NEW",
+                            "password_reset":"NONE",
+                            "2fa_reset":"NONE"
+                        }
+                """);
         var result = handler.handleRequest(event, context);
         String expectedResponse =
-                "{\"intervention\":{\"interventionCode\":\"01\",\"interventionReason\":\"01\"},"
-                        + "\"sub\":\"urn:fdc:gov.uk:2022:test\","
-                        + "\"govuk_signin_journey_id\":\"44444444-4444-4444-4444-444444444444\","
-                        + "\"ci\":[\"D03\",\"F01\"]}";
+                """
+                        {\
+                        "intervention":{"interventionCode":"01","interventionReason":"01"},\
+                        "sub":"urn:fdc:gov.uk:2022:test",\
+                        "govuk_signin_journey_id":"44444444-4444-4444-4444-444444444444",\
+                        "ci":["D03","F01"]}\
+                        """;
         assertEquals(result.getBody(), expectedResponse);
         assertEquals(200, result.getStatusCode());
     }
@@ -44,23 +54,34 @@ class TICFCRIStubHandlerTest {
         TICFCRIStubHandler handler = new TICFCRIStubHandler();
         var event = new APIGatewayProxyRequestEvent();
         event.setBody(
-                "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:test\","
-                        + "\"vtr\":[\"Cl.Cm\"],"
-                        + "\"govukSigninJourneyId\":\"44444444-4444-4444-4444-444444444444\","
-                        + "\"authenticated\":true,"
-                        + "\"accountState\":\"EXISTING\","
-                        + "\"resetPasswordState\":\"NONE\","
-                        + "\"resetMfaState\":\"NONE\"}");
+                """
+                        {
+                            "sub":"urn:fdc:gov.uk:2022:test",
+                            "vtr":["Cl.Cm"],
+                            "govuk_signin_journey_id":"44444444-4444-4444-4444-444444444444",
+                            "authenticated":"Y",
+                            "initial_registration":"EXISTING",
+                            "password_reset":"NONE",
+                            "2fa_reset":"NONE",
+                            "2fa_method":["SMS"]
+                        }
+                """);
+
         handler.handleRequest(event, context);
 
         assertThat(logging.events(), hasItem(withMessageContaining("TICF Request")));
-        assertThat(logging.events(), hasItem(withMessageContaining("govukSigninJourneyId:")));
-        assertThat(logging.events(), hasItem(withMessageContaining("vtr:")));
-        assertThat(logging.events(), hasItem(withMessageContaining("authenticated:")));
-        assertThat(logging.events(), hasItem(withMessageContaining("accountState:")));
-        assertThat(logging.events(), hasItem(withMessageContaining("resetPasswordState:")));
-        assertThat(logging.events(), hasItem(withMessageContaining("resetMfaState:")));
-        assertThat(logging.events(), hasItem(withMessageContaining("mfaMethodType:")));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "govuk_signin_journey_id: 44444444-4444-4444-4444-444444444444")));
+        assertThat(logging.events(), hasItem(withMessageContaining("vtr: [Cl.Cm]")));
+        assertThat(logging.events(), hasItem(withMessageContaining("authenticated: Y")));
+        assertThat(
+                logging.events(), hasItem(withMessageContaining("initial_registration: EXISTING")));
+        assertThat(logging.events(), hasItem(withMessageContaining("password_reset: NONE")));
+        assertThat(logging.events(), hasItem(withMessageContaining("2fa_reset: NONE")));
+        assertThat(logging.events(), hasItem(withMessageContaining("2fa_method:")));
         assertThat(
                 logging.events(), not(hasItem(withMessageContaining("urn:fdc:gov.uk:2022:test"))));
     }
