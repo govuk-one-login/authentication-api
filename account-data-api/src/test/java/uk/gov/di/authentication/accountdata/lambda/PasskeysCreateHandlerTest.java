@@ -316,8 +316,8 @@ class PasskeysCreateHandlerTest {
             boolean isResidentKey)
             throws Json.JsonException {
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("credential", credential);
         requestBody.put("id", id);
+        requestBody.put("credential", credential);
         requestBody.put("aaguid", aaguid);
         requestBody.put("isAttested", String.valueOf(isAttested));
         requestBody.put("signCount", String.valueOf(signCount));

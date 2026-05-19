@@ -7,8 +7,8 @@ import uk.gov.di.authentication.shared.validation.Required;
 import java.util.List;
 
 public record PasskeysCreateRequest(
-        @SerializedName("credential") @Expose @Required String credential,
         @SerializedName("id") @Expose @Required String passkeyId,
+        @SerializedName("credential") @Expose @Required String credential,
         @SerializedName("aaguid") @Expose @Required String aaguid,
         @SerializedName("isAttested") @Expose @Required boolean isAttested,
         @SerializedName("signCount") @Expose @Required int signCount,

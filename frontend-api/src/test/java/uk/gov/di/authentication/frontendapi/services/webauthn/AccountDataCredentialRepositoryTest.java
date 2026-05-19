@@ -234,6 +234,7 @@ class AccountDataCredentialRepositoryTest {
                 List.of(),
                 true,
                 true,
+                true,
                 "some-timestamp",
                 "another-timestamp");
     }
