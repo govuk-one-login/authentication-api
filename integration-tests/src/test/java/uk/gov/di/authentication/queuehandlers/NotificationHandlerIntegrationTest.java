@@ -36,7 +36,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     private static final int VERIFICATION_CODE_LENGTH = 6;
 
     private final NotificationHandler handler = new NotificationHandler(configurationService);
-    public final String CODE = format("%06d", new SecureRandom().nextInt(999999));
+    public static final String CODE = format("%06d", new SecureRandom().nextInt(999999));
     public static final String SESSION_ID = "session-id";
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
 
