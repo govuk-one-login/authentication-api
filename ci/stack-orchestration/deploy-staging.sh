@@ -136,8 +136,7 @@ function provision_vpc_stack() {
 
   echo "Provisioning VPC stack"
 
-  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/build-notifications/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" build-notifications build-notifications "${BUILD_NOTIFICATION_STACK_VERSION}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "vpc" "vpc" "${VPC_STACK_VERSION}"
-
+  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/vpc/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" "vpc" "vpc" "${VPC_STACK_VERSION}"
   echo "Provisioned VPC stack"
 }
 
