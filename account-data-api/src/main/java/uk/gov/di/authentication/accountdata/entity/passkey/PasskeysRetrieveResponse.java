@@ -18,6 +18,7 @@ public record PasskeysRetrieveResponse(
             @SerializedName("transports") @Expose @Required List<String> transports,
             @SerializedName("isBackUpEligible") @Expose @Required boolean isBackUpEligible,
             @SerializedName("isBackedUp") @Expose @Required boolean isBackedUp,
+            @SerializedName("isResidentKey") @Expose @Required boolean isResidentKey,
             @SerializedName("createdAt") @Expose String createdAt,
             @SerializedName("lastUsedAt") @Expose String lastUsedAt) {}
 
@@ -31,6 +32,7 @@ public record PasskeysRetrieveResponse(
                 passkey.getPasskeyTransports(),
                 passkey.getPasskeyBackupEligible(),
                 passkey.getPasskeyBackedUp(),
+                passkey.getPasskeyIsResidentKey(),
                 passkey.getCreated(),
                 passkey.getLastUsed());
     }
