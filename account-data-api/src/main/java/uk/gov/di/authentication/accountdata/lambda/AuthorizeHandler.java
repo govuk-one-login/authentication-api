@@ -69,14 +69,10 @@ public class AuthorizeHandler
             var signedAccessToken = SignedJWT.parse(accessToken.getValue());
             var claimsSet = signedAccessToken.getJWTClaimsSet();
 
-            var validatedClaimsResult =
+            var result =
                     validateAccessTokenExpiryTime(claimsSet)
                             .flatMap(success -> verifySignature(signedAccessToken))
-                            .flatMap(success -> validateClaimsSet(claimsSet));
-
-            var result =
-                    validatedClaimsResult
-                            .flatMap(this::validateScope)
+                            .flatMap(success -> validateClaimsSet(claimsSet))
                             .map(JWTClaimsSet::getSubject);
 
             if (result.isFailure()) {
@@ -144,6 +140,12 @@ public class AuthorizeHandler
             LOG.warn("Access Token subject is missing");
             return Result.failure(new UnauthorizedException());
         }
+        var scopeValue = (String) claimsSet.getClaim("scope");
+        var scope = AccountDataScope.fromValue(scopeValue);
+        if (scope.isEmpty()) {
+            LOG.warn("Invalid or missing scope: {}", scopeValue);
+            return Result.failure(new UnauthorizedException());
+        }
         var expectedIssuer = configurationService.getAuthIssuerClaim();
         if (!expectedIssuer.equals(claimsSet.getIssuer())) {
             LOG.warn("Access Token issuer is invalid");
@@ -187,17 +189,5 @@ public class AuthorizeHandler
                 .withPrincipalId(subject)
                 .withContext(Map.of("scope", scope))
                 .build();
-    }
-
-    private Result<UnauthorizedException, JWTClaimsSet> validateScope(JWTClaimsSet claimsSet) {
-        var scopeValue = (String) claimsSet.getClaim("scope");
-        var scope = AccountDataScope.fromValue(scopeValue);
-
-        if (scope.isEmpty()) {
-            LOG.warn("Invalid or missing scope: {}", scopeValue);
-            return Result.failure(new UnauthorizedException());
-        }
-
-        return Result.success(claimsSet);
     }
 }
