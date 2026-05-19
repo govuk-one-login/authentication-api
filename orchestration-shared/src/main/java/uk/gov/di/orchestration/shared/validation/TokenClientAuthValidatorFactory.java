@@ -35,7 +35,9 @@ public class TokenClientAuthValidatorFactory {
             checkAssertionType(requestBody);
             return Optional.of(
                     new PrivateKeyJwtClientAuthValidator(
-                            dynamoClientService, clientSignatureValidationService));
+                            dynamoClientService,
+                            clientSignatureValidationService,
+                            configurationService));
         }
 
         if (requestBody.containsKey("client_secret") && requestBody.containsKey("client_id")) {
