@@ -59,6 +59,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INDEFINITELY_BLOCKED_SENDING_INT_NUMBERS_SMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_MISSING;
@@ -79,7 +80,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private static final Logger LOG = LogManager.getLogger(SendNotificationHandler.class);
     private static final List<NotificationType> CONFIRMATION_NOTIFICATION_TYPES =
             List.of(ACCOUNT_CREATED_CONFIRMATION, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION);
-    public static final String AUDIT_EVENT_MFA_METHOD_FIELD = "mfa-method";
     public static final String AUDIT_EVENT_DEFAULT_MFA_VALUE =
             PriorityIdentifier.DEFAULT.toString().toLowerCase();
 
@@ -319,7 +319,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         auditContext =
                 auditContext.withMetadataItem(
                         new AuditService.MetadataPair(
-                                AUDIT_EVENT_MFA_METHOD_FIELD,
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                                 AUDIT_EVENT_DEFAULT_MFA_VALUE,
                                 false));
 
