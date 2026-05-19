@@ -3,6 +3,7 @@ import com.github.spotbugs.snom.Effort
 buildscript {
     repositories {
         mavenCentral()
+        gradlePluginPortal()
     }
     dependencies {
         constraints {
