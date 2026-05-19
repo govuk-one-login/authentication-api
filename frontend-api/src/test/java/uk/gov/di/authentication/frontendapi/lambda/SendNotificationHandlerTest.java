@@ -486,7 +486,14 @@ class SendNotificationHandlerTest {
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
-            verify(auditService).submitAuditEvent(eq(AUTH_PHONE_CODE_SENT), any());
+            var priorityPair = pair("mfa-method", "default");
+            var journeyTypePair = pair("journey-type", REGISTRATION);
+            var expectedAuditContext =
+                    auditContext
+                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
+                            .withMetadataItem(priorityPair)
+                            .withMetadataItem(journeyTypePair);
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
         }
 
         @ParameterizedTest
@@ -597,7 +604,12 @@ class SendNotificationHandlerTest {
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
-            verify(auditService).submitAuditEvent(eq(AUTH_PHONE_CODE_SENT), any());
+            var expectedAuditContext =
+                    auditContext
+                            .withPhoneNumber(phoneNumber)
+                            .withMetadataItem(pair("mfa-method", "default"))
+                            .withMetadataItem(pair("journey-type", REGISTRATION));
+            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
         }
 
         @ParameterizedTest
