@@ -80,6 +80,22 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         try {
             var jwtClaimsSet = signedJWT.getJWTClaimsSet();
 
+            var expiration = jwtClaimsSet.getExpirationTime();
+            if (Objects.isNull(expiration)) {
+                LOG.info("Request object JWT does not have an expiry date");
+            } else {
+                long now = System.currentTimeMillis();
+                if (expiration.getTime() < now) {
+                    long expiredBySeconds = (now - expiration.getTime()) / 1000;
+                    LOG.warn(
+                            "Request object JWT has expired. Expiry: {}, expired by {} seconds",
+                            expiration,
+                            expiredBySeconds);
+                } else {
+                    LOG.info("Request object JWT has a valid expiry date. Expiry: {}", expiration);
+                }
+            }
+
             if (jwtClaimsSet.getStringClaim("redirect_uri") == null
                     || !client.getRedirectUrls()
                             .contains(jwtClaimsSet.getStringClaim("redirect_uri"))) {
