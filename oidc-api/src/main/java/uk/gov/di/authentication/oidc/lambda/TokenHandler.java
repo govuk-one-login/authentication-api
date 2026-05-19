@@ -137,7 +137,8 @@ public class TokenHandler
         this.tokenClientAuthValidatorFactory =
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
-                        new ClientSignatureValidationService(configurationService));
+                        new ClientSignatureValidationService(configurationService),
+                        configurationService);
         this.metrics = new Metrics(configurationService);
         this.auditService = new AuditService(configurationService);
     }
