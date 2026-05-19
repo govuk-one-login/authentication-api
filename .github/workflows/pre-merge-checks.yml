@@ -108,7 +108,7 @@ jobs:
 
       - name: Run Spotless
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        run: ./gradlew spotlessCheck
+        run: ./gradlew --configuration-cache spotlessCheck
 
   run-unit-tests:
     runs-on: ubuntu-24.04-arm
