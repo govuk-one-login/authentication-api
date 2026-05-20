@@ -219,7 +219,7 @@ public class AMCService {
                     accessTokenConstructorService
                             .createSignedAccessToken(
                                     publicSubjectId,
-                                    config.scope(),
+                                    config.scopes(),
                                     sessionId,
                                     issueTime,
                                     expiryDate,

@@ -122,7 +122,7 @@ class AMCServiceTest {
             List.of(
                     new AccessTokenConfig(
                             "account_management_api_access_token",
-                            AccountManagementScope.ACCOUNT_DELETE,
+                            List.of(AccountManagementScope.ACCOUNT_DELETE),
                             ACCESS_TOKEN_AUDIENCE,
                             ACCESS_TOKEN_KEY_ALIAS));
     private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
@@ -189,19 +189,19 @@ class AMCServiceTest {
                             List.of(
                                     new AccessTokenConfig(
                                             "account_management_api_access_token",
-                                            AccountManagementScope.ACCOUNT_DELETE,
+                                            List.of(AccountManagementScope.ACCOUNT_DELETE),
                                             ACCESS_TOKEN_AUDIENCE,
                                             ACCESS_TOKEN_KEY_ALIAS))),
                     Arguments.of(
                             List.of(
                                     new AccessTokenConfig(
                                             "account_management_api_access_token",
-                                            AccountManagementScope.ACCOUNT_DELETE,
+                                            List.of(AccountManagementScope.ACCOUNT_DELETE),
                                             ACCESS_TOKEN_AUDIENCE,
                                             OTHER_ACCESS_TOKEN_KEY_ALIAS),
                                     new AccessTokenConfig(
                                             "account_data_api_access_token",
-                                            AccountDataScope.PASSKEY_CREATE,
+                                            List.of(AccountDataScope.PASSKEY_CREATE),
                                             SECOND_ACCESS_TOKEN_AUDIENCE,
                                             ACCESS_TOKEN_KEY_ALIAS))));
         }
@@ -258,7 +258,9 @@ class AMCServiceTest {
 
                 JWTClaimsSet accessTokenClaims = accessTokenJWT.getJWTClaimsSet();
                 assertAccessTokenClaims(
-                        accessTokenConfig.scope(), accessTokenConfig.audience(), accessTokenClaims);
+                        accessTokenConfig.scopes(),
+                        accessTokenConfig.audience(),
+                        accessTokenClaims);
             }
         }
 
@@ -415,17 +417,19 @@ class AMCServiceTest {
         }
 
         private void assertAccessTokenClaims(
-                AccessTokenScope expectedScope,
+                List<AccessTokenScope> expectedScopes,
                 String expectedAudience,
                 JWTClaimsSet accessTokenClaims) {
+            var expectedScopeValue =
+                    expectedScopes.stream()
+                            .map(AccessTokenScope::getValue)
+                            .collect(java.util.stream.Collectors.joining(" "));
             assertAll(
                     "Access Token Claims",
                     () -> assertEquals(AUTH_ISSUER_CLAIM, accessTokenClaims.getIssuer()),
                     () -> assertEquals(PUBLIC_SUBJECT, accessTokenClaims.getSubject()),
                     () -> assertEquals(List.of(expectedAudience), accessTokenClaims.getAudience()),
-                    () ->
-                            assertEquals(
-                                    expectedScope.getValue(), accessTokenClaims.getClaim("scope")),
+                    () -> assertEquals(expectedScopeValue, accessTokenClaims.getClaim("scope")),
                     () -> assertEquals(AMC_CLIENT_ID, accessTokenClaims.getClaim("client_id")),
                     () -> assertEquals(SESSION_ID, accessTokenClaims.getClaim("sid")),
                     () ->
@@ -634,7 +638,7 @@ class AMCServiceTest {
                 .thenAnswer(
                         invocation -> {
                             String publicSubjectId = invocation.getArgument(0);
-                            AccessTokenScope scope = invocation.getArgument(1);
+                            List<AccessTokenScope> scopes = invocation.getArgument(1);
                             String sessionId = invocation.getArgument(2);
                             Date issueTime = invocation.getArgument(3);
                             Date expiryDate = invocation.getArgument(4);
@@ -642,6 +646,11 @@ class AMCServiceTest {
                             String issuer = invocation.getArgument(6);
                             String clientId = invocation.getArgument(7);
                             String signingKeyAlias = invocation.getArgument(8);
+
+                            var scopeValue =
+                                    scopes.stream()
+                                            .map(AccessTokenScope::getValue)
+                                            .collect(java.util.stream.Collectors.joining(" "));
 
                             ECKey key =
                                     Map.of(
@@ -652,7 +661,7 @@ class AMCServiceTest {
 
                             var claims =
                                     new JWTClaimsSet.Builder()
-                                            .claim("scope", scope.getValue())
+                                            .claim("scope", scopeValue)
                                             .issuer(issuer)
                                             .audience(audience)
                                             .expirationTime(expiryDate)
@@ -675,9 +684,7 @@ class AMCServiceTest {
 
                             return Result.success(
                                     new BearerAccessToken(
-                                            signedJWT.serialize(),
-                                            3600L,
-                                            new Scope(scope.getValue())));
+                                            signedJWT.serialize(), 3600L, new Scope(scopeValue)));
                         });
     }
 }

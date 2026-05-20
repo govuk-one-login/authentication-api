@@ -25,6 +25,7 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,21 +66,24 @@ class AccessTokenConstructorServiceTest {
 
     private static Stream<Arguments> validScopes() {
         return Stream.of(
-                Arguments.of(AccountDataScope.PASSKEY_CREATE, "passkey-create"),
-                Arguments.of(AccountDataScope.PASSKEY_RETRIEVE, "passkey-retrieve"));
+                Arguments.of(List.of(AccountDataScope.PASSKEY_CREATE), "passkey-create"),
+                Arguments.of(List.of(AccountDataScope.PASSKEY_RETRIEVE), "passkey-retrieve"),
+                Arguments.of(
+                        List.of(AccountDataScope.PASSKEY_CREATE, AccountDataScope.PASSKEY_RETRIEVE),
+                        "passkey-create passkey-retrieve"));
     }
 
     @ParameterizedTest
     @MethodSource("validScopes")
     void shouldCreateAndSignAccessTokenWithValidScope(
-            AccessTokenScope accessTokenScope, String expectedScope)
+            List<AccessTokenScope> scopes, String expectedScope)
             throws ParseException, JOSEException {
         // Arrange
         // Act
         var result =
                 accessTokenConstructorService.createSignedAccessToken(
                         PUBLIC_SUBJECT_ID,
-                        accessTokenScope,
+                        scopes,
                         SESSION_ID,
                         NOW,
                         EXPIRY,
@@ -116,7 +120,7 @@ class AccessTokenConstructorServiceTest {
         var result =
                 accessTokenConstructorService.createSignedAccessToken(
                         PUBLIC_SUBJECT_ID,
-                        AccountDataScope.PASSKEY_CREATE,
+                        List.of(AccountDataScope.PASSKEY_CREATE),
                         SESSION_ID,
                         NOW,
                         EXPIRY,

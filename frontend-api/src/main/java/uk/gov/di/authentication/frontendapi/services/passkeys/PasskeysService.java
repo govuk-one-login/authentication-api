@@ -21,6 +21,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
@@ -127,7 +128,7 @@ public class PasskeysService {
         return accessTokenConstructorService
                 .createSignedAccessToken(
                         publicSubjectId,
-                        AccountDataScope.PASSKEY_RETRIEVE,
+                        List.of(AccountDataScope.PASSKEY_RETRIEVE),
                         sessionId,
                         nowClock.now(),
                         nowClock.nowPlus(ADAPI_ACCESS_TOKEN_LIFETIME, ChronoUnit.MINUTES),

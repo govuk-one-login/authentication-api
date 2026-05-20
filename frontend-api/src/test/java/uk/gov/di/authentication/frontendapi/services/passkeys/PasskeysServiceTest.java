@@ -117,7 +117,7 @@ class PasskeysServiceTest {
             verify(accessTokenConstructorService)
                     .createSignedAccessToken(
                             eq(PUBLIC_SUBJECT_ID),
-                            eq(AccountDataScope.PASSKEY_RETRIEVE),
+                            eq(List.of(AccountDataScope.PASSKEY_RETRIEVE)),
                             eq(SESSION_ID),
                             any(),
                             any(),
