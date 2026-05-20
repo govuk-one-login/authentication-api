@@ -3,7 +3,7 @@ image_resource:
   type: registry-image
   source:
     repository: governmentpaas/awscli
-    tag: "469ceea7a619b0abdd6cb27efd4d3bd5e9be3ddb"  # pragma: allowlist secret
+    tag: "469ceea7a619b0abdd6cb27efd4d3bd5e9be3ddb" # pragma: allowlist secret
     username: ((docker-hub-username))
     password: ((docker-hub-password))
 params:

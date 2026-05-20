@@ -32,6 +32,8 @@ import java.util.Map;
 public class AuthorizeHandler
         implements RequestHandler<APIGatewayCustomAuthorizerEvent, IamPolicyResponseV1> {
     private static final Logger LOG = LogManager.getLogger(AuthorizeHandler.class);
+    private static final String SCOPE_CLAIM = "scope";
+    private static final String CLIENT_ID_CLAIM = "client_id";
     private final ConfigurationService configurationService;
     private RemoteJwksService jwksService;
 
@@ -69,25 +71,20 @@ public class AuthorizeHandler
             var signedAccessToken = SignedJWT.parse(accessToken.getValue());
             var claimsSet = signedAccessToken.getJWTClaimsSet();
 
-            var validatedClaimsResult =
+            var result =
                     validateAccessTokenExpiryTime(claimsSet)
                             .flatMap(success -> verifySignature(signedAccessToken))
-                            .flatMap(success -> validateClaimsSet(claimsSet));
-
-            var methodArn = apiGatewayCustomAuthorizerEvent.getMethodArn();
-
-            var result =
-                    validatedClaimsResult
-                            .flatMap(this::validateScope)
+                            .flatMap(success -> validateClaimsSet(claimsSet))
                             .map(JWTClaimsSet::getSubject);
 
             if (result.isFailure()) {
                 throw result.getFailure();
             }
 
-            var scope = (String) claimsSet.getClaim("scope");
+            var scope = (String) claimsSet.getClaim(SCOPE_CLAIM);
             LOG.info("Request validated, returning access policy");
-            return getAllowExecuteApiPolicyForSubject(result.getSuccess(), methodArn, scope);
+            return getAllowExecuteApiPolicyForSubject(
+                    result.getSuccess(), apiGatewayCustomAuthorizerEvent.getMethodArn(), scope);
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token {}", e.getMessage());
             throw new UnauthorizedException();
@@ -145,6 +142,12 @@ public class AuthorizeHandler
             LOG.warn("Access Token subject is missing");
             return Result.failure(new UnauthorizedException());
         }
+        var scopeValue = (String) claimsSet.getClaim(SCOPE_CLAIM);
+        var scope = AccountDataScope.fromValue(scopeValue);
+        if (scope.isEmpty()) {
+            LOG.warn("Invalid or missing scope: {}", scopeValue);
+            return Result.failure(new UnauthorizedException());
+        }
         var expectedIssuer = configurationService.getAuthIssuerClaim();
         if (!expectedIssuer.equals(claimsSet.getIssuer())) {
             LOG.warn("Access Token issuer is invalid");
@@ -165,7 +168,7 @@ public class AuthorizeHandler
         }
         var amcClientId = configurationService.getAMCClientId();
         var homeClientId = configurationService.getHomeClientId();
-        var clientId = (String) claimsSet.getClaim("client_id");
+        var clientId = (String) claimsSet.getClaim(CLIENT_ID_CLAIM);
         if (!amcClientId.equals(clientId) && !homeClientId.equals(clientId)) {
             LOG.warn("Access Token client_id is invalid");
             return Result.failure(new UnauthorizedException());
@@ -188,17 +191,5 @@ public class AuthorizeHandler
                 .withPrincipalId(subject)
                 .withContext(Map.of("scope", scope))
                 .build();
-    }
-
-    private Result<UnauthorizedException, JWTClaimsSet> validateScope(JWTClaimsSet claimsSet) {
-        var scopeValue = (String) claimsSet.getClaim("scope");
-        var scope = AccountDataScope.fromValue(scopeValue);
-
-        if (scope.isEmpty()) {
-            LOG.warn("Invalid or missing scope: {}", scopeValue);
-            return Result.failure(new UnauthorizedException());
-        }
-
-        return Result.success(claimsSet);
     }
 }
