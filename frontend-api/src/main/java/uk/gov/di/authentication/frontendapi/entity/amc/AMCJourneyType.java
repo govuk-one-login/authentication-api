@@ -20,7 +20,9 @@ public enum AMCJourneyType {
             case PASSKEY_CREATE -> List.of(
                     new AccessTokenConfig(
                             "account_data_api_access_token",
-                            List.of(AccountDataScope.PASSKEY_CREATE),
+                            List.of(
+                                    AccountDataScope.PASSKEY_CREATE,
+                                    AccountDataScope.PASSKEY_RETRIEVE),
                             config.getAuthToAccountDataApiAudience(),
                             config.getAuthToAccountDataSigningKey()));
         };
