@@ -33,6 +33,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSKEY_DELETED_NONE_REMAINING;
@@ -162,6 +163,23 @@ class PasskeysDeleteProxyHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
             verify(accountDataApiService)
+                    .deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN);
+        }
+
+        @Test
+        void shouldReturn500AndNotDeletePasskeyIfCannotConstructNotifyRequest()
+                throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
+            // Arrange
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+                    .thenThrow(new UnsuccessfulAccountDataApiResponseException("foo", 500));
+
+            // Act
+            var result = handler.handleRequest(passkeysDeleteProxyRequest(), context);
+
+            // Assert
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
+            verify(accountDataApiService, never())
                     .deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN);
         }
     }
