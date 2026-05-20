@@ -121,7 +121,11 @@ public class UserInfoService {
             var result =
                     accessTokenConstructorService.createSignedAccessToken(
                             userProfile.getPublicSubjectID(),
-                            List.of(AccountDataScope.PASSKEY_CREATE),
+                            List.of(
+                                    AccountDataScope.PASSKEY_CREATE,
+                                    AccountDataScope.PASSKEY_RETRIEVE,
+                                    AccountDataScope.PASSKEY_UPDATE,
+                                    AccountDataScope.PASSKEY_DELETE),
                             authSession.getSessionId(),
                             NowHelper.now(),
                             NowHelper.nowPlus(2, ChronoUnit.HOURS),

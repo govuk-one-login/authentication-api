@@ -137,7 +137,12 @@ public class UserInfoServiceTest {
                                 List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
         when(accessTokenConstructorService.createSignedAccessToken(
                         eq(TEST_PUBLIC_SUBJECT_ID),
-                        eq(List.of(AccountDataScope.PASSKEY_CREATE)),
+                        eq(
+                                List.of(
+                                        AccountDataScope.PASSKEY_CREATE,
+                                        AccountDataScope.PASSKEY_RETRIEVE,
+                                        AccountDataScope.PASSKEY_UPDATE,
+                                        AccountDataScope.PASSKEY_DELETE)),
                         any(),
                         any(),
                         any(),
@@ -316,7 +321,12 @@ public class UserInfoServiceTest {
                                 List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
         when(accessTokenConstructorService.createSignedAccessToken(
                         eq(TEST_PUBLIC_SUBJECT_ID),
-                        eq(List.of(AccountDataScope.PASSKEY_CREATE)),
+                        eq(
+                                List.of(
+                                        AccountDataScope.PASSKEY_CREATE,
+                                        AccountDataScope.PASSKEY_RETRIEVE,
+                                        AccountDataScope.PASSKEY_UPDATE,
+                                        AccountDataScope.PASSKEY_DELETE)),
                         any(),
                         any(),
                         any(),
