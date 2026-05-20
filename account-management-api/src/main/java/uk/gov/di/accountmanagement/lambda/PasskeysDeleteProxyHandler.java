@@ -80,38 +80,33 @@ public class PasskeysDeleteProxyHandler
 
         PasskeysDeleteRequest request = extractPasskeyDeleteRequest(input);
 
-        var userEmailResult = getUserEmailFromPublicSubjectId(request.publicSubjectId);
-        if (userEmailResult.isFailure()) {
+        // Constructing the notify request can fail in various ways - if it does, we cannot send the
+        // email and want to fail the request before we delete anything
+        var notifyRequestResult = getNotifyRequest(request);
+        if (notifyRequestResult.isFailure()) {
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
-        var userEmail = userEmailResult.getSuccess();
+        var notifyRequest = notifyRequestResult.getSuccess();
 
-        var currentPasskeyCountResult = getPasskeyCount(request);
-        if (currentPasskeyCountResult.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
-        }
-        var currentPasskeyCount = currentPasskeyCountResult.getSuccess();
+        return deletePasskey(request)
+                .fold(
+                        failure ->
+                                generateApiGatewayProxyErrorResponse(
+                                        500, ErrorResponse.INTERNAL_SERVER_ERROR),
+                        deleteResponseFromApi -> {
+                            var statusCode = deleteResponseFromApi.statusCode();
+                            if (statusCode != 204) {
+                                LOG.warn(
+                                        "Passkey Deleted Email notification not sent because delete passkey response was {} for Public Subject ID {}",
+                                        deleteResponseFromApi.statusCode(),
+                                        request.publicSubjectId);
+                            } else {
+                                sendEmailNotification(notifyRequest, request.publicSubjectId);
+                            }
 
-        var deletePasskeyResponseResult = deletePasskey(request);
-        if (deletePasskeyResponseResult.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
-        }
-        HttpResponse<String> deletePasskeyResponse = deletePasskeyResponseResult.getSuccess();
-
-        var deletePasskeyProxyResponse =
-                generateApiGatewayProxyResponse(
-                        deletePasskeyResponse.statusCode(), deletePasskeyResponse.body());
-
-        if (deletePasskeyResponse.statusCode() != 204) {
-            LOG.warn(
-                    "Passkey Deleted Email notification not sent because delete passkey response was {} for Public Subject ID {}",
-                    deletePasskeyResponse.statusCode(),
-                    request.publicSubjectId);
-        } else {
-            sendEmailNotification(request, userEmail, currentPasskeyCount);
-        }
-
-        return deletePasskeyProxyResponse;
+                            return generateApiGatewayProxyResponse(
+                                    statusCode, deleteResponseFromApi.body());
+                        });
     }
 
     private PasskeysDeleteRequest extractPasskeyDeleteRequest(APIGatewayProxyRequestEvent input) {
@@ -138,9 +133,9 @@ public class PasskeysDeleteProxyHandler
         return new PasskeysDeleteRequest(publicSubjectId, token, passkeyIdentifier, userLanguage);
     }
 
-    private Result<PasskeysDeleteProxyFailureReason, String> getUserEmailFromPublicSubjectId(String publicSubjectId) {
-        var userProfile =
-                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+    private Result<PasskeysDeleteProxyFailureReason, String> getUserEmailFromPublicSubjectId(
+            String publicSubjectId) {
+        var userProfile = dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
 
         if (userProfile.isEmpty()) {
             LOG.warn("No user profile found for public subject ID{}", publicSubjectId);
@@ -182,19 +177,32 @@ public class PasskeysDeleteProxyHandler
         }
     }
 
-    private void sendEmailNotification(PasskeysDeleteRequest request, String email, int passkeyCount) {
-        var passkeyCountPostDelete = passkeyCount - 1;
+    private Result<PasskeysDeleteProxyFailureReason, NotifyRequest> getNotifyRequest(
+            PasskeysDeleteRequest request) {
+        var passkeyCountResult = getPasskeyCount(request);
+        if (passkeyCountResult.isFailure()) {
+            return Result.failure(passkeyCountResult.getFailure());
+        }
+        var passkeysRemainingAfterDelete = passkeyCountResult.getSuccess() - 1;
+
         var notificationType =
-                passkeyCountPostDelete <= 0
+                passkeysRemainingAfterDelete <= 0
                         ? NotificationType.PASSKEY_DELETED_NONE_REMAINING
                         : NotificationType.PASSKEY_DELETED_SOME_REMAINING;
 
-        var notifyRequest = new NotifyRequest(email, notificationType, request.supportedLanguage);
+        return getUserEmailFromPublicSubjectId(request.publicSubjectId)
+                .map(
+                        email ->
+                                new NotifyRequest(
+                                        email, notificationType, request.supportedLanguage));
+    }
+
+    private void sendEmailNotification(NotifyRequest notifyRequest, String publicSubjectId) {
         sqsClient.send(serializationService.writeValueAsString((notifyRequest)));
         LOG.info(
                 "Notify request sent with notification type '{}' and publicSubjectId '{}'",
-                notificationType,
-                request.publicSubjectId);
+                notifyRequest.getNotificationType(),
+                publicSubjectId);
     }
 
     private record PasskeysDeleteRequest(
