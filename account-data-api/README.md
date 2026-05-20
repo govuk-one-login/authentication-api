@@ -33,7 +33,7 @@ export AMC_CLIENT_ID="auth"
 #### Generate a token
 
 ```bash
-python3 ./account-data-api/scripts/generate_account_data_token.py <public-subject-id> \
+python3 ./account-data-api/scripts/generate_account_data_token.py --public-subject-id=<public-subject-id> \
   --scope "passkey-create passkey-retrieve" \
   --profile di-authentication-development-AdministratorAccessPermission
 ```
