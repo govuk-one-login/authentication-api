@@ -1,31 +1,10 @@
-data "aws_cloudwatch_log_group" "ipv_callback_lambda_log_group" {
-  name = replace("/aws/lambda/${var.environment}-ipv-callback-lambda", ".", "")
-}
-
-
 data "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
   name = replace("/aws/lambda/${var.environment}-spot-response-lambda", ".", "")
-  depends_on = [
-    module.ipv_spot_response_role_2
-  ]
 }
 
 
 data "aws_cloudwatch_log_group" "processing_identity_lambda_log_group" {
   name = replace("/aws/lambda/${var.environment}-processing-identity-lambda", ".", "")
-}
-
-
-resource "aws_cloudwatch_log_metric_filter" "ipv_callback_metric_filter" {
-  name           = replace("${var.environment}-ipv-callback-p1-errors", ".", "")
-  pattern        = "{($.level = \"ERROR\")}"
-  log_group_name = data.aws_cloudwatch_log_group.ipv_callback_lambda_log_group.name
-
-  metric_transformation {
-    name      = replace("${var.environment}-ipv-handback-error-count", ".", "")
-    namespace = "LambdaErrorsNamespace"
-    value     = "1"
-  }
 }
 
 
