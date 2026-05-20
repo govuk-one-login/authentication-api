@@ -21,6 +21,16 @@ class ScopeAuthorizerHelperTest {
     }
 
     @Test
+    void shouldReturnTrueWhenExpectedScopeIsInSpaceSeparatedList() {
+        var requestContext = new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        requestContext.setAuthorizer(Map.of("scope", "passkey-create passkey-retrieve"));
+
+        assertTrue(isScopeAuthorized(AccountDataScope.PASSKEY_CREATE, requestContext));
+        assertTrue(isScopeAuthorized(AccountDataScope.PASSKEY_RETRIEVE, requestContext));
+        assertFalse(isScopeAuthorized(AccountDataScope.PASSKEY_DELETE, requestContext));
+    }
+
+    @Test
     void shouldReturnFalseWhenScopeDoesNotMatch() {
         var requestContext = new APIGatewayProxyRequestEvent.ProxyRequestContext();
         requestContext.setAuthorizer(Map.of("scope", "passkey-retrieve"));

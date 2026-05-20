@@ -5,6 +5,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 
+import java.util.Arrays;
+
 public class ScopeAuthorizerHelper {
     private static final Logger LOG = LogManager.getLogger(ScopeAuthorizerHelper.class);
     private static final String SCOPE_FIELD = "scope";
@@ -20,7 +22,7 @@ public class ScopeAuthorizerHelper {
             return false;
         }
         var scope = requestContext.getAuthorizer().get(SCOPE_FIELD).toString();
-        var matches = expectedScope.getValue().equals(scope);
+        var matches = Arrays.asList(scope.split(" ")).contains(expectedScope.getValue());
         if (!matches) {
             LOG.warn("Scope {} does not match expected scope {}", scope, expectedScope.getValue());
         }
