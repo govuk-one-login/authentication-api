@@ -109,7 +109,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate an account data API access token"
     )
-    parser.add_argument("public_subject_id", help="The public subject ID (sub claim)")
+    parser.add_argument("--public-subject-id", required=True, help="The public subject ID (sub claim)")
     parser.add_argument("--profile", default=None, help="AWS profile name")
     parser.add_argument(
         "--region", default="eu-west-2", help="AWS region (default: eu-west-2)"
