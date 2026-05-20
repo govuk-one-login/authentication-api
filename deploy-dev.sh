@@ -23,6 +23,7 @@ Options:
     -u, --utils                 deploy the utils API. (default: false)
     -s, --shared                deploy the shared Terraform configuration. (default: true)
     -t, --test-services         deploy the test services API. (default: false)
+    -o, --oidc                  deploy the OIDC API. (default: true)
 
 Arguments:
     environment                 the environment to deploy to. Valid environments are: ${environments[*]}
@@ -36,6 +37,7 @@ O_SHELL=0   # --shell
 O_REFRESH=0 # -r, --refresh-only
 
 T_ACCOUNT_MANAGEMENT=0 # -a, --account-management
+T_OIDC=0               # -o, --oidc
 T_UTILS=0              # -u, --utils
 T_SHARED=0             # -s, --shared
 T_TEST_SERVICE=0       # -t, --test-services
@@ -56,10 +58,11 @@ while (($#)); do
     -r | --refresh-only) O_REFRESH=1 ;;
 
     -a | --account-management) T_ACCOUNT_MANAGEMENT=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
+    -o | --oidc) T_OIDC=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -u | --utils) T_UTILS=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -s | --shared) T_SHARED=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
     -t | --test-services) T_TEST_SERVICE=1 NUMBER_PICKED=$((NUMBER_PICKED + 1)) ;;
-    --all) T_ACCOUNT_MANAGEMENT=1 T_UTILS=1 T_SHARED=1 T_TEST_SERVICE=1 NUMBER_PICKED=-1 ;;
+    --all) T_ACCOUNT_MANAGEMENT=1 T_UTILS=1 T_SHARED=1 T_OIDC=1 T_TEST_SERVICE=1 NUMBER_PICKED=-1 ;;
 
     -h | --help)
       usage
@@ -102,6 +105,7 @@ if [[ ${NUMBER_PICKED} -eq 0 ]]; then
   O_BUILD=1
   T_ACCOUNT_MANAGEMENT=1
   T_SHARED=1
+  T_OIDC=1
 fi
 
 if [[ ${O_BUILD} -eq 1 ]]; then
@@ -162,4 +166,8 @@ fi
 
 if [[ ${T_TEST_SERVICE} -eq 1 ]]; then
   run_terraform "test-services"
+fi
+
+if [[ ${T_OIDC} -eq 1 ]]; then
+  run_terraform "oidc"
 fi

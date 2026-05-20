@@ -294,16 +294,6 @@ variable "ipv_authorisation_uri" {
   default = "undefined"
 }
 
-variable "ipv_authorisation_callback_uri" {
-  type    = string
-  default = "undefined"
-}
-
-variable "ipv_authorisation_client_id" {
-  type    = string
-  default = "undefined"
-}
-
 variable "ipv_audience" {
   type    = string
   default = "undefined"
@@ -362,58 +352,9 @@ variable "auth_frontend_public_encryption_key" {
   description = "Public encryption key which should be used to encrypt JWTs sent to Authentication (frontend)"
 }
 
-variable "doc_app_authorisation_uri" {
-  type    = string
-  default = "undefined"
-}
-
-variable "doc_app_authorisation_callback_uri" {
-  type    = string
-  default = "undefined"
-}
-
-variable "doc_app_authorisation_client_id" {
-  type    = string
-  default = "undefined"
-}
-
 variable "doc_app_domain" {
   type    = string
   default = "undefined"
-}
-
-variable "doc_app_aud" {
-  type        = string
-  default     = ""
-  description = "Audience to use in calls to DCMAW when doc_app_new_aud_claim_enabled is true"
-}
-
-variable "doc_app_new_aud_claim_enabled" {
-  type        = bool
-  default     = false
-  description = "When enabled, use new aud claim to docapp for consistency with IPV Core"
-}
-
-variable "doc_app_backend_uri" {
-  type        = string
-  default     = ""
-  description = "The base URL of the Doc App CRI API (to be used with the token endpoint and protected resource)"
-}
-
-variable "doc_app_cri_data_endpoint" {
-  type        = string
-  default     = ""
-  description = "The endpoint path to the protected resource on the Doc App CRI (this is appended to the doc_app_backend_uri variable)"
-}
-
-variable "doc_app_jwks_endpoint" {
-  type    = string
-  default = "undefined"
-}
-
-variable "doc_app_cri_data_v2_endpoint" {
-  type    = string
-  default = "userinfo/v2"
 }
 
 variable "doc_app_rp_client_id" {
@@ -468,11 +409,6 @@ variable "use_robots_txt" {
 variable "txma_account_id" {
   default = ""
   type    = string
-}
-
-variable "orch_client_id" {
-  type    = string
-  default = "orchestrationAuth"
 }
 
 variable "orch_openid_configuration_enabled" {
@@ -541,12 +477,6 @@ variable "orch_auth_code_enabled" {
   default     = false
 }
 
-variable "orch_userinfo_enabled" {
-  description = "Flag to enable routing userinfo traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "orch_storage_token_jwk_enabled" {
   description = "Flag to enable routing storage token jwk traffic to the orchestration account"
   type        = bool
@@ -600,23 +530,6 @@ variable "ticf_cri_service_call_timeout" {
   default     = 2000
   type        = number
   description = "The HTTP Client connection timeout for requests to TICF CRI Service (in milliseconds)."
-}
-
-variable "orch_redirect_uri" {
-  type        = string
-  description = "The redirect URI set by Orchestration in the OAuth2 authorize request to Authentication"
-}
-
-variable "authorize_protected_subnet_enabled" {
-  description = "Flag to move authorize lambda to protected subnet"
-  type        = bool
-  default     = false
-}
-
-variable "send_storage_token_to_ipv_enabled" {
-  default     = false
-  type        = bool
-  description = "Feature flag which toggles whether signed VC storage token is included as claim in JAR sent to IPV"
 }
 
 variable "support_reauth_signout_enabled" {

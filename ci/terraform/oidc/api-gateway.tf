@@ -57,34 +57,6 @@ resource "aws_api_gateway_deployment" "deployment" {
 
   triggers = {
     redeployment = sha1(jsonencode([
-      module.auth-code.integration_trigger_value,
-      module.auth-code.method_trigger_value,
-      module.authorize.integration_trigger_value,
-      module.authorize.method_trigger_value,
-      module.jwks.integration_trigger_value,
-      module.jwks.method_trigger_value,
-      module.storage_token_jwk.integration_trigger_value,
-      module.storage_token_jwk.method_trigger_value,
-      module.logout.integration_trigger_value,
-      module.logout.method_trigger_value,
-      module.openid_configuration_discovery.integration_trigger_value,
-      module.openid_configuration_discovery.method_trigger_value,
-      var.client_registry_api_enabled ? module.register[0].integration_trigger_value : null,
-      var.client_registry_api_enabled ? module.register[0].method_trigger_value : null,
-      module.token.integration_trigger_value,
-      module.token.method_trigger_value,
-      var.client_registry_api_enabled ? module.update[0].integration_trigger_value : null,
-      var.client_registry_api_enabled ? module.update[0].method_trigger_value : null,
-      module.userinfo.integration_trigger_value,
-      module.userinfo.method_trigger_value,
-      module.ipv-callback.integration_trigger_value,
-      module.ipv-callback.method_trigger_value,
-      module.ipv-capacity.integration_trigger_value,
-      module.ipv-capacity.method_trigger_value,
-      module.doc-app-callback.integration_trigger_value,
-      module.doc-app-callback.method_trigger_value,
-      module.authentication_callback.integration_trigger_value,
-      module.authentication_callback.method_trigger_value,
       var.use_robots_txt ? aws_api_gateway_integration_response.robots_txt_integration_response[0].response_templates : null,
       var.orch_openid_configuration_enabled,
       var.orch_doc_app_callback_enabled,
@@ -96,7 +68,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_register_enabled,
       var.orch_authentication_callback_enabled,
       var.orch_auth_code_enabled,
-      var.orch_userinfo_enabled,
       var.orch_storage_token_jwk_enabled,
       jsonencode(aws_api_gateway_integration.orch_ipv_jwks_integration),
       jsonencode(aws_api_gateway_method.orch_ipv_jwks_method),
@@ -108,19 +79,6 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
-    module.auth-code,
-    module.authorize,
-    module.jwks,
-    module.storage_token_jwk,
-    module.logout,
-    module.openid_configuration_discovery,
-    module.register,
-    module.token,
-    module.update,
-    module.userinfo,
-    module.ipv-callback,
-    module.ipv-capacity,
-    module.doc-app-callback,
     aws_api_gateway_integration.orch_openid_configuration_integration,
     aws_api_gateway_integration.orch_trustmark_integration,
     aws_api_gateway_integration.orch_doc_app_callback_integration,
@@ -132,7 +90,6 @@ resource "aws_api_gateway_deployment" "deployment" {
     aws_api_gateway_integration.orch_register_integration,
     aws_api_gateway_integration.orch_authentication_callback_integration,
     aws_api_gateway_integration.orch_auth_code_integration,
-    aws_api_gateway_integration.orch_userinfo_integration,
     aws_api_gateway_integration.orch_update_client_integration,
     aws_api_gateway_integration.orch_storage_token_jwk_integration,
     aws_api_gateway_integration.orch_ipv_jwks_integration,
@@ -210,20 +167,6 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
   }
 
   depends_on = [
-    module.auth-code,
-    module.authorize,
-    module.jwks,
-    module.storage_token_jwk,
-    module.logout,
-    module.openid_configuration_discovery,
-    module.register,
-    module.token,
-    module.update,
-    module.userinfo,
-    module.ipv-callback,
-    module.ipv-capacity,
-    module.doc-app-callback,
-    module.authentication_callback,
     aws_api_gateway_deployment.deployment,
   ]
 
@@ -725,8 +668,7 @@ resource "aws_api_gateway_resource" "orch_openid_configuration_resource" {
   parent_id   = aws_api_gateway_resource.wellknown_resource.id
   path_part   = "openid-configuration"
   depends_on = [
-    aws_api_gateway_resource.wellknown_resource,
-    module.openid_configuration_discovery
+    aws_api_gateway_resource.wellknown_resource
   ]
 }
 
@@ -789,9 +731,6 @@ resource "aws_api_gateway_resource" "orch_doc_app_callback_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "doc-app-callback"
-  depends_on = [
-    module.doc-app-callback
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_doc_app_callback_method" {
@@ -824,9 +763,6 @@ resource "aws_api_gateway_resource" "orch_token_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "token"
-  depends_on = [
-    module.token
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_token_method" {
@@ -860,8 +796,7 @@ resource "aws_api_gateway_resource" "orch_jwks_resource" {
   parent_id   = aws_api_gateway_resource.wellknown_resource.id
   path_part   = "jwks.json"
   depends_on = [
-    aws_api_gateway_resource.wellknown_resource,
-    module.jwks
+    aws_api_gateway_resource.wellknown_resource
   ]
 }
 
@@ -895,9 +830,6 @@ resource "aws_api_gateway_resource" "orch_authorisation_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "authorize"
-  depends_on = [
-    module.authorize
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_authorisation_method" {
@@ -917,9 +849,6 @@ resource "aws_api_gateway_resource" "orch_auth_code_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "auth-code"
-  depends_on = [
-    module.auth-code
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_auth_code_method" {
@@ -952,9 +881,6 @@ resource "aws_api_gateway_resource" "orch_logout_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "logout"
-  depends_on = [
-    module.logout
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_logout_method" {
@@ -987,9 +913,6 @@ resource "aws_api_gateway_resource" "orch_ipv_callback_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "ipv-callback"
-  depends_on = [
-    module.ipv-callback
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_ipv_callback_method" {
@@ -1022,9 +945,6 @@ resource "aws_api_gateway_resource" "orch_register_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_resource.connect_resource.id
   path_part   = "register"
-  depends_on = [
-    module.register
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_register_method" {
@@ -1058,9 +978,6 @@ resource "aws_api_gateway_resource" "orch_update_client_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_resource.orch_register_resource[0].id
   path_part   = "{clientId}"
-  depends_on = [
-    module.update
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_update_client_method" {
@@ -1096,9 +1013,6 @@ resource "aws_api_gateway_resource" "orch_authentication_callback_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "orchestration-redirect"
-  depends_on = [
-    module.authentication_callback
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_authentication_callback_method" {
@@ -1140,40 +1054,6 @@ resource "aws_api_gateway_integration" "orch_auth_code_integration" {
 }
 
 
-resource "aws_api_gateway_resource" "orch_userinfo_resource" {
-  count       = var.orch_userinfo_enabled ? 1 : 0
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
-  path_part   = "userinfo"
-  depends_on = [
-    module.userinfo
-  ]
-}
-
-resource "aws_api_gateway_method" "orch_userinfo_method" {
-  count       = var.orch_userinfo_enabled ? 1 : 0
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_userinfo_resource[0].id
-  http_method = "GET"
-
-  depends_on = [
-    aws_api_gateway_resource.orch_userinfo_resource
-  ]
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "orch_userinfo_integration" {
-  count       = var.orch_userinfo_enabled ? 1 : 0
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_userinfo_resource[0].id
-  http_method = aws_api_gateway_method.orch_userinfo_method[0].http_method
-  depends_on = [
-    aws_api_gateway_resource.orch_userinfo_resource
-  ]
-  type                    = "AWS_PROXY"
-  integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-UserInfoFunction:latest/invocations"
-}
 
 resource "aws_api_gateway_resource" "orch_storage_token_jwk_resource" {
   count       = var.orch_storage_token_jwk_enabled ? 1 : 0
@@ -1181,8 +1061,7 @@ resource "aws_api_gateway_resource" "orch_storage_token_jwk_resource" {
   parent_id   = aws_api_gateway_resource.wellknown_resource.id
   path_part   = "storage-token-jwk.json"
   depends_on = [
-    aws_api_gateway_resource.wellknown_resource,
-    module.storage_token_jwk
+    aws_api_gateway_resource.wellknown_resource
   ]
 }
 

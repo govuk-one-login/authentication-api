@@ -1,9 +1,5 @@
 data "aws_cloudwatch_log_group" "ipv_callback_lambda_log_group" {
   name = replace("/aws/lambda/${var.environment}-ipv-callback-lambda", ".", "")
-
-  depends_on = [
-    module.ipv-callback
-  ]
 }
 
 
@@ -17,10 +13,6 @@ data "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
 
 data "aws_cloudwatch_log_group" "processing_identity_lambda_log_group" {
   name = replace("/aws/lambda/${var.environment}-processing-identity-lambda", ".", "")
-
-  depends_on = [
-    module.processing-identity
-  ]
 }
 
 
