@@ -91,6 +91,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     aws_api_gateway_integration.orch_register_integration,
     aws_api_gateway_integration.orch_authentication_callback_integration,
     aws_api_gateway_integration.orch_auth_code_integration,
+    aws_api_gateway_integration.orch_userinfo_integration,
     aws_api_gateway_integration.orch_update_client_integration,
     aws_api_gateway_integration.orch_storage_token_jwk_integration,
     aws_api_gateway_integration.orch_ipv_jwks_integration,
