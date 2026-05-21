@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.userpermissions.entity;
 
+import java.util.Set;
+
 public enum ForbiddenReason {
     EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT,
     EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
@@ -7,5 +9,14 @@ public enum ForbiddenReason {
     EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
     EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
     EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
-    EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+    EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+
+    private static final Set<ForbiddenReason> EXCEEDED_OTP_SUBMISSION_LIMIT_REASONS =
+            Set.of(
+                    EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                    EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT);
+
+    public boolean hasExceededOtpSubmissionLimit() {
+        return EXCEEDED_OTP_SUBMISSION_LIMIT_REASONS.contains(this);
+    }
 }

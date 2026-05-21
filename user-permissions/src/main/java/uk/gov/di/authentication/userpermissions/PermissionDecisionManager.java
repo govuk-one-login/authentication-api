@@ -106,6 +106,16 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return Result.success(createTemporarilyLockedOut(reason, 0, false));
         }
 
+        if (journeyType != JourneyType.REGISTRATION) {
+            var canVerifyResult = canVerifyEmailOtp(journeyType, permissionContext);
+            if (canVerifyResult.isFailure()) {
+                return canVerifyResult;
+            }
+            if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+                return canVerifyResult;
+            }
+        }
+
         // PASSWORD_RESET has additional count-based check.
         //
         // This exists because ResetPasswordRequestHandler used to do one check of the count
@@ -283,6 +293,14 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 configurationService.getCodeMaxRetries(),
                                 Instant.ofEpochSecond(ttl),
                                 false));
+            }
+
+            var canVerifyResult = canVerifyMfaOtp(journeyType, permissionContext);
+            if (canVerifyResult.isFailure()) {
+                return canVerifyResult;
+            }
+            if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+                return canVerifyResult;
             }
 
             return Result.success(new Decision.Permitted(0));
