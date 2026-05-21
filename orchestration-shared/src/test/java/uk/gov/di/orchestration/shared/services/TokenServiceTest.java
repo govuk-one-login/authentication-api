@@ -616,7 +616,6 @@ class TokenServiceTest {
 
         @Test
         void itShouldUseTheNewV2KeyToCreateATokenWhenFeatureFlagEnabled() {
-            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(true);
             when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseEc);
 
             var testClaimsSet =
@@ -637,7 +636,6 @@ class TokenServiceTest {
 
         @Test
         void itShouldUseTheNewV2RsaKeyToCreateATokenWhenFeatureFlagEnabled() {
-            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(true);
             when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseRsa);
 
             var testClaimsSet =
@@ -655,51 +653,6 @@ class TokenServiceTest {
             assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.RS256));
             assertThat(
                     signedToken.getHeader().getKeyID(), equalTo(EXPECTED_OPAQUE_NEW_V2_RSA_KEY_ID));
-        }
-
-        @Test
-        void itShouldContinueToUseOldKeyWhenFeatureFlagIsDisabled() {
-            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(false);
-            when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseEc);
-
-            var testClaimsSet =
-                    new JWTClaimsSet.Builder()
-                            .claim("sub", FIXED_INTERNAL_PAIRWISE_SUBJECT)
-                            .build();
-
-            var signedToken =
-                    tokenService.generateSignedJwtUsingExternalKey(
-                            testClaimsSet, Optional.empty(), JWSAlgorithm.ES256);
-
-            verify(kmsConnectionService)
-                    .getPublicKey(GetPublicKeyRequest.builder().keyId(PREVIOUS_KEY_ALIAS).build());
-            assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
-            assertThat(
-                    signedToken.getHeader().getKeyID(),
-                    equalTo(EXPECTED_OPAQUE_PREVIOUS_EC_KEY_ID));
-        }
-
-        @Test
-        void itShouldContinueToUseOldRsaKeyWhenFeatureFlagIsDisabled() {
-            when(configurationService.isUseNewV2TokenSigningKeysEnabled()).thenReturn(false);
-            when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockSignResponseRsa);
-
-            var testClaimsSet =
-                    new JWTClaimsSet.Builder()
-                            .claim("sub", FIXED_INTERNAL_PAIRWISE_SUBJECT)
-                            .build();
-
-            var signedToken =
-                    tokenService.generateSignedJwtUsingExternalKey(
-                            testClaimsSet, Optional.empty(), JWSAlgorithm.RS256);
-
-            verify(kmsConnectionService)
-                    .getPublicKey(
-                            GetPublicKeyRequest.builder().keyId(PREVIOUS_KEY_ALIAS_RSA).build());
-            assertThat(signedToken.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.RS256));
-            assertThat(
-                    signedToken.getHeader().getKeyID(),
-                    equalTo(EXPECTED_OPAQUE_PREVIOUS_RSA_KEY_ID));
         }
     }
 
