@@ -10,33 +10,30 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapper;
 import uk.gov.di.authentication.frontendapi.errormapper.TrackingErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ForcedMfaResetHelper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -45,26 +42,26 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
-import static uk.gov.di.authentication.shared.entity.JourneyType.PASSWORD_RESET_MFA;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
@@ -76,8 +73,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
@@ -91,9 +86,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountModifiersService accountModifiersService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
     private final UserActionsManager userActionsManager;
+    private final PermissionDecisionManager permissionDecisionManager;
     private final TestUserHelper testUserHelper;
 
     protected VerifyCodeHandler(
@@ -103,10 +98,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoAccountModifiersService accountModifiersService,
-            AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             UserActionsManager userActionsManager,
+            PermissionDecisionManager permissionDecisionManager,
             TestUserHelper testUserHelper) {
         super(
                 VerifyCodeRequest.class,
@@ -117,9 +112,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.accountModifiersService = accountModifiersService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
         this.userActionsManager = userActionsManager;
+        this.permissionDecisionManager = permissionDecisionManager;
         this.testUserHelper = testUserHelper;
     }
 
@@ -133,10 +128,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -147,10 +141,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -173,7 +166,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var notificationType = codeRequest.notificationType();
         var journeyType = getJourneyType(codeRequest, notificationType);
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
@@ -194,25 +186,26 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
 
-        if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-                journeyType, subjectId, auditContext, maybeRpPairwiseId))
-            return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+        var permissionContext =
+                PermissionContext.builder()
+                        .withAuthSessionItem(authSession)
+                        .withEmailAddress(authSession.getEmailAddress())
+                        .withInternalSubjectId(subjectId)
+                        .withRpPairwiseId(maybeRpPairwiseId.orElse(null))
+                        .build();
 
-        if (isCodeBlockedForSession(authSession, codeBlockedKeyPrefix)) {
-            ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
-            return generateApiGatewayProxyErrorResponse(400, errorResponse);
-        }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(
-                        notificationType.getMfaMethodType(), journeyType);
-        if (deprecatedCodeRequestType != null
-                && isCodeBlockedForSession(
-                        authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
-            return generateApiGatewayProxyErrorResponse(400, errorResponse);
+        var permissionCheck =
+                checkPermission(
+                        journeyType,
+                        permissionContext,
+                        auditContext,
+                        maybeRpPairwiseId,
+                        false,
+                        codeRequest,
+                        Optional.empty());
+        var initialPermissionError = permissionCheck.errorResponse();
+        if (initialPermissionError.isPresent()) {
+            return initialPermissionError.get();
         }
 
         var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
@@ -251,14 +244,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         var errorResponse =
                 ValidationHelper.validateVerificationCode(
-                        notificationType,
-                        journeyType,
-                        code,
-                        codeRequest.code(),
-                        codeStorageService,
-                        authSession.getEmailAddress(),
-                        configurationService,
-                        true);
+                        notificationType, code, codeRequest.code());
 
         if (errorResponse.stream().anyMatch(ErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
             return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -267,21 +253,45 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         authSessionService.updateSession(authSession);
 
         if (errorResponse.isPresent()) {
-            handleInvalidVerificationCode(
+            Result<TrackingError, Void> trackingResult = Result.success(null);
+            if (notificationType.isForPhoneNumber()) {
+                trackingResult =
+                        userActionsManager.incorrectSmsOtpReceived(journeyType, permissionContext);
+            } else if (notificationType.isEmail()) {
+                trackingResult =
+                        userActionsManager.incorrectEmailOtpReceived(
+                                journeyType, permissionContext);
+            }
+            if (trackingResult.isFailure()) {
+                LOG.error(
+                        "Failed to record incorrect OTP for {}: {}",
+                        notificationType,
+                        trackingResult.getFailure());
+                return TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                        trackingResult.getFailure());
+            }
+
+            var permissionCheckAfterIncrement =
+                    checkPermission(
+                            journeyType,
+                            permissionContext,
+                            auditContext,
+                            maybeRpPairwiseId,
+                            true,
+                            codeRequest,
+                            maybeRequestedSmsMfaMethod);
+            var permissionErrorResponse = permissionCheckAfterIncrement.errorResponse();
+            if (permissionErrorResponse.isPresent()) {
+                return permissionErrorResponse.get();
+            }
+
+            emitInvalidCodeAuditEvent(
                     codeRequest,
                     journeyType,
-                    notificationType,
-                    subjectId,
-                    errorResponse.get(),
-                    authSession,
                     auditContext,
-                    maybeRequestedSmsMfaMethod);
+                    maybeRequestedSmsMfaMethod,
+                    permissionCheckAfterIncrement.attemptCount());
 
-            if (userHasExceededAllowedAttemptsForReauthenticationJourney(
-                    journeyType, subjectId, auditContext, maybeRpPairwiseId)) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
-            }
             return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
         }
 
@@ -290,64 +300,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     userContext, authSessionService, authenticationService, configurationService);
         }
 
-        if (notificationType.equals(RESET_PASSWORD_WITH_CODE)) {
-            var mfaCodeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            CodeRequestType.SupportedCodeType.MFA, PASSWORD_RESET_MFA);
-            // TODO remove temporary ZDD measure to reference existing deprecated keys when
-            //  expired
-            var deprecatedMfaCodeRequestType =
-                    CodeRequestType.getDeprecatedCodeRequestTypeString(
-                            MFAMethodType.SMS, PASSWORD_RESET_MFA);
-
-            if (isCodeBlockedForSession(
-                    authSession, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
-            }
-            if (deprecatedMfaCodeRequestType != null
-                    && isCodeBlockedForSession(
-                            authSession,
-                            CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
-            }
-
-            if (isCodeBlockedForSession(
-                    authSession, CODE_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
-            }
-            if (deprecatedMfaCodeRequestType != null
-                    && isCodeBlockedForSession(
-                            authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
-            }
-        }
-
-        var maybeErrorResponse =
-                processSuccessfulCodeRequest(
+        return processSuccessfulCodeRequest(
                         codeRequest,
                         userContext,
-                        subjectId,
                         journeyType,
                         auditContext,
-                        maybeRpPairwiseId,
                         maybeRequestedSmsMfaMethod,
-                        retrievedMfaMethods);
-
-        return maybeErrorResponse.orElseGet(() -> generateEmptySuccessApiGatewayResponse());
-    }
-
-    private boolean userHasExceededAllowedAttemptsForReauthenticationJourney(
-            JourneyType journeyType,
-            String subjectId,
-            AuditContext auditContext,
-            Optional<String> maybeRpPairwiseId) {
-        return journeyType == REAUTHENTICATION
-                && checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-                        journeyType, subjectId, auditContext, maybeRpPairwiseId);
+                        retrievedMfaMethods,
+                        permissionContext,
+                        permissionCheck.attemptCount())
+                .orElseGet(() -> generateEmptySuccessApiGatewayResponse());
     }
 
     private Optional<String> getCode(
@@ -370,86 +332,125 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return codeStorageService.getOtpCode(identifier, notificationType);
     }
 
-    private void handleInvalidVerificationCode(
+    private record PermissionCheckResult(
+            Optional<APIGatewayProxyResponseEvent> errorResponse, int attemptCount) {}
+
+    private PermissionCheckResult checkPermission(
+            JourneyType journeyType,
+            PermissionContext permissionContext,
+            AuditContext auditContext,
+            Optional<String> maybeRpPairwiseId,
+            boolean afterActionRecorded,
+            VerifyCodeRequest codeRequest,
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
+        var notificationType = codeRequest.notificationType();
+        Result<DecisionError, Decision> canVerifyOtpResult =
+                Result.success(new Decision.Permitted(0));
+        if (notificationType.isForPhoneNumber()) {
+            canVerifyOtpResult =
+                    permissionDecisionManager.canVerifyMfaOtp(journeyType, permissionContext);
+        } else if (notificationType.isEmail()) {
+            canVerifyOtpResult =
+                    permissionDecisionManager.canVerifyEmailOtp(journeyType, permissionContext);
+        }
+
+        if (canVerifyOtpResult.isFailure()) {
+            LOG.error(
+                    "Failed to check OTP verification permission: {}",
+                    canVerifyOtpResult.getFailure());
+            return new PermissionCheckResult(
+                    Optional.of(
+                            generateApiGatewayProxyErrorResponse(
+                                    500, ErrorResponse.INTERNAL_SERVER_ERROR)),
+                    0);
+        }
+
+        var decision = canVerifyOtpResult.getSuccess();
+
+        if (decision instanceof Decision.ReauthLockedOut reauthLockedOut) {
+            ReauthFailureReasons reauthFailureReason =
+                    ForbiddenReasonErrorMapper.toReauthFailureReason(
+                            reauthLockedOut.forbiddenReason());
+
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                    auditContext,
+                    ReauthMetadataBuilder.builder(maybeRpPairwiseId.orElse(AuditService.UNKNOWN))
+                            .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
+                            .withFailureReason(reauthFailureReason)
+                            .build());
+            cloudwatchMetricsService.incrementCounter(
+                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            FAILURE_REASON.getValue(),
+                            reauthFailureReason.getValue()));
+
+            return new PermissionCheckResult(
+                    Optional.of(
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS)),
+                    reauthLockedOut.attemptCount());
+        }
+
+        if (decision instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
+            LOG.info("User is temporarily locked out from OTP verification");
+            if (afterActionRecorded) {
+                if (maybeRequestedSmsMfaMethod.isPresent()) {
+                    auditContext =
+                            auditContext.withMetadataItem(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                            maybeRequestedSmsMfaMethod
+                                                    .get()
+                                                    .getPriority()
+                                                    .toLowerCase()));
+                }
+                // loginFailureCount is hardcoded to 0 because the previous implementation
+                // reset the incorrect attempts counter before reading it for the audit event,
+                // so this field was always emitted as 0 on the max-retries path.
+                var metadataPairArray =
+                        metadataPairs(notificationType, journeyType, codeRequest, 0, true);
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
+                        auditContext,
+                        metadataPairArray);
+            }
+            var errorResponse = blockedCodeBehaviour(notificationType);
+            return new PermissionCheckResult(
+                    Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse)),
+                    temporarilyLockedOut.attemptCount());
+        }
+
+        if (decision instanceof Decision.Permitted permitted) {
+            return new PermissionCheckResult(Optional.empty(), permitted.attemptCount());
+        }
+
+        return new PermissionCheckResult(Optional.empty(), 0);
+    }
+
+    private void emitInvalidCodeAuditEvent(
             VerifyCodeRequest codeRequest,
             JourneyType journeyType,
-            NotificationType notificationType,
-            String subjectId,
-            ErrorResponse errorResponse,
-            AuthSessionItem authSession,
             AuditContext auditContext,
-            Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
-        if (journeyType == REAUTHENTICATION && notificationType == MFA_SMS) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                authenticationAttemptsService.createOrIncrementCount(
-                        subjectId,
-                        NowHelper.nowPlus(
-                                        configurationService.getReauthEnterSMSCodeCountTTL(),
-                                        ChronoUnit.SECONDS)
-                                .toInstant()
-                                .getEpochSecond(),
-                        REAUTHENTICATION,
-                        CountType.ENTER_MFA_CODE);
-            }
-        } else {
-            processBlockedCodeSession(
-                    errorResponse,
-                    authSession,
-                    codeRequest,
-                    journeyType,
-                    auditContext,
-                    maybeRequestedSmsMfaMethod);
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod,
+            int loginFailureCount) {
+        var notificationType = codeRequest.notificationType();
+        if (maybeRequestedSmsMfaMethod.isPresent()) {
+            auditContext =
+                    auditContext.withMetadataItem(
+                            pair(
+                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                    maybeRequestedSmsMfaMethod.get().getPriority().toLowerCase()));
         }
+        var metadataPairArray =
+                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true);
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.AUTH_INVALID_CODE_SENT, auditContext, metadataPairArray);
     }
 
-    private boolean checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-            JourneyType journeyType,
-            String subjectId,
-            AuditContext auditContext,
-            Optional<String> maybeRpPairwiseId) {
-        if (journeyType == REAUTHENTICATION
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            var countsByJourney =
-                    maybeRpPairwiseId.isEmpty()
-                            ? authenticationAttemptsService.getCountsByJourney(
-                                    subjectId, REAUTHENTICATION)
-                            : authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId, maybeRpPairwiseId.get(), REAUTHENTICATION);
-
-            var countTypesWhereBlocked =
-                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                            countsByJourney, configurationService);
-
-            if (!countTypesWhereBlocked.isEmpty()) {
-                ReauthFailureReasons failureReason =
-                        getReauthFailureReasonFromCountTypes(countTypesWhereBlocked);
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                        auditContext,
-                        ReauthMetadataBuilder.builder(
-                                        maybeRpPairwiseId.orElse(AuditService.UNKNOWN))
-                                .withAllIncorrectAttemptCounts(countsByJourney)
-                                .withFailureReason(failureReason)
-                                .build());
-                cloudwatchMetricsService.incrementCounter(
-                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                FAILURE_REASON.getValue(),
-                                failureReason == null ? "unknown" : failureReason.getValue()));
-                LOG.info(
-                        "Re-authentication locked due to {} counts exceeded.",
-                        countTypesWhereBlocked);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private ErrorResponse blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
+    private ErrorResponse blockedCodeBehaviour(NotificationType notificationType) {
         return Map.ofEntries(
                         entry(
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
@@ -459,41 +460,20 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                 RESET_PASSWORD_WITH_CODE,
                                 ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED),
                         entry(MFA_SMS, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED))
-                .get(codeRequest.notificationType());
-    }
-
-    private boolean isCodeBlockedForSession(
-            AuthSessionItem authSession, String codeBlockedKeyPrefix) {
-        return codeStorageService.isBlockedForEmail(
-                authSession.getEmailAddress(), codeBlockedKeyPrefix);
-    }
-
-    private void blockCodeForSession(AuthSessionItem authSession, String codeBlockPrefix) {
-        codeStorageService.saveBlockedForEmail(
-                authSession.getEmailAddress(),
-                codeBlockPrefix,
-                configurationService.getLockoutDuration());
-        LOG.info("Email is blocked");
-    }
-
-    private void resetIncorrectMfaCodeAttemptsCount(AuthSessionItem authSession) {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
-        LOG.info("IncorrectMfaCodeAttemptsCount reset");
+                .get(notificationType);
     }
 
     private Optional<APIGatewayProxyResponseEvent> processSuccessfulCodeRequest(
             VerifyCodeRequest codeRequest,
             UserContext userContext,
-            String subjectId,
             JourneyType journeyType,
             AuditContext auditContext,
-            Optional<String> maybeRpPairwiseId,
             Optional<MFAMethod> maybeRequestedSmsMfaMethod,
-            List<MFAMethod> retrievedMfaMethods) {
+            List<MFAMethod> retrievedMfaMethods,
+            PermissionContext permissionContext,
+            int loginFailureCount) {
         var authSession = userContext.getAuthSession();
         var notificationType = codeRequest.notificationType();
-        int loginFailureCount =
-                codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
         var clientId = authSession.getClientId();
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
@@ -511,9 +491,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         String emailAddress = authSession.getEmailAddress();
         String otpCodeIdentifier = emailAddress;
-        MFAMethod smsMfaMethod = null;
         if (notificationType.isForPhoneNumber()) {
-            smsMfaMethod = maybeRequestedSmsMfaMethod.orElseThrow();
+            MFAMethod smsMfaMethod = maybeRequestedSmsMfaMethod.orElseThrow();
             String formattedPhoneNumber =
                     PhoneNumberHelper.formatPhoneNumber(smsMfaMethod.getDestination());
             otpCodeIdentifier = emailAddress.concat(formattedPhoneNumber);
@@ -522,15 +501,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             pair(
                                     AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                                     smsMfaMethod.getPriority().toLowerCase()));
-        }
 
-        if (notificationType.equals(MFA_SMS)) {
             String countryCode =
-                    Optional.ofNullable(smsMfaMethod)
-                            .flatMap(
-                                    method ->
-                                            PhoneNumberHelper.maybeGetCountry(
-                                                    method.getDestination()))
+                    PhoneNumberHelper.maybeGetCountry(smsMfaMethod.getDestination())
                             .orElse("unknown");
             LOG.info(
                     "MFA code has been successfully verified for MFA type: {}. JourneyType: {}. CountryCode: {}",
@@ -539,13 +512,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     countryCode);
 
             LOG.info("Setting hasVerifiedMfa to true");
-            var permissionContext =
-                    PermissionContext.builder()
-                            .withAuthSessionItem(authSession)
-                            .withEmailAddress(authSession.getEmailAddress())
-                            .withInternalSubjectId(subjectId)
-                            .withRpPairwiseId(maybeRpPairwiseId.orElse(null))
-                            .build();
             var result = userActionsManager.correctSmsOtpReceived(journeyType, permissionContext);
             if (result.isFailure()) {
                 LOG.error("Failed to record correct SMS OTP: {}", result.getFailure());
@@ -566,21 +532,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     levelOfConfidence.getValue(),
                     testUserHelper.isTestJourney(authSession.getEmailAddress()),
                     journeyType,
-                    smsMfaMethod != null
-                            ? MFAMethodType.valueOf(smsMfaMethod.getMfaMethodType())
-                            : null,
-                    smsMfaMethod != null
-                            ? PriorityIdentifier.valueOf(smsMfaMethod.getPriority())
-                            : null);
+                    MFAMethodType.valueOf(smsMfaMethod.getMfaMethodType()),
+                    PriorityIdentifier.valueOf(smsMfaMethod.getPriority()));
         }
 
-        if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
-            preserveReauthCountsForAuditIfJourneyIsReauth(
-                    journeyType, subjectId, authSession, maybeRpPairwiseId);
-            clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
-            maybeRpPairwiseId.ifPresentOrElse(
-                    this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
-                    () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
+        if (notificationType.isEmail()) {
+            var result = userActionsManager.correctEmailOtpReceived(journeyType, permissionContext);
+            if (result.isFailure()) {
+                LOG.error("Failed to record correct email OTP: {}", result.getFailure());
+                return Optional.of(
+                        TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(
+                                result.getFailure()));
+            }
         }
 
         codeStorageService.deleteOtpCode(otpCodeIdentifier, notificationType);
@@ -589,36 +552,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
-
         return Optional.empty();
-    }
-
-    void preserveReauthCountsForAuditIfJourneyIsReauth(
-            JourneyType journeyType,
-            String subjectId,
-            AuthSessionItem authSession,
-            Optional<String> maybeRpPairwiseId) {
-        if (journeyType == REAUTHENTICATION
-                && configurationService.supportReauthSignoutEnabled()
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            var counts =
-                    maybeRpPairwiseId.isPresent()
-                            ? authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId, maybeRpPairwiseId.get(), REAUTHENTICATION)
-                            : authenticationAttemptsService.getCountsByJourney(
-                                    subjectId, REAUTHENTICATION);
-            var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
-            authSessionService.updateSession(updatedAuthSession);
-        }
-    }
-
-    void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String identifier) {
-        Arrays.stream(CountType.values())
-                .forEach(
-                        countType ->
-                                authenticationAttemptsService.deleteCount(
-                                        identifier, REAUTHENTICATION, countType));
     }
 
     private AuditService.MetadataPair[] metadataPairs(
@@ -640,50 +574,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             metadataPairs.add(pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
         }
         return metadataPairs.toArray(AuditService.MetadataPair[]::new);
-    }
-
-    private void processBlockedCodeSession(
-            ErrorResponse errorResponse,
-            AuthSessionItem authSession,
-            VerifyCodeRequest codeRequest,
-            JourneyType journeyType,
-            AuditContext auditContext,
-            Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
-        var notificationType = codeRequest.notificationType();
-        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        AuditableEvent auditableEvent;
-        switch (errorResponse) {
-            case TOO_MANY_INVALID_MFA_OTPS_ENTERED,
-                    TOO_MANY_INVALID_PW_RESET_CODES_ENTERED,
-                    TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED:
-                if (!configurationService.supportReauthSignoutEnabled()
-                        || journeyType != REAUTHENTICATION) {
-                    blockCodeForSession(authSession, codeBlockedKeyPrefix);
-                }
-                resetIncorrectMfaCodeAttemptsCount(authSession);
-                auditableEvent = FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
-                break;
-            case TOO_MANY_EMAIL_CODES_ENTERED:
-                resetIncorrectMfaCodeAttemptsCount(authSession);
-                auditableEvent = FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
-                break;
-            default:
-                auditableEvent = FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
-                break;
-        }
-        if (maybeRequestedSmsMfaMethod.isPresent()) {
-            auditContext =
-                    auditContext.withMetadataItem(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                    maybeRequestedSmsMfaMethod.get().getPriority().toLowerCase()));
-        }
-        var loginFailureCount =
-                codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
-        var metadataPairArray =
-                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true);
-        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
     }
 
     private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {

@@ -8,10 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
 import java.util.Objects;
@@ -22,7 +19,6 @@ import java.util.regex.Pattern;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
 public class ValidationHelper {
     private static final Logger LOG = LogManager.getLogger(ValidationHelper.class);
@@ -138,20 +134,9 @@ public class ValidationHelper {
     }
 
     public static Optional<ErrorResponse> validateVerificationCode(
-            NotificationType notificationType,
-            JourneyType journeyType,
-            Optional<String> code,
-            String input,
-            CodeStorageService codeStorageService,
-            String emailAddress,
-            ConfigurationService configurationService,
-            boolean incrementCountOnFailure) {
+            NotificationType notificationType, Optional<String> code, String input) {
 
         if (code.filter(input::equals).isPresent()) {
-            if (journeyType != JourneyType.REAUTHENTICATION) {
-                codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
-            }
-
             switch (notificationType) {
                 case MFA_SMS:
                 case VERIFY_EMAIL:
@@ -163,49 +148,11 @@ public class ValidationHelper {
             return Optional.of(ErrorResponse.INVALID_NOTIFICATION_TYPE);
         }
 
-        return getErrorResponse(
-                notificationType,
-                journeyType,
-                codeStorageService,
-                emailAddress,
-                configurationService,
-                incrementCountOnFailure);
+        return getErrorResponse(notificationType);
     }
 
     private static @NotNull Optional<ErrorResponse> getErrorResponse(
-            NotificationType notificationType,
-            JourneyType journeyType,
-            CodeStorageService codeStorageService,
-            String emailAddress,
-            ConfigurationService configurationService,
-            boolean incrementCountOnFailure) {
-        if (incrementCountOnFailure && journeyType != JourneyType.REAUTHENTICATION) {
-            if (configurationService.supportAccountCreationTTL()
-                    && notificationType == VERIFY_EMAIL) {
-                codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(
-                        emailAddress);
-            } else {
-                codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
-            }
-
-            if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress)
-                    >= configurationService.getCodeMaxRetries()) {
-                switch (notificationType) {
-                    case MFA_SMS:
-                        return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
-                    case VERIFY_EMAIL:
-                        return Optional.of(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED);
-                    case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                        return Optional.of(
-                                ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED);
-                    case VERIFY_PHONE_NUMBER:
-                        return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
-                    case RESET_PASSWORD_WITH_CODE:
-                        return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
-                }
-            }
-        }
-
+            NotificationType notificationType) {
         switch (notificationType) {
             case MFA_SMS:
                 return Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED);
