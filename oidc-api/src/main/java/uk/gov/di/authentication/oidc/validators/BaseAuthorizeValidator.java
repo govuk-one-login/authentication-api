@@ -33,6 +33,7 @@ public abstract class BaseAuthorizeValidator {
     protected final DynamoClientService dynamoClientService;
     protected final IPVCapacityService ipvCapacityService;
     protected static final Logger LOG = LogManager.getLogger(BaseAuthorizeValidator.class);
+    protected static final String VTR_NOT_PERMITTED = "Request vtr is not permitted";
 
     protected BaseAuthorizeValidator(
             ConfigurationService configurationService,
@@ -167,14 +168,18 @@ public abstract class BaseAuthorizeValidator {
                                 "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: %s",
                                 levelOfConfidenceValues));
                 return Optional.of(
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, VTR_NOT_PERMITTED));
             }
             var vtrError = errorIfIdentityLoCAndIdentityUnsupported(vtrList, client);
             if (vtrError.isPresent()) {
                 return vtrError;
             }
-            logIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(vtrList, client);
+            var tokenAuthMethodError =
+                    errorForIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
+                            vtrList, client);
+            if (tokenAuthMethodError.isPresent()) {
+                return tokenAuthMethodError;
+            }
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
@@ -197,19 +202,22 @@ public abstract class BaseAuthorizeValidator {
             logErrorInProdElseWarn(
                     "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.");
             return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, VTR_NOT_PERMITTED));
         }
         return Optional.empty();
     }
 
-    protected void logIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
-            List<VectorOfTrust> vtrList, ClientRegistry client) {
+    protected Optional<ErrorObject>
+            errorForIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
+                    List<VectorOfTrust> vtrList, ClientRegistry client) {
         if (requestContainsIdentityLoC(vtrList)
                 && ("client_secret_post".equals(client.getTokenAuthMethod()))) {
-            LOG.info(
+            logErrorInProdElseWarn(
                     "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.");
+            return Optional.of(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, VTR_NOT_PERMITTED));
         }
+        return Optional.empty();
     }
 
     protected void validateResponseMode(String responseMode) throws InvalidResponseModeException {
