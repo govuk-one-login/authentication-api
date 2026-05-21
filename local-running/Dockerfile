@@ -17,6 +17,7 @@ COPY user-permissions ./user-permissions
 COPY auth-external-api ./auth-external-api
 COPY frontend-api ./frontend-api
 COPY audit-events ./audit-events
+COPY account-data-api ./account-data-api
 
 RUN --mount=type=cache,target=/root/.gradle ./gradlew :local-running:build --no-daemon
 RUN mkdir untarred && tar -xvf local-running/build/distributions/local-running.tar -C ./untarred
