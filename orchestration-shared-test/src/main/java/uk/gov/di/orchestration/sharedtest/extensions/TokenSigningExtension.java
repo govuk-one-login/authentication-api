@@ -54,7 +54,7 @@ public class TokenSigningExtension extends KmsKeyExtension {
             SignRequest signRequest =
                     SignRequest.builder()
                             .message(SdkBytes.fromByteBuffer(messageToSign))
-                            .keyId(getKeyAlias())
+                            .keyId(getNewKeyAliasV2())
                             .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();
             var signResult = kmsConnectionService.sign(signRequest);

@@ -531,19 +531,6 @@ class TokenServiceTest {
         private final String NEW_V2_KEY_ALIAS = "alias/new-signing-key-v2";
         private final String NEW_V2_KEY_ALIAS_RSA = "alias/new-signing-key-rsa-v2";
 
-        private final String PREVIOUS_KEY_ALIAS = "alias/old-signing-key";
-        private final String PREVIOUS_KEY_ALIAS_RSA = "alias/old-signing-key-rsa";
-
-        private final String MOCK_PREVIOUS_EC_KEY_ID =
-                "nF2rpzCc-UZavTfpb9V7TTBG4uphYul9u-Op-cLqf_4";
-        private final String MOCK_PREVIOUS_RSA_KEY_ID =
-                "A67fuGRkM96UF0YRCObJMeRLfL38jAP07zAAv79uYRk";
-
-        private final String EXPECTED_OPAQUE_PREVIOUS_EC_KEY_ID =
-                hashSha256String(MOCK_PREVIOUS_EC_KEY_ID);
-        private final String EXPECTED_OPAQUE_PREVIOUS_RSA_KEY_ID =
-                hashSha256String(MOCK_PREVIOUS_RSA_KEY_ID);
-
         private final String MOCK_NEW_V2_EC_KEY_ID = "i4rwnl-SLuhPjdtP1GJyKXZRDG00znaRld8s-h6Fn2i";
         private final String MOCK_NEW_V2_RSA_KEY_ID = "LA9hmMyeZ2h4oOZcoWpReQKHGp0PwfyzuKCc08cdjYh";
 
@@ -560,21 +547,6 @@ class TokenServiceTest {
 
         @BeforeEach
         void setup() throws JOSEException {
-
-            when(configurationService.getExternalTokenSigningKeyAlias())
-                    .thenReturn(PREVIOUS_KEY_ALIAS);
-            when(configurationService.getExternalTokenSigningKeyRsaAlias())
-                    .thenReturn(PREVIOUS_KEY_ALIAS_RSA);
-
-            when(kmsConnectionService.getPublicKey(
-                            GetPublicKeyRequest.builder().keyId(PREVIOUS_KEY_ALIAS).build()))
-                    .thenReturn(
-                            GetPublicKeyResponse.builder().keyId(MOCK_PREVIOUS_EC_KEY_ID).build());
-            when(kmsConnectionService.getPublicKey(
-                            GetPublicKeyRequest.builder().keyId(PREVIOUS_KEY_ALIAS_RSA).build()))
-                    .thenReturn(
-                            GetPublicKeyResponse.builder().keyId(MOCK_PREVIOUS_RSA_KEY_ID).build());
-
             when(configurationService.getNextExternalTokenSigningKeyAliasV2())
                     .thenReturn(NEW_V2_KEY_ALIAS);
             when(configurationService.getNextExternalTokenSigningKeyRsaAliasV2())

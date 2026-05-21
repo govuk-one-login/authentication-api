@@ -62,23 +62,11 @@ public class TokenValidationService {
 
             if (JWSAlgorithm.RS256 == jwt.getHeader().getAlgorithm()
                     && configuration.isRsaSigningAvailable()) {
-                if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
-                    var newV2PublicKey = jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2();
-                    return jwt.verify(new RSASSAVerifier(newV2PublicKey.toRSAKey()));
-                } else {
-                    return jwt.verify(
-                            new RSASSAVerifier(
-                                    jwksService.getPublicTokenRsaJwkWithOpaqueId().toRSAKey()));
-                }
+                var newV2PublicKey = jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2();
+                return jwt.verify(new RSASSAVerifier(newV2PublicKey.toRSAKey()));
             } else {
-                if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
-                    var newV2PublicKey = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
-                    return jwt.verify(new ECDSAVerifier(newV2PublicKey.toECKey()));
-                } else {
-                    return jwt.verify(
-                            new ECDSAVerifier(
-                                    jwksService.getPublicTokenJwkWithOpaqueId().toECKey()));
-                }
+                var newV2PublicKey = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
+                return jwt.verify(new ECDSAVerifier(newV2PublicKey.toECKey()));
             }
 
         } catch (JOSEException | java.text.ParseException e) {
@@ -91,13 +79,9 @@ public class TokenValidationService {
         try {
             var jwt = SignedJWT.parse(tokenValue);
 
-            if (configuration.isPublishNextExternalTokenSigningKeysEnabledV2()) {
-                var newV2PublicKey = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
-                if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
-                    return jwt.verify(new ECDSAVerifier(newV2PublicKey.toECKey()));
-                } else {
-                    return validateWithOldECPublicKey(jwt);
-                }
+            var newV2PublicKey = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
+            if (Objects.equals(jwt.getHeader().getKeyID(), newV2PublicKey.getKeyID())) {
+                return jwt.verify(new ECDSAVerifier(newV2PublicKey.toECKey()));
             } else {
                 return validateWithOldECPublicKey(jwt);
             }
