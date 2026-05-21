@@ -93,7 +93,8 @@ class AuthorizeHandlerTest {
                     Arguments.of(AccountDataScope.PASSKEY_CREATE.getValue()),
                     Arguments.of(AccountDataScope.PASSKEY_RETRIEVE.getValue()),
                     Arguments.of(AccountDataScope.PASSKEY_UPDATE.getValue()),
-                    Arguments.of(AccountDataScope.PASSKEY_DELETE.getValue()));
+                    Arguments.of(AccountDataScope.PASSKEY_DELETE.getValue()),
+                    Arguments.of("passkey-create passkey-retrieve"));
         }
 
         @ParameterizedTest
@@ -136,25 +137,6 @@ class AuthorizeHandlerTest {
 
     @Nested
     class Failure {
-
-        @Test
-        void authorizeHandlerShouldRejectInvalidScope() throws JOSEException {
-            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
-
-            var bearerAccessToken =
-                    createBearerAccessTokenWithExpiry(
-                            expiryDateFiveMinutesFromNow, ecSigningKey, "invalid-scope");
-
-            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
-
-            RuntimeException exception =
-                    assertThrows(
-                            RuntimeException.class,
-                            () -> handler.handleRequest(event, context),
-                            "Expected to throw exception");
-
-            assertEquals("Unauthorized", exception.getMessage());
-        }
 
         @Test
         void authorizeHandlerShouldRejectIfScopeIsNotPresent() throws JOSEException {

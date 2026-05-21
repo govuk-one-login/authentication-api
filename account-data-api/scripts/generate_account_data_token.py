@@ -120,7 +120,9 @@ def main():
         help="Session ID (sid claim); random UUID if omitted",
     )
     parser.add_argument(
-        "--scope", default="passkeys.read", help="Token scope (default: passkeys.read)"
+        "--scope",
+        default="passkey-retrieve",
+        help="Token scope - space-separated for multiple (default: passkey-retrieve)",
     )
     parser.add_argument(
         "--ttl", type=int, default=5, help="Token TTL in minutes (default: 5)"

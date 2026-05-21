@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import java.nio.ByteBuffer;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.List;
 import java.util.Objects;
 
 public class UserInfoService {
@@ -120,7 +121,11 @@ public class UserInfoService {
             var result =
                     accessTokenConstructorService.createSignedAccessToken(
                             userProfile.getPublicSubjectID(),
-                            AccountDataScope.PASSKEY_CREATE,
+                            List.of(
+                                    AccountDataScope.PASSKEY_CREATE,
+                                    AccountDataScope.PASSKEY_RETRIEVE,
+                                    AccountDataScope.PASSKEY_UPDATE,
+                                    AccountDataScope.PASSKEY_DELETE),
                             authSession.getSessionId(),
                             NowHelper.now(),
                             NowHelper.nowPlus(2, ChronoUnit.HOURS),

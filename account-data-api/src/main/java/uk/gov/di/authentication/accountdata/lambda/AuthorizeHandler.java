@@ -19,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
-import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -142,30 +141,35 @@ public class AuthorizeHandler
             LOG.warn("Access Token subject is missing");
             return Result.failure(new UnauthorizedException());
         }
+
         var scopeValue = (String) claimsSet.getClaim(SCOPE_CLAIM);
-        var scope = AccountDataScope.fromValue(scopeValue);
-        if (scope.isEmpty()) {
+        if (scopeValue == null || scopeValue.isBlank()) {
             LOG.warn("Invalid or missing scope: {}", scopeValue);
             return Result.failure(new UnauthorizedException());
         }
+
         var expectedIssuer = configurationService.getAuthIssuerClaim();
         if (!expectedIssuer.equals(claimsSet.getIssuer())) {
             LOG.warn("Access Token issuer is invalid");
             return Result.failure(new UnauthorizedException());
         }
+
         var expectedAudience = configurationService.getAuthToAccountDataApiAudience();
         if (!claimsSet.getAudience().contains(expectedAudience)) {
             LOG.warn("Access Token audience is invalid");
             return Result.failure(new UnauthorizedException());
         }
+
         if (claimsSet.getNotBeforeTime() == null) {
             LOG.warn("Access Token is missing nbf claim");
             return Result.failure(new UnauthorizedException());
         }
+
         if (DateUtils.isAfter(claimsSet.getNotBeforeTime(), NowHelper.now(), 0)) {
             LOG.warn("Access Token is not yet valid (nbf: {})", claimsSet.getNotBeforeTime());
             return Result.failure(new UnauthorizedException());
         }
+
         var amcClientId = configurationService.getAMCClientId();
         var homeClientId = configurationService.getHomeClientId();
         var clientId = (String) claimsSet.getClaim(CLIENT_ID_CLAIM);

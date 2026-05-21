@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeysRetrieveResponse;
+import uk.gov.di.authentication.shared.entity.AccessTokenScope;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
@@ -21,6 +22,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
@@ -60,7 +62,8 @@ public class PasskeysService {
             String publicSubjectId, String sessionId) {
 
         var accountDataApiAccessTokenResult =
-                createAccountDataApiAccessToken(publicSubjectId, sessionId);
+                createAccountDataApiAccessToken(
+                        publicSubjectId, sessionId, List.of(AccountDataScope.PASSKEY_RETRIEVE));
         if (accountDataApiAccessTokenResult.isFailure()) {
             return Result.failure(accountDataApiAccessTokenResult.getFailure());
         }
@@ -123,11 +126,11 @@ public class PasskeysService {
     }
 
     private Result<PasskeyRetrieveError, BearerAccessToken> createAccountDataApiAccessToken(
-            String publicSubjectId, String sessionId) {
+            String publicSubjectId, String sessionId, List<AccessTokenScope> scopes) {
         return accessTokenConstructorService
                 .createSignedAccessToken(
                         publicSubjectId,
-                        AccountDataScope.PASSKEY_RETRIEVE,
+                        scopes,
                         sessionId,
                         nowClock.now(),
                         nowClock.nowPlus(ADAPI_ACCESS_TOKEN_LIFETIME, ChronoUnit.MINUTES),

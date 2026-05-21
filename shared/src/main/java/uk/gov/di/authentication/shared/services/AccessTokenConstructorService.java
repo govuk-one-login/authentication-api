@@ -9,7 +9,9 @@ import uk.gov.di.authentication.shared.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class AccessTokenConstructorService {
 
@@ -29,7 +31,7 @@ public class AccessTokenConstructorService {
 
     public Result<JwtFailureReason, BearerAccessToken> createSignedAccessToken(
             String publicSubjectId,
-            AccessTokenScope scope,
+            List<AccessTokenScope> scopes,
             String sessionId,
             Date issueTime,
             Date expiryDate,
@@ -37,9 +39,12 @@ public class AccessTokenConstructorService {
             String issuer,
             String clientId,
             String signingKey) {
+        var scopeValue =
+                scopes.stream().map(AccessTokenScope::getValue).collect(Collectors.joining(" "));
+
         var claims =
                 new JWTClaimsSet.Builder()
-                        .claim("scope", scope.getValue())
+                        .claim("scope", scopeValue)
                         .issuer(issuer)
                         .audience(audience)
                         .expirationTime(expiryDate)
@@ -53,13 +58,13 @@ public class AccessTokenConstructorService {
 
         return jwtService
                 .signJWT(claims, signingKey)
-                .map(signedJWT -> signedJwtToAccessToken(signedJWT, scope));
+                .map(signedJWT -> signedJwtToAccessToken(signedJWT, scopeValue));
     }
 
-    private BearerAccessToken signedJwtToAccessToken(SignedJWT signedJWT, AccessTokenScope scope) {
+    private BearerAccessToken signedJwtToAccessToken(SignedJWT signedJWT, String scopeValue) {
         return new BearerAccessToken(
                 signedJWT.serialize(),
                 configurationService.getSessionExpiry(),
-                new Scope(scope.getValue()));
+                new Scope(scopeValue));
     }
 }

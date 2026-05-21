@@ -34,11 +34,13 @@ export AMC_CLIENT_ID="auth"
 
 ```bash
 python3 ./account-data-api/scripts/generate_account_data_token.py <public-subject-id> \
-  --scope passkey-retrieve \
+  --scope "passkey-create passkey-retrieve" \
   --profile di-authentication-development-AdministratorAccessPermission
 ```
 
 Available scopes: `passkey-create`, `passkey-retrieve`, `passkey-update`, `passkey-delete`
+
+Multiple scopes can be passed as a space-separated string (e.g. `"passkey-create passkey-retrieve"`).
 
 Options: `--ttl <minutes>` (default 5), `--region <region>` (default eu-west-2)
 
@@ -95,6 +97,8 @@ A valid token returns an Allow policy with the scope in context. An invalid toke
 When invoking Lambda directly you must supply `pathParameters` and `requestContext.authorizer.principalId` explicitly — API Gateway is not involved so these are not populated automatically.
 
 The `principalId` must match the `publicSubjectId` path parameter, otherwise the handler returns 401.
+
+The `scope` field should be a space-separated string of the scopes the token was issued with (e.g. `"passkey-create passkey-retrieve"`). Each handler checks that its required scope is present in this list.
 
 #### Retrieve passkeys
 
