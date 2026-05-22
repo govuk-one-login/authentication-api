@@ -86,8 +86,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.deploy_orch_oidc_lambdas ? module.token[0].method_trigger_value : null,
       var.client_registry_api_enabled && var.deploy_orch_oidc_lambdas ? module.update[0].integration_trigger_value : null,
       var.client_registry_api_enabled && var.deploy_orch_oidc_lambdas ? module.update[0].method_trigger_value : null,
-      module.userinfo.integration_trigger_value,
-      module.userinfo.method_trigger_value,
+      var.deploy_orch_oidc_lambdas ? module.userinfo[0].integration_trigger_value : null,
+      var.deploy_orch_oidc_lambdas ? module.userinfo[0].method_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.ipv-callback[0].integration_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.ipv-callback[0].method_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.ipv-capacity[0].integration_trigger_value : null,
@@ -121,7 +121,6 @@ resource "aws_api_gateway_deployment" "deployment" {
   }
   depends_on = [
     module.openid_configuration_discovery,
-    module.userinfo,
     aws_api_gateway_integration.orch_openid_configuration_integration,
     aws_api_gateway_integration.orch_trustmark_integration,
     aws_api_gateway_integration.orch_doc_app_callback_integration,
@@ -220,7 +219,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     aws_api_gateway_integration.orch_register_integration,
     aws_api_gateway_integration.orch_token_integration,
     aws_api_gateway_integration.orch_update_client_integration,
-    module.userinfo,
+    aws_api_gateway_integration.orch_userinfo_integration,
     aws_api_gateway_integration.orch_ipv_callback_integration,
     aws_api_gateway_integration.orch_doc_app_callback_integration,
     aws_api_gateway_integration.orch_authentication_callback_integration,
@@ -1117,9 +1116,6 @@ resource "aws_api_gateway_resource" "orch_userinfo_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "userinfo"
-  depends_on = [
-    module.userinfo
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_userinfo_method" {

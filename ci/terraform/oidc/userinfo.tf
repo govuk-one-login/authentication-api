@@ -1,4 +1,5 @@
 module "oidc_userinfo_role_2" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-userinfo-role"
@@ -19,9 +20,15 @@ module "oidc_userinfo_role_2" {
     Service = "userinfo"
   }
 }
+moved {
+  from = module.oidc_userinfo_role_2
+  to   = module.oidc_userinfo_role_2[0]
+}
+
 
 module "userinfo" {
   source = "../modules/endpoint-module-v2"
+  count  = var.deploy_orch_oidc_lambdas ? 1 : 0
 
   endpoint_name   = "userinfo"
   path_part       = var.orch_userinfo_enabled ? "userinfo-auth" : "userinfo"
@@ -56,7 +63,7 @@ module "userinfo" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_userinfo_role_2.arn
+  lambda_role_arn                        = module.oidc_userinfo_role_2[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -71,4 +78,8 @@ module "userinfo" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+moved {
+  from = module.userinfo
+  to   = module.userinfo[0]
 }
