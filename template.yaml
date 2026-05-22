@@ -5595,15 +5595,15 @@ Resources:
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
-  SpotResponseQueueEventMapping:
-    Type: AWS::Lambda::EventSourceMapping
-    Properties:
-      Enabled: true
-      BatchSize: 1
-      EventSourceArn: !Sub
-        - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
-        - SecretArn: !Ref SpotResponseQueueArnSecret
-      FunctionName: !Ref SpotResponseFunction.Alias
+  #  SpotResponseQueueEventMapping:
+  #    Type: AWS::Lambda::EventSourceMapping
+  #    Properties:
+  #      Enabled: true
+  #      BatchSize: 1
+  #      EventSourceArn: !Sub
+  #        - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
+  #        - SecretArn: !Ref SpotResponseQueueArnSecret
+  #      FunctionName: !Ref SpotResponseFunction.Alias
 
   SpotResponseFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -6035,46 +6035,46 @@ Resources:
       ResourceArn: !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${OrchestrationOidcApi}/stages/${Environment}"
     DependsOn:
       - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
+  #
+  #  OrchestrationOidcApiCustomDomain:
+  #    Type: AWS::ApiGatewayV2::DomainName
+  #    Condition: UseCloudfront
+  #    Properties:
+  #      DomainName:
+  #        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
+  #      DomainNameConfigurations:
+  #        - CertificateArn: "{{resolve:ssm:/deploy/hosted-zone/oidc/certificate-Arn}}"
+  #          SecurityPolicy: TLS_1_2
+  #
+  #  OrchestrationOidcApiBasePathMapping:
+  #    Type: AWS::ApiGateway::BasePathMapping
+  #    Condition: UseCloudfront
+  #    Properties:
+  #      DomainName:
+  #        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
+  #      RestApiId: !Ref OrchestrationOidcApi
+  #      Stage: !Sub "${Environment}"
+  #    DependsOn:
+  #      - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
 
-  OrchestrationOidcApiCustomDomain:
-    Type: AWS::ApiGatewayV2::DomainName
-    Condition: UseCloudfront
-    Properties:
-      DomainName:
-        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
-      DomainNameConfigurations:
-        - CertificateArn: "{{resolve:ssm:/deploy/hosted-zone/oidc/certificate-Arn}}"
-          SecurityPolicy: TLS_1_2
-
-  OrchestrationOidcApiBasePathMapping:
-    Type: AWS::ApiGateway::BasePathMapping
-    Condition: UseCloudfront
-    Properties:
-      DomainName:
-        !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
-      RestApiId: !Ref OrchestrationOidcApi
-      Stage: !Sub "${Environment}"
-    DependsOn:
-      - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
-
-  OrchestrationOidcOriginRecordSet:
-    Type: AWS::Route53::RecordSet
-    Condition: UseCloudfront
-    Properties:
-      Name: !Sub
-        - "origin.${oidcDomain}"
-        - oidcDomain:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              oidcDomainName,
-            ]
-      Type: A
-      HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc/hosted-zone-id}}"
-      AliasTarget:
-        DNSName: !GetAtt OrchestrationOidcApiCustomDomain.RegionalDomainName
-        HostedZoneId: !GetAtt OrchestrationOidcApiCustomDomain.RegionalHostedZoneId
-        EvaluateTargetHealth: false
+  #  OrchestrationOidcOriginRecordSet:
+  #    Type: AWS::Route53::RecordSet
+  #    Condition: UseCloudfront
+  #    Properties:
+  #      Name: !Sub
+  #        - "origin.${oidcDomain}"
+  #        - oidcDomain:
+  #            !FindInMap [
+  #              EnvironmentConfiguration,
+  #              !Ref Environment,
+  #              oidcDomainName,
+  #            ]
+  #      Type: A
+  #      HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc/hosted-zone-id}}"
+  #      AliasTarget:
+  #        DNSName: !GetAtt OrchestrationOidcApiCustomDomain.RegionalDomainName
+  #        HostedZoneId: !GetAtt OrchestrationOidcApiCustomDomain.RegionalHostedZoneId
+  #        EvaluateTargetHealth: false
 
   OrchestrationOidcCloudFrontRecordSet:
     Type: AWS::Route53::RecordSet
