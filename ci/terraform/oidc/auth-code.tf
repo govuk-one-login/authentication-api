@@ -1,4 +1,5 @@
 module "oidc_auth_code_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-auth-code-role"
@@ -20,8 +21,14 @@ module "oidc_auth_code_role" {
   }
 }
 
+moved {
+  from = module.oidc_auth_code_role
+  to   = module.oidc_auth_code_role[0]
+}
+
 module "auth-code" {
   source = "../modules/endpoint-module-v2"
+  count  = var.deploy_orch_oidc_lambdas ? 1 : 0
 
   endpoint_name   = "auth-code"
   path_part       = var.orch_auth_code_enabled ? "auth-code-auth" : "auth-code"
@@ -52,7 +59,7 @@ module "auth-code" {
   ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
 
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_auth_code_role.arn
+  lambda_role_arn                        = module.oidc_auth_code_role[0].arn
   environment                            = var.environment
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -68,4 +75,8 @@ module "auth-code" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+moved {
+  from = module.auth-code
+  to   = module.auth-code[0]
 }
