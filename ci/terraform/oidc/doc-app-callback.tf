@@ -1,4 +1,5 @@
 module "doc_app_callback_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "doc-app-callback-role"
@@ -16,8 +17,13 @@ module "doc_app_callback_role" {
     Service = "doc-app-callback"
   }
 }
+moved {
+  from = module.doc_app_callback_role
+  to   = module.doc_app_callback_role[0]
+}
 
 module "doc-app-callback" {
+  count           = var.deploy_orch_oidc_lambdas ? 1 : 0
   source          = "../modules/endpoint-module-v2"
   endpoint_name   = "doc-app-callback"
   path_part       = var.orch_doc_app_callback_enabled ? "doc-app-callback-auth" : "doc-app-callback"
@@ -60,7 +66,7 @@ module "doc-app-callback" {
     local.authentication_egress_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.doc_app_callback_role.arn
+  lambda_role_arn                        = module.doc_app_callback_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -75,4 +81,8 @@ module "doc-app-callback" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
   ]
+}
+moved {
+  from = module.doc-app-callback
+  to   = module.doc-app-callback[0]
 }
