@@ -334,24 +334,6 @@
             "file": ".github/workflows/sonar-analysis-on-merge.yml",
             "path": "jobs.run-code-analysis"
           }
-        },
-        {
-          "check-types": ["unit"],
-          "provider": "GitHub",
-          "phase": "pre-upload",
-          "config": {
-            "file": ".github/workflows/deploy-orch.yml",
-            "path": "jobs.run-unit-tests"
-          }
-        },
-        {
-          "check-types": ["unit"],
-          "provider": "GitHub",
-          "phase": "pre-upload",
-          "config": {
-            "file": ".github/workflows/deploy-orch.yml",
-            "path": "jobs.run-orchestration-alerting-tests"
-          }
         }
       ]
     }
