@@ -100,7 +100,21 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_storage_token_jwk_enabled,
       jsonencode(aws_api_gateway_integration.orch_ipv_jwks_integration),
       jsonencode(aws_api_gateway_method.orch_ipv_jwks_method),
-      jsonencode(aws_api_gateway_method.orch_auth_jwks_method)
+      jsonencode(aws_api_gateway_method.orch_auth_jwks_method),
+      jsonencode(aws_api_gateway_integration.orch_openid_configuration_integration),
+      jsonencode(aws_api_gateway_integration.orch_trustmark_integration),
+      jsonencode(aws_api_gateway_integration.orch_doc_app_callback_integration),
+      jsonencode(aws_api_gateway_integration.orch_token_integration),
+      jsonencode(aws_api_gateway_integration.orch_jwks_integration),
+      jsonencode(aws_api_gateway_integration.orch_authorisation_integration),
+      jsonencode(aws_api_gateway_integration.orch_logout_integration),
+      jsonencode(aws_api_gateway_integration.orch_ipv_callback_integration),
+      jsonencode(aws_api_gateway_integration.orch_register_integration),
+      jsonencode(aws_api_gateway_integration.orch_authentication_callback_integration),
+      jsonencode(aws_api_gateway_integration.orch_auth_code_integration),
+      jsonencode(aws_api_gateway_integration.orch_userinfo_integration),
+      jsonencode(aws_api_gateway_integration.orch_update_client_integration),
+      jsonencode(aws_api_gateway_integration.orch_storage_token_jwk_integration),
     ]))
   }
 
