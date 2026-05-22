@@ -74,7 +74,7 @@ while [[ $# -gt 0 ]]; do
         echo "Certificate arg provided: ${CERT_TO_DEPLOY} is not one of ${PERMITTED_VALUES}"
         exit 1
       fi
-
+      shift
       ;;
     -d | --distribution)
       PROVISION_CLOUDFRONT=true
@@ -86,7 +86,7 @@ while [[ $# -gt 0 ]]; do
         echo "Cloudfront distribution arg provided: ${CLOUDFRONT_PARAMS_TO_USE} is not one of ${PERMITTED_VALUES}"
         exit 1
       fi
-
+      shift
       ;;
     -m | --monitoring)
       PROVISION_CLOUDFRONT_MONITORING=true
