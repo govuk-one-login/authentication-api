@@ -1,4 +1,5 @@
 module "oidc_authorize_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-authorize-role"
@@ -26,6 +27,7 @@ module "oidc_authorize_role" {
 
 module "authorize" {
   source = "../modules/endpoint-module-v2"
+  count  = var.deploy_orch_oidc_lambdas ? 1 : 0
 
   endpoint_name   = "authorize"
   path_part       = var.orch_authorisation_enabled ? "authorize-auth" : "authorize"
@@ -80,7 +82,7 @@ module "authorize" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = var.authorize_protected_subnet_enabled ? local.authentication_protected_subnet_ids : local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_authorize_role.arn
+  lambda_role_arn                        = module.oidc_authorize_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
