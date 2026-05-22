@@ -77,8 +77,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.client_registry_api_enabled ? module.update[0].method_trigger_value : null,
       module.userinfo.integration_trigger_value,
       module.userinfo.method_trigger_value,
-      module.ipv-callback.integration_trigger_value,
-      module.ipv-callback.method_trigger_value,
+      var.deploy_orch_oidc_lambdas ? module.ipv-callback[0].integration_trigger_value : null,
+      var.deploy_orch_oidc_lambdas ? module.ipv-callback[0].method_trigger_value : null,
       module.ipv-capacity.integration_trigger_value,
       module.ipv-capacity.method_trigger_value,
       var.deploy_orch_oidc_lambdas ? module.doc-app-callback[0].integration_trigger_value : null,
@@ -116,7 +116,6 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.token,
     module.update,
     module.userinfo,
-    module.ipv-callback,
     module.ipv-capacity,
     aws_api_gateway_integration.orch_openid_configuration_integration,
     aws_api_gateway_integration.orch_trustmark_integration,
@@ -217,7 +216,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.token,
     module.update,
     module.userinfo,
-    module.ipv-callback,
+    aws_api_gateway_integration.orch_ipv_callback_integration,
     module.ipv-capacity,
     aws_api_gateway_integration.orch_doc_app_callback_integration,
     aws_api_gateway_integration.orch_authentication_callback_integration,
@@ -975,9 +974,6 @@ resource "aws_api_gateway_resource" "orch_ipv_callback_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "ipv-callback"
-  depends_on = [
-    module.ipv-callback
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_ipv_callback_method" {
