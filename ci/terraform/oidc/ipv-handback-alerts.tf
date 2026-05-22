@@ -1,5 +1,6 @@
 data "aws_cloudwatch_log_group" "ipv_callback_lambda_log_group" {
-  name = replace("/aws/lambda/${var.environment}-ipv-callback-lambda", ".", "")
+  count = var.deploy_orch_oidc_lambdas ? 1 : 0
+  name  = replace("/aws/lambda/${var.environment}-ipv-callback-lambda", ".", "")
 
   depends_on = [
     module.ipv-callback
@@ -25,9 +26,10 @@ data "aws_cloudwatch_log_group" "processing_identity_lambda_log_group" {
 
 
 resource "aws_cloudwatch_log_metric_filter" "ipv_callback_metric_filter" {
+  count          = var.deploy_orch_oidc_lambdas ? 1 : 0
   name           = replace("${var.environment}-ipv-callback-p1-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
-  log_group_name = data.aws_cloudwatch_log_group.ipv_callback_lambda_log_group.name
+  log_group_name = data.aws_cloudwatch_log_group.ipv_callback_lambda_log_group[0].name
 
   metric_transformation {
     name      = replace("${var.environment}-ipv-handback-error-count", ".", "")
