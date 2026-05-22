@@ -1,4 +1,5 @@
 module "client_registry_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "client-registry-role"
@@ -18,7 +19,7 @@ module "client_registry_role" {
 }
 
 module "register" {
-  count  = var.client_registry_api_enabled ? 1 : 0
+  count  = var.client_registry_api_enabled && var.deploy_orch_oidc_lambdas ? 1 : 0
   source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "register"
@@ -45,7 +46,7 @@ module "register" {
 
   security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.client_registry_role.arn
+  lambda_role_arn                        = module.client_registry_role[0].arn
   environment                            = var.environment
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
