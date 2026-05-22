@@ -67,8 +67,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.deploy_orch_oidc_lambdas ? module.storage_token_jwk[0].method_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.logout[0].integration_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.logout[0].method_trigger_value : null,
-      module.openid_configuration_discovery.integration_trigger_value,
-      module.openid_configuration_discovery.method_trigger_value,
+      var.deploy_orch_oidc_lambdas ? module.openid_configuration_discovery[0].integration_trigger_value : null,
+      var.deploy_orch_oidc_lambdas ? module.openid_configuration_discovery[0].method_trigger_value : null,
       var.client_registry_api_enabled && var.deploy_orch_oidc_lambdas ? module.register[0].integration_trigger_value : null,
       var.client_registry_api_enabled && var.deploy_orch_oidc_lambdas ? module.register[0].method_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.token[0].integration_trigger_value : null,
@@ -108,7 +108,6 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
-    module.openid_configuration_discovery,
     aws_api_gateway_integration.orch_openid_configuration_integration,
     aws_api_gateway_integration.orch_trustmark_integration,
     aws_api_gateway_integration.orch_doc_app_callback_integration,
@@ -203,7 +202,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     aws_api_gateway_integration.orch_jwks_integration,
     aws_api_gateway_integration.orch_storage_token_jwk_integration,
     aws_api_gateway_integration.orch_logout_integration,
-    module.openid_configuration_discovery,
+    aws_api_gateway_integration.orch_openid_configuration_integration,
     aws_api_gateway_integration.orch_register_integration,
     aws_api_gateway_integration.orch_token_integration,
     aws_api_gateway_integration.orch_update_client_integration,
@@ -713,7 +712,6 @@ resource "aws_api_gateway_resource" "orch_openid_configuration_resource" {
   path_part   = "openid-configuration"
   depends_on = [
     aws_api_gateway_resource.wellknown_resource,
-    module.openid_configuration_discovery
   ]
 }
 
