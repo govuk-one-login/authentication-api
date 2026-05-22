@@ -25,6 +25,7 @@ import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieF
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.parseBrowserSessionCookie;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.parsePersistentCookie;
 
+// QualityGateUnitTest
 class CookieHelperTest {
 
     static Stream<String> inputs() {
@@ -40,6 +41,7 @@ class CookieHelperTest {
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
     private static final String BROWSER_SESSION_ID_COOKIE_VALUE = IdGenerator.generate();
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnIdsFromValidSessionCookieStringWithMultipleCookies(String header) {
@@ -53,6 +55,7 @@ class CookieHelperTest {
         assertEquals("456", ids.getClientSessionId());
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnIdsFromValidPersistentCookieStringWithMultipleCookies(String header) {
@@ -67,6 +70,7 @@ class CookieHelperTest {
         assertEquals(PERSISTENT_SESSION_ID_COOKIE_VALUE, id);
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnIdsFromValidSessionCookie(String header) {
@@ -79,6 +83,7 @@ class CookieHelperTest {
         assertEquals("456", ids.getClientSessionId());
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnIdsFromValidPersistentCookie(String header) {
@@ -91,6 +96,7 @@ class CookieHelperTest {
         assertEquals(PERSISTENT_SESSION_ID_COOKIE_VALUE, id);
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnIdFromBrowserSessionCookie(String header) {
@@ -103,6 +109,7 @@ class CookieHelperTest {
         assertEquals(BROWSER_SESSION_ID_COOKIE_VALUE, id);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotReturnIdFromInvalidPersistentCookie() {
         String existingPersistentSessionId = "--1700558480962--1700558480963";
@@ -115,6 +122,7 @@ class CookieHelperTest {
         assertEmpty(id);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAppendTimestampToPersistentCookieWhenMissing() {
         String existingPersistentSessionId = IdGenerator.generate();
@@ -130,6 +138,7 @@ class CookieHelperTest {
                         id.get()));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnEmptyIfSessionCookieNotPresent(String header) {
@@ -138,6 +147,7 @@ class CookieHelperTest {
         assertEmpty(CookieHelper.parseSessionCookie(Map.of(header, "value")));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnEmptyIfCookieMalformatted(String header) {
@@ -151,6 +161,7 @@ class CookieHelperTest {
         assertEmpty(CookieHelper.parseSessionCookie(Map.of(header, "gsdsds=one-value.two-value")));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnEmptyIPersistentCookieMalformatted(String header) {
@@ -168,6 +179,7 @@ class CookieHelperTest {
                         Map.of(header, "di-persistent-session-idfds=one-value.two-value\"")));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnEmptyIfBrowserSessionCookieMalformed(String header) {
@@ -176,6 +188,7 @@ class CookieHelperTest {
         assertEmpty(parseBrowserSessionCookie(Map.of(header, "invalid value")));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnCookiePrefsFromValidSessionCookieStringWithMultipleCookies(String header) {
@@ -190,6 +203,7 @@ class CookieHelperTest {
         assertThat(cookie.getValue(), containsString("\"analytics\":false"));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnEmptyCookiePrefsIfCookieNotPresent(String header) {
@@ -201,6 +215,7 @@ class CookieHelperTest {
                         Map.of(header, "value"), "cookies_preferences_set"));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("responseInputs")
     void shouldReturnIdsFromPersistentCookieStringWithMultipleValuesMap(String header) {
@@ -216,6 +231,7 @@ class CookieHelperTest {
         assertEquals(PERSISTENT_SESSION_ID_COOKIE_VALUE, httpCookie.getValue());
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("responseInputs")
     void shouldReturnCookiePrefsFromValidResponseCookieStringWithMultipleCookies(String header) {
@@ -229,6 +245,7 @@ class CookieHelperTest {
         assertThat(cookie.getValue(), containsString("\"analytics\":false"));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("responseInputs")
     void shouldReturnEmptyCookiePrefsIfResponseCookieNotPresent(String header) {

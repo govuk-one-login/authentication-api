@@ -16,8 +16,10 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// QualityGateUnitTest
 class LevelOfConfidenceTest {
 
+    // QualityGateRegressionTest
     @Test
     void valuesShouldBeComparable() {
         assertThat(LevelOfConfidence.LOW_LEVEL, lessThan(LevelOfConfidence.MEDIUM_LEVEL));
@@ -25,6 +27,7 @@ class LevelOfConfidenceTest {
         assertThat(LevelOfConfidence.HIGH_LEVEL, lessThan(LevelOfConfidence.VERY_HIGH_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("supportedLevelOfConfidence")
     void shouldReturnLevelOfConfidenceForValidValue(
@@ -32,6 +35,7 @@ class LevelOfConfidenceTest {
         assertThat(LevelOfConfidence.retrieveLevelOfConfidence(vtrSet), equalTo(expectedLevel));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("unsupportedLevelOfConfidence")
     void shouldThrowWhenUnsupportedValueIsPassed(String vtrSet) {
@@ -40,6 +44,7 @@ class LevelOfConfidenceTest {
                 () -> LevelOfConfidence.retrieveLevelOfConfidence(vtrSet));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("invalidLevelOfConfidence")
     void shouldThrowWhenInvalidValueIsPassed(String vtrSet) {
@@ -48,6 +53,7 @@ class LevelOfConfidenceTest {
                 () -> LevelOfConfidence.retrieveLevelOfConfidence(vtrSet));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnOnlySupportedLevelOfConfidenceValues() {
         List<String> allLevelOfConfidenceValues =
@@ -67,6 +73,7 @@ class LevelOfConfidenceTest {
                                                 && cl.isSupported()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnOnlyDefaultLevelOfConfidenceValues() {
         List<String> allLevelOfConfidenceValues =
