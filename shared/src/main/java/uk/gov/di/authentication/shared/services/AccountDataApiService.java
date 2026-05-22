@@ -1,9 +1,12 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.google.gson.JsonParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -23,6 +26,7 @@ public class AccountDataApiService {
     private static final int MAX_TRIES = 2;
     private final HttpClient httpClient;
     private final ConfigurationService configurationService;
+    private final SerializationService serializationService = SerializationService.getInstance();
 
     public AccountDataApiService(ConfigurationService configurationService) {
         this(HttpClientHelper.newInstrumentedHttpClient(), configurationService);
@@ -33,7 +37,25 @@ public class AccountDataApiService {
         this.configurationService = configurationService;
     }
 
-    public HttpResponse<String> retrievePasskeys(String publicSubjectId, String token)
+    public PasskeysRetrieveResponse retrievePasskeys(String publicSubjectId, String token)
+            throws Json.JsonException, UnsuccessfulAccountDataApiResponseException {
+        try {
+            var response = retrievePasskeysAsJson(publicSubjectId, token);
+            return serializationService.readValue(
+                    response.body(), PasskeysRetrieveResponse.class, true);
+        } catch (Json.JsonException e) {
+            LOG.error("Failed to parse passkeys retrieve response", e);
+            throw e;
+        } catch (JsonParseException e) {
+            LOG.error("Failed to parse passkeys retrieve response", e);
+            throw new Json.JsonException(e);
+        } catch (UnsuccessfulAccountDataApiResponseException e) {
+            LOG.error("Error retrieving passkeys", e);
+            throw e;
+        }
+    }
+
+    public HttpResponse<String> retrievePasskeysAsJson(String publicSubjectId, String token)
             throws UnsuccessfulAccountDataApiResponseException {
         var request =
                 HttpRequest.newBuilder(

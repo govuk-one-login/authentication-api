@@ -53,6 +53,14 @@ public enum NotificationType implements TemplateAware, NotifiableType {
             "SWITCHED_MFA_METHODS_TEMPLATE_ID",
             new EnumMap<>(Map.of(SupportedLanguage.CY, "SWITCHED_MFA_METHODS_TEMPLATE_ID_CY")),
             false),
+    PASSKEY_DELETED_NONE_REMAINING(
+            "PASSKEY_DELETED_TEMPLATE_ID",
+            new EnumMap<>(Map.of(SupportedLanguage.CY, "PASSKEY_DELETED_TEMPLATE_ID_CY")),
+            false),
+    PASSKEY_DELETED_SOME_REMAINING(
+            "PASSKEY_DELETED_TEMPLATE_ID",
+            new EnumMap<>(Map.of(SupportedLanguage.CY, "PASSKEY_DELETED_TEMPLATE_ID_CY")),
+            false),
     ;
 
     private final String templateName;

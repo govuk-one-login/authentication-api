@@ -49,7 +49,7 @@ class PasskeysRetrieveProxyHandlerTest {
             var mockHttpResponse = mock(HttpResponse.class);
             when(mockHttpResponse.statusCode()).thenReturn(200);
             when(mockHttpResponse.body()).thenReturn("{\"passkeys\": []}");
-            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+            when(accountDataApiService.retrievePasskeysAsJson(PUBLIC_SUBJECT_ID, TOKEN))
                     .thenReturn(mockHttpResponse);
 
             // Act
@@ -58,7 +58,7 @@ class PasskeysRetrieveProxyHandlerTest {
             // Assert
             assertThat(result, hasStatus(200));
             assertThat(result, hasBody("{\"passkeys\": []}"));
-            verify(accountDataApiService).retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(accountDataApiService).retrievePasskeysAsJson(PUBLIC_SUBJECT_ID, TOKEN);
         }
     }
 
@@ -68,7 +68,7 @@ class PasskeysRetrieveProxyHandlerTest {
         void shouldReturn500IfServiceThrowsException()
                 throws UnsuccessfulAccountDataApiResponseException {
             // Arrange
-            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+            when(accountDataApiService.retrievePasskeysAsJson(PUBLIC_SUBJECT_ID, TOKEN))
                     .thenThrow(new UnsuccessfulAccountDataApiResponseException("service error", 0));
 
             // Act
@@ -77,7 +77,7 @@ class PasskeysRetrieveProxyHandlerTest {
             // Assert
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
-            verify(accountDataApiService).retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(accountDataApiService).retrievePasskeysAsJson(PUBLIC_SUBJECT_ID, TOKEN);
         }
     }
 

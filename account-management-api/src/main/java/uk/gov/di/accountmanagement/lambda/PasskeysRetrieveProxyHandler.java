@@ -63,7 +63,7 @@ public class PasskeysRetrieveProxyHandler
         }
 
         try {
-            var response = accountDataApiService.retrievePasskeys(publicSubjectId, token);
+            var response = accountDataApiService.retrievePasskeysAsJson(publicSubjectId, token);
             return generateApiGatewayProxyResponse(response.statusCode(), response.body());
         } catch (UnsuccessfulAccountDataApiResponseException e) {
             LOG.warn(
