@@ -69,8 +69,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.deploy_orch_oidc_lambdas ? module.logout[0].method_trigger_value : null,
       module.openid_configuration_discovery.integration_trigger_value,
       module.openid_configuration_discovery.method_trigger_value,
-      var.client_registry_api_enabled ? module.register[0].integration_trigger_value : null,
-      var.client_registry_api_enabled ? module.register[0].method_trigger_value : null,
+      var.client_registry_api_enabled && var.deploy_orch_oidc_lambdas ? module.register[0].integration_trigger_value : null,
+      var.client_registry_api_enabled && var.deploy_orch_oidc_lambdas ? module.register[0].method_trigger_value : null,
       module.token.integration_trigger_value,
       module.token.method_trigger_value,
       var.client_registry_api_enabled ? module.update[0].integration_trigger_value : null,
@@ -110,7 +110,6 @@ resource "aws_api_gateway_deployment" "deployment" {
   depends_on = [
     module.storage_token_jwk,
     module.openid_configuration_discovery,
-    module.register,
     module.token,
     module.update,
     module.userinfo,
@@ -209,7 +208,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.storage_token_jwk,
     aws_api_gateway_integration.orch_logout_integration,
     module.openid_configuration_discovery,
-    module.register,
+    aws_api_gateway_integration.orch_register_integration,
     module.token,
     module.update,
     module.userinfo,
@@ -998,9 +997,6 @@ resource "aws_api_gateway_resource" "orch_register_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_resource.connect_resource.id
   path_part   = "register"
-  depends_on = [
-    module.register
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_register_method" {
