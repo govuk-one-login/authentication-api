@@ -3,6 +3,7 @@ locals {
 }
 
 module "oidc_token_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-token"
@@ -23,6 +24,10 @@ module "oidc_token_role" {
   extra_tags = {
     Service = local.oidc_token_endpoint_name
   }
+}
+moved {
+  from = module.oidc_token_role
+  to   = module.oidc_token_role[0]
 }
 
 data "aws_iam_policy_document" "kms_signing_policy_document" {
@@ -53,6 +58,7 @@ resource "aws_iam_policy" "oidc_token_kms_signing_policy" {
 }
 
 module "token" {
+  count  = var.deploy_orch_oidc_lambdas ? 1 : 0
   source = "../modules/endpoint-module-v2"
 
   endpoint_name   = local.oidc_token_endpoint_name
@@ -88,7 +94,7 @@ module "token" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_token_role.arn
+  lambda_role_arn                        = module.oidc_token_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -103,4 +109,8 @@ module "token" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+moved {
+  from = module.token
+  to   = module.token[0]
 }
