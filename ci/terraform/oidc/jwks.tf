@@ -1,4 +1,5 @@
 module "oidc_jwks_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-jwks-role"
@@ -12,8 +13,13 @@ module "oidc_jwks_role" {
     Service = "jwks.json"
   }
 }
+moved {
+  from = module.oidc_jwks_role
+  to   = module.oidc_jwks_role[0]
+}
 
 module "jwks" {
+  count  = var.deploy_orch_oidc_lambdas ? 1 : 0
   source = "../modules/endpoint-module-v2"
 
   endpoint_name           = "jwks.json"
@@ -44,7 +50,7 @@ module "jwks" {
 
   security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_jwks_role.arn
+  lambda_role_arn                        = module.oidc_jwks_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -59,4 +65,8 @@ module "jwks" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+moved {
+  from = module.jwks
+  to   = module.jwks[0]
 }
