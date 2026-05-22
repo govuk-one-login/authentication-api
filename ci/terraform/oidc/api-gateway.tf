@@ -70,8 +70,8 @@ resource "aws_api_gateway_deployment" "deployment" {
     redeployment = sha1(jsonencode([
       var.deploy_orch_oidc_lambdas ? module.auth-code[0].integration_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.auth-code[0].method_trigger_value : null,
-      module.authorize.integration_trigger_value,
-      module.authorize.method_trigger_value,
+      var.deploy_orch_oidc_lambdas ? module.authorize[0].integration_trigger_value : null,
+      var.deploy_orch_oidc_lambdas ? module.authorize[0].method_trigger_value : null,
       module.jwks.integration_trigger_value,
       module.jwks.method_trigger_value,
       module.storage_token_jwk.integration_trigger_value,
@@ -120,7 +120,6 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
-    module.authorize,
     module.jwks,
     module.storage_token_jwk,
     module.logout,
@@ -222,7 +221,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
 
   depends_on = [
     aws_api_gateway_integration.orch_auth_code_integration,
-    module.authorize,
+    aws_api_gateway_integration.orch_authorisation_integration,
     module.jwks,
     module.storage_token_jwk,
     module.logout,
@@ -906,9 +905,6 @@ resource "aws_api_gateway_resource" "orch_authorisation_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "authorize"
-  depends_on = [
-    module.authorize
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_authorisation_method" {
