@@ -1,4 +1,5 @@
 module "client_update_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "client-update-role"
@@ -18,7 +19,7 @@ module "client_update_role" {
 }
 
 module "update" {
-  count  = var.client_registry_api_enabled ? 1 : 0
+  count  = var.client_registry_api_enabled && var.deploy_orch_oidc_lambdas ? 1 : 0
   source = "../modules/endpoint-module-v2"
 
   path_part                      = "{clientId}"
@@ -53,7 +54,7 @@ module "update" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.client_update_role.arn
+  lambda_role_arn                        = module.client_update_role[0].arn
   environment                            = var.environment
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
