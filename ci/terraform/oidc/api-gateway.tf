@@ -63,8 +63,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.deploy_orch_oidc_lambdas ? module.authorize[0].method_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.jwks[0].integration_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.jwks[0].method_trigger_value : null,
-      module.storage_token_jwk.integration_trigger_value,
-      module.storage_token_jwk.method_trigger_value,
+      var.deploy_orch_oidc_lambdas ? module.storage_token_jwk[0].integration_trigger_value : null,
+      var.deploy_orch_oidc_lambdas ? module.storage_token_jwk[0].method_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.logout[0].integration_trigger_value : null,
       var.deploy_orch_oidc_lambdas ? module.logout[0].method_trigger_value : null,
       module.openid_configuration_discovery.integration_trigger_value,
@@ -108,7 +108,6 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
-    module.storage_token_jwk,
     module.openid_configuration_discovery,
     module.token,
     module.userinfo,
@@ -204,7 +203,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     aws_api_gateway_integration.orch_auth_code_integration,
     aws_api_gateway_integration.orch_authorisation_integration,
     aws_api_gateway_integration.orch_jwks_integration,
-    module.storage_token_jwk,
+    aws_api_gateway_integration.orch_storage_token_jwk_integration,
     aws_api_gateway_integration.orch_logout_integration,
     module.openid_configuration_discovery,
     aws_api_gateway_integration.orch_register_integration,
@@ -1147,7 +1146,6 @@ resource "aws_api_gateway_resource" "orch_storage_token_jwk_resource" {
   path_part   = "storage-token-jwk.json"
   depends_on = [
     aws_api_gateway_resource.wellknown_resource,
-    module.storage_token_jwk
   ]
 }
 
