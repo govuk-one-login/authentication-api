@@ -19,7 +19,7 @@ public record PasskeysRetrieveResponse(
             @SerializedName("isBackUpEligible") @Expose @Required boolean isBackUpEligible,
             @SerializedName("isBackedUp") @Expose @Required boolean isBackedUp,
             @SerializedName("isResidentKey") @Expose @Required boolean isResidentKey,
-            @SerializedName("createdAt") @Expose String createdAt,
+            @SerializedName("createdAt") @Expose @Required String createdAt,
             @SerializedName("lastUsedAt") @Expose String lastUsedAt) {}
 
     public static PasskeyResponse from(Passkey passkey) {
