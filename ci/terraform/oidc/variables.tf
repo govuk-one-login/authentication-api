@@ -741,3 +741,8 @@ variable "deploy_oidc_api_gateway_domain" {
   type    = bool
   default = true
 }
+
+variable "deploy_orch_oidc_lambdas" {
+  type    = bool
+  default = true
+}
