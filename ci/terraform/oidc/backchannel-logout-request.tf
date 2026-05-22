@@ -1,4 +1,5 @@
 module "backchannel_logout_request_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "backchannel-logout-request-role"
@@ -11,10 +12,15 @@ module "backchannel_logout_request_role" {
     Service = "backchannel-logout-request"
   }
 }
+moved {
+  from = module.backchannel_logout_request_role
+  to   = module.backchannel_logout_request_role[0]
+}
 
 resource "aws_lambda_function" "backchannel_logout_request_lambda" {
+  count         = var.deploy_orch_oidc_lambdas ? 1 : 0
   function_name = "${var.environment}-backchannel-logout-request-lambda"
-  role          = module.backchannel_logout_request_role.arn
+  role          = module.backchannel_logout_request_role[0].arn
   handler       = "uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
@@ -39,9 +45,14 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
     Service = "backchannel-logout-request"
   }
 }
+moved {
+  from = aws_lambda_function.backchannel_logout_request_lambda
+  to   = aws_lambda_function.backchannel_logout_request_lambda[0]
+}
 
 resource "aws_cloudwatch_log_group" "backchannel_logout_request_lambda_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.backchannel_logout_request_lambda.function_name}"
+  count             = var.deploy_orch_oidc_lambdas ? 1 : 0
+  name              = "/aws/lambda/${aws_lambda_function.backchannel_logout_request_lambda[0].function_name}"
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 
@@ -49,12 +60,16 @@ resource "aws_cloudwatch_log_group" "backchannel_logout_request_lambda_log_group
     aws_lambda_function.backchannel_logout_request_lambda
   ]
 }
+moved {
+  from = aws_cloudwatch_log_group.backchannel_logout_request_lambda_log_group
+  to   = aws_cloudwatch_log_group.backchannel_logout_request_lambda_log_group[0]
+}
 
 
 resource "aws_cloudwatch_log_subscription_filter" "backchannel_logout_request_lambda_log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "${aws_lambda_function.backchannel_logout_request_lambda.function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.backchannel_logout_request_lambda_log_group.name
+  count           = var.deploy_orch_oidc_lambdas ? length(var.logging_endpoint_arns) : 0
+  name            = "${aws_lambda_function.backchannel_logout_request_lambda[0].function_name}-log-subscription-${count.index}"
+  log_group_name  = aws_cloudwatch_log_group.backchannel_logout_request_lambda_log_group[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -62,17 +77,27 @@ resource "aws_cloudwatch_log_subscription_filter" "backchannel_logout_request_la
     create_before_destroy = false
   }
 }
+moved {
+  from = aws_cloudwatch_log_subscription_filter.backchannel_logout_request_lambda_log_subscription
+  to   = aws_cloudwatch_log_subscription_filter.backchannel_logout_request_lambda_log_subscription[0]
+}
 
 resource "aws_lambda_alias" "backchannel_logout_request_lambda_active" {
-  name             = "${aws_lambda_function.backchannel_logout_request_lambda.function_name}-active"
+  count            = var.deploy_orch_oidc_lambdas ? 1 : 0
+  name             = "${aws_lambda_function.backchannel_logout_request_lambda[0].function_name}-active"
   description      = "Alias pointing at active version of Lambda"
-  function_name    = aws_lambda_function.backchannel_logout_request_lambda.arn
-  function_version = aws_lambda_function.backchannel_logout_request_lambda.version
+  function_name    = aws_lambda_function.backchannel_logout_request_lambda[0].arn
+  function_version = aws_lambda_function.backchannel_logout_request_lambda[0].version
+}
+moved {
+  from = aws_lambda_alias.backchannel_logout_request_lambda_active
+  to   = aws_lambda_alias.backchannel_logout_request_lambda_active[0]
 }
 
 resource "aws_lambda_event_source_mapping" "backchannel_logout_lambda_sqs_mapping" {
+  count            = var.deploy_orch_oidc_lambdas ? 1 : 0
   event_source_arn = aws_sqs_queue.back_channel_logout_queue.arn
-  function_name    = aws_lambda_function.backchannel_logout_request_lambda.arn
+  function_name    = aws_lambda_function.backchannel_logout_request_lambda[0].arn
 
   depends_on = [
     aws_sqs_queue.back_channel_logout_queue,
@@ -81,4 +106,8 @@ resource "aws_lambda_event_source_mapping" "backchannel_logout_lambda_sqs_mappin
   tags = {
     Service = "backchannel-logout-request"
   }
+}
+moved {
+  from = aws_lambda_event_source_mapping.backchannel_logout_lambda_sqs_mapping
+  to   = aws_lambda_event_source_mapping.backchannel_logout_lambda_sqs_mapping[0]
 }
