@@ -8,36 +8,17 @@ resource "aws_sns_topic" "elasticache_alerts" {
   name = "${var.environment}-elasticache-alerts"
 }
 
-resource "aws_sns_topic_policy" "elasticache_alerts_policy" {
-  arn    = aws_sns_topic.elasticache_alerts.arn
-  policy = data.aws_iam_policy_document.elasticache_alerts_topic_policy.json
-}
-
-data "aws_iam_policy_document" "elasticache_alerts_topic_policy" {
-  statement {
-    sid    = "AllowCrossAccountSubscription"
-    effect = "Allow"
-    actions = [
-      "SNS:Subscribe",
-      "SNS:Receive",
-    ]
-    resources = [aws_sns_topic.elasticache_alerts.arn]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
-    }
-  }
+resource "aws_sns_topic_subscription" "elasticache_alerts_lambda" {
+  topic_arn                       = aws_sns_topic.elasticache_alerts.arn
+  protocol                        = "lambda"
+  endpoint                        = "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-alerts"
+  endpoint_auto_confirms          = true
+  confirmation_timeout_in_minutes = 5
 }
 
 output "slack_event_sns_topic_arn" {
   description = "The ARN of the SNS topic for Slack events"
   value       = aws_sns_topic.slack_events.arn
-}
-
-output "elasticache_alerts_sns_topic_arn" {
-  description = "The ARN of the unencrypted SNS topic for ElastiCache notifications"
-  value       = aws_sns_topic.elasticache_alerts.arn
 }
 
 data "aws_iam_policy_document" "sns_topic_policy" {
