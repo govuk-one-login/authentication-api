@@ -65,8 +65,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.deploy_orch_oidc_lambdas ? module.jwks[0].method_trigger_value : null,
       module.storage_token_jwk.integration_trigger_value,
       module.storage_token_jwk.method_trigger_value,
-      module.logout.integration_trigger_value,
-      module.logout.method_trigger_value,
+      var.deploy_orch_oidc_lambdas ? module.logout[0].integration_trigger_value : null,
+      var.deploy_orch_oidc_lambdas ? module.logout[0].method_trigger_value : null,
       module.openid_configuration_discovery.integration_trigger_value,
       module.openid_configuration_discovery.method_trigger_value,
       var.client_registry_api_enabled ? module.register[0].integration_trigger_value : null,
@@ -109,7 +109,6 @@ resource "aws_api_gateway_deployment" "deployment" {
   }
   depends_on = [
     module.storage_token_jwk,
-    module.logout,
     module.openid_configuration_discovery,
     module.register,
     module.token,
@@ -208,7 +207,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     aws_api_gateway_integration.orch_authorisation_integration,
     aws_api_gateway_integration.orch_jwks_integration,
     module.storage_token_jwk,
-    module.logout,
+    aws_api_gateway_integration.orch_logout_integration,
     module.openid_configuration_discovery,
     module.register,
     module.token,
@@ -935,9 +934,6 @@ resource "aws_api_gateway_resource" "orch_logout_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "logout"
-  depends_on = [
-    module.logout
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_logout_method" {
