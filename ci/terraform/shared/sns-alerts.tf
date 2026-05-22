@@ -9,6 +9,7 @@ resource "aws_sns_topic" "elasticache_alerts" {
 }
 
 resource "aws_sns_topic_subscription" "elasticache_alerts_lambda" {
+  count                           = contains(["integration", "production"], var.environment) ? 1 : 0
   topic_arn                       = aws_sns_topic.elasticache_alerts.arn
   protocol                        = "lambda"
   endpoint                        = "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-alerts"
