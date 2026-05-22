@@ -69,6 +69,7 @@ Resources:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
+        - !Ref AuthToAccountDataSigningKeyPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
