@@ -1,4 +1,5 @@
 module "ipv_capacity_role" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "ipv-capacity-role"
@@ -14,9 +15,14 @@ module "ipv_capacity_role" {
     Service = "ipv-capacity"
   }
 }
+moved {
+  from = module.ipv_capacity_role
+  to   = module.ipv_capacity_role[0]
+}
 
 module "ipv-capacity" {
   source = "../modules/endpoint-module-v2"
+  count  = var.deploy_orch_oidc_lambdas ? 1 : 0
 
   endpoint_name   = "ipv-capacity"
   path_part       = "ipv-capacity"
@@ -54,7 +60,7 @@ module "ipv-capacity" {
   ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
 
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.ipv_capacity_role.arn
+  lambda_role_arn                        = module.ipv_capacity_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -69,4 +75,8 @@ module "ipv-capacity" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+moved {
+  from = module.ipv-capacity
+  to   = module.ipv-capacity[0]
 }
