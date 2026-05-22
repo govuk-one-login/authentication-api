@@ -17,6 +17,11 @@ resource "aws_sns_topic_subscription" "elasticache_alerts_lambda" {
   confirmation_timeout_in_minutes = 5
 }
 
+output "elasticache_alerts_sns_topic_arn" {
+  description = "The ARN of the unencrypted SNS topic for ElastiCache notifications"
+  value       = aws_sns_topic.elasticache_alerts.arn
+}
+
 output "slack_event_sns_topic_arn" {
   description = "The ARN of the SNS topic for Slack events"
   value       = aws_sns_topic.slack_events.arn
