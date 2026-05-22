@@ -30,6 +30,8 @@ on:
 jobs:
   deploy:
     uses: ./.github/workflows/deploy-orch.yml
+    with:
+      run_unit_tests: true
     secrets:
       ORCH_GH_ACTIONS_ROLE_ARN: ${{ secrets.ORCH_GH_ACTIONS_ROLE_ARN }}
       ORCH_ARTIFACT_BUCKET_NAME: ${{ secrets.ORCH_ARTIFACT_BUCKET_NAME }}
