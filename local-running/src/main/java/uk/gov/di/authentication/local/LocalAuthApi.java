@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.local;
 
 import io.javalin.Javalin;
+import uk.gov.di.authentication.accountdata.lambda.PasskeysRetrieveHandler;
 import uk.gov.di.authentication.external.lambda.TokenHandler;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
 import uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler;
@@ -99,6 +100,11 @@ public class LocalAuthApi {
                             // External API
                             config.routes.post("/token", handlerFor(new TokenHandler()));
                             config.routes.get("/userinfo", handlerFor(new UserInfoHandler()));
+
+                            // Account Data API
+                            config.routes.post(
+                                    "/accounts/{publicSubjectId}/authenticators/passkeys",
+                                    handlerFor(new PasskeysRetrieveHandler()));
                         });
 
         // Start app

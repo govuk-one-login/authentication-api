@@ -22,7 +22,8 @@ dependencies {
             libs.awsSecretsManager,
             project(":shared"),
             project(":auth-external-api"),
-            project(":frontend-api")
+            project(":frontend-api"),
+            project(":account-data-api")
 }
 
 java {
