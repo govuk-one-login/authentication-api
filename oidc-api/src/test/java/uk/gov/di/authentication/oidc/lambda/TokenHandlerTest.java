@@ -1149,6 +1149,30 @@ public class TokenHandlerTest {
             verifyNoMetricsOrAuditEvents();
         }
 
+        @Test
+        void shouldReturnInvalidGrantIfRefreshTokenFromDifferentClient()
+                throws JOSEException, TokenAuthInvalidException {
+            KeyPair keyPair = generateRsaKeyPair();
+            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+            setupTokenServiceValidationMocks(clientRegistry);
+
+            SignedJWT signedRefreshToken = createSignedRefreshToken("a-non-matching-client-id");
+            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
+            when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(
+                            refreshTokenInRequest))
+                    .thenReturn(true);
+
+            APIGatewayProxyResponseEvent result =
+                    generateApiGatewayRefreshRequest(
+                            privateKeyJWT, refreshTokenInRequest.getValue(), CLIENT_ID);
+
+            assertThat(result, hasStatus(400));
+            assertTrue(result.getBody().contains("invalid_grant"));
+            assertTrue(result.getBody().contains("Invalid Refresh token"));
+            verifyNoMetricsOrAuditEvents();
+        }
+
         @ParameterizedTest
         @NullSource
         @ValueSource(strings = {CLIENT_ID})
@@ -1318,6 +1342,10 @@ public class TokenHandlerTest {
     }
 
     private SignedJWT createSignedRefreshToken() throws JOSEException {
+        return createSignedRefreshToken(CLIENT_ID);
+    }
+
+    private SignedJWT createSignedRefreshToken(String clientId) throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID("KEY_ID")
@@ -1325,7 +1353,7 @@ public class TokenHandlerTest {
                         .generate();
         ECDSASigner signer = new ECDSASigner(ecSigningKey);
         return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, RP_PAIRWISE_SUBJECT, "KEY_ID");
+                clientId, BASE_URI, SCOPES.toStringList(), signer, RP_PAIRWISE_SUBJECT, "KEY_ID");
     }
 
     private SignedJWT createSignedRsaRefreshToken() throws JOSEException {
