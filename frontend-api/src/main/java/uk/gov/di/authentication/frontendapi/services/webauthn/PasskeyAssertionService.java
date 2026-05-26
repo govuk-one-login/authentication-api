@@ -10,6 +10,8 @@ import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import com.yubico.webauthn.exception.AssertionFailedException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 
@@ -19,6 +21,7 @@ import java.util.Optional;
 public class PasskeyAssertionService {
     private final RelyingParty relyingParty;
     private final PasskeyJsonParser jsonParser;
+    private static final Logger LOG = LogManager.getLogger(PasskeyAssertionService.class);
 
     public PasskeyAssertionService(RelyingParty relyingParty, PasskeyJsonParser jsonParser) {
         this.relyingParty = relyingParty;
@@ -59,10 +62,12 @@ public class PasskeyAssertionService {
                                     .response(credential)
                                     .build());
         } catch (AssertionFailedException e) {
+            LOG.error("Passkey assertion unexpectedly failed with error: {}", e.getMessage());
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
 
         if (!assertionResult.isSuccess()) {
+            LOG.warn("Passkey assertion unsuccessful");
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
 
