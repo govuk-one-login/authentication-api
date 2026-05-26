@@ -46,6 +46,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_PASSKEY_ASSERTION_REQUEST = "PasskeyAssertionRequest";
     public static final String ATTRIBUTE_HAS_VERIFIED_PASSWORD = "HasVerifiedPassword";
     public static final String ATTRIBUTE_HAS_VERIFIED_MFA = "HasVerifiedMfa";
+    public static final String ATTRIBUTE_HAS_VERIFIED_PASSKEY = "HasVerifiedPasskey";
 
     public enum AccountState {
         NEW,
@@ -91,6 +92,7 @@ public class AuthSessionItem {
     private String passkeyAssertionRequest;
     private boolean hasVerifiedPassword;
     private boolean hasVerifiedMfa;
+    private boolean hasVerifiedPasskey;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -524,6 +526,20 @@ public class AuthSessionItem {
         return this;
     }
 
+    @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_PASSKEY)
+    public boolean getHasVerifiedPasskey() {
+        return hasVerifiedPasskey;
+    }
+
+    public void setHasVerifiedPasskey(boolean hasVerifiedPasskey) {
+        this.hasVerifiedPasskey = hasVerifiedPasskey;
+    }
+
+    public AuthSessionItem withHasVerifiedPasskey(boolean hasVerifiedPasskey) {
+        this.hasVerifiedPasskey = hasVerifiedPasskey;
+        return this;
+    }
+
     /**
      * Return a string representation of the instance that is safe to record in logs (e.g. does not
      * contain PII)
@@ -549,6 +565,8 @@ public class AuthSessionItem {
                 + hasVerifiedPassword
                 + "', hasVerifiedMfa = '"
                 + hasVerifiedMfa
+                + "', hasVerifiedPasskey = '"
+                + hasVerifiedPasskey
                 + "'}}";
     }
 }
