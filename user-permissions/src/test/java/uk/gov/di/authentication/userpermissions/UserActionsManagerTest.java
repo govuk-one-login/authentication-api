@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CodeRequestType.SupportedCodeType;
 import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -583,6 +585,46 @@ class UserActionsManagerTest {
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
             assertTrue(capturedSession.getHasVerifiedMfa());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class CorrectPasskeyReceived {
+        @Test
+        void
+                correctPasskeyReceivedShouldSetHasVerifiedPasskeyToTrueAndCredentialStrengthToMedium() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result = userActionsManager.correctPasskeyReceived(null, permissionContext);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertTrue(capturedSession.getHasVerifiedPasskey());
+            assertEquals(
+                    CredentialTrustLevel.MEDIUM_LEVEL,
+                    capturedSession.getAchievedCredentialStrength());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class IncorrectPasskeyReceived {
+        @Test
+        void incorrectPasskeyReceivedShouldSetHasVerifiedPasskeyToFalse() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result = userActionsManager.incorrectPasskeyReceived(null, permissionContext);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertFalse(capturedSession.getHasVerifiedPasskey());
             assertTrue(result.isSuccess());
         }
     }

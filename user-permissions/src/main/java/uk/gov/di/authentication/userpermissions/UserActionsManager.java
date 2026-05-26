@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CodeRequestType.SupportedCodeType;
 import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -290,6 +291,26 @@ public class UserActionsManager implements UserActions {
     public Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
         var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        getAuthSessionService().updateSession(updatedSession);
+        return Result.success(null);
+    }
+
+    @Override
+    public Result<TrackingError, Void> correctPasskeyReceived(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        var updatedSession =
+                permissionContext
+                        .authSessionItem()
+                        .withHasVerifiedPasskey(true)
+                        .withAchievedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        getAuthSessionService().updateSession(updatedSession);
+        return Result.success(null);
+    }
+
+    @Override
+    public Result<TrackingError, Void> incorrectPasskeyReceived(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedPasskey(false);
         getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }

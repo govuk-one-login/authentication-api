@@ -114,5 +114,17 @@ class UserActionsTest {
                 JourneyType journeyType, PermissionContext permissionContext) {
             return Result.success(null);
         }
+
+        @Override
+        public Result<TrackingError, Void> correctPasskeyReceived(
+                JourneyType journeyType, PermissionContext permissionContext) {
+            return Result.success(null);
+        }
+
+        @Override
+        public Result<TrackingError, Void> incorrectPasskeyReceived(
+                JourneyType journeyType, PermissionContext permissionContext) {
+            return Result.success(null);
+        }
     }
 }
