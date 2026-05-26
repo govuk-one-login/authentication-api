@@ -5,8 +5,8 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 || exit
 
 # To update a stack bump the version here and run the deployment command which contains that stack
-VPC_STACK_VERSION="v2.10.0"
-SECURE_PIPELINE_STACK_VERSION="v2.95.0"
+VPC_STACK_VERSION="v2.14.3"
+SECURE_PIPELINE_STACK_VERSION="v2.105.0"
 GITHUB_IDENTITY_STACK_VERSION="v1.1.1"
 SIGNER_STACK_VERSION="v1.0.8"
 CLOUDWATCH_ALARM_STACK_VERSION="v0.0.10"

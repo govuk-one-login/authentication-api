@@ -5,8 +5,8 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 || exit
 
 # To update a stack bump the version here and run the deployment command which contains that stack
-VPC_STACK_VERSION="v2.10.0"
-SECURE_PIPELINE_STACK_VERSION="v2.90.0"
+VPC_STACK_VERSION="v2.14.3"
+SECURE_PIPELINE_STACK_VERSION="v2.105.0"
 API_GATEWAY_LOGGING_STACK_VERSION="v1.0.9"
 BUILD_NOTIFICATION_STACK_VERSION="v2.7.0"
 CLOUDWATCH_ALARM_STACK_VERSION="v0.0.10"
@@ -136,8 +136,7 @@ function provision_vpc_stack() {
 
   echo "Provisioning VPC stack"
 
-  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/build-notifications/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" build-notifications build-notifications "${BUILD_NOTIFICATION_STACK_VERSION}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "vpc" "vpc" "${VPC_STACK_VERSION}"
-
+  PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/vpc/parameters.json" ${PROVISION_COMMAND} "${ENVIRONMENT}" "vpc" "vpc" "${VPC_STACK_VERSION}"
   echo "Provisioned VPC stack"
 }
 
