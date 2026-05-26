@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -1234,63 +1235,81 @@ class PermissionDecisionManagerTest {
 
     @Nested
     class CanIssueAuthCode {
-        AuthSessionItem mockSession;
-
-        @BeforeEach
-        void setUp() {
-            mockSession = mock(AuthSessionItem.class);
-            when(mockSession.getHasVerifiedPassword()).thenReturn(true);
-            when(mockSession.getHasVerifiedMfa()).thenReturn(true);
+        @ParameterizedTest
+        @CsvSource({
+            // Achieved    Required      Passkey  Password  MFA    Issue?
+            "LOW_LEVEL,    LOW_LEVEL,    false,   false,    false, false",
+            "LOW_LEVEL,    LOW_LEVEL,    true,    false,    false, true",
+            "LOW_LEVEL,    LOW_LEVEL,    false,   true,     false, true",
+            "LOW_LEVEL,    LOW_LEVEL,    false,   false,    true,  false",
+            "LOW_LEVEL,    LOW_LEVEL,    false,   true,     true,  true",
+            "MEDIUM_LEVEL, LOW_LEVEL,    false,   false,    false, false",
+            "MEDIUM_LEVEL, LOW_LEVEL,    true,    false,    false, true",
+            "MEDIUM_LEVEL, LOW_LEVEL,    false,   true,     false, true",
+            "MEDIUM_LEVEL, LOW_LEVEL,    false,   false,    true,  false",
+            "MEDIUM_LEVEL, LOW_LEVEL,    false,   true,     true,  true",
+            "LOW_LEVEL,    MEDIUM_LEVEL, false,   false,    false, false",
+            "LOW_LEVEL,    MEDIUM_LEVEL, true,    false,    false, false",
+            "LOW_LEVEL,    MEDIUM_LEVEL, false,   true,     false, false",
+            "LOW_LEVEL,    MEDIUM_LEVEL, false,   false,    true,  false",
+            "LOW_LEVEL,    MEDIUM_LEVEL, false,   true,     true,  false",
+            "MEDIUM_LEVEL, MEDIUM_LEVEL, false,   false,    false, false",
+            "MEDIUM_LEVEL, MEDIUM_LEVEL, true,    false,    false, true",
+            "MEDIUM_LEVEL, MEDIUM_LEVEL, false,   true,     false, false",
+            "MEDIUM_LEVEL, MEDIUM_LEVEL, false,   false,    true,  false",
+            "MEDIUM_LEVEL, MEDIUM_LEVEL, false,   true,     true,  true"
+        })
+        void shouldReturnCorrectAssessmentForDifferentSessions(
+                CredentialTrustLevel achievedCredentialTrustLevel,
+                CredentialTrustLevel requiredCredentialTrustLevel,
+                boolean hasVerifiedPasskey,
+                boolean hasVerifiedPassword,
+                boolean hasVerifiedMfa,
+                boolean shouldIssueAuthCode) {
+            // Arrange
+            var mockSession = mock(AuthSessionItem.class);
             when(mockSession.getAchievedCredentialStrength())
-                    .thenReturn(CredentialTrustLevel.MEDIUM_LEVEL);
+                    .thenReturn(achievedCredentialTrustLevel);
             when(mockSession.getRequestedCredentialStrength())
-                    .thenReturn(CredentialTrustLevel.MEDIUM_LEVEL);
-        }
-
-        @Test
-        void shouldReturnTrueWhenAllRequirementsMet() {
-            // Act
-            var result = permissionDecisionManager.canIssueAuthCode(mockSession);
-
-            // Assert
-            assertTrue(result);
-        }
-
-        @Test
-        void shouldReturnFalseIfHasNotVerifiedPassword() {
-            // Arrange
-            when(mockSession.getHasVerifiedPassword()).thenReturn(false);
+                    .thenReturn(requiredCredentialTrustLevel);
+            when(mockSession.getHasVerifiedPasskey()).thenReturn(hasVerifiedPasskey);
+            when(mockSession.getHasVerifiedPassword()).thenReturn(hasVerifiedPassword);
+            when(mockSession.getHasVerifiedMfa()).thenReturn(hasVerifiedMfa);
 
             // Act
             var result = permissionDecisionManager.canIssueAuthCode(mockSession);
 
             // Assert
-            assertFalse(result);
+            assertEquals(shouldIssueAuthCode, result);
         }
 
         @Test
-        void shouldReturnFalseIfHasNotVerifiedMfa() {
-            // Arrange
-            when(mockSession.getHasVerifiedMfa()).thenReturn(false);
-
-            // Act
-            var result = permissionDecisionManager.canIssueAuthCode(mockSession);
-
-            // Assert
-            assertFalse(result);
-        }
-
-        @Test
-        void shouldReturnFalseIfNotAchievedRequiredCredentialStrength() {
-            // Arrange
-            when(mockSession.getAchievedCredentialStrength())
+        void shouldReturnFalseWhenAchievedCredentialStrengthIsNull() {
+            var mockSession = mock(AuthSessionItem.class);
+            when(mockSession.getAchievedCredentialStrength()).thenReturn(null);
+            when(mockSession.getRequestedCredentialStrength())
                     .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
-            // Act
-            var result = permissionDecisionManager.canIssueAuthCode(mockSession);
+            assertFalse(permissionDecisionManager.canIssueAuthCode(mockSession));
+        }
 
-            // Assert
-            assertFalse(result);
+        @Test
+        void shouldReturnFalseWhenRequestedCredentialStrengthIsNull() {
+            var mockSession = mock(AuthSessionItem.class);
+            when(mockSession.getAchievedCredentialStrength())
+                    .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+            when(mockSession.getRequestedCredentialStrength()).thenReturn(null);
+
+            assertFalse(permissionDecisionManager.canIssueAuthCode(mockSession));
+        }
+
+        @Test
+        void shouldReturnFalseWhenBothCredentialStrengthsAreNull() {
+            var mockSession = mock(AuthSessionItem.class);
+            when(mockSession.getAchievedCredentialStrength()).thenReturn(null);
+            when(mockSession.getRequestedCredentialStrength()).thenReturn(null);
+
+            assertFalse(permissionDecisionManager.canIssueAuthCode(mockSession));
         }
     }
 

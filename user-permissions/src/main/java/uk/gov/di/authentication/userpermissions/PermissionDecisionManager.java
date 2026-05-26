@@ -385,26 +385,61 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public boolean canIssueAuthCode(AuthSessionItem authSession) {
-        if (!authSession.getHasVerifiedPassword()) {
-            LOG.info("Auth code failed to issue due to session not having a verified password");
+        var achievedCredentialStrength = authSession.getAchievedCredentialStrength();
+        var requestedCredentialStrength = authSession.getRequestedCredentialStrength();
+        var hasVerifiedPasskey = authSession.getHasVerifiedPasskey();
+        var hasVerifiedPassword = authSession.getHasVerifiedPassword();
+        var hasVerifiedMfa = authSession.getHasVerifiedMfa();
+
+        LOG.info(
+                "Checking if auth code is blocked - "
+                        + "achievedCredentialStrength='{}', "
+                        + "requestedCredentialStrength='{}', "
+                        + "hasVerifiedPasskey='{}', "
+                        + "hasVerifiedPassword='{}', "
+                        + "hasVerifiedMfa='{}'",
+                achievedCredentialStrength == null ? null : achievedCredentialStrength.getValue(),
+                requestedCredentialStrength == null ? null : requestedCredentialStrength.getValue(),
+                hasVerifiedPasskey,
+                hasVerifiedPassword,
+                hasVerifiedMfa);
+
+        if (achievedCredentialStrength == null) {
+            LOG.info("Auth code blocked: no credential strength achieved");
             return false;
         }
 
-        if (authSession.getRequestedCredentialStrength() == CredentialTrustLevel.MEDIUM_LEVEL) {
-            if (!authSession.getHasVerifiedMfa()) {
-                LOG.info("Auth code failed to issue due to session not having a verified MFA");
+        if (requestedCredentialStrength == null) {
+            LOG.info("Auth code blocked: no required credential strength provided");
+            return false;
+        }
+
+        if (achievedCredentialStrength.isLowerThan(requestedCredentialStrength)) {
+            LOG.info(
+                    "Auth code blocked: achieved credential strength does not meet required credential strength");
+            return false;
+        }
+
+        if (hasVerifiedPasskey) {
+            LOG.info("Auth code permitted");
+            return true;
+        }
+
+        LOG.info("Passkey not verified");
+
+        if (!hasVerifiedPassword) {
+            LOG.info("Auth code blocked: password not verified");
+            return false;
+        }
+
+        if (requestedCredentialStrength == CredentialTrustLevel.MEDIUM_LEVEL) {
+            if (!hasVerifiedMfa) {
+                LOG.info("Auth code blocked: mfa not verified");
                 return false;
             }
         }
 
-        if (authSession
-                .getAchievedCredentialStrength()
-                .isLowerThan(authSession.getRequestedCredentialStrength())) {
-            LOG.info(
-                    "Auth code failed to issue due to session not having an achieved credential strength");
-            return false;
-        }
-
+        LOG.info("Auth code permitted");
         return true;
     }
 

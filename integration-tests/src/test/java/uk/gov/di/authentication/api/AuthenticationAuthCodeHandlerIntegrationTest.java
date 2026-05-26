@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.AuthenticationAuthCodeHandler;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -147,6 +148,13 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        authSessionExtension.addRequestedCredentialStrengthToSession(
+                sessionId, CredentialTrustLevel.LOW_LEVEL);
+        authSessionExtension.addAchievedCredentialTrustToSession(
+                sessionId, CredentialTrustLevel.LOW_LEVEL);
+        var session = authSessionExtension.getSession(sessionId).orElseThrow();
+        session.setHasVerifiedPassword(true);
+        authSessionExtension.updateSession(session);
         return sessionId;
     }
 }
