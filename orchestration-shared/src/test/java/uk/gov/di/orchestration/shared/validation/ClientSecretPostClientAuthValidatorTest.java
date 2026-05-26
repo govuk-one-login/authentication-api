@@ -9,9 +9,12 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.Objects;
@@ -30,6 +33,7 @@ import static org.mockito.Mockito.when;
 class ClientSecretPostClientAuthValidatorTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private ClientSecretPostClientAuthValidator clientSecretPostClientAuthValidator;
 
     private static final ClientID CLIENT_ID = new ClientID();
@@ -38,7 +42,7 @@ class ClientSecretPostClientAuthValidatorTest {
     @BeforeEach
     void setUp() {
         clientSecretPostClientAuthValidator =
-                new ClientSecretPostClientAuthValidator(dynamoClientService);
+                new ClientSecretPostClientAuthValidator(dynamoClientService, configurationService);
     }
 
     @Test
@@ -80,13 +84,17 @@ class ClientSecretPostClientAuthValidatorTest {
         assertThat(tokenAuthInvalidException.getErrorObject(), equalTo(OAuth2Error.INVALID_CLIENT));
     }
 
-    @Test
-    void shouldThrowIfClientRegistryDoesNotSupportClientSecretPost() {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldThrowIfClientRegistryDoesNotSupportClientSecretPost(
+            boolean useDefaultTokenAuthMethod) {
         var expectedClientRegistry =
                 generateClientRegistry(
                         null, Argon2EncoderHelper.argon2Hash(CLIENT_SECRET.getValue()));
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(expectedClientRegistry));
+        when(configurationService.isUseDefaultTokenAuthMethod())
+                .thenReturn(useDefaultTokenAuthMethod);
         var clientSecretPost = new ClientSecretPost(CLIENT_ID, CLIENT_SECRET);
         var requestString = URLUtils.serializeParameters(clientSecretPost.toParameters());
 
