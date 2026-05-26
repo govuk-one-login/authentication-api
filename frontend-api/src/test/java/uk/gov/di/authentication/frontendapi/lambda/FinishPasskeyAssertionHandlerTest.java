@@ -14,12 +14,15 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
@@ -35,6 +38,7 @@ class FinishPasskeyAssertionHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeyAssertionService passkeyAssertionService =
             mock(PasskeyAssertionService.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private FinishPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
@@ -49,7 +53,8 @@ class FinishPasskeyAssertionHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        passkeyAssertionService);
+                        passkeyAssertionService,
+                        userActionsManager);
     }
 
     @Nested
@@ -66,6 +71,21 @@ class FinishPasskeyAssertionHandlerTest {
 
             // Then
             assertThat(response, hasStatus(200));
+        }
+
+        @Test
+        void shouldReportCorrectPasskeyReceivedWhenAssertionSuccessful() {
+            // Given
+            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(Result.success(mockAssertionResult));
+
+            // When
+            handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            verify(userActionsManager, times(1)).correctPasskeyReceived(any(), any());
+            verify(userActionsManager, times(0)).incorrectPasskeyReceived(any(), any());
         }
     }
 
@@ -87,6 +107,22 @@ class FinishPasskeyAssertionHandlerTest {
 
     @Nested
     class Error {
+        @Test
+        void shouldReportIncorrectPasskeyReceivedWhenAssertionUnsuccessful() {
+            // Given
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(
+                            Result.failure(
+                                    FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR));
+
+            // When
+            handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            verify(userActionsManager, times(1)).incorrectPasskeyReceived(any(), any());
+            verify(userActionsManager, times(0)).correctPasskeyReceived(any(), any());
+        }
+
         @Test
         void shouldReturn500WhenAssertionRequestDeserializationFails() {
             // Given
