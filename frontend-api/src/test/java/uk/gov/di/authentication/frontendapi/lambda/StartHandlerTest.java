@@ -896,8 +896,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldResetHasVerifiedPasswordAndHasVerifiedMfaOnReauthJourney()
-            throws Json.JsonException {
+    void shouldResetHasVerifiedOnReauthJourney() throws Json.JsonException {
         // Arrange
         var authSession =
                 new AuthSessionItem()
@@ -905,7 +904,8 @@ class StartHandlerTest {
                         .withClientId(CLIENT_ID)
                         .withInternalCommonSubjectId(TEST_SUBJECT_ID)
                         .withHasVerifiedPassword(true)
-                        .withHasVerifiedMfa(true);
+                        .withHasVerifiedMfa(true)
+                        .withHasVerifiedPasskey(true);
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
                 .thenReturn(authSession);
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
@@ -920,5 +920,6 @@ class StartHandlerTest {
         assertThat(result, hasStatus(200));
         assertFalse(authSession.getHasVerifiedPassword());
         assertFalse(authSession.getHasVerifiedMfa());
+        assertFalse(authSession.getHasVerifiedPasskey());
     }
 }
