@@ -26,6 +26,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
@@ -106,6 +107,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         assertTrue(clientStore.clientExists(clientResponse.getClientId()));
         assertTrue(client.isPresent());
         assertTrue(client.get().isActive());
+        assertFalse(client.get().isDeprecated());
         assertEquals(2000, client.get().getRateLimit());
         assertThat(clientResponse.getClaims(), equalTo(claims));
         assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(backChannelLogoutUri));

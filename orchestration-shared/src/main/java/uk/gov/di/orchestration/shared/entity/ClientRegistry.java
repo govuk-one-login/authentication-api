@@ -28,6 +28,7 @@ public class ClientRegistry {
     private String sectorIdentifierUri;
     private String subjectType;
     private boolean isActive = true;
+    private boolean isDeprecated = false;
     private boolean cookieConsentShared = false;
     private boolean jarValidationRequired = false;
     private boolean testClient = false;
@@ -249,6 +250,20 @@ public class ClientRegistry {
 
     public ClientRegistry withActive(boolean isActive) {
         this.isActive = isActive;
+        return this;
+    }
+
+    @DynamoDbAttribute("IsDeprecated")
+    public boolean isDeprecated() {
+        return isDeprecated;
+    }
+
+    public void setDeprecated(boolean isDeprecated) {
+        this.isDeprecated = isDeprecated;
+    }
+
+    public ClientRegistry withDeprecated(boolean isDeprecated) {
+        this.isDeprecated = isDeprecated;
         return this;
     }
 
