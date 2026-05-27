@@ -237,8 +237,8 @@ class CheckUserExistsHandlerTest {
                 MFAMethod mfaMethod,
                 MFAMethodType expectedMfaMethodType,
                 String expectedPhoneNumberLastThree) {
-            var userProfile = generateUserProfile().withMfaMethodsMigrated(true);
-            setupUserProfileAndClient(Optional.of(userProfile));
+            var userProfilWithMigratedMethods = generateUserProfile().withMfaMethodsMigrated(true);
+            setupUserProfileAndClient(Optional.of(userProfilWithMigratedMethods));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
 
@@ -646,8 +646,6 @@ class CheckUserExistsHandlerTest {
         void shouldReturnResultOfHasActivePasskeysWhenFeatureFlagIsOn(boolean hasActivePasskey)
                 throws Json.JsonException {
             when(configurationService.supportPasskeys()).thenReturn(true);
-            var userProfile = generateUserProfile();
-            setupUserProfileAndClient(Optional.of(userProfile));
 
             MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
@@ -667,8 +665,6 @@ class CheckUserExistsHandlerTest {
         void shouldReturnNullForHasActivePasskeyIfPasskeysServiceReturnsFailure()
                 throws Json.JsonException {
             when(configurationService.supportPasskeys()).thenReturn(true);
-            var userProfile = generateUserProfile();
-            setupUserProfileAndClient(Optional.of(userProfile));
 
             MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
