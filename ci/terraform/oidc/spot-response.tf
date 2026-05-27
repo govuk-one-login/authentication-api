@@ -1,4 +1,5 @@
 module "ipv_spot_response_role_2" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "ipv-spot-response-role"
@@ -63,10 +64,10 @@ resource "aws_iam_policy" "spot_response_sqs_read_policy" {
 }
 
 resource "aws_lambda_event_source_mapping" "spot_response_lambda_sqs_mapping" {
-  count            = var.spot_enabled ? 1 : 0
+  count            = var.spot_enabled && var.deploy_orch_oidc_lambdas ? 1 : 0
   enabled          = !var.auth_spot_response_disabled
   event_source_arn = aws_ssm_parameter.spot_response_queue_arn.value
-  function_name    = aws_lambda_function.spot_response_lambda.arn
+  function_name    = aws_lambda_function.spot_response_lambda[0].arn
   batch_size       = 1
 
   depends_on = [
@@ -79,8 +80,9 @@ resource "aws_lambda_event_source_mapping" "spot_response_lambda_sqs_mapping" {
 }
 
 resource "aws_lambda_function" "spot_response_lambda" {
+  count         = var.deploy_orch_oidc_lambdas ? 1 : 0
   function_name = "${var.environment}-spot-response-lambda"
-  role          = module.ipv_spot_response_role_2.arn
+  role          = module.ipv_spot_response_role_2[0].arn
   handler       = "uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
@@ -113,7 +115,8 @@ resource "aws_lambda_function" "spot_response_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.spot_response_lambda.function_name}"
+  count             = var.deploy_orch_oidc_lambdas ? 1 : 0
+  name              = "/aws/lambda/${aws_lambda_function.spot_response_lambda[0].function_name}"
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 
@@ -123,9 +126,9 @@ resource "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "spot_response_lambda_log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "${aws_lambda_function.spot_response_lambda.function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.spot_response_lambda_log_group.name
+  count           = var.deploy_orch_oidc_lambdas ? length(var.logging_endpoint_arns) : 0
+  name            = "${aws_lambda_function.spot_response_lambda[0].function_name}-log-subscription-${count.index}"
+  log_group_name  = aws_cloudwatch_log_group.spot_response_lambda_log_group[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -135,8 +138,9 @@ resource "aws_cloudwatch_log_subscription_filter" "spot_response_lambda_log_subs
 }
 
 resource "aws_lambda_alias" "spot_response_lambda_active" {
-  name             = "${aws_lambda_function.spot_response_lambda.function_name}-active"
+  count            = var.deploy_orch_oidc_lambdas ? 1 : 0
+  name             = "${aws_lambda_function.spot_response_lambda[0].function_name}-active"
   description      = "Alias pointing at active version of Lambda"
-  function_name    = aws_lambda_function.spot_response_lambda.arn
-  function_version = aws_lambda_function.spot_response_lambda.version
+  function_name    = aws_lambda_function.spot_response_lambda[0].arn
+  function_version = aws_lambda_function.spot_response_lambda[0].version
 }
