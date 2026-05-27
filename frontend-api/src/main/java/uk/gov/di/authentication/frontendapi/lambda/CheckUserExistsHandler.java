@@ -48,6 +48,7 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.hasInternationalPhoneNumber;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_HAS_ACTIVE_PASSKEY;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -175,6 +176,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
+            var metadataPairs = new ArrayList<AuditService.MetadataPair>();
             var userMfaDetail = UserMfaDetail.noMfa();
             Optional<Boolean> hasActivePasskey = Optional.empty();
             var needsForcedMFAResetAfterMFACheck = false;
@@ -208,13 +210,23 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         authSession, userCredentials, userProfile.get());
                 hasActivePasskey =
                         hasActivePasskey(userProfile.get().getPublicSubjectID(), authSession);
+                metadataPairs.add(
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_HAS_ACTIVE_PASSKEY,
+                                hasActivePasskey
+                                        .map(Object::toString)
+                                        .orElse(AuditService.UNKNOWN)));
             } else {
                 authSession.setInternalCommonSubjectId(null);
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
 
+            metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
+
             auditService.submitAuditEvent(
-                    auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
+                    auditableEvent,
+                    auditContext,
+                    metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
             var lockoutInformationResult = determineLockoutInformation(permissionContext);
 

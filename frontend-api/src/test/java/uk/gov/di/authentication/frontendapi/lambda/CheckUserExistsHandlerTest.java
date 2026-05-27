@@ -74,6 +74,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -168,11 +169,13 @@ class CheckUserExistsHandlerTest {
 
     @Nested
     class WhenUserExists {
+        private UserProfile userProfile;
+
         @BeforeEach
         void setup() {
             authSessionExists();
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
-            var userProfile =
+            userProfile =
                     generateUserProfile().withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
             setupUserProfileAndClient(Optional.of(userProfile));
         }
@@ -271,6 +274,7 @@ class CheckUserExistsHandlerTest {
         void shouldSubmitTheRelevantAuditEvent() {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(200));
@@ -278,8 +282,29 @@ class CheckUserExistsHandlerTest {
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL,
                             AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
-                            AuditService.MetadataPair.pair(
-                                    "rpPairwiseId", getExpectedRpPairwiseId()));
+                            pair("has_active_passkey", AuditService.UNKNOWN),
+                            pair("rpPairwiseId", getExpectedRpPairwiseId()));
+        }
+
+        @ValueSource(booleans = {true, false})
+        @ParameterizedTest
+        void shouldIncludeWhetherTheUserHasAnActivePasskeyOnAuthCheckUserKnownEmail(
+                Boolean hasActivePasskey) {
+            when(configurationService.supportPasskeys()).thenReturn(true);
+            when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID(), SESSION_ID))
+                    .thenReturn(Result.success((hasActivePasskey)));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL,
+                            AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
+                            pair("has_active_passkey", hasActivePasskey.toString()),
+                            pair("rpPairwiseId", getExpectedRpPairwiseId()));
         }
 
         @Test
@@ -298,8 +323,8 @@ class CheckUserExistsHandlerTest {
                             AUDIT_CONTEXT
                                     .withSubjectId(getExpectedInternalPairwiseId())
                                     .withTxmaAuditEncoded(Optional.empty()),
-                            AuditService.MetadataPair.pair(
-                                    "rpPairwiseId", getExpectedRpPairwiseId()));
+                            pair("has_active_passkey", AuditService.UNKNOWN),
+                            pair("rpPairwiseId", getExpectedRpPairwiseId()));
         }
 
         @Test
@@ -683,8 +708,7 @@ class CheckUserExistsHandlerTest {
                     .submitAuditEvent(
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                             AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
-                            AuditService.MetadataPair.pair(
-                                    "number_of_attempts_user_allowed_to_login", 5));
+                            pair("number_of_attempts_user_allowed_to_login", 5));
         }
     }
 
@@ -708,7 +732,7 @@ class CheckUserExistsHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
                         AUDIT_CONTEXT,
-                        AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
+                        pair("rpPairwiseId", AuditService.UNKNOWN));
     }
 
     @Test

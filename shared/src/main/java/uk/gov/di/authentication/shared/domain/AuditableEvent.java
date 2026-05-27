@@ -12,6 +12,7 @@ public interface AuditableEvent {
     String AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE = "notification-type";
     String AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED = "MFACodeEntered";
     String AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE = "mfaResetType";
+    String AUDIT_EVENT_EXTENSIONS_HAS_ACTIVE_PASSKEY = "has_active_passkey";
 
     AuditableEvent parseFromName(String name);
 }
