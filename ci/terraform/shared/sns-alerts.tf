@@ -4,6 +4,24 @@ resource "aws_sns_topic" "slack_events" {
   kms_master_key_id                = "alias/aws/sns"
 }
 
+resource "aws_sns_topic" "elasticache_alerts" {
+  name = "${var.environment}-elasticache-alerts"
+}
+
+resource "aws_sns_topic_subscription" "elasticache_alerts_lambda" {
+  count                           = contains(["integration", "production"], var.environment) ? 1 : 0
+  topic_arn                       = aws_sns_topic.elasticache_alerts.arn
+  protocol                        = "lambda"
+  endpoint                        = "arn:aws:lambda:eu-west-2:${var.auth_new_account_id}:function:${var.environment}-alerts"
+  endpoint_auto_confirms          = true
+  confirmation_timeout_in_minutes = 5
+}
+
+output "elasticache_alerts_sns_topic_arn" {
+  description = "The ARN of the unencrypted SNS topic for ElastiCache notifications"
+  value       = aws_sns_topic.elasticache_alerts.arn
+}
+
 output "slack_event_sns_topic_arn" {
   description = "The ARN of the SNS topic for Slack events"
   value       = aws_sns_topic.slack_events.arn
