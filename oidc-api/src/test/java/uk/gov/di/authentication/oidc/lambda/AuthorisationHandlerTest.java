@@ -2075,6 +2075,36 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldReturn302WithErrorQueryParamsWhenClientIsDeprecated() {
+            when(clientService.getClient(CLIENT_ID.toString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withDeprecated(true)));
+
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    SCOPE,
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "response_type",
+                                    "code"));
+
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessage("Client configured as deprecated in Client Registry")));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    equalTo(
+                            REDIRECT_URI
+                                    + "?error=unauthorized_client&error_description=client+deprecated"));
+        }
+
+        @Test
         void
                 shouldRedirectToProvidedRedirectUriWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
