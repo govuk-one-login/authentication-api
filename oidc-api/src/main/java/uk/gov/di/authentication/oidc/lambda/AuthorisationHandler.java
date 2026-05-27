@@ -351,6 +351,17 @@ public class AuthorisationHandler
                     user);
         }
 
+        if (client.isDeprecated()) {
+            LOG.error("Client configured as deprecated in Client Registry");
+            return generateErrorResponse(
+                    authRequest.getRedirectionURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deprecated"),
+                    authRequest.getClientID().getValue(),
+                    user);
+        }
+
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
                         ClientRateLimitConfig.fromClientRegistry(client));
