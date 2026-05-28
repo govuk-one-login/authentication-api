@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +42,9 @@ public class RelyingPartyProvider {
                     return RelyingParty.builder()
                             .identity(rpIdentity)
                             .credentialRepository(credentialRepository)
+                            .origins(
+                                    Collections.singleton(
+                                            configurationService.getPasskeyAllowedOrigin()))
                             .build();
                 });
     }

@@ -69,6 +69,12 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               relyingPartyId,
             ]
+          PASSKEY_ALLOWED_ORIGIN:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendBaseUrl,
+            ]
       LoggingConfig:
         LogGroup: !Ref StartPasskeyAssertionFunctionLogGroup
       Policies:

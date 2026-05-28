@@ -16,6 +16,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,6 +28,7 @@ class RelyingPartyProviderTest {
 
     private static final String RELYING_PARTY_ID_A = "test.example.com";
     private static final String RELYING_PARTY_NAME_A = "Test Service";
+    private static final String ALLOWED_ORIGIN = "https://subdomain.test.example.com";
     private static final String RELYING_PARTY_ID_B = "other.example.com";
     private static final String RELYING_PARTY_NAME_B = "Other Service";
 
@@ -35,6 +37,7 @@ class RelyingPartyProviderTest {
         MockitoAnnotations.openMocks(this);
         when(configurationService.getWebAuthnRelyingPartyId()).thenReturn(RELYING_PARTY_ID_A);
         when(configurationService.getWebAuthnRelyingPartyName()).thenReturn(RELYING_PARTY_NAME_A);
+        when(configurationService.getPasskeyAllowedOrigin()).thenReturn(ALLOWED_ORIGIN);
     }
 
     @Nested
@@ -48,6 +51,8 @@ class RelyingPartyProviderTest {
             assertThat(result, is(notNullValue()));
             assertThat(result.getIdentity().getId(), equalTo(RELYING_PARTY_ID_A));
             assertThat(result.getIdentity().getName(), equalTo(RELYING_PARTY_NAME_A));
+            assertThat(result.getOrigins().size(), equalTo(1));
+            assertTrue(result.getOrigins().contains(ALLOWED_ORIGIN));
         }
 
         @Test
