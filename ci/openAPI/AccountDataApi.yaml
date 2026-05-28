@@ -277,6 +277,7 @@ components:
         - isBackUpEligible
         - isBackedUp
         - isResidentKey
+        - algorithm
       properties:
         id:
           type: string
@@ -307,6 +308,9 @@ components:
         isResidentKey:
           type: boolean
           description: Is the passkey a resident key (stored on the device)
+        algorithm:
+          type: number
+          description: The COSE Algorithm ID of the key pair, as specified in [section 5.8.5 of the W3C WebAuthn specification](https://www.w3.org/TR/webauthn-3/#sctn-alg-identifier)
 
     PasskeyAuthenticatorUpdate:
       type: object
