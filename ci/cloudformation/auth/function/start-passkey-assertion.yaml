@@ -63,6 +63,12 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcClientId,
             ]
+          WEBAUTHN_RELYING_PARTY_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              relyingPartyId,
+            ]
       LoggingConfig:
         LogGroup: !Ref StartPasskeyAssertionFunctionLogGroup
       Policies:
