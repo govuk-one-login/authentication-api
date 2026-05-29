@@ -349,7 +349,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         authSessionService.updateSession(
                 authSessionItem
                         .withAccountState(AuthSessionItem.AccountState.EXISTING)
-                        .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
+                        .withInternalCommonSubjectId(internalCommonSubjectIdentifier)
+                        .withIsPartiallyCreatedAccount(!userMfaDetail.mfaMethodVerified()));
 
         String redactedPhoneNumber =
                 userMfaDetail.phoneNumber() != null && userMfaDetail.mfaMethodVerified()

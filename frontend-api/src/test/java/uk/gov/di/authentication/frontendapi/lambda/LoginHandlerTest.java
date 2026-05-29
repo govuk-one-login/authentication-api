@@ -1486,4 +1486,39 @@ class LoginHandlerTest {
                 .updateSession(
                         argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
     }
+
+    @Test
+    void shouldSetIsPartiallyCreatedAccountTrueWhenMfaMethodNotVerified() {
+        var userProfile =
+                generateUserProfile(null).withPhoneNumberVerified(false).withPhoneNumber(null);
+        var userCredentialsNoMfa =
+                new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
+        when(authenticationService.login(userCredentialsNoMfa, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(userCredentialsNoMfa);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        handler.handleRequest(event, context);
+
+        verify(authSessionService).updateSession(argThat(s -> s.getIsPartiallyCreatedAccount()));
+    }
+
+    @Test
+    void shouldSetIsPartiallyCreatedAccountFalseWhenMfaMethodVerified() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        handler.handleRequest(event, context);
+
+        verify(authSessionService).updateSession(argThat(s -> !s.getIsPartiallyCreatedAccount()));
+    }
 }
