@@ -158,4 +158,24 @@ public interface UserActions {
      */
     Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
+     * Records that a user successfully authenticated with a passkey.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result indicating success or failure of the tracking operation
+     */
+    Result<TrackingError, Void> correctPasskeyReceived(
+            JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
+     * Records that a user failed to authenticate with a passkey.
+     *
+     * @param journeyType The type of authentication journey
+     * @param permissionContext The user's permission context
+     * @return A Result indicating success or failure of the tracking operation
+     */
+    Result<TrackingError, Void> incorrectPasskeyReceived(
+            JourneyType journeyType, PermissionContext permissionContext);
 }

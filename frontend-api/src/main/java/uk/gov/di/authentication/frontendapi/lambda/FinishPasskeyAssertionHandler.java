@@ -19,6 +19,8 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -28,6 +30,7 @@ public class FinishPasskeyAssertionHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOG = LogManager.getLogger(FinishPasskeyAssertionHandler.class);
     private final PasskeyAssertionService passkeyAssertionService;
+    private final UserActionsManager userActionsManager;
 
     public FinishPasskeyAssertionHandler() {
         this(ConfigurationService.getInstance());
@@ -37,13 +40,15 @@ public class FinishPasskeyAssertionHandler
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
-            PasskeyAssertionService passkeyAssertionService) {
+            PasskeyAssertionService passkeyAssertionService,
+            UserActionsManager userActionsManager) {
         super(
                 FinishPasskeyAssertionRequest.class,
                 configurationService,
                 authenticationService,
                 authSessionService);
         this.passkeyAssertionService = passkeyAssertionService;
+        this.userActionsManager = userActionsManager;
     }
 
     public FinishPasskeyAssertionHandler(ConfigurationService configurationService) {
@@ -52,6 +57,7 @@ public class FinishPasskeyAssertionHandler
                 new PasskeyAssertionService(
                         RelyingPartyProvider.provide(configurationService),
                         new DefaultPasskeyJsonParser());
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     @Override
@@ -69,22 +75,53 @@ public class FinishPasskeyAssertionHandler
 
         LOG.info("FinishPasskeyAssertionHandler called");
 
-        Result<FinishPasskeyAssertionFailureReason, AssertionResult> result =
-                passkeyAssertionService.finishAssertion(
-                        userContext.getAuthSession().getPasskeyAssertionRequest(), request.pkc());
-
-        return result.fold(
-                failure ->
-                        switch (failure) {
-                            case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
-                            case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
-                            case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
-                                    401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
+        return verifyPasskeyAssertion(userContext, request)
+                .flatMap(this::updatePasskeyRecord)
+                .map(success -> reportCorrectPasskeyReceived(userContext))
+                .fold(
+                        failure -> {
+                            reportIncorrectPasskeyReceived(userContext);
+                            return switch (failure) {
+                                case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
+                                        500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+                                case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
+                                case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
+                                        401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
+                            };
                         },
-                assertionResult -> generateApiGatewayProxyResponse(200, ""));
+                        success -> generateApiGatewayProxyResponse(200, ""));
+    }
 
+    private Result<FinishPasskeyAssertionFailureReason, AssertionResult> verifyPasskeyAssertion(
+            UserContext userContext, FinishPasskeyAssertionRequest request) {
+        return passkeyAssertionService.finishAssertion(
+                userContext.getAuthSession().getPasskeyAssertionRequest(), request.pkc());
+    }
+
+    private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(
+            AssertionResult assertionResult) {
         // TODO - AUT-4938 - Update database with latest passkey values
+        return Result.success(null);
+    }
+
+    private Void reportCorrectPasskeyReceived(UserContext userContext) {
+        PermissionContext permissionContext =
+                PermissionContext.builder()
+                        .withAuthSessionItem(userContext.getAuthSession())
+                        .build();
+        userActionsManager.correctPasskeyReceived(null, permissionContext);
+
+        return null;
+    }
+
+    private Void reportIncorrectPasskeyReceived(UserContext userContext) {
+        PermissionContext permissionContext =
+                PermissionContext.builder()
+                        .withAuthSessionItem(userContext.getAuthSession())
+                        .build();
+        userActionsManager.incorrectPasskeyReceived(null, permissionContext);
+
+        return null;
     }
 }

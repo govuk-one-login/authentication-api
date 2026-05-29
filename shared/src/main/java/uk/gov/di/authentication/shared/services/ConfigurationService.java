@@ -657,6 +657,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("WEBAUTHN_RELYING_PARTY_NAME", "GOV.UK One Login");
     }
 
+    public String getPasskeyAllowedOrigin() {
+        return System.getenv().getOrDefault("PASSKEY_ALLOWED_ORIGIN", "");
+    }
+
     public String getAuthToAMApiAudience() {
         return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_MANAGEMENT_API_AUDIENCE", "");
     }
