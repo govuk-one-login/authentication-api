@@ -188,7 +188,9 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         userContext,
                         internalPairwiseId,
                         request.authenticated(),
-                        authSession.getIsNewAccount(),
+                        authSession.getIsPartiallyCreatedAccount()
+                                ? AuthSessionItem.AccountState.NEW
+                                : authSession.getIsNewAccount(),
                         authSession.getResetPasswordState(),
                         authSession.getResetMfaState(),
                         authSession.getVerifiedMfaMethodType());

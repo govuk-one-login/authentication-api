@@ -402,6 +402,38 @@ class AccountInterventionsHandlerTest {
         return Stream.of(Boolean.TRUE, Boolean.FALSE, null);
     }
 
+    @Test
+    void checkInvokesTICFLambdaWithNewAccountStateWhenPartiallyCreatedAccount()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
+        var authSessionWithChanges =
+                authSession
+                        .withAccountState(AccountState.EXISTING)
+                        .withIsPartiallyCreatedAccount(true)
+                        .withVerifiedMfaMethodType(MFAMethodType.NONE);
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSessionWithChanges));
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventForTICF(true),
+                        context,
+                        new AccountInterventionsRequest("test", true),
+                        userContext);
+
+        assertThat(result, hasStatus(200));
+        verify(mockLambdaInvokerService, times(1))
+                .invokeAsyncWithPayload(
+                        eq(
+                                "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        any());
+    }
+
     @ParameterizedTest
     @MethodSource("authenticatedUserSource")
     void checkDoesNotInvokesTICFLambdaForUsersWithUnknownAuthenticationStatus(Boolean authenticated)
