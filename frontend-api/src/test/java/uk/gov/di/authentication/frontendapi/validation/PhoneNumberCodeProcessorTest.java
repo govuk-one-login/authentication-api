@@ -14,7 +14,6 @@ import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -63,7 +62,6 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
@@ -111,7 +109,6 @@ class PhoneNumberCodeProcessorTest {
 
     @BeforeEach
     void setup() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(3);
         when(userContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
 
         var userCredentials =
@@ -135,15 +132,13 @@ class PhoneNumberCodeProcessorTest {
 
     @ParameterizedTest
     @MethodSource("codeRequestTypes")
-    void shouldReturnNoErrorForValidPhoneNumberCode(
-            CodeRequestType codeRequestType, JourneyType journeyType) {
+    void shouldReturnNoErrorForValidPhoneNumberCode(JourneyType journeyType) {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         VALID_CODE,
                         journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(phoneNumberCodeProcessor.validateCode(), equalTo(Optional.empty()));
     }
@@ -151,16 +146,13 @@ class PhoneNumberCodeProcessorTest {
     @ParameterizedTest
     @MethodSource("codeRequestTypes")
     void shouldDeleteMfaCodeFromDataStoreWhenValidRegistrationPhoneNumberCode(
-            CodeRequestType codeRequestType,
-            JourneyType journeyType,
-            NotificationType notificationType) {
+            JourneyType journeyType, NotificationType notificationType) {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         VALID_CODE,
                         journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         phoneNumberCodeProcessor.validateCode();
         verify(codeStorageService)
@@ -176,8 +168,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         INVALID_CODE,
                         REGISTRATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_REGISTRATION);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -191,8 +182,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         INVALID_CODE,
                         JourneyType.PASSWORD_RESET_MFA,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_PW_RESET_MFA);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -202,16 +192,13 @@ class PhoneNumberCodeProcessorTest {
     @ParameterizedTest
     @MethodSource("codeRequestTypes")
     void shouldNotDeleteMfaCodeFromDataStoreWhenInvalidRegistrationPhoneNumberCode(
-            CodeRequestType codeRequestType,
-            JourneyType journeyType,
-            NotificationType notificationType) {
+            JourneyType journeyType, NotificationType notificationType) {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         INVALID_CODE,
                         journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         phoneNumberCodeProcessor.validateCode();
         verify(codeStorageService, never())
@@ -221,106 +208,13 @@ class PhoneNumberCodeProcessorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenInvalidRegistrationPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        REGISTRATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
-    }
-
-    @Test
-    void shouldReturnErrorWhenInvalidMfaPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        JourneyType.PASSWORD_RESET_MFA,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED)));
-    }
-
-    @Test
-    void shouldReturnErrorWhenInvalidReauthenticateMfaPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        JourneyType.REAUTHENTICATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER));
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED)));
-    }
-
-    @ParameterizedTest
-    @MethodSource("codeRequestTypes")
-    void shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodes(
-            CodeRequestType codeRequestType, JourneyType journeyType) {
-        setUpBlockedPhoneNumberCode(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @Test
-    void
-            shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodesWithDeprecatedPrefix() {
-        var codeRequestType = CodeRequestType.MFA_PW_RESET_MFA;
-        var journeyType = JourneyType.PASSWORD_RESET_MFA;
-        var mfaMethodType = MFAMethodType.SMS;
-
-        setUpBlockedPhoneNumberCode(
-                new VerifyMfaCodeRequest(
-                        mfaMethodType,
-                        INVALID_CODE,
-                        journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                codeRequestType);
-
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(false);
-
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
-                        CODE_BLOCKED_KEY_PREFIX
-                                + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                        mfaMethodType, journeyType)))
-                .thenReturn(true);
-
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
-    }
-
-    @Test
     void shouldThrowExceptionForSignInPhoneNumberCode() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         INVALID_CODE,
                         JourneyType.SIGN_IN,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_SIGN_IN);
-
+                        CommonTestVariables.UK_MOBILE_NUMBER));
         var expectedException =
                 assertThrows(
                         RuntimeException.class,
@@ -339,8 +233,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         VALID_CODE,
                         REGISTRATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_REGISTRATION);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -385,8 +278,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         VALID_CODE,
                         JourneyType.ACCOUNT_RECOVERY,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_ACCOUNT_RECOVERY);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -427,8 +319,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         VALID_CODE,
                         JourneyType.SIGN_IN,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_REGISTRATION);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -446,8 +337,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         VALID_CODE,
                         journeyType,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_REGISTRATION);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -473,8 +363,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         VALID_CODE,
                         JourneyType.ACCOUNT_RECOVERY,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_ACCOUNT_RECOVERY);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
@@ -491,8 +380,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         VALID_CODE,
                         REGISTRATION,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_REGISTRATION);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -507,8 +395,7 @@ class PhoneNumberCodeProcessorTest {
         when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(true);
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, journeyType, UK_NOTIFY_MOBILE_TEST_NUMBER),
-                CodeRequestType.MFA_REGISTRATION);
+                        MFAMethodType.SMS, VALID_CODE, journeyType, UK_NOTIFY_MOBILE_TEST_NUMBER));
         authSession.setIsSmokeTest(true);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
@@ -527,8 +414,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         VALID_CODE,
                         JourneyType.ACCOUNT_RECOVERY,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.MFA_ACCOUNT_RECOVERY);
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -563,8 +449,7 @@ class PhoneNumberCodeProcessorTest {
                             MFAMethodType.SMS,
                             CommonTestVariables.TEST_OTP_CODE,
                             JourneyType.ACCOUNT_RECOVERY,
-                            CommonTestVariables.UK_MOBILE_NUMBER),
-                    CodeRequestType.MFA_ACCOUNT_RECOVERY);
+                            CommonTestVariables.UK_MOBILE_NUMBER));
 
             var response = phoneNumberCodeProcessor.validateCode();
             assertTrue(response.isEmpty());
@@ -580,8 +465,7 @@ class PhoneNumberCodeProcessorTest {
                             MFAMethodType.SMS,
                             CommonTestVariables.TEST_OTP_CODE.replace("456", "321"),
                             JourneyType.ACCOUNT_RECOVERY,
-                            CommonTestVariables.UK_MOBILE_NUMBER),
-                    CodeRequestType.MFA_ACCOUNT_RECOVERY);
+                            CommonTestVariables.UK_MOBILE_NUMBER));
 
             var response = phoneNumberCodeProcessor.validateCode();
             assertTrue(response.isPresent());
@@ -590,7 +474,7 @@ class PhoneNumberCodeProcessorTest {
         }
     }
 
-    public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
+    public void setupPhoneNumberCode(CodeRequest codeRequest) {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getAuthSession()).thenReturn(authSession);
@@ -606,60 +490,6 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
                         NotificationType.MFA_SMS))
                 .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(false);
-        phoneNumberCodeProcessor =
-                new PhoneNumberCodeProcessor(
-                        codeStorageService,
-                        userContext,
-                        configurationService,
-                        codeRequest,
-                        authenticationService,
-                        auditService,
-                        accountModifiersService,
-                        sqsClient,
-                        mfaMethodsService,
-                        testUserHelper);
-    }
-
-    public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
-                .thenReturn(6);
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(configurationService.isTestClientsEnabled()).thenReturn(false);
-        when(codeStorageService.getOtpCode(
-                        CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
-                        NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX))
-                .thenReturn(false);
-        phoneNumberCodeProcessor =
-                new PhoneNumberCodeProcessor(
-                        codeStorageService,
-                        userContext,
-                        configurationService,
-                        codeRequest,
-                        authenticationService,
-                        auditService,
-                        accountModifiersService,
-                        sqsClient,
-                        mfaMethodsService,
-                        testUserHelper);
-    }
-
-    public void setUpBlockedPhoneNumberCode(
-            CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(configurationService.isTestClientsEnabled()).thenReturn(false);
-        when(codeStorageService.getOtpCode(
-                        CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
-                        NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
-                .thenReturn(true);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(
                         codeStorageService,
@@ -676,17 +506,8 @@ class PhoneNumberCodeProcessorTest {
 
     private static Stream<Arguments> codeRequestTypes() {
         return Stream.of(
-                Arguments.of(
-                        CodeRequestType.MFA_PW_RESET_MFA,
-                        JourneyType.PASSWORD_RESET_MFA,
-                        NotificationType.MFA_SMS),
-                Arguments.of(
-                        CodeRequestType.MFA_REAUTHENTICATION,
-                        JourneyType.REAUTHENTICATION,
-                        NotificationType.MFA_SMS),
-                Arguments.of(
-                        CodeRequestType.MFA_REGISTRATION,
-                        REGISTRATION,
-                        NotificationType.VERIFY_PHONE_NUMBER));
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA, NotificationType.MFA_SMS),
+                Arguments.of(JourneyType.REAUTHENTICATION, NotificationType.MFA_SMS),
+                Arguments.of(REGISTRATION, NotificationType.VERIFY_PHONE_NUMBER));
     }
 }

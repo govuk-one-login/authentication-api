@@ -6,7 +6,6 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -34,7 +33,6 @@ import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
@@ -59,7 +57,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         super(
                 userContext,
                 codeStorageService,
-                configurationService.getCodeMaxRetries(),
                 authenticationService,
                 auditService,
                 dynamoAccountModifiersService,
@@ -89,7 +86,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         super(
                 userContext,
                 codeStorageService,
-                configurationService.getCodeMaxRetries(),
                 authenticationService,
                 auditService,
                 dynamoAccountModifiersService,
@@ -114,23 +110,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         ? NotificationType.MFA_SMS
                         : NotificationType.VERIFY_PHONE_NUMBER;
 
-        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
-        }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(
-                        notificationType.getMfaMethodType(), journeyType);
-        if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
-        }
-
         boolean isTestClient = testUserHelper.isTestJourney(userContext);
 
         var formattedPhoneNumber =
@@ -143,13 +122,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
         var errorResponse =
                 ValidationHelper.validateVerificationCode(
-                        notificationType,
-                        journeyType,
-                        storedCode,
-                        codeRequest.getCode(),
-                        codeStorageService,
-                        emailAddress,
-                        configurationService);
+                        notificationType, storedCode, codeRequest.getCode());
 
         if (errorResponse.isEmpty()) {
             codeStorageService.deleteOtpCode(codeIdentifier, notificationType);

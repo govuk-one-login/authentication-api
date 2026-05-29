@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -172,6 +173,37 @@ class PermissionDecisionManagerTest {
                                 ? ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST
                                 : ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT;
                 assertEquals(expectedReason, lockedOut.forbiddenReason());
+            }
+
+            @ParameterizedTest
+            @EnumSource(
+                    value = JourneyType.class,
+                    names = {"REGISTRATION", "ACCOUNT_RECOVERY", "PASSWORD_RESET"})
+            void shouldReturnVerificationBlockForAllJourneysExceptRegistration(
+                    JourneyType journeyType) {
+                var userContext = createUserContext(0);
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(
+                                CodeRequestType.SupportedCodeType.EMAIL, journeyType);
+                when(codeStorageService.isBlockedForEmail(
+                                EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
+                        .thenReturn(true);
+
+                var result =
+                        permissionDecisionManager.canSendEmailOtpNotification(
+                                journeyType, userContext);
+
+                assertTrue(result.isSuccess());
+                if (journeyType == JourneyType.REGISTRATION) {
+                    assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+                } else {
+                    var lockedOut =
+                            assertInstanceOf(
+                                    Decision.TemporarilyLockedOut.class, result.getSuccess());
+                    assertEquals(
+                            ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                            lockedOut.forbiddenReason());
+                }
             }
         }
 
@@ -720,6 +752,29 @@ class PermissionDecisionManagerTest {
 
             assertTrue(result.isSuccess());
             assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = JourneyType.class,
+                names = {"SIGN_IN", "REGISTRATION", "PASSWORD_RESET_MFA"})
+        void shouldReturnLockedOutWhenVerificationBlockExists(JourneyType journeyType) {
+            var userContext = createUserContext(0);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            CodeRequestType.SupportedCodeType.MFA, journeyType);
+            when(codeStorageService.getTTL(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
+                    .thenReturn(300L);
+
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(journeyType, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
         }
     }
 

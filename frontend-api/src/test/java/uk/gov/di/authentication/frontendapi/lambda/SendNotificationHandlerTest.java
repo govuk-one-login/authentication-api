@@ -1340,18 +1340,8 @@ class SendNotificationHandlerTest {
             }
 
             @Test
-            void shouldReturn400IfUserIsBlockedFromEnteringRegistrationEmailOtpCodes() {
+            void shouldAllowRegistrationEmailOtpRequestEvenWhenVerificationBlockExists() {
                 usingValidSession();
-                when(permissionDecisionManager.canVerifyEmailOtp(
-                                eq(REGISTRATION), any(PermissionContext.class)))
-                        .thenReturn(
-                                Result.success(
-                                        new Decision.TemporarilyLockedOut(
-                                                ForbiddenReason
-                                                        .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
-                                                6,
-                                                Instant.now(),
-                                                false)));
 
                 var body =
                         format(
@@ -1361,17 +1351,13 @@ class SendNotificationHandlerTest {
 
                 var result = handler.handleRequest(event, context);
 
-                assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED));
-                verifyNoInteractions(emailSqsClient);
-                verify(auditService)
-                        .submitAuditEvent(AUTH_EMAIL_INVALID_CODE_REQUEST, auditContext);
+                assertEquals(204, result.getStatusCode());
             }
 
             @Test
             void shouldReturn400IfUserIsBlockedFromEnteringAccountRecoveryEmailOtpCodes() {
                 usingValidSession();
-                when(permissionDecisionManager.canVerifyEmailOtp(
+                when(permissionDecisionManager.canSendEmailOtpNotification(
                                 eq(JourneyType.ACCOUNT_RECOVERY), any(PermissionContext.class)))
                         .thenReturn(
                                 Result.success(
@@ -1404,7 +1390,7 @@ class SendNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
-                when(permissionDecisionManager.canVerifyMfaOtp(
+                when(permissionDecisionManager.canSendSmsOtpNotification(
                                 eq(REGISTRATION), any(PermissionContext.class)))
                         .thenReturn(
                                 Result.success(

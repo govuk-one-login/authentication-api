@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -19,6 +20,7 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -118,6 +120,15 @@ public class UserActionsManager implements UserActions {
             return Result.success(null);
         }
 
+        if (journeyType == JourneyType.REGISTRATION) {
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(SupportedCodeType.EMAIL, journeyType);
+            getCodeStorageService()
+                    .deleteBlockForEmail(
+                            permissionContext.emailAddress(),
+                            CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType);
+        }
+
         var updatedSession =
                 permissionContext
                         .authSessionItem()
@@ -154,6 +165,66 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectEmailOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        /*
+         * REAUTHENTICATION journey type: Currently a no-op.
+         *
+         * AuthenticationAttemptsService supports tracking email OTP attempts via
+         * CountType.ENTER_EMAIL_CODE (wired into ReauthAuthenticationAttemptsHelper),
+         * but this is not currently used.
+         *
+         * Previously, ValidationHelper.getErrorResponse() explicitly skipped count
+         * increment when journeyType was REAUTHENTICATION, expecting
+         * authenticationAttemptsService to be used instead (as done for MFA_SMS).
+         *
+         * However, email OTP notifications (VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE, etc.)
+         * are never sent with journeyType=REAUTHENTICATION. Even during a reauth flow,
+         * RESET_PASSWORD_WITH_CODE uses PASSWORD_RESET as the journey type because the
+         * frontend does not send a journeyType, so the backend defaults based on
+         * notification type.
+         *
+         * When lockout data storage is consolidated, consider what should happen for
+         * password reset sub-journeys within a reauthentication flow, and whether the
+         * existing CountType.ENTER_EMAIL_CODE should be utilised.
+         */
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            return Result.success(null);
+        }
+
+        int updatedCount;
+        if (configurationService.supportAccountCreationTTL()
+                && journeyType == JourneyType.REGISTRATION) {
+            updatedCount =
+                    getCodeStorageService()
+                            .increaseIncorrectMfaCodeAttemptsCountAccountCreation(
+                                    permissionContext.emailAddress());
+        } else {
+            updatedCount =
+                    getCodeStorageService()
+                            .increaseIncorrectMfaCodeAttemptsCount(
+                                    permissionContext.emailAddress());
+        }
+        if (updatedCount >= configurationService.getCodeMaxRetries()) {
+            LOG.info("Setting block for email as user has exceeded max email OTP retries");
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            CodeRequestType.SupportedCodeType.EMAIL, journeyType);
+
+            boolean reducedLockout =
+                    journeyType == JourneyType.REGISTRATION
+                            || journeyType == JourneyType.ACCOUNT_RECOVERY;
+            long blockDuration =
+                    reducedLockout
+                            ? configurationService.getReducedLockoutDuration()
+                            : configurationService.getLockoutDuration();
+
+            getCodeStorageService()
+                    .saveBlockedForEmail(
+                            permissionContext.emailAddress(),
+                            CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType,
+                            blockDuration);
+            getCodeStorageService()
+                    .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        }
         return Result.success(null);
     }
 
@@ -269,29 +340,182 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectSmsOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            try {
+                getAuthenticationAttemptsService()
+                        .createOrIncrementCount(
+                                permissionContext.internalSubjectId(),
+                                NowHelper.nowPlus(
+                                                configurationService
+                                                        .getReauthEnterSMSCodeCountTTL(),
+                                                ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond(),
+                                journeyType,
+                                CountType.ENTER_MFA_CODE);
+            } catch (RuntimeException e) {
+                LOG.error(
+                        "Failed to store incorrect SMS OTP count in AuthenticationAttemptsService",
+                        e);
+                return Result.failure(TrackingError.STORAGE_SERVICE_ERROR);
+            }
+        } else {
+            var updatedCount =
+                    getCodeStorageService()
+                            .increaseIncorrectMfaCodeAttemptsCount(
+                                    permissionContext.emailAddress());
+            if (updatedCount >= configurationService.getCodeMaxRetries()) {
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(SupportedCodeType.MFA, journeyType);
+                LOG.info("Setting block for email as user has exceeded max MFA code retries");
+
+                boolean reducedLockout =
+                        journeyType == JourneyType.REGISTRATION
+                                || journeyType == JourneyType.ACCOUNT_RECOVERY;
+                long blockDuration =
+                        reducedLockout
+                                ? configurationService.getReducedLockoutDuration()
+                                : configurationService.getLockoutDuration();
+
+                getCodeStorageService()
+                        .saveBlockedForEmail(
+                                permissionContext.emailAddress(),
+                                CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType,
+                                blockDuration);
+                getCodeStorageService()
+                        .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+            }
+        }
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> correctSmsOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
-        getAuthSessionService().updateSession(updatedSession);
-        return Result.success(null);
+        return correctMfaOtpReceived(journeyType, permissionContext);
     }
 
     @Override
     public Result<TrackingError, Void> incorrectAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            try {
+                getAuthenticationAttemptsService()
+                        .createOrIncrementCount(
+                                permissionContext.internalSubjectId(),
+                                NowHelper.nowPlus(
+                                                configurationService
+                                                        .getReauthEnterAuthAppCodeCountTTL(),
+                                                ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond(),
+                                journeyType,
+                                CountType.ENTER_MFA_CODE);
+            } catch (RuntimeException e) {
+                LOG.error(
+                        "Failed to store incorrect Auth App OTP count in AuthenticationAttemptsService",
+                        e);
+                return Result.failure(TrackingError.STORAGE_SERVICE_ERROR);
+            }
+        } else {
+            var updatedCount =
+                    getCodeStorageService()
+                            .increaseIncorrectMfaCodeAttemptsCount(
+                                    permissionContext.emailAddress());
+            int maxRetries =
+                    (journeyType == JourneyType.REGISTRATION
+                                    || journeyType == JourneyType.ACCOUNT_RECOVERY)
+                            ? configurationService.getIncreasedCodeMaxRetries()
+                            : configurationService.getCodeMaxRetries();
+            if (updatedCount >= maxRetries) {
+                var codeRequestType =
+                        CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, journeyType);
+                LOG.info("Setting block for email as user has exceeded max MFA code retries");
+
+                boolean reducedLockout =
+                        journeyType == JourneyType.REGISTRATION
+                                || journeyType == JourneyType.ACCOUNT_RECOVERY;
+                long blockDuration =
+                        reducedLockout
+                                ? configurationService.getReducedLockoutDuration()
+                                : configurationService.getLockoutDuration();
+
+                getCodeStorageService()
+                        .saveBlockedForEmail(
+                                permissionContext.emailAddress(),
+                                CodeStorageService.CODE_BLOCKED_KEY_PREFIX + codeRequestType,
+                                blockDuration);
+                getCodeStorageService()
+                        .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+            }
+        }
         return Result.success(null);
     }
 
     @Override
     public Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        return correctMfaOtpReceived(journeyType, permissionContext);
+    }
+
+    private Result<TrackingError, Void> correctMfaOtpReceived(
+            JourneyType journeyType, PermissionContext permissionContext) {
+        if (permissionContext == null) {
+            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+        }
+        var authSession = permissionContext.authSessionItem();
+        if (authSession == null) {
+            return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+        }
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            var internalSubjectId = permissionContext.internalSubjectId();
+            var rpPairwiseId = permissionContext.rpPairwiseId();
+            if (internalSubjectId == null || rpPairwiseId == null) {
+                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+            }
+
+            if (configurationService.supportReauthSignoutEnabled()
+                    && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                var counts =
+                        getAuthenticationAttemptsService()
+                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                        internalSubjectId,
+                                        rpPairwiseId,
+                                        JourneyType.REAUTHENTICATION);
+                authSession = authSession.withPreservedReauthCountsForAuditMap(counts);
+            }
+        } else {
+            if (permissionContext.emailAddress() == null) {
+                return Result.failure(TrackingError.INVALID_USER_CONTEXT);
+            }
+            getCodeStorageService()
+                    .deleteIncorrectMfaCodeAttemptsCount(permissionContext.emailAddress());
+        }
+
+        clearReauthCounts(permissionContext);
+
+        var updatedSession = authSession.withHasVerifiedMfa(true);
         getAuthSessionService().updateSession(updatedSession);
+
         return Result.success(null);
+    }
+
+    private void clearReauthCounts(PermissionContext permissionContext) {
+        var identifiers = new ArrayList<String>();
+        if (permissionContext.internalSubjectIds() != null) {
+            identifiers.addAll(permissionContext.internalSubjectIds());
+        }
+        if (permissionContext.rpPairwiseId() != null) {
+            identifiers.add(permissionContext.rpPairwiseId());
+        }
+
+        for (String identifier : identifiers) {
+            for (CountType countType : CountType.values()) {
+                getAuthenticationAttemptsService()
+                        .deleteCount(identifier, JourneyType.REAUTHENTICATION, countType);
+            }
+        }
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {

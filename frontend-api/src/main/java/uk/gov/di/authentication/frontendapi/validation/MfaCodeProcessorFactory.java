@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.validation;
 
 import uk.gov.di.authentication.entity.CodeRequest;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -12,7 +11,6 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.List;
 import java.util.Optional;
 
 public class MfaCodeProcessorFactory {
@@ -45,24 +43,16 @@ public class MfaCodeProcessorFactory {
     public Optional<MfaCodeProcessor> getMfaCodeProcessor(
             MFAMethodType mfaMethodType, CodeRequest codeRequest, UserContext userContext) {
         return switch (mfaMethodType) {
-            case AUTH_APP -> {
-                int codeMaxRetries =
-                        List.of(JourneyType.REGISTRATION, JourneyType.ACCOUNT_RECOVERY)
-                                        .contains(codeRequest.getJourneyType())
-                                ? configurationService.getIncreasedCodeMaxRetries()
-                                : configurationService.getCodeMaxRetries();
-                yield Optional.of(
-                        new AuthAppCodeProcessor(
-                                userContext,
-                                codeStorageService,
-                                configurationService,
-                                authenticationService,
-                                codeMaxRetries,
-                                codeRequest,
-                                auditService,
-                                accountModifiersService,
-                                mfaMethodsService));
-            }
+            case AUTH_APP -> Optional.of(
+                    new AuthAppCodeProcessor(
+                            userContext,
+                            codeStorageService,
+                            configurationService,
+                            authenticationService,
+                            codeRequest,
+                            auditService,
+                            accountModifiersService,
+                            mfaMethodsService));
             case SMS -> Optional.of(
                     new PhoneNumberCodeProcessor(
                             codeStorageService,
