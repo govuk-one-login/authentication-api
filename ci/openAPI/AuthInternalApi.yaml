@@ -3,6 +3,14 @@ openapi: 3.0.1
 info:
   title: "Authentication Internal API"
   version: "1.0.0"
+security:
+  - api_key: []
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: x-api-key
+      in: header
 paths:
   /.well-known/mfa-reset-jwk.json:
     get:
