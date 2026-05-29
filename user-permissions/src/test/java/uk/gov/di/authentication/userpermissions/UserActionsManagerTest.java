@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType.SupportedCodeType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.userpermissions.entity.InMemoryLockoutStateHolde
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,6 +70,7 @@ class UserActionsManagerTest {
                         authSessionService,
                         authenticationAttemptsService);
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
+        when(configurationService.getIncreasedCodeMaxRetries()).thenReturn(999999);
         when(configurationService.getLockoutDuration()).thenReturn(900L);
     }
 
@@ -411,18 +414,184 @@ class UserActionsManagerTest {
 
     @Nested
     class CorrectSmsOtpReceived {
+
         @Test
-        void correctSmsOtpReceivedShouldSetHasVerifiedMfaToTrue() {
-            // Arrange
+        void shouldReturnErrorWhenPermissionContextIsNull() {
+            var result = userActionsManager.correctSmsOtpReceived(JourneyType.SIGN_IN, null);
+            assertTrue(result.isFailure());
+            assertEquals(TrackingError.INVALID_USER_CONTEXT, result.getFailure());
+        }
+
+        @Test
+        void shouldSetHasVerifiedMfaAndClearCountForStandardJourney() {
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
-            // Act
-            var result = userActionsManager.correctSmsOtpReceived(null, permissionContext);
+            var result =
+                    userActionsManager.correctSmsOtpReceived(
+                            JourneyType.SIGN_IN, permissionContext);
 
-            // Assert
             verify(authSessionService).updateSession(captor.capture());
-            AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedMfa());
+            assertTrue(captor.getValue().getHasVerifiedMfa());
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldClearReauthCountsAndSetHasVerifiedMfaForReauth() {
+            var context =
+                    PermissionContext.builder()
+                            .withInternalSubjectId("subject-123")
+                            .withRpPairwiseId("rp-pairwise-456")
+                            .withAuthSessionItem(authSession)
+                            .build();
+
+            var result =
+                    userActionsManager.correctSmsOtpReceived(JourneyType.REAUTHENTICATION, context);
+
+            for (CountType countType : CountType.values()) {
+                verify(authenticationAttemptsService)
+                        .deleteCount("subject-123", JourneyType.REAUTHENTICATION, countType);
+                verify(authenticationAttemptsService)
+                        .deleteCount("rp-pairwise-456", JourneyType.REAUTHENTICATION, countType);
+            }
+            verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(anyString());
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldPreserveReauthCountsForAuditWhenFeatureFlagsEnabled() {
+            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+            when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+            var counts = Map.of(CountType.ENTER_PASSWORD, 2, CountType.ENTER_SMS_CODE, 1);
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            "subject-123", "rp-pairwise-456", JourneyType.REAUTHENTICATION))
+                    .thenReturn(counts);
+            var context =
+                    PermissionContext.builder()
+                            .withInternalSubjectId("subject-123")
+                            .withRpPairwiseId("rp-pairwise-456")
+                            .withAuthSessionItem(authSession)
+                            .build();
+
+            userActionsManager.correctSmsOtpReceived(JourneyType.REAUTHENTICATION, context);
+
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+            verify(authSessionService).updateSession(captor.capture());
+            assertEquals(counts, captor.getValue().getPreservedReauthCountsForAuditMap());
+        }
+    }
+
+    @Nested
+    class IncorrectSmsOtpReceived {
+
+        @Test
+        void shouldIncrementCount() {
+            when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(1);
+
+            var result =
+                    userActionsManager.incorrectSmsOtpReceived(
+                            JourneyType.SIGN_IN, permissionContext);
+
+            verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL);
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldBlockWhenMaxRetriesReached() {
+            when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(6);
+
+            var result =
+                    userActionsManager.incorrectSmsOtpReceived(
+                            JourneyType.SIGN_IN, permissionContext);
+
+            var expectedBlockedKey =
+                    CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                            + CodeRequestType.getCodeRequestType(
+                                    SupportedCodeType.MFA, JourneyType.SIGN_IN);
+            verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 900L);
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldIncrementCountViaAuthAttemptsServiceForReauth() {
+            var context = PermissionContext.builder().withInternalSubjectId("subject-123").build();
+            when(configurationService.getReauthEnterSMSCodeCountTTL()).thenReturn(120L);
+
+            var result =
+                    userActionsManager.incorrectSmsOtpReceived(
+                            JourneyType.REAUTHENTICATION, context);
+
+            verify(authenticationAttemptsService)
+                    .createOrIncrementCount(
+                            eq("subject-123"),
+                            anyLong(),
+                            eq(JourneyType.REAUTHENTICATION),
+                            eq(CountType.ENTER_MFA_CODE));
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class IncorrectAuthAppOtpReceived {
+
+        @Test
+        void shouldIncrementCount() {
+            when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(1);
+
+            var result =
+                    userActionsManager.incorrectAuthAppOtpReceived(
+                            JourneyType.SIGN_IN, permissionContext);
+
+            verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL);
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldBlockWhenMaxRetriesReached() {
+            when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(6);
+
+            var result =
+                    userActionsManager.incorrectAuthAppOtpReceived(
+                            JourneyType.SIGN_IN, permissionContext);
+
+            var expectedBlockedKey =
+                    CodeStorageService.CODE_BLOCKED_KEY_PREFIX
+                            + CodeRequestType.getCodeRequestType(
+                                    MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
+            verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 900L);
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldUseIncreasedMaxRetriesForRegistration() {
+            when(codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL))
+                    .thenReturn(999998);
+
+            var result =
+                    userActionsManager.incorrectAuthAppOtpReceived(
+                            JourneyType.REGISTRATION, permissionContext);
+
+            verify(codeStorageService, never()).saveBlockedForEmail(any(), any(), anyLong());
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldIncrementCountViaAuthAttemptsServiceForReauth() {
+            var context = PermissionContext.builder().withInternalSubjectId("subject-123").build();
+            when(configurationService.getReauthEnterAuthAppCodeCountTTL()).thenReturn(120L);
+
+            var result =
+                    userActionsManager.incorrectAuthAppOtpReceived(
+                            JourneyType.REAUTHENTICATION, context);
+
+            verify(authenticationAttemptsService)
+                    .createOrIncrementCount(
+                            eq("subject-123"),
+                            anyLong(),
+                            eq(JourneyType.REAUTHENTICATION),
+                            eq(CountType.ENTER_MFA_CODE));
             assertTrue(result.isSuccess());
         }
     }

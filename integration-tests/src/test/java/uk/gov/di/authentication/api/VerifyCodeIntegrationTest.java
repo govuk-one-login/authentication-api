@@ -463,6 +463,12 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     void shouldReturnMaxReachedAndSingalLogoutWhenReauthSmsCodeAttemptsExceedMaxRetryCount() {
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+        authSessionExtension.addInternalCommonSubjectIdToSession(
+                this.sessionId, internalCommonSubjectId);
+        authSessionExtension.addRpSectorIdentifierHostToSession(this.sessionId, RP_SECTOR_HOST);
         setUpTestWithSignUp(sessionId);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         for (int i = 0; i < 5; i++) {
@@ -548,6 +554,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
+        authSessionExtension.addRpSectorIdentifierHostToSession(this.sessionId, RP_SECTOR_HOST);
         setUpTestWithoutSignUp(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
@@ -634,6 +641,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
+        authSessionExtension.addRpSectorIdentifierHostToSession(this.sessionId, RP_SECTOR_HOST);
         setUpTestWithoutSignUp(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
@@ -722,6 +730,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
+        authSessionExtension.addRpSectorIdentifierHostToSession(this.sessionId, RP_SECTOR_HOST);
         setUpTestWithSignUp(sessionId);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");

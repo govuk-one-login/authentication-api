@@ -49,6 +49,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -225,6 +226,8 @@ class VerifyCodeHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.success(null));
     }
 
     @Test
@@ -1316,5 +1319,20 @@ class VerifyCodeHandlerTest {
                                     MFA_RESET_TYPE.getValue(),
                                     MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
         }
+    }
+
+    @Test
+    void shouldReturn500WhenCorrectSmsOtpReceivedFails() {
+        when(codeStorageService.getOtpCode(
+                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
+                .thenReturn(Optional.of(CODE));
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        when(userActionsManager.correctSmsOtpReceived(any(), any()))
+                .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+        var result = makeCallWithCode(CODE, MFA_SMS.name(), JourneyType.SIGN_IN);
+
+        assertThat(result, hasStatus(500));
     }
 }
