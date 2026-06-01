@@ -618,19 +618,16 @@ class MFAMethodsPutHandlerTest {
 
         handler.handleRequest(eventWithUpdateRequest, context);
 
-        var expectedAuditContext =
-                BASE_AUDIT_CONTEXT
-                        .withPhoneNumber(UK_MOBILE_NUMBER)
-                        .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
-                        .withMetadataItem(pair("notification-type", "MFA_SMS"))
-                        .withMetadataItem(pair("account-recovery", "false"))
-                        .withMetadataItem(
-                                pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()))
-                        .withMetadataItem(pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()));
-
         verify(auditService)
                 .submitAuditEvent(
-                        AUTH_CODE_VERIFIED, expectedAuditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
+                        AUTH_CODE_VERIFIED,
+                        BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
+                        AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("MFACodeEntered", TEST_OTP),
+                        pair("notification-type", "MFA_SMS"),
+                        pair("account-recovery", "false"),
+                        pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()),
+                        pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()));
     }
 
     @Test
