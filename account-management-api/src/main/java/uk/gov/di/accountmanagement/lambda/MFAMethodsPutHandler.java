@@ -633,12 +633,12 @@ public class MFAMethodsPutHandler
             case AUTH_UPDATE_PHONE_NUMBER -> new AuditService.MetadataPair[] {priorityPair};
             case AUTH_MFA_METHOD_SWITCH_FAILED, AUTH_INVALID_CODE_SENT -> new AuditService
                             .MetadataPair[] {mfaTypePair, priorityPair};
+            case AUTH_CODE_VERIFIED -> pairsForAuthCodeVerified(putRequest);
             default -> new AuditService.MetadataPair[] {};
         };
     }
 
-    private AuditService.MetadataPair[] pairsForAuthCodeVerified(
-            ValidPutRequest putRequest, MFAMethod retrievedMfaMethod) {
+    private AuditService.MetadataPair[] pairsForAuthCodeVerified(ValidPutRequest putRequest) {
         var pairs = new ArrayList<AuditService.MetadataPair>();
 
         var requestedMethod = putRequest.request.mfaMethod();
@@ -667,40 +667,6 @@ public class MFAMethodsPutHandler
                 retrievedMfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
                         ? retrievedMfaMethod.getDestination()
                         : AuditService.UNKNOWN;
-        var context = baseContext.withPhoneNumber(phoneNumber);
-
-        if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_COMPLETED)
-                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
-                || auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
-                || auditEvent.equals(AUTH_INVALID_CODE_SENT)
-                || auditEvent.equals(AUTH_UPDATE_PROFILE_AUTH_APP)) {
-            return context;
-        }
-
-        if (!(auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
-                || auditEvent.equals(AUTH_CODE_VERIFIED))) {
-            var mfaTypePair =
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, retrievedMfaMethod.getMfaMethodType());
-            context = context.withMetadataItem(mfaTypePair);
-        }
-
-        if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
-                || auditEvent.equals(AUTH_INVALID_CODE_SENT)
-                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
-            var priorityPair =
-                    pair(
-                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                            retrievedMfaMethod.getPriority().toLowerCase());
-            context = context.withMetadataItem(priorityPair);
-        }
-
-        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-            var metadataPairs = pairsForAuthCodeVerified(putRequest, retrievedMfaMethod);
-            for (var pair : metadataPairs) {
-                context = context.withMetadataItem(pair);
-            }
-        }
-
-        return context;
+        return baseContext.withPhoneNumber(phoneNumber);
     }
 }
