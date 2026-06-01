@@ -154,11 +154,6 @@ public class MFAMethodsPutHandler
 
         var putRequest = validRequestOrErrorResponse.getSuccess();
 
-        LocaleHelper.SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
-
         boolean isDefaultMethod =
                 putRequest
                         .request()
@@ -275,34 +270,51 @@ public class MFAMethodsPutHandler
                     500, ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
-        var updateTypeIdentifier = updateResult.updateTypeIdentifier();
+        var notificationsResult =
+                sendSuccessfulUpdateNotifications(putRequest, updateResult, auditContext, input);
 
-        if (updateTypeIdentifier != null) {
-            var emailNotificationType = mapEmailNotificationIdentifierToType(updateTypeIdentifier);
-
-            sendEmailNotification(
-                    emailNotificationType, putRequest.userProfile.getEmail(), userLanguage);
-
-            var maybeAuditEventsStatus =
-                    sendSuccessAuditEvents(
-                            updateTypeIdentifier,
-                            putRequest,
-                            successfulUpdateMethods,
-                            auditContext);
-
-            if (maybeAuditEventsStatus.isFailure()) {
-                return maybeAuditEventsStatus.getFailure();
-            }
-
-        } else {
-            LOG.warn(
-                    "Update operation completed successfully. Email notification could not be sent due to missing or invalid notification ID in service response.");
+        if (notificationsResult.isFailure()) {
+            return notificationsResult.getFailure();
         }
 
         try {
             return generateApiGatewayProxyResponse(200, methodsAsResponse.getSuccess(), true);
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+        }
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendSuccessfulUpdateNotifications(
+            ValidPutRequest putRequest,
+            MFAMethodsService.MfaUpdateResponse updateResult,
+            AuditContext auditContext,
+            APIGatewayProxyRequestEvent input) {
+        try {
+            var updateTypeIdentifier = updateResult.updateTypeIdentifier();
+
+            if (updateTypeIdentifier != null) {
+                var emailNotificationType =
+                        mapEmailNotificationIdentifierToType(updateTypeIdentifier);
+
+                var userLanguage =
+                        matchSupportedLanguage(
+                                getUserLanguageFromRequestHeaders(
+                                        input.getHeaders(), configurationService));
+                sendEmailNotification(
+                        emailNotificationType, putRequest.userProfile.getEmail(), userLanguage);
+
+                return sendSuccessAuditEvents(
+                        updateTypeIdentifier, putRequest, updateResult.mfaMethods(), auditContext);
+
+            } else {
+                LOG.warn(
+                        "Update operation completed successfully. Email notification could not be sent due to missing or invalid notification ID in service response.");
+            }
+            return Result.success(null);
+        } catch (Json.JsonException e) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.REQUEST_MISSING_PARAMS));
         }
     }
 
