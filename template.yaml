@@ -113,11 +113,7 @@ Conditions:
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
     ]
-  PublishOldExternalTokenSigningKeys:
-    !Or [
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
+  PublishOldExternalTokenSigningKeys: !Equals [production, !Ref Environment]
   UseDefaultTokenAuthMethod:
     !Or [
       !Equals [dev, !Ref Environment],
