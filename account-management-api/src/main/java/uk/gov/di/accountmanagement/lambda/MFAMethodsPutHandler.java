@@ -494,10 +494,6 @@ public class MFAMethodsPutHandler
             case CHANGED_SMS -> NotificationType.PHONE_NUMBER_UPDATED;
             case CHANGED_DEFAULT_MFA -> NotificationType.CHANGED_DEFAULT_MFA;
             case SWITCHED_MFA_METHODS -> NotificationType.SWITCHED_MFA_METHODS;
-            default -> throw new IllegalArgumentException(
-                    "Email notification identifier '"
-                            + emailNotificationIdentifier.getValue()
-                            + "' is not supported by the PUT endpoint.");
         };
     }
 
