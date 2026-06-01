@@ -1296,17 +1296,13 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        var expectedContext =
-                BASE_AUDIT_CONTEXT
-                        .withPhoneNumber(null)
-                        .withMetadataItem(pair("mfa-type", "AUTH_APP"))
-                        .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
-
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_AUTH_APP,
-                        expectedContext,
-                        AUDIT_EVENT_COMPONENT_ID_HOME);
+                        BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                        AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("mfa-type", "AUTH_APP"),
+                        pair("mfa-method", DEFAULT.name().toLowerCase()));
     }
 
     private static APIGatewayProxyRequestEvent baseRequestWithoutPathParams(String principal) {

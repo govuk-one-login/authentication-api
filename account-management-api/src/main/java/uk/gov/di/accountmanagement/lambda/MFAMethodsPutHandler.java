@@ -601,18 +601,18 @@ public class MFAMethodsPutHandler
                     generateApiGatewayProxyErrorResponse(401, maybeAuditContext.getFailure()));
         }
 
+        var auditContext = maybeAuditContext.getSuccess();
+
         var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.getValue());
         var priority = putRequest.request.mfaMethod().priorityIdentifier().toString().toLowerCase();
         var priorityPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority);
 
-        var auditContext =
-                maybeAuditContext
-                        .getSuccess()
-                        .withMetadataItem(mfaTypePair)
-                        .withMetadataItem(priorityPair);
-
         auditService.submitAuditEvent(
-                AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
+                AUTH_UPDATE_PROFILE_AUTH_APP,
+                auditContext,
+                AUDIT_EVENT_COMPONENT_ID_HOME,
+                mfaTypePair,
+                priorityPair);
 
         return Result.success(null);
     }
@@ -650,7 +650,8 @@ public class MFAMethodsPutHandler
         if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_COMPLETED)
                 || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
                 || auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
-                || auditEvent.equals(AUTH_INVALID_CODE_SENT)) {
+                || auditEvent.equals(AUTH_INVALID_CODE_SENT)
+                || auditEvent.equals(AUTH_UPDATE_PROFILE_AUTH_APP)) {
             return context;
         }
 
