@@ -15,7 +15,6 @@ import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -573,7 +572,13 @@ public class MFAMethodsPutHandler
         return accountManagementAuditContext(
                         configurationService, authenticationService, input, putRequest.userProfile)
                 .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
-                .map(context -> addPhoneNumberToContext(mfaMethod, context))
+                .map(context -> {
+                    var phoneNumber =
+                            mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
+                                    ? mfaMethod.getDestination()
+                                    : AuditService.UNKNOWN;
+                    return context.withPhoneNumber(phoneNumber);
+                })
                 .flatMap(
                         context -> {
                             var pairs = metadataPairsForEvent(auditEvent, putRequest, mfaMethod);
@@ -667,12 +672,4 @@ public class MFAMethodsPutHandler
         return pairs.toArray(AuditService.MetadataPair[]::new);
     }
 
-    private AuditContext addPhoneNumberToContext(
-            MFAMethod retrievedMfaMethod, AuditContext baseContext) {
-        var phoneNumber =
-                retrievedMfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
-                        ? retrievedMfaMethod.getDestination()
-                        : AuditService.UNKNOWN;
-        return baseContext.withPhoneNumber(phoneNumber);
-    }
 }
