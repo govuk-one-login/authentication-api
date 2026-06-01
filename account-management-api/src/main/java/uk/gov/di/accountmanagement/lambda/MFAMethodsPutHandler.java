@@ -573,10 +573,12 @@ public class MFAMethodsPutHandler
                 .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
                 .map(context -> buildAuditContext(auditEvent, putRequest, mfaMethod, context))
                 .flatMap(
-                        context ->
-                                AuditHelper.sendAuditEvent(auditEvent, context, auditService, LOG)
-                                        .mapFailure(
-                                                f -> generateApiGatewayProxyErrorResponse(500, f)))
+                        context -> {
+                            var pairs = metadataPairsForEvent(auditEvent, putRequest, mfaMethod);
+                            return AuditHelper.sendAuditEvent(
+                                            auditEvent, context, auditService, LOG, pairs)
+                                    .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f));
+                        })
                 .map(
                         success -> {
                             LOG.info("Successfully submitted audit event: {}", auditEvent.name());
@@ -615,6 +617,18 @@ public class MFAMethodsPutHandler
         return Result.success(null);
     }
 
+    private AuditService.MetadataPair[] metadataPairsForEvent(
+            AccountManagementAuditableEvent auditableEvent,
+            ValidPutRequest putRequest,
+            MFAMethod retrievedMfaMethod) {
+        var mfaTypePair =
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, retrievedMfaMethod.getMfaMethodType());
+        return switch (auditableEvent) {
+            case AUTH_MFA_METHOD_SWITCH_COMPLETED -> new AuditService.MetadataPair[] {mfaTypePair};
+            default -> new AuditService.MetadataPair[] {};
+        };
+    }
+
     private AuditContext buildAuditContext(
             AccountManagementAuditableEvent auditEvent,
             ValidPutRequest putRequest,
@@ -625,6 +639,10 @@ public class MFAMethodsPutHandler
                         ? retrievedMfaMethod.getDestination()
                         : AuditService.UNKNOWN;
         var context = baseContext.withPhoneNumber(phoneNumber);
+
+        if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_COMPLETED)) {
+            return context;
+        }
 
         if (!(auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
                 || auditEvent.equals(AUTH_CODE_VERIFIED))) {

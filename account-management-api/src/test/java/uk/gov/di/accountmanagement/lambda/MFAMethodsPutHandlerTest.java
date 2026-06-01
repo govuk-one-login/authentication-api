@@ -427,16 +427,12 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        var expectedAuditContext =
-                BASE_AUDIT_CONTEXT
-                        .withPhoneNumber(UK_MOBILE_NUMBER)
-                        .withMetadataItem(pair("mfa-type", defaultMfaMethod.getMfaMethodType()));
-
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_MFA_METHOD_SWITCH_COMPLETED,
-                        expectedAuditContext,
-                        AUDIT_EVENT_COMPONENT_ID_HOME);
+                        BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
+                        AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("mfa-type", defaultMfaMethod.getMfaMethodType()));
     }
 
     private static Stream<MFAMethodUpdateIdentifier> phoneNumberUpdateTypeIdentifiers() {
@@ -545,17 +541,12 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        var expectedAuditContext =
-                BASE_AUDIT_CONTEXT
-                        .withPhoneNumber(existingBackupNumber)
-                        .withMetadataItem(
-                                pair("mfa-type", defaultMethodAfterSwitch.getMfaMethodType()));
-
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_MFA_METHOD_SWITCH_COMPLETED,
-                        expectedAuditContext,
-                        AUDIT_EVENT_COMPONENT_ID_HOME);
+                        BASE_AUDIT_CONTEXT.withPhoneNumber(existingBackupNumber),
+                        AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("mfa-type", defaultMethodAfterSwitch.getMfaMethodType()));
 
         verify(auditService, never()).submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(), any());
     }
