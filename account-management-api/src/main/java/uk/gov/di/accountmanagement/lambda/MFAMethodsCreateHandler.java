@@ -436,18 +436,18 @@ public class MFAMethodsCreateHandler
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
-        var maybeAuditContext =
+        var auditContextResult =
                 accountManagementAuditContext(
                         configurationService, dynamoService, input, userProfile);
-        if (maybeAuditContext.isFailure()) {
+        if (auditContextResult.isFailure()) {
             LOG.error(
                     "Error when building audit context for {} audit event with error code {}. No event raised",
                     auditEvent,
-                    maybeAuditContext.getFailure());
+                    auditContextResult.getFailure());
             return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
         }
 
-        var baseAuditContext = maybeAuditContext.getSuccess();
+        var baseAuditContext = auditContextResult.getSuccess();
         var enrichedAuditContext =
                 enrichAuditContextForEvent(auditEvent, mfaMethodCreateRequest, baseAuditContext);
         return AuditHelper.sendAuditEvent(auditEvent, enrichedAuditContext, auditService, LOG)
