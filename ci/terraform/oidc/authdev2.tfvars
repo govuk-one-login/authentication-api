@@ -81,4 +81,3 @@ oidc_cloudfront_enabled = false
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
 use_strongly_consistent_reads           = true
-deploy_orch_oidc_lambdas                = false
