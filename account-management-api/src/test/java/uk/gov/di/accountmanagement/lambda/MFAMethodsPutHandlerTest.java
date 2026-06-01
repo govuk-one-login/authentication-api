@@ -744,11 +744,16 @@ class MFAMethodsPutHandlerTest {
         }
 
         if (migrationFailureReason == MfaMigrationFailureReason.ALREADY_MIGRATED) {
+            var expectedAuditContext =
+                    BASE_AUDIT_CONTEXT
+                            .withEmail(NON_MIGRATED_EMAIL)
+                            .withPhoneNumber(phoneNumber)
+                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
             verify(auditService)
                     .submitAuditEvent(
-                            eq(AUTH_UPDATE_PHONE_NUMBER),
-                            any(AuditContext.class),
-                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+                            AUTH_UPDATE_PHONE_NUMBER,
+                            expectedAuditContext,
+                            AUDIT_EVENT_COMPONENT_ID_HOME);
         } else {
             verifyNoInteractions(auditService);
         }
