@@ -102,36 +102,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  ProvisionNewExternalTokenSigningKeysV2:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
-  PublishNextExternalTokenSigningKeysV2:
-    !And [
-      !Condition ProvisionNewExternalTokenSigningKeysV2,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
-  UseNewV2SigningKeys:
-    !And [
-      !Condition PublishNextExternalTokenSigningKeysV2,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
   ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
   UseCloudfront: !Equals [dev, !Ref Environment]
   ProvisionNewApiClientRegistryApiKey:
@@ -1930,18 +1900,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
-          USE_NEW_V2_TOKEN_SIGNING_KEYS: !If
-            - UseNewV2SigningKeys
-            - true
-            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref BackChannelLogoutQueueConsumePolicy
@@ -2340,22 +2299,8 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
-          USE_NEW_V2_TOKEN_SIGNING_KEYS: !If
-            - UseNewV2SigningKeys
-            - true
-            - false
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2567,18 +2512,8 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -3438,18 +3373,8 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
           PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: !If
             - PublishOldExternalTokenSigningKeys
             - true
@@ -3941,14 +3866,7 @@ Resources:
               !Ref Environment,
               idTokenKeyArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
           STORED_OLD_ID_TOKEN_EC_PUBLIC_KEYS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -4202,18 +4120,8 @@ Resources:
               !Ref Environment,
               idTokenKeyRsaArn,
             ]
-          PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - true
-            - false
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
-          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !If
-            - PublishNextExternalTokenSigningKeysV2
-            - !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
-            - !Ref AWS::NoValue
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
+          NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -6764,16 +6672,13 @@ Resources:
                   !Ref Environment,
                   idTokenKeyArn,
                 ]
-          - Fn::If:
-              - ProvisionNewExternalTokenSigningKeysV2
-              - Sid: AllowNewIdTokenSigningKmsV2
-                Effect: Allow
-                Action:
-                  - kms:Sign
-                  - kms:GetPublicKey
-                Resource:
-                  - !GetAtt OrchExternalTokenEcSigningKmsKeyV2.Arn
-              - !Ref AWS::NoValue
+          - Sid: AllowNewIdTokenSigningKmsV2
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt OrchExternalTokenEcSigningKmsKeyV2.Arn
 
   IdTokenKmsRsaAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6792,16 +6697,13 @@ Resources:
                   !Ref Environment,
                   idTokenKeyRsaArn,
                 ]
-          - Fn::If:
-              - ProvisionNewExternalTokenSigningKeysV2
-              - Sid: AllowNewIdTokenSigningKmsV2
-                Effect: Allow
-                Action:
-                  - kms:Sign
-                  - kms:GetPublicKey
-                Resource:
-                  - !GetAtt OrchExternalTokenRsaSigningKmsKeyV2.Arn
-              - !Ref AWS::NoValue
+          - Sid: AllowNewIdTokenSigningKmsV2
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt OrchExternalTokenRsaSigningKmsKeyV2.Arn
 
   DocAppSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -8237,7 +8139,6 @@ Resources:
   #region External Token signing keys
 
   OrchExternalTokenEcSigningKmsKeyV2:
-    Condition: ProvisionNewExternalTokenSigningKeysV2
     Type: AWS::KMS::Key
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
@@ -8257,14 +8158,12 @@ Resources:
             Resource: "*"
 
   OrchExternalTokenEcSigningKmsKeyAliasV2:
-    Condition: ProvisionNewExternalTokenSigningKeysV2
     Type: AWS::KMS::Alias
     Properties:
       AliasName: !Sub "alias/${Environment}-orch-external-token-ec-signing-kms-key-alias-v2"
       TargetKeyId: !Ref OrchExternalTokenEcSigningKmsKeyV2
 
   OrchExternalTokenRsaSigningKmsKeyV2:
-    Condition: ProvisionNewExternalTokenSigningKeysV2
     Type: AWS::KMS::Key
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
@@ -8284,7 +8183,6 @@ Resources:
             Resource: "*"
 
   OrchExternalTokenRsaSigningKmsKeyAliasV2:
-    Condition: ProvisionNewExternalTokenSigningKeysV2
     Type: AWS::KMS::Alias
     Properties:
       AliasName: !Sub "alias/${Environment}-orch-external-token-rsa-signing-kms-key-alias-v2"

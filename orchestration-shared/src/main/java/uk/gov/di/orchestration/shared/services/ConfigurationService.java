@@ -381,10 +381,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("STORED_OLD_ID_TOKEN_EC_PUBLIC_KEYS");
     }
 
-    public boolean isPublishNextExternalTokenSigningKeysEnabledV2() {
-        return getFlagOrFalse("PUBLISH_NEXT_EXTERNAL_TOKEN_SIGNING_KEYS_V2");
-    }
-
     public boolean isPublishOldExternalTokenSigningKeysEnabled() {
         return getFlagOrFalse("PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS");
     }
@@ -392,10 +388,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean isRsaSigningAvailable() {
         return List.of("dev", "build", "staging", "integration", "production")
                 .contains(getEnvironment());
-    }
-
-    public boolean isUseNewV2TokenSigningKeysEnabled() {
-        return getFlagOrFalse("USE_NEW_V2_TOKEN_SIGNING_KEYS");
     }
 
     public boolean isUseStoredOldIdTokenPublicKeysEnabled() {
