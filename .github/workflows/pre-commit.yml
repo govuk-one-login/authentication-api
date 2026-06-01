@@ -68,7 +68,7 @@ jobs:
         shell: bash
 
       - name: 🏗️ Set Up Terraform
-        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
 
       - name: 🏗️ Install Pre-commit
         run: python -m pip install pre-commit
