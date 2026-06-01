@@ -630,9 +630,8 @@ public class MFAMethodsPutHandler
         return switch (auditableEvent) {
             case AUTH_MFA_METHOD_SWITCH_COMPLETED -> new AuditService.MetadataPair[] {mfaTypePair};
             case AUTH_UPDATE_PHONE_NUMBER -> new AuditService.MetadataPair[] {priorityPair};
-            case AUTH_MFA_METHOD_SWITCH_FAILED -> new AuditService.MetadataPair[] {
-                mfaTypePair, priorityPair
-            };
+            case AUTH_MFA_METHOD_SWITCH_FAILED, AUTH_INVALID_CODE_SENT -> new AuditService
+                            .MetadataPair[] {mfaTypePair, priorityPair};
             default -> new AuditService.MetadataPair[] {};
         };
     }
@@ -650,7 +649,8 @@ public class MFAMethodsPutHandler
 
         if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_COMPLETED)
                 || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
-                || auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)) {
+                || auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
+                || auditEvent.equals(AUTH_INVALID_CODE_SENT)) {
             return context;
         }
 
