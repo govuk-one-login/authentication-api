@@ -50,7 +50,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
-import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContextWithJourneyType;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
@@ -569,7 +569,7 @@ public class MFAMethodsPutHandler
             APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
             MFAMethod mfaMethod) {
-        return accountManagementAuditContext(
+        return accountManagementAuditContextWithJourneyType(
                         configurationService, authenticationService, input, putRequest.userProfile)
                 .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
                 .map(context -> addPhoneNumberToContext(mfaMethod, context))
@@ -594,7 +594,7 @@ public class MFAMethodsPutHandler
         }
 
         var maybeAuditContext =
-                accountManagementAuditContext(
+                accountManagementAuditContextWithJourneyType(
                         configurationService, dynamoService, input, putRequest.userProfile);
 
         if (maybeAuditContext.isFailure()) {
