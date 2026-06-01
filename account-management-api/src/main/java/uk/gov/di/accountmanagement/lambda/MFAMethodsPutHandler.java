@@ -572,7 +572,7 @@ public class MFAMethodsPutHandler
         return accountManagementAuditContext(
                         configurationService, authenticationService, input, putRequest.userProfile)
                 .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
-                .map(context -> buildAuditContext(auditEvent, putRequest, mfaMethod, context))
+                .map(context -> addPhoneNumberToContext(mfaMethod, context))
                 .flatMap(
                         context -> {
                             var pairs = metadataPairsForEvent(auditEvent, putRequest, mfaMethod);
@@ -658,11 +658,8 @@ public class MFAMethodsPutHandler
         return pairs.toArray(AuditService.MetadataPair[]::new);
     }
 
-    private AuditContext buildAuditContext(
-            AccountManagementAuditableEvent auditEvent,
-            ValidPutRequest putRequest,
-            MFAMethod retrievedMfaMethod,
-            AuditContext baseContext) {
+    private AuditContext addPhoneNumberToContext(
+            MFAMethod retrievedMfaMethod, AuditContext baseContext) {
         var phoneNumber =
                 retrievedMfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
                         ? retrievedMfaMethod.getDestination()
