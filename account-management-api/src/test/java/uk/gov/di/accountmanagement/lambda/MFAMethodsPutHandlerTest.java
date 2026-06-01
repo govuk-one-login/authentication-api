@@ -851,17 +851,13 @@ class MFAMethodsPutHandlerTest {
 
         handler.handleRequest(eventWithUpdateRequest, context);
 
-        var expectedAuditContext =
-                BASE_AUDIT_CONTEXT
-                        .withPhoneNumber(UK_MOBILE_NUMBER)
-                        .withMetadataItem(pair("mfa-type", BACKUP_SMS_METHOD.getMfaMethodType()))
-                        .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
-
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_MFA_METHOD_SWITCH_FAILED,
-                        expectedAuditContext,
-                        AUDIT_EVENT_COMPONENT_ID_HOME);
+                        BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
+                        AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("mfa-type", BACKUP_SMS_METHOD.getMfaMethodType()),
+                        pair("mfa-method", BACKUP.name().toLowerCase()));
     }
 
     @Test

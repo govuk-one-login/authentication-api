@@ -630,6 +630,9 @@ public class MFAMethodsPutHandler
         return switch (auditableEvent) {
             case AUTH_MFA_METHOD_SWITCH_COMPLETED -> new AuditService.MetadataPair[] {mfaTypePair};
             case AUTH_UPDATE_PHONE_NUMBER -> new AuditService.MetadataPair[] {priorityPair};
+            case AUTH_MFA_METHOD_SWITCH_FAILED -> new AuditService.MetadataPair[] {
+                mfaTypePair, priorityPair
+            };
             default -> new AuditService.MetadataPair[] {};
         };
     }
@@ -646,7 +649,8 @@ public class MFAMethodsPutHandler
         var context = baseContext.withPhoneNumber(phoneNumber);
 
         if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_COMPLETED)
-                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
+                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
+                || auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)) {
             return context;
         }
 
