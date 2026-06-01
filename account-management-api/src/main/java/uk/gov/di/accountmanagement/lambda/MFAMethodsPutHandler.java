@@ -534,8 +534,11 @@ public class MFAMethodsPutHandler
                         .orElseThrow();
 
         return switch (updateTypeIdentifier) {
-            case SWITCHED_MFA_METHODS -> handleSwitchedMfaMethodsAuditEvents(
-                    auditContext, putRequest, updatedMfaMethods);
+            case SWITCHED_MFA_METHODS -> sendAuditEvent(
+                    AUTH_MFA_METHOD_SWITCH_COMPLETED,
+                    putRequest,
+                    postUpdateDefaultMfaMethod,
+                    auditContext);
             case CHANGED_SMS -> sendAuditEvent(
                     AUTH_UPDATE_PHONE_NUMBER, putRequest, postUpdateDefaultMfaMethod, auditContext);
             case CHANGED_DEFAULT_MFA -> {
@@ -555,23 +558,6 @@ public class MFAMethodsPutHandler
             }
             default -> Result.success(null);
         };
-    }
-
-    private Result<APIGatewayProxyResponseEvent, Void> handleSwitchedMfaMethodsAuditEvents(
-            AuditContext auditContext,
-            ValidPutRequest putRequest,
-            List<MFAMethod> updatedMfaMethods) {
-        var postUpdateDefaultMfaMethod =
-                updatedMfaMethods.stream()
-                        .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
-                        .findFirst()
-                        .orElseThrow();
-
-        return sendAuditEvent(
-                        AUTH_MFA_METHOD_SWITCH_COMPLETED,
-                        putRequest,
-                        postUpdateDefaultMfaMethod,
-                        auditContext);
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
