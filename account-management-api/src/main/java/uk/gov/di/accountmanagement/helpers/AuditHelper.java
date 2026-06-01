@@ -34,6 +34,8 @@ public class AuditHelper {
     private static final Logger LOG = LogManager.getLogger(AuditHelper.class);
     public static final String TXMA_ENCODED_HEADER_NAME = "txma-audit-encoded";
     public static final String ERROR_BUILDING_AUDIT_CONTEXT = "Error building audit context";
+    public static final AuditService.MetadataPair ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR =
+            pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue());
 
     private AuditHelper() {}
 
@@ -49,7 +51,7 @@ public class AuditHelper {
         }
     }
 
-    public static Result<ErrorResponse, AuditContext> accountManagementAuditContextWithJourneyType(
+    public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             APIGatewayProxyRequestEvent input,
@@ -74,14 +76,24 @@ public class AuditHelper {
                             null,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             getTxmaAuditEncoded(input.getHeaders()),
-                            List.of(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                            ACCOUNT_MANAGEMENT.getValue()))));
+                            List.of()));
         } catch (Exception e) {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
+    }
+
+    public static Result<ErrorResponse, AuditContext> accountManagementAuditContextWithJourneyType(
+            ConfigurationService configurationService,
+            AuthenticationService authenticationService,
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile) {
+        return accountManagementAuditContext(
+                        configurationService, authenticationService, input, userProfile)
+                .map(
+                        auditContext ->
+                                auditContext.withMetadataItem(
+                                        ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR));
     }
 
     public static Result<ErrorResponse, Void> sendAuditEvent(
