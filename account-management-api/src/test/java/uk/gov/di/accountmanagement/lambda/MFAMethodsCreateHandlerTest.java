@@ -558,6 +558,16 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNATIONAL_PHONE_NUMBER_NOT_SUPPORTED));
             verifyNoInteractions(sqsClient);
+            var expectedContext =
+                    BASE_AUDIT_CONTEXT
+                            .withPhoneNumber(INTERNATIONAL_MOBILE_NUMBER)
+                            .withMetadataItem(pair("mfa-type", SMS.toString()))
+                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_MFA_METHOD_ADD_FAILED,
+                            expectedContext,
+                            AUDIT_EVENT_COMPONENT_ID_HOME);
         }
 
         @Test
