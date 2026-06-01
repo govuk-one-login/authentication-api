@@ -39,6 +39,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -636,6 +637,27 @@ public class MFAMethodsPutHandler
         };
     }
 
+    private AuditService.MetadataPair[] pairsForAuthCodeVerified(
+            ValidPutRequest putRequest, MFAMethod retrievedMfaMethod) {
+        var pairs = new ArrayList<AuditService.MetadataPair>();
+
+        var requestedMethod = putRequest.request.mfaMethod();
+
+        if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
+                && requestSmsMfaDetail.otp() != null) {
+            pairs.add(pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, requestSmsMfaDetail.otp()));
+            pairs.add(pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name()));
+        }
+
+        pairs.add(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
+        var priority = requestedMethod.priorityIdentifier().name().toLowerCase();
+        pairs.add(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority));
+        var mfaType = requestedMethod.method().mfaMethodType().toString();
+        pairs.add(pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType));
+
+        return pairs.toArray(AuditService.MetadataPair[]::new);
+    }
+
     private AuditContext buildAuditContext(
             AccountManagementAuditableEvent auditEvent,
             ValidPutRequest putRequest,
@@ -673,25 +695,10 @@ public class MFAMethodsPutHandler
         }
 
         if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-            MfaMethodUpdateRequest.MfaMethod requestedMethod = putRequest.request.mfaMethod();
-            if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
-                    && requestSmsMfaDetail.otp() != null) {
-                var codeEnteredPair =
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, requestSmsMfaDetail.otp());
-                var notificationTypePair =
-                        pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
-                context =
-                        context.withMetadataItem(codeEnteredPair)
-                                .withMetadataItem(notificationTypePair);
+            var metadataPairs = pairsForAuthCodeVerified(putRequest, retrievedMfaMethod);
+            for (var pair : metadataPairs) {
+                context = context.withMetadataItem(pair);
             }
-            var priority = requestedMethod.priorityIdentifier().name().toLowerCase();
-            var mfaType = requestedMethod.method().mfaMethodType().toString();
-            var priorityPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority);
-            var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType);
-            context =
-                    context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(mfaTypePair);
         }
 
         return context;
