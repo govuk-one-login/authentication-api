@@ -480,17 +480,12 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        var expectedAuditContext =
-                BASE_AUDIT_CONTEXT
-                        .withPhoneNumber(UK_MOBILE_NUMBER)
-                        .withMetadataItem(
-                                pair("mfa-method", defaultMfaMethod.getPriority().toLowerCase()));
-
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PHONE_NUMBER,
-                        expectedAuditContext,
-                        AUDIT_EVENT_COMPONENT_ID_HOME);
+                        BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
+                        AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("mfa-method", defaultMfaMethod.getPriority().toLowerCase()));
     }
 
     @Test
@@ -745,15 +740,13 @@ class MFAMethodsPutHandlerTest {
 
         if (migrationFailureReason == MfaMigrationFailureReason.ALREADY_MIGRATED) {
             var expectedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withEmail(NON_MIGRATED_EMAIL)
-                            .withPhoneNumber(phoneNumber)
-                            .withMetadataItem(pair("mfa-method", DEFAULT.name().toLowerCase()));
+                    BASE_AUDIT_CONTEXT.withEmail(NON_MIGRATED_EMAIL).withPhoneNumber(phoneNumber);
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_UPDATE_PHONE_NUMBER,
                             expectedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("mfa-method", DEFAULT.name().toLowerCase()));
         } else {
             verifyNoInteractions(auditService);
         }

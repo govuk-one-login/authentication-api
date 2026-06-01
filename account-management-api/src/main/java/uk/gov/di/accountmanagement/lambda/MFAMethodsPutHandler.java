@@ -623,8 +623,13 @@ public class MFAMethodsPutHandler
             MFAMethod retrievedMfaMethod) {
         var mfaTypePair =
                 pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, retrievedMfaMethod.getMfaMethodType());
+        var priorityPair =
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                        retrievedMfaMethod.getPriority().toLowerCase());
         return switch (auditableEvent) {
             case AUTH_MFA_METHOD_SWITCH_COMPLETED -> new AuditService.MetadataPair[] {mfaTypePair};
+            case AUTH_UPDATE_PHONE_NUMBER -> new AuditService.MetadataPair[] {priorityPair};
             default -> new AuditService.MetadataPair[] {};
         };
     }
@@ -640,7 +645,8 @@ public class MFAMethodsPutHandler
                         : AuditService.UNKNOWN;
         var context = baseContext.withPhoneNumber(phoneNumber);
 
-        if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_COMPLETED)) {
+        if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_COMPLETED)
+                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
             return context;
         }
 
