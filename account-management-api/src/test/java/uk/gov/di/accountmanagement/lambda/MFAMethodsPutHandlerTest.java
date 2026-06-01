@@ -122,8 +122,7 @@ class MFAMethodsPutHandlerTest {
                     .withSubjectId(TEST_INTERNAL_SUBJECT)
                     .withIpAddress(IP_ADDRESS)
                     .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
-                    .withPersistentSessionId(PERSISTENT_ID)
-                    .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+                    .withPersistentSessionId(PERSISTENT_ID);
     private static final String NON_MIGRATED_EMAIL = "non-migrated-email@example.com";
     private static final UserProfile NON_MIGRATED_USER =
             new UserProfile()
@@ -432,6 +431,7 @@ class MFAMethodsPutHandlerTest {
                         AUTH_MFA_METHOD_SWITCH_COMPLETED,
                         BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
                         AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                         pair("mfa-type", defaultMfaMethod.getMfaMethodType()));
     }
 
@@ -485,6 +485,7 @@ class MFAMethodsPutHandlerTest {
                         AUTH_UPDATE_PHONE_NUMBER,
                         BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
                         AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                         pair("mfa-method", defaultMfaMethod.getPriority().toLowerCase()));
     }
 
@@ -541,6 +542,7 @@ class MFAMethodsPutHandlerTest {
                         AUTH_MFA_METHOD_SWITCH_COMPLETED,
                         BASE_AUDIT_CONTEXT.withPhoneNumber(existingBackupNumber),
                         AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                         pair("mfa-type", defaultMethodAfterSwitch.getMfaMethodType()));
 
         verify(auditService, never()).submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(), any());
@@ -623,6 +625,7 @@ class MFAMethodsPutHandlerTest {
                         AUTH_CODE_VERIFIED,
                         BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
                         AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                         pair("MFACodeEntered", TEST_OTP),
                         pair("notification-type", "MFA_SMS"),
                         pair("account-recovery", "false"),
@@ -743,6 +746,7 @@ class MFAMethodsPutHandlerTest {
                             AUTH_UPDATE_PHONE_NUMBER,
                             expectedAuditContext,
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-method", DEFAULT.name().toLowerCase()));
         } else {
             verifyNoInteractions(auditService);
@@ -853,6 +857,7 @@ class MFAMethodsPutHandlerTest {
                         AUTH_MFA_METHOD_SWITCH_FAILED,
                         BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
                         AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                         pair("mfa-type", BACKUP_SMS_METHOD.getMfaMethodType()),
                         pair("mfa-method", BACKUP.name().toLowerCase()));
     }
@@ -1257,6 +1262,7 @@ class MFAMethodsPutHandlerTest {
                         AUTH_INVALID_CODE_SENT,
                         BASE_AUDIT_CONTEXT.withPhoneNumber(phoneNumber),
                         AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                         pair("mfa-type", "SMS"),
                         pair("mfa-method", DEFAULT.name().toLowerCase()));
 
@@ -1298,6 +1304,7 @@ class MFAMethodsPutHandlerTest {
                         AUTH_UPDATE_PROFILE_AUTH_APP,
                         BASE_AUDIT_CONTEXT.withPhoneNumber(null),
                         AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                         pair("mfa-type", "AUTH_APP"),
                         pair("mfa-method", DEFAULT.name().toLowerCase()));
     }
