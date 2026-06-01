@@ -30,7 +30,7 @@ import java.util.Map;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_DELETE_COMPLETED;
-import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContextWithJourneyType;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -199,7 +199,7 @@ public class MFAMethodsDeleteHandler
                         ? mfaMethod.getDestination()
                         : AuditService.UNKNOWN;
         var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType());
-        return accountManagementAuditContext(
+        return accountManagementAuditContextWithJourneyType(
                         configurationService, dynamoService, input, userProfile)
                 .map(
                         baseContext ->

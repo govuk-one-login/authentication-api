@@ -49,7 +49,7 @@ public class AuditHelper {
         }
     }
 
-    public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
+    public static Result<ErrorResponse, AuditContext> accountManagementAuditContextWithJourneyType(
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             APIGatewayProxyRequestEvent input,
