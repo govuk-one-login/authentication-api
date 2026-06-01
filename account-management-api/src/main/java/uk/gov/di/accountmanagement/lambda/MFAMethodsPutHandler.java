@@ -567,18 +567,11 @@ public class MFAMethodsPutHandler
                         .findFirst()
                         .orElseThrow();
 
-        var maybeCompletedAuditEvent =
-                sendAuditEvent(
+        return sendAuditEvent(
                         AUTH_MFA_METHOD_SWITCH_COMPLETED,
                         putRequest,
                         postUpdateDefaultMfaMethod,
                         auditContext);
-
-        if (maybeCompletedAuditEvent.isFailure()) {
-            return maybeCompletedAuditEvent;
-        }
-
-        return Result.success(null);
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
