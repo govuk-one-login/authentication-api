@@ -380,7 +380,8 @@ public class MFAMethodsCreateHandler
     private AuditService.MetadataPair[] metadataPairsForEvent(
             AccountManagementAuditableEvent auditableEvent, MfaMethodCreateRequest createRequest) {
         return switch (auditableEvent) {
-            case AUTH_MFA_METHOD_ADD_COMPLETED -> new AuditService.MetadataPair[] {
+            case AUTH_MFA_METHOD_ADD_COMPLETED, AUTH_UPDATE_PHONE_NUMBER -> new AuditService
+                            .MetadataPair[] {
                 pair(
                         AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
                         createRequest.mfaMethod().method().mfaMethodType().name()),
@@ -398,7 +399,8 @@ public class MFAMethodsCreateHandler
             AuditContext baseAuditContext) {
         // Add a temporary short circuit while we switch audit events over one by one to not set
         // metadata on context
-        if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)) {
+        if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)
+                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
             if (mfaMethodCreateRequest.mfaMethod().method()
                     instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
                 return enrichWithSmsDetails(baseAuditContext, auditEvent, requestSmsMfaDetail);

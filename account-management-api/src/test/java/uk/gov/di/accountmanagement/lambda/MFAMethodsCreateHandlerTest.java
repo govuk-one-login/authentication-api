@@ -306,17 +306,13 @@ class MFAMethodsCreateHandlerTest {
                             pair("mfa-type", SMS.name()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
 
-            var expectedUpdatedPhoneNumberContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_UPDATE_PHONE_NUMBER,
-                            expectedUpdatedPhoneNumberContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("mfa-type", SMS.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()));
         }
 
         @Test
@@ -382,7 +378,11 @@ class MFAMethodsCreateHandlerTest {
                                             LocaleHelper.SupportedLanguage.EN)));
 
             verify(auditService, never())
-                    .submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(), any());
+                    .submitAuditEvent(
+                            eq(AUTH_UPDATE_PHONE_NUMBER),
+                            any(),
+                            any(),
+                            any(AuditService.MetadataPair[].class));
 
             var expectedAuthCodeVerifiedAuditContext =
                     BASE_AUDIT_CONTEXT
