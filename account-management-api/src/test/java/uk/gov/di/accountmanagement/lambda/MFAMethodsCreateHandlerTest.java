@@ -283,20 +283,16 @@ class MFAMethodsCreateHandlerTest {
                     JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
             assertEquals(expectedResponseParsedToString, result.getBody());
 
-            var expectedAuthCodeVerifiedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
-                            .withMetadataItem(pair("notification-type", MFA_SMS.name()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_CODE_VERIFIED,
-                            expectedAuthCodeVerifiedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("mfa-type", SMS.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("account-recovery", "false"),
+                            pair("MFACodeEntered", TEST_OTP),
+                            pair("notification-type", MFA_SMS.name()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -384,18 +380,14 @@ class MFAMethodsCreateHandlerTest {
                             any(),
                             any(AuditService.MetadataPair[].class));
 
-            var expectedAuthCodeVerifiedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("account-recovery", "false"));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_CODE_VERIFIED,
-                            expectedAuthCodeVerifiedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("mfa-type", AUTH_APP.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("account-recovery", "false"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -458,20 +450,16 @@ class MFAMethodsCreateHandlerTest {
 
             handler.handleRequest(event, context);
 
-            var expectedAuthCodeVerifiedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()))
-                            .withMetadataItem(pair("account-recovery", "false"))
-                            .withMetadataItem(pair("MFACodeEntered", TEST_OTP))
-                            .withMetadataItem(pair("notification-type", MFA_SMS.name()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_CODE_VERIFIED,
-                            expectedAuthCodeVerifiedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("mfa-type", SMS.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()),
+                            pair("account-recovery", "false"),
+                            pair("MFACodeEntered", TEST_OTP),
+                            pair("notification-type", MFA_SMS.name()));
         }
     }
 

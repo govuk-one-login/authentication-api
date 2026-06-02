@@ -379,17 +379,34 @@ public class MFAMethodsCreateHandler
 
     private AuditService.MetadataPair[] metadataPairsForEvent(
             AccountManagementAuditableEvent auditableEvent, MfaMethodCreateRequest createRequest) {
+        var mfaType = createRequest.mfaMethod().method().mfaMethodType().toString();
+        var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
+
+        var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType);
+        var mfaMethodPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority);
+        var accountRecoveryPair = pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
+
         return switch (auditableEvent) {
             case AUTH_MFA_METHOD_ADD_COMPLETED,
                     AUTH_UPDATE_PHONE_NUMBER,
                     AUTH_MFA_METHOD_ADD_FAILED -> new AuditService.MetadataPair[] {
-                pair(
-                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                        createRequest.mfaMethod().method().mfaMethodType().name()),
-                pair(
-                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                        PriorityIdentifier.BACKUP.name().toLowerCase()),
+                mfaTypePair, mfaMethodPair
             };
+            case AUTH_CODE_VERIFIED -> {
+                if (createRequest.mfaMethod().method() instanceof RequestSmsMfaDetail smsDetail) {
+                    yield new AuditService.MetadataPair[] {
+                        mfaTypePair,
+                        mfaMethodPair,
+                        accountRecoveryPair,
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, smsDetail.otp()),
+                        pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                    };
+                } else {
+                    yield new AuditService.MetadataPair[] {
+                        mfaTypePair, mfaMethodPair, accountRecoveryPair
+                    };
+                }
+            }
             default -> new AuditService.MetadataPair[] {};
         };
     }
@@ -402,10 +419,11 @@ public class MFAMethodsCreateHandler
         // metadata on context
         if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)
                 || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
-                || auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)) {
+                || auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)
+                || auditEvent.equals(AUTH_CODE_VERIFIED)) {
             if (mfaMethodCreateRequest.mfaMethod().method()
                     instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-                return enrichWithSmsDetails(baseAuditContext, auditEvent, requestSmsMfaDetail);
+                return enrichWithSmsDetails(baseAuditContext, requestSmsMfaDetail);
             } else {
                 return baseAuditContext;
             }
@@ -415,27 +433,19 @@ public class MFAMethodsCreateHandler
 
         var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType);
         var mfaMethodPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority);
-        var accountRecoveryPair = pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
 
         var context =
                 baseAuditContext.withMetadataItem(mfaTypePair).withMetadataItem(mfaMethodPair);
 
-        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-            context = context.withMetadataItem(accountRecoveryPair);
-        }
-
         if (mfaMethodCreateRequest.mfaMethod().method()
                 instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            context = enrichWithSmsDetails(context, auditEvent, requestSmsMfaDetail);
+            context = enrichWithSmsDetails(context, requestSmsMfaDetail);
         }
 
         return context;
     }
 
-    private AuditContext enrichWithSmsDetails(
-            AuditContext context,
-            AccountManagementAuditableEvent auditEvent,
-            RequestSmsMfaDetail smsDetail) {
+    private AuditContext enrichWithSmsDetails(AuditContext context, RequestSmsMfaDetail smsDetail) {
         String formattedPhoneNumber;
         try {
             formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(smsDetail.phoneNumber());
@@ -444,20 +454,7 @@ public class MFAMethodsCreateHandler
             formattedPhoneNumber = smsDetail.phoneNumber();
         }
 
-        var updatedContext = context.withPhoneNumber(formattedPhoneNumber);
-
-        // Note: we do not need to explicitly add the phone number country code metadata pair as
-        // this is handled already by the audit service
-
-        if (auditEvent.equals(AUTH_CODE_VERIFIED) && smsDetail.otp() != null) {
-            return updatedContext
-                    .withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, smsDetail.otp()))
-                    .withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name()));
-        }
-
-        return updatedContext;
+        return context.withPhoneNumber(formattedPhoneNumber);
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(
