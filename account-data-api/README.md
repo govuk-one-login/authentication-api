@@ -15,27 +15,29 @@ You can either use CloudShell in a VPC environment (which goes through the full 
 
 Use the token generation script to create a valid signed JWT. This is only needed when testing via CloudShell (full API Gateway flow) or invoking the authorizer lambda directly. When invoking endpoint Lambdas directly, you control the authorizer context in the payload and don't need a real token.
 
-Requires Python 3 and `boto3`:
+Requires Python 3 and dependencies from `scripts/requirements.txt`:
 
 ```bash
-pip install boto3
+python3 -m venv ./account-data-api/.venv
+source ./account-data-api/.venv/bin/activate
+pip install -r ./account-data-api/scripts/requirements.txt
 ```
 
-#### Environment variables (authdev1 example)
+#### Environment variables (authdev3 example)
 
 ```bash
-export AUTH_TO_ACCOUNT_DATA_SIGNING_KEY="alias/authdev1-auth-to-account-data-signing-key"
-export AUTH_TO_ACCOUNT_DATA_API_AUDIENCE="https://account.authdev1.dev.account.gov.uk"
-export AUTH_ISSUER_CLAIM="https://signin.authdev1.dev.account.gov.uk"
+export AUTH_TO_ACCOUNT_DATA_SIGNING_KEY="alias/authdev3-auth-to-account-data-signing-key"
+export AUTH_TO_ACCOUNT_DATA_API_AUDIENCE="https://account.authdev3.dev.account.gov.uk"
+export AUTH_ISSUER_CLAIM="https://signin.authdev3.dev.account.gov.uk"
 export AMC_CLIENT_ID="auth"
 ```
 
 #### Generate a token
 
 ```bash
-python3 ./account-data-api/scripts/generate_account_data_token.py --public-subject-id=<public-subject-id> \
+export AD_API_TOKEN=$(python3 ./account-data-api/scripts/generate_account_data_token.py --public-subject-id="-deRzccLWy8DTp8mWVv5GkEhAVUb-UvZWXb0GrcQmpA" \
   --scope "passkey-create passkey-retrieve" \
-  --profile di-authentication-development-AdministratorAccessPermission
+  --profile di-authentication-development-AdministratorAccessPermission)
 ```
 
 Available scopes: `passkey-create`, `passkey-retrieve`, `passkey-update`, `passkey-delete`
@@ -167,3 +169,59 @@ aws lambda invoke \
 ```
 
 Replace `<env>` with e.g. `authdev1`, `<profile>` with e.g. `authdev1-admin`, and `<subject-id>`/`<passkey-id>` with the relevant values for your case.
+
+
+### Testing via ALB (development environments)
+
+In development environments an ALB is configured to route to private APIs. 
+You need a valid token, either by running the script (see [Generating a token](#generating-a-token-for-cloudshell-or-authorizer-lambda-testing-only)) 
+and a `Host` header for routing, or by logging in to the [Authdev 3 RP Stub](https://rp-dev.build.stubs.account.gov.uk/).
+
+
+```bash
+export PUBLIC_SUBJECT_ID="-deRzccLWy8DTp8mWVv5GkEhAVUb-UvZWXb0GrcQmpA"
+export PASSKEY_ID="1234-5678"
+export API_ID="5ctgxqnq37"
+export ENVIRONMENT="authdev3"
+export ALB_URL="http://auth-test-alb-alb-1869347301.eu-west-2.elb.amazonaws.com"
+```
+
+#### Retrieve passkeys
+
+```bash
+curl -s -X GET \
+  "$ALB_URL/$ENVIRONMENT/accounts/$PUBLIC_SUBJECT_ID/authenticators/passkeys" \
+  -H "Host: $API_ID.execute-api.eu-west-2.amazonaws.com" \
+  -H "Authorization: Bearer $AD_API_TOKEN"
+```
+
+#### Create a passkey
+
+```bash
+curl -s -X POST \
+  "$ALB_URL/$ENVIRONMENT/accounts/$PUBLIC_SUBJECT_ID/authenticators/passkeys" \
+  -H "Host: $API_ID.execute-api.eu-west-2.amazonaws.com" \
+  -H "Authorization: Bearer $AD_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"credential":"credential","id":"'$PASSKEY_ID'","aaguid":"ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4","isAttested":"false","signCount":"0","transports":["internal","hybrid"],"isBackedUpEligible":"false","isBackedUp":"false","isResidentKey":"false"}'
+```
+
+#### Update a passkey
+
+```bash
+curl -s -X PATCH \
+  "$ALB_URL/$ENVIRONMENT/accounts/$PUBLIC_SUBJECT_ID/authenticators/passkeys/$PASSKEY_ID" \
+  -H "Host: $API_ID.execute-api.eu-west-2.amazonaws.com" \
+  -H "Authorization: Bearer $AD_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"signCount": 1, "lastUsedAt": "2026-06-03T16:00:00Z"}'
+```
+
+#### Delete a passkey
+
+```bash
+curl -s -X DELETE \
+  "$ALB_URL/$ENVIRONMENT/accounts/$PUBLIC_SUBJECT_ID/authenticators/passkeys/$PASSKEY_ID" \
+  -H "Host: $API_ID.execute-api.eu-west-2.amazonaws.com" \
+  -H "Authorization: Bearer $AD_API_TOKEN"
+```
