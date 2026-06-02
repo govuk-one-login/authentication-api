@@ -58,9 +58,12 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLI
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class AMCAuthorizeHandlerTest {
@@ -119,16 +122,24 @@ class AMCAuthorizeHandlerTest {
 
     @Nested
     class Success {
-        @ParameterizedTest
-        @MethodSource("amcJourneyTypeAndExpectedScope")
-        void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
-                AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
-            String expectedUrl = "https://example.com/authorize";
+        private static final String REDIRECT_URL_RETURNED_FROM_AUTHORIZATION =
+                "https://example.com/authorize";
+        private static final APIGatewayProxyRequestEvent EVENT_WITH_VALID_HEADERS =
+                new APIGatewayProxyRequestEvent()
+                        .withHeaders(VALID_HEADERS)
+                        .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+
+        @BeforeEach
+        void setup() {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
+
+            var authorizationUrlAndCookie =
+                    new AMCAuthorizationUrlAndCookie(
+                            REDIRECT_URL_RETURNED_FROM_AUTHORIZATION, AMC_COOKIE);
             when(amcService.buildAuthorizationResult(
                             eq(INTERNAL_COMMON_SUBJECT_ID),
-                            eq(expectedAmcScope),
+                            any(),
                             eq(authSession),
                             eq(PUBLIC_SUBJECT_ID),
                             anyString(),
@@ -136,22 +147,34 @@ class AMCAuthorizeHandlerTest {
                             any(RSAPublicKey.class),
                             anyString(),
                             any(State.class)))
-                    .thenReturn(
-                            Result.success(
-                                    new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
+                    .thenReturn(Result.success(authorizationUrlAndCookie));
+        }
 
-            var event =
-                    apiRequestEventWithHeadersAndBody(
-                            CommonTestVariables.VALID_HEADERS,
-                            format("{\"journeyType\":\"%s\"}", amcJourneyType));
-
+        @ParameterizedTest
+        @MethodSource("amcJourneyTypeAndExpectedScope")
+        void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
+                AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
-            APIGatewayProxyResponseEvent result =
-                    handler.handleRequestWithUserContext(event, context, request, userContext);
+            var result =
+                    handler.handleRequestWithUserContext(
+                            EVENT_WITH_VALID_HEADERS, context, request, userContext);
 
-            var expectedResponse = new AMCAuthorizeResponse(expectedUrl, AMC_COOKIE);
+            var expectedResponse =
+                    new AMCAuthorizeResponse(REDIRECT_URL_RETURNED_FROM_AUTHORIZATION, AMC_COOKIE);
             assertEquals(200, result.getStatusCode());
             assertThat(result, hasJsonBody(expectedResponse));
+        }
+
+        @ParameterizedTest
+        @MethodSource("amcJourneyTypeAndExpectedScope")
+        void shouldConstructTheAuthorizationResultWithTheCorrectTransportJwtAndTokenConfigs(
+                AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
+            var request = new AMCAuthorizeRequest(amcJourneyType);
+            var result =
+                    handler.handleRequestWithUserContext(
+                            EVENT_WITH_VALID_HEADERS, context, request, userContext);
+
+            assertEquals(200, result.getStatusCode());
 
             var expectedRedirectUri =
                     request.amcJourneyType()
