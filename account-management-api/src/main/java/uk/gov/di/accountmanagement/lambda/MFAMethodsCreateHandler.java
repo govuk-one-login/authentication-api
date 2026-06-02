@@ -377,10 +377,35 @@ public class MFAMethodsCreateHandler
         };
     }
 
+    private AuditService.MetadataPair[] metadataPairsForEvent(
+            AccountManagementAuditableEvent auditableEvent, MfaMethodCreateRequest createRequest) {
+        return switch (auditableEvent) {
+            case AUTH_MFA_METHOD_ADD_COMPLETED -> new AuditService.MetadataPair[] {
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                        createRequest.mfaMethod().method().mfaMethodType().name()),
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                        PriorityIdentifier.BACKUP.name().toLowerCase()),
+            };
+            default -> new AuditService.MetadataPair[] {};
+        };
+    }
+
     private AuditContext enrichAuditContextForEvent(
             AccountManagementAuditableEvent auditEvent,
             MfaMethodCreateRequest mfaMethodCreateRequest,
             AuditContext baseAuditContext) {
+        // Add a temporary short circuit while we switch audit events over one by one to not set
+        // metadata on context
+        if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)) {
+            if (mfaMethodCreateRequest.mfaMethod().method()
+                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+                return enrichWithSmsDetails(baseAuditContext, auditEvent, requestSmsMfaDetail);
+            } else {
+                return baseAuditContext;
+            }
+        }
         var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
         var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
 
@@ -450,7 +475,9 @@ public class MFAMethodsCreateHandler
         var baseAuditContext = auditContextResult.getSuccess();
         var enrichedAuditContext =
                 enrichAuditContextForEvent(auditEvent, mfaMethodCreateRequest, baseAuditContext);
-        return AuditHelper.sendAuditEvent(auditEvent, enrichedAuditContext, auditService, LOG)
+        var metadataPairs = metadataPairsForEvent(auditEvent, mfaMethodCreateRequest);
+        return AuditHelper.sendAuditEvent(
+                        auditEvent, enrichedAuditContext, auditService, LOG, metadataPairs)
                 .map(
                         sucess -> {
                             LOG.info("Successfully submitted audit event: {}", auditEvent.name());

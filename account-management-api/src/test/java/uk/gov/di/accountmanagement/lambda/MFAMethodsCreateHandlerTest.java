@@ -298,17 +298,13 @@ class MFAMethodsCreateHandlerTest {
                             expectedAuthCodeVerifiedAuditContext,
                             AUDIT_EVENT_COMPONENT_ID_HOME);
 
-            var expectedAuthMfaMethodAddCompleteContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_COMPLETED,
-                            expectedAuthMfaMethodAddCompleteContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("mfa-type", SMS.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()));
 
             var expectedUpdatedPhoneNumberContext =
                     BASE_AUDIT_CONTEXT
@@ -401,17 +397,13 @@ class MFAMethodsCreateHandlerTest {
                             expectedAuthCodeVerifiedAuditContext,
                             AUDIT_EVENT_COMPONENT_ID_HOME);
 
-            var expectedAddCompletedAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(null)
-                            .withMetadataItem(pair("mfa-type", AUTH_APP.name()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_COMPLETED,
-                            expectedAddCompletedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("mfa-type", AUTH_APP.name()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()));
         }
 
         @Test
