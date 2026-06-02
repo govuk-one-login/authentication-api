@@ -389,7 +389,8 @@ public class MFAMethodsCreateHandler
         return switch (auditableEvent) {
             case AUTH_MFA_METHOD_ADD_COMPLETED,
                     AUTH_UPDATE_PHONE_NUMBER,
-                    AUTH_MFA_METHOD_ADD_FAILED -> new AuditService.MetadataPair[] {
+                    AUTH_MFA_METHOD_ADD_FAILED,
+                    AUTH_INVALID_CODE_SENT -> new AuditService.MetadataPair[] {
                 mfaTypePair, mfaMethodPair
             };
             case AUTH_CODE_VERIFIED -> {
@@ -420,7 +421,8 @@ public class MFAMethodsCreateHandler
         if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)
                 || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
                 || auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)
-                || auditEvent.equals(AUTH_CODE_VERIFIED)) {
+                || auditEvent.equals(AUTH_CODE_VERIFIED)
+                || auditEvent.equals(AUTH_INVALID_CODE_SENT)) {
             if (mfaMethodCreateRequest.mfaMethod().method()
                     instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
                 return enrichWithSmsDetails(baseAuditContext, requestSmsMfaDetail);

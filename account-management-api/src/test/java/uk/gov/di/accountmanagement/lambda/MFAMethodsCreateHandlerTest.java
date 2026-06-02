@@ -726,17 +726,13 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_OTP));
 
-            var expectedInvalidCodeSentAuditContext =
-                    BASE_AUDIT_CONTEXT
-                            .withPhoneNumber(TEST_E164_PHONE_NUMBER)
-                            .withMetadataItem(pair("mfa-type", SMS.toString()))
-                            .withMetadataItem(pair("mfa-method", BACKUP.name().toLowerCase()));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_INVALID_CODE_SENT,
-                            expectedInvalidCodeSentAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("mfa-type", SMS.toString()),
+                            pair("mfa-method", BACKUP.name().toLowerCase()));
 
             verifyNoInteractions(sqsClient);
         }
