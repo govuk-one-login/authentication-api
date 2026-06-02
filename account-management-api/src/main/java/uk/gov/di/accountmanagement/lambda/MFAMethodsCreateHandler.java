@@ -412,39 +412,14 @@ public class MFAMethodsCreateHandler
         };
     }
 
-    private AuditContext enrichAuditContextForEvent(
-            AccountManagementAuditableEvent auditEvent,
-            MfaMethodCreateRequest mfaMethodCreateRequest,
-            AuditContext baseAuditContext) {
-        // Add a temporary short circuit while we switch audit events over one by one to not set
-        // metadata on context
-        if (auditEvent.equals(AUTH_MFA_METHOD_ADD_COMPLETED)
-                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
-                || auditEvent.equals(AUTH_MFA_METHOD_ADD_FAILED)
-                || auditEvent.equals(AUTH_CODE_VERIFIED)
-                || auditEvent.equals(AUTH_INVALID_CODE_SENT)) {
-            if (mfaMethodCreateRequest.mfaMethod().method()
-                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-                return enrichWithSmsDetails(baseAuditContext, requestSmsMfaDetail);
-            } else {
-                return baseAuditContext;
-            }
-        }
-        var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
-        var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
-
-        var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType);
-        var mfaMethodPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority);
-
-        var context =
-                baseAuditContext.withMetadataItem(mfaTypePair).withMetadataItem(mfaMethodPair);
-
+    private AuditContext addPhoneNumberToAuditContext(
+            MfaMethodCreateRequest mfaMethodCreateRequest, AuditContext baseAuditContext) {
         if (mfaMethodCreateRequest.mfaMethod().method()
                 instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            context = enrichWithSmsDetails(context, requestSmsMfaDetail);
+            return enrichWithSmsDetails(baseAuditContext, requestSmsMfaDetail);
+        } else {
+            return baseAuditContext;
         }
-
-        return context;
     }
 
     private AuditContext enrichWithSmsDetails(AuditContext context, RequestSmsMfaDetail smsDetail) {
@@ -477,7 +452,7 @@ public class MFAMethodsCreateHandler
 
         var baseAuditContext = auditContextResult.getSuccess();
         var enrichedAuditContext =
-                enrichAuditContextForEvent(auditEvent, mfaMethodCreateRequest, baseAuditContext);
+                addPhoneNumberToAuditContext(mfaMethodCreateRequest, baseAuditContext);
         var metadataPairs = metadataPairsForEvent(auditEvent, mfaMethodCreateRequest);
         return AuditHelper.sendAuditEvent(
                         auditEvent, enrichedAuditContext, auditService, LOG, metadataPairs)
