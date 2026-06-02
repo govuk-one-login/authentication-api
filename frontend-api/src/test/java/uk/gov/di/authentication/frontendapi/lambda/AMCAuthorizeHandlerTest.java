@@ -203,9 +203,9 @@ class AMCAuthorizeHandlerTest {
         }
 
         @ParameterizedTest
-        @MethodSource("amcJourneyTypeAndExpectedScope")
+        @MethodSource("amcJourneyTypeAndExpectedScopeInAudtEvent")
         void shouldEmitTheRelevantAuditEvent(
-                AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
+                AMCJourneyType amcJourneyType, String expectedAmcScopeInAuditEvent) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
             var result =
                     handler.handleRequestWithUserContext(
@@ -223,7 +223,7 @@ class AMCAuthorizeHandlerTest {
                             .withIpAddress(IP_ADDRESS)
                             .withPersistentSessionId(DI_PERSISTENT_SESSION_ID);
             var expectedJourneyTypePair = pair("journey-type", SIGN_IN);
-            var expectedAmcScopePair = pair("amc_scope", amcJourneyType);
+            var expectedAmcScopePair = pair("amc_scope", expectedAmcScopeInAuditEvent);
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_AMC_AUTHORISATION_REQUESTED,
@@ -236,6 +236,12 @@ class AMCAuthorizeHandlerTest {
             return Stream.of(
                     Arguments.of(AMCJourneyType.SFAD, AMCScope.ACCOUNT_DELETE),
                     Arguments.of(AMCJourneyType.PASSKEY_CREATE, AMCScope.PASSKEY_CREATE));
+        }
+
+        private static Stream<Arguments> amcJourneyTypeAndExpectedScopeInAudtEvent() {
+            return Stream.of(
+                    Arguments.of(AMCJourneyType.SFAD, "sfad"),
+                    Arguments.of(AMCJourneyType.PASSKEY_CREATE, "passkey-create"));
         }
     }
 

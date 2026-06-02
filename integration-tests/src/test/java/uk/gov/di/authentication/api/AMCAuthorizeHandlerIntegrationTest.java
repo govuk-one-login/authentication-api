@@ -16,7 +16,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
@@ -42,6 +44,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -208,9 +211,16 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertDoesNotThrow(() -> encryptedJWT.decrypt(decrypter));
     }
 
+    private static Stream<Arguments> journeyTypesToAmcScopesInAuditEvent() {
+        return Stream.of(
+                Arguments.of(AMCJourneyType.SFAD, "sfad"),
+                Arguments.of(AMCJourneyType.PASSKEY_CREATE, "passkey-create"));
+    }
+
     @ParameterizedTest
-    @EnumSource(AMCJourneyType.class)
-    void shouldEmitCorrectAuditEvent(AMCJourneyType amcJourneyType) {
+    @MethodSource("journeyTypesToAmcScopesInAuditEvent")
+    void shouldEmitCorrectAuditEvent(
+            AMCJourneyType amcJourneyType, String expectedAmcScopeInMetadata) {
         handler = new AMCAuthorizeHandler();
 
         var requestBody =
@@ -231,7 +241,7 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         Map<String, Object> expectedMetadataPairs =
                 Map.ofEntries(
                         Map.entry(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN"),
-                        Map.entry(EXTENSIONS_AMC_SCOPE, amcJourneyType.name()));
+                        Map.entry(EXTENSIONS_AMC_SCOPE, expectedAmcScopeInMetadata));
         verifyAuditEvents(Map.of(AUTH_AMC_AUTHORISATION_REQUESTED, expectedMetadataPairs));
     }
 

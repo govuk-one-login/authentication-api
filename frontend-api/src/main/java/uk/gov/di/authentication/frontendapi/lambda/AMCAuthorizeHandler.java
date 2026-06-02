@@ -190,8 +190,16 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         AuditService
                                 .UNKNOWN, // the schema does not include phone number for this event
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+        var amcScopeForAuditEvent =
+                switch (request.amcJourneyType()) {
+                    case PASSKEY_CREATE -> "passkey-create";
+                    case SFAD -> "sfad"; // note we'll probably want to review this when we get to
+                        // implementing sfad fully
+                };
+
         var journeyTypePair = pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN);
-        var amcScopePair = pair(AUDIT_EVENT_EXTENSIONS_AMC_SCOPE, request.amcJourneyType());
+        var amcScopePair = pair(AUDIT_EVENT_EXTENSIONS_AMC_SCOPE, amcScopeForAuditEvent);
         auditService.submitAuditEvent(
                 AUTH_AMC_AUTHORISATION_REQUESTED, auditContext, journeyTypePair, amcScopePair);
     }
