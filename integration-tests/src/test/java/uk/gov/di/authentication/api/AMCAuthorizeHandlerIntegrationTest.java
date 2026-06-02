@@ -81,6 +81,7 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         environment.set("AMC_CLIENT_ID", "test-amc-client");
         environment.set("AMC_AUTHORIZE_URI", "https://test-amc.account.gov.uk/authorize");
         environment.set("AMC_REDIRECT_URI", "https://test.account.gov.uk/amc/callback");
+        environment.set("TXMA_AUDIT_QUEUE_URL", txmaAuditQueue.getQueueUrl());
 
         KeyPair keyPair;
         try {

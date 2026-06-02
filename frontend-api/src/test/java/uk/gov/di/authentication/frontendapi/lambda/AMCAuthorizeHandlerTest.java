@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -67,6 +68,7 @@ class AMCAuthorizeHandlerTest {
     private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
     private final AMCService amcService = mock(AMCService.class);
     private final DynamoAmcStateService dynamoAmcStateService = mock(DynamoAmcStateService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private AMCAuthorizeHandler handler;
     private final Context context = mock(Context.class);
     private final AuthSessionItem authSession =
@@ -94,7 +96,8 @@ class AMCAuthorizeHandlerTest {
                         authSessionService,
                         amcService,
                         jwkSource,
-                        dynamoAmcStateService);
+                        dynamoAmcStateService,
+                        auditService);
         when(jwkSource.get(any(), any())).thenReturn(List.of(TEST_RSA_JWK));
         when(configurationService.getAMCSfadRedirectURI())
                 .thenReturn("https://example.com/callback");

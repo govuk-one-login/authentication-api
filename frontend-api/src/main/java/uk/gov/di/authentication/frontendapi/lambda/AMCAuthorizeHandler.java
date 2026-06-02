@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -48,6 +49,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest> {
     private final AMCService amcService;
     private final JWKSource<SecurityContext> jwkSource;
+    private final AuditService auditService;
 
     private static final Logger LOG = LogManager.getLogger(AMCAuthorizeHandler.class);
     private final DynamoAmcStateService dynamoAmcStateService;
@@ -76,6 +78,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         new JwtService(new KmsConnectionService(configurationService)),
                         new AccessTokenConstructorService(configurationService));
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     @SuppressWarnings("java:S1185")
@@ -91,7 +94,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             AuthSessionService authSessionService,
             AMCService amcService,
             JWKSource<SecurityContext> jwkSource,
-            DynamoAmcStateService amcStateService) {
+            DynamoAmcStateService amcStateService,
+            AuditService auditService) {
         super(
                 AMCAuthorizeRequest.class,
                 configurationService,
@@ -100,6 +104,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.amcService = amcService;
         this.jwkSource = jwkSource;
         this.dynamoAmcStateService = amcStateService;
+        this.auditService = auditService;
     }
 
     @Override
