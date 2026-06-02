@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -115,154 +116,179 @@ class AMCAuthorizeHandlerTest {
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
     }
 
-    private static Stream<Arguments> amcJourneyTypeAndExpectedScope() {
-        return Stream.of(
-                Arguments.of(AMCJourneyType.SFAD, AMCScope.ACCOUNT_DELETE),
-                Arguments.of(AMCJourneyType.PASSKEY_CREATE, AMCScope.PASSKEY_CREATE));
+    @Nested
+    class Success {
+        @ParameterizedTest
+        @MethodSource("amcJourneyTypeAndExpectedScope")
+        void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
+                AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
+            String expectedUrl = "https://example.com/authorize";
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            when(amcService.buildAuthorizationResult(
+                            eq(INTERNAL_COMMON_SUBJECT_ID),
+                            eq(expectedAmcScope),
+                            eq(authSession),
+                            eq(PUBLIC_SUBJECT_ID),
+                            anyString(),
+                            anyList(),
+                            any(RSAPublicKey.class),
+                            anyString(),
+                            any(State.class)))
+                    .thenReturn(
+                            Result.success(
+                                    new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
+
+            var event =
+                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                            CommonTestVariables.VALID_HEADERS,
+                            format("{\"journeyType\":\"%s\"}", amcJourneyType));
+
+            var request = new AMCAuthorizeRequest(amcJourneyType);
+            APIGatewayProxyResponseEvent result =
+                    handler.handleRequestWithUserContext(event, context, request, userContext);
+
+            var expectedResponse = new AMCAuthorizeResponse(expectedUrl, AMC_COOKIE);
+            assertEquals(200, result.getStatusCode());
+            assertThat(result, hasJsonBody(expectedResponse));
+
+            var expectedRedirectUri =
+                    request.amcJourneyType()
+                            .getTransportJwtConfig(configurationService)
+                            .redirectUri();
+            var expectedAccessTokenConfigs =
+                    request.amcJourneyType().getAccessTokenConfigs(configurationService);
+            var stateCaptor = ArgumentCaptor.forClass(State.class);
+            verify(amcService)
+                    .buildAuthorizationResult(
+                            eq(INTERNAL_COMMON_SUBJECT_ID),
+                            eq(expectedAmcScope),
+                            eq(authSession),
+                            eq(PUBLIC_SUBJECT_ID),
+                            eq(expectedRedirectUri),
+                            eq(expectedAccessTokenConfigs),
+                            any(RSAPublicKey.class),
+                            anyString(),
+                            stateCaptor.capture());
+        }
+
+        private static Stream<Arguments> amcJourneyTypeAndExpectedScope() {
+            return Stream.of(
+                    Arguments.of(AMCJourneyType.SFAD, AMCScope.ACCOUNT_DELETE),
+                    Arguments.of(AMCJourneyType.PASSKEY_CREATE, AMCScope.PASSKEY_CREATE));
+        }
     }
 
-    @ParameterizedTest
-    @MethodSource("amcJourneyTypeAndExpectedScope")
-    void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
-            AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
-        String expectedUrl = "https://example.com/authorize";
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(amcService.buildAuthorizationResult(
-                        eq(INTERNAL_COMMON_SUBJECT_ID),
-                        eq(expectedAmcScope),
-                        eq(authSession),
-                        eq(PUBLIC_SUBJECT_ID),
-                        anyString(),
-                        anyList(),
-                        any(RSAPublicKey.class),
-                        anyString(),
-                        any(State.class)))
-                .thenReturn(
-                        Result.success(new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
+    @Nested
+    class Failure {
+        @Test
+        void shouldReturn400WhenUserProfileNotFound() {
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.empty());
 
-        var event =
-                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                        CommonTestVariables.VALID_HEADERS,
-                        format("{\"journeyType\":\"%s\"}", amcJourneyType));
+            var event =
+                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                            CommonTestVariables.VALID_HEADERS,
+                            format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
-        var request = new AMCAuthorizeRequest(amcJourneyType);
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(event, context, request, userContext);
+            APIGatewayProxyResponseEvent result =
+                    handler.handleRequestWithUserContext(
+                            event,
+                            context,
+                            new AMCAuthorizeRequest(AMCJourneyType.SFAD),
+                            userContext);
 
-        var expectedResponse = new AMCAuthorizeResponse(expectedUrl, AMC_COOKIE);
-        assertEquals(200, result.getStatusCode());
-        assertThat(result, hasJsonBody(expectedResponse));
+            assertEquals(400, result.getStatusCode());
+            assertTrue(
+                    result.getBody()
+                            .contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
+        }
 
-        var expectedRedirectUri =
-                request.amcJourneyType().getTransportJwtConfig(configurationService).redirectUri();
-        var expectedAccessTokenConfigs =
-                request.amcJourneyType().getAccessTokenConfigs(configurationService);
-        var stateCaptor = ArgumentCaptor.forClass(State.class);
-        verify(amcService)
-                .buildAuthorizationResult(
-                        eq(INTERNAL_COMMON_SUBJECT_ID),
-                        eq(expectedAmcScope),
-                        eq(authSession),
-                        eq(PUBLIC_SUBJECT_ID),
-                        eq(expectedRedirectUri),
-                        eq(expectedAccessTokenConfigs),
-                        any(RSAPublicKey.class),
-                        anyString(),
-                        stateCaptor.capture());
-    }
+        @Test
+        void shouldReturnJwksRetrievalErrorWhenKeySourceExceptionThrown()
+                throws KeySourceException {
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            when(jwkSource.get(any(), any()))
+                    .thenThrow(new KeySourceException("JWKS endpoint unreachable"));
 
-    @Test
-    void shouldReturn400WhenUserProfileNotFound() {
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
+            var event =
+                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                            CommonTestVariables.VALID_HEADERS,
+                            format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
-        var event =
-                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                        CommonTestVariables.VALID_HEADERS,
-                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+            APIGatewayProxyResponseEvent result =
+                    handler.handleRequestWithUserContext(
+                            event,
+                            context,
+                            new AMCAuthorizeRequest(AMCJourneyType.SFAD),
+                            userContext);
 
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
+            var httpResponse =
+                    AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
+            assertEquals(httpResponse.statusCode(), result.getStatusCode());
+            assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
+        }
 
-        assertEquals(400, result.getStatusCode());
-        assertTrue(result.getBody().contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
-    }
+        @Test
+        void shouldReturnJwksRetrievalErrorWhenNoRsaKeyFound() throws KeySourceException {
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            when(jwkSource.get(any(), any())).thenReturn(List.of());
 
-    @Test
-    void shouldReturnJwksRetrievalErrorWhenKeySourceExceptionThrown() throws KeySourceException {
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(jwkSource.get(any(), any()))
-                .thenThrow(new KeySourceException("JWKS endpoint unreachable"));
+            var event =
+                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                            CommonTestVariables.VALID_HEADERS,
+                            format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
-        var event =
-                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                        CommonTestVariables.VALID_HEADERS,
-                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+            APIGatewayProxyResponseEvent result =
+                    handler.handleRequestWithUserContext(
+                            event,
+                            context,
+                            new AMCAuthorizeRequest(AMCJourneyType.SFAD),
+                            userContext);
 
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
+            var httpResponse =
+                    AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
+            assertEquals(httpResponse.statusCode(), result.getStatusCode());
+            assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
+        }
 
-        var httpResponse =
-                AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
-        assertEquals(httpResponse.statusCode(), result.getStatusCode());
-        assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
-    }
+        @ParameterizedTest
+        @EnumSource(AMCFailureReason.class)
+        void shouldHandleAllFailureReasons(AMCFailureReason failureReason) {
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            when(amcService.buildAuthorizationResult(
+                            anyString(),
+                            any(),
+                            any(),
+                            anyString(),
+                            anyString(),
+                            anyList(),
+                            any(RSAPublicKey.class),
+                            anyString(),
+                            any()))
+                    .thenReturn(Result.failure(failureReason));
 
-    @Test
-    void shouldReturnJwksRetrievalErrorWhenNoRsaKeyFound() throws KeySourceException {
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(jwkSource.get(any(), any())).thenReturn(List.of());
+            var event =
+                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                            CommonTestVariables.VALID_HEADERS,
+                            format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
-        var event =
-                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                        CommonTestVariables.VALID_HEADERS,
-                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+            APIGatewayProxyResponseEvent result =
+                    handler.handleRequestWithUserContext(
+                            event,
+                            context,
+                            new AMCAuthorizeRequest(AMCJourneyType.SFAD),
+                            userContext);
 
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
+            var httpResponse = AMCFailureHttpMapper.toHttpResponse(failureReason);
+            int expectedStatusCode = httpResponse.statusCode();
+            ErrorResponse expectedError = httpResponse.errorResponse();
 
-        var httpResponse =
-                AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
-        assertEquals(httpResponse.statusCode(), result.getStatusCode());
-        assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
-    }
-
-    @ParameterizedTest
-    @EnumSource(AMCFailureReason.class)
-    void shouldHandleAllFailureReasons(AMCFailureReason failureReason) {
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(amcService.buildAuthorizationResult(
-                        anyString(),
-                        any(),
-                        any(),
-                        anyString(),
-                        anyString(),
-                        anyList(),
-                        any(RSAPublicKey.class),
-                        anyString(),
-                        any()))
-                .thenReturn(Result.failure(failureReason));
-
-        var event =
-                ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                        CommonTestVariables.VALID_HEADERS,
-                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
-
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        event, context, new AMCAuthorizeRequest(AMCJourneyType.SFAD), userContext);
-
-        var httpResponse = AMCFailureHttpMapper.toHttpResponse(failureReason);
-        int expectedStatusCode = httpResponse.statusCode();
-        ErrorResponse expectedError = httpResponse.errorResponse();
-
-        assertEquals(expectedStatusCode, result.getStatusCode());
-        assertTrue(result.getBody().contains(expectedError.getMessage()));
+            assertEquals(expectedStatusCode, result.getStatusCode());
+            assertTrue(result.getBody().contains(expectedError.getMessage()));
+        }
     }
 }
