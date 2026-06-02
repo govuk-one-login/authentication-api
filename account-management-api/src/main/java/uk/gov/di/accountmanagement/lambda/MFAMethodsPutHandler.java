@@ -39,6 +39,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,6 +50,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
@@ -193,6 +195,17 @@ public class MFAMethodsPutHandler
 
         var mfaMethodResult = maybeMfaMethodResult.getSuccess();
 
+        var auditContextResult =
+                accountManagementAuditContext(
+                        configurationService, authenticationService, input, putRequest.userProfile);
+        if (auditContextResult.isFailure()) {
+            LOG.error(
+                    "Unable to build audit context for update MFA method request: {}",
+                    auditContextResult.getFailure());
+            return generateApiGatewayProxyErrorResponse(500, auditContextResult.getFailure());
+        }
+        var auditContext = auditContextResult.getSuccess();
+
         if (isDefaultMethod
                 && putRequest.request.mfaMethod().method()
                         instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
@@ -205,9 +218,9 @@ public class MFAMethodsPutHandler
                 var maybeAuditEventStatus =
                         sendAuditEvent(
                                 AUTH_INVALID_CODE_SENT,
-                                input,
                                 putRequest,
-                                mfaMethodResult.mfaMethod());
+                                mfaMethodResult.mfaMethod(),
+                                auditContext);
                 if (maybeAuditEventStatus.isFailure()) {
                     return maybeAuditEventStatus.getFailure();
                 }
@@ -222,7 +235,10 @@ public class MFAMethodsPutHandler
         if (!isSwitch) {
             var maybeAuditEventStatus =
                     sendAuditEvent(
-                            AUTH_CODE_VERIFIED, input, putRequest, mfaMethodResult.mfaMethod());
+                            AUTH_CODE_VERIFIED,
+                            putRequest,
+                            mfaMethodResult.mfaMethod(),
+                            auditContext);
             if (maybeAuditEventStatus.isFailure()) {
                 return maybeAuditEventStatus.getFailure();
             }
@@ -236,10 +252,11 @@ public class MFAMethodsPutHandler
                         putRequest.request);
 
         if (maybeUpdateResult.isFailure()) {
-            return handleUpdateMfaFailureReason(maybeUpdateResult.getFailure(), input, putRequest);
+            return handleUpdateMfaFailureReason(
+                    maybeUpdateResult.getFailure(), auditContext, putRequest);
         }
 
-        var auditResult = emitAuditEventForAuthAppUpdate(putRequest, input);
+        var auditResult = emitAuditEventForAuthAppUpdate(putRequest, auditContext);
 
         if (auditResult.isFailure()) {
             return auditResult.getFailure();
@@ -268,7 +285,10 @@ public class MFAMethodsPutHandler
 
             var maybeAuditEventsStatus =
                     sendSuccessAuditEvents(
-                            updateTypeIdentifier, input, putRequest, successfulUpdateMethods);
+                            updateTypeIdentifier,
+                            putRequest,
+                            successfulUpdateMethods,
+                            auditContext);
 
             if (maybeAuditEventsStatus.isFailure()) {
                 return maybeAuditEventsStatus.getFailure();
@@ -287,9 +307,7 @@ public class MFAMethodsPutHandler
     }
 
     private APIGatewayProxyResponseEvent handleUpdateMfaFailureReason(
-            MfaUpdateFailure failure,
-            APIGatewayProxyRequestEvent input,
-            ValidPutRequest putRequest) {
+            MfaUpdateFailure failure, AuditContext auditContext, ValidPutRequest putRequest) {
         var failureReason = failure.failureReason();
         var updateType = failure.updateTypeIdentifier();
         var mfaMethodToBeUpdated = failure.mfaMethodToUpdate();
@@ -307,9 +325,9 @@ public class MFAMethodsPutHandler
                                         MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS)) {
                             sendAuditEvent(
                                     AUTH_MFA_METHOD_SWITCH_FAILED,
-                                    input,
                                     putRequest,
-                                    mfaMethodToBeUpdated);
+                                    mfaMethodToBeUpdated,
+                                    auditContext);
                         }
                         yield generateApiGatewayProxyErrorResponse(
                                 500, ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
@@ -506,9 +524,9 @@ public class MFAMethodsPutHandler
 
     private Result<APIGatewayProxyResponseEvent, Void> sendSuccessAuditEvents(
             MFAMethodUpdateIdentifier updateTypeIdentifier,
-            APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
-            List<MFAMethod> updatedMfaMethods) {
+            List<MFAMethod> updatedMfaMethods,
+            AuditContext auditContext) {
         var postUpdateDefaultMfaMethod =
                 updatedMfaMethods.stream()
                         .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
@@ -517,9 +535,9 @@ public class MFAMethodsPutHandler
 
         return switch (updateTypeIdentifier) {
             case SWITCHED_MFA_METHODS -> handleSwitchedMfaMethodsAuditEvents(
-                    input, putRequest, updatedMfaMethods);
+                    auditContext, putRequest, updatedMfaMethods);
             case CHANGED_SMS -> sendAuditEvent(
-                    AUTH_UPDATE_PHONE_NUMBER, input, putRequest, postUpdateDefaultMfaMethod);
+                    AUTH_UPDATE_PHONE_NUMBER, putRequest, postUpdateDefaultMfaMethod, auditContext);
             case CHANGED_DEFAULT_MFA -> {
                 var isDefaultMfaMethodSMS =
                         postUpdateDefaultMfaMethod
@@ -528,9 +546,9 @@ public class MFAMethodsPutHandler
                 if (isDefaultMfaMethodSMS) {
                     yield sendAuditEvent(
                             AUTH_UPDATE_PHONE_NUMBER,
-                            input,
                             putRequest,
-                            postUpdateDefaultMfaMethod);
+                            postUpdateDefaultMfaMethod,
+                            auditContext);
                 }
 
                 yield Result.success(null);
@@ -540,7 +558,7 @@ public class MFAMethodsPutHandler
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> handleSwitchedMfaMethodsAuditEvents(
-            APIGatewayProxyRequestEvent input,
+            AuditContext auditContext,
             ValidPutRequest putRequest,
             List<MFAMethod> updatedMfaMethods) {
         var postUpdateDefaultMfaMethod =
@@ -552,9 +570,9 @@ public class MFAMethodsPutHandler
         var maybeCompletedAuditEvent =
                 sendAuditEvent(
                         AUTH_MFA_METHOD_SWITCH_COMPLETED,
-                        input,
                         putRequest,
-                        postUpdateDefaultMfaMethod);
+                        postUpdateDefaultMfaMethod,
+                        auditContext);
 
         if (maybeCompletedAuditEvent.isFailure()) {
             return maybeCompletedAuditEvent;
@@ -565,18 +583,20 @@ public class MFAMethodsPutHandler
 
     private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
             AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
             ValidPutRequest putRequest,
-            MFAMethod mfaMethod) {
-        return accountManagementAuditContext(
-                        configurationService, authenticationService, input, putRequest.userProfile)
+            MFAMethod mfaMethod,
+            AuditContext auditContext) {
+        var phoneNumber =
+                mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
+                        ? mfaMethod.getDestination()
+                        : AuditService.UNKNOWN;
+        var contextWithPhoneNumber = auditContext.withPhoneNumber(phoneNumber);
+
+        var pairs = metadataPairsForEvent(auditEvent, putRequest, mfaMethod);
+
+        return AuditHelper.sendAuditEvent(
+                        auditEvent, contextWithPhoneNumber, auditService, LOG, pairs)
                 .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
-                .map(context -> buildAuditContext(auditEvent, putRequest, mfaMethod, context))
-                .flatMap(
-                        context ->
-                                AuditHelper.sendAuditEvent(auditEvent, context, auditService, LOG)
-                                        .mapFailure(
-                                                f -> generateApiGatewayProxyErrorResponse(500, f)))
                 .map(
                         success -> {
                             LOG.info("Successfully submitted audit event: {}", auditEvent.name());
@@ -585,86 +605,70 @@ public class MFAMethodsPutHandler
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> emitAuditEventForAuthAppUpdate(
-            ValidPutRequest putRequest, APIGatewayProxyRequestEvent input) {
+            ValidPutRequest putRequest, AuditContext auditContext) {
         if (!(putRequest.request.mfaMethod().method() instanceof RequestAuthAppMfaDetail)) {
             return Result.success(null);
-        }
-
-        var maybeAuditContext =
-                accountManagementAuditContext(
-                        configurationService, dynamoService, input, putRequest.userProfile);
-
-        if (maybeAuditContext.isFailure()) {
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(401, maybeAuditContext.getFailure()));
         }
 
         var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.getValue());
         var priority = putRequest.request.mfaMethod().priorityIdentifier().toString().toLowerCase();
         var priorityPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority);
 
-        var auditContext =
-                maybeAuditContext
-                        .getSuccess()
-                        .withMetadataItem(mfaTypePair)
-                        .withMetadataItem(priorityPair);
-
         auditService.submitAuditEvent(
-                AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
+                AUTH_UPDATE_PROFILE_AUTH_APP,
+                auditContext,
+                AUDIT_EVENT_COMPONENT_ID_HOME,
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                mfaTypePair,
+                priorityPair);
 
         return Result.success(null);
     }
 
-    private AuditContext buildAuditContext(
-            AccountManagementAuditableEvent auditEvent,
+    private AuditService.MetadataPair[] metadataPairsForEvent(
+            AccountManagementAuditableEvent auditableEvent,
             ValidPutRequest putRequest,
-            MFAMethod retrievedMfaMethod,
-            AuditContext baseContext) {
-        var phoneNumber =
-                retrievedMfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
-                        ? retrievedMfaMethod.getDestination()
-                        : AuditService.UNKNOWN;
-        var context = baseContext.withPhoneNumber(phoneNumber);
+            MFAMethod retrievedMfaMethod) {
+        var mfaTypePair =
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, retrievedMfaMethod.getMfaMethodType());
+        var priorityPair =
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                        retrievedMfaMethod.getPriority().toLowerCase());
+        return switch (auditableEvent) {
+            case AUTH_MFA_METHOD_SWITCH_COMPLETED -> new AuditService.MetadataPair[] {
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR, mfaTypePair
+            };
+            case AUTH_UPDATE_PHONE_NUMBER -> new AuditService.MetadataPair[] {
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR, priorityPair
+            };
+            case AUTH_MFA_METHOD_SWITCH_FAILED, AUTH_INVALID_CODE_SENT -> new AuditService
+                            .MetadataPair[] {
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR, mfaTypePair, priorityPair
+            };
+            case AUTH_CODE_VERIFIED -> pairsForAuthCodeVerified(putRequest);
+            default -> new AuditService.MetadataPair[] {};
+        };
+    }
 
-        if (!(auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)
-                || auditEvent.equals(AUTH_CODE_VERIFIED))) {
-            var mfaTypePair =
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, retrievedMfaMethod.getMfaMethodType());
-            context = context.withMetadataItem(mfaTypePair);
+    private AuditService.MetadataPair[] pairsForAuthCodeVerified(ValidPutRequest putRequest) {
+        var pairs = new ArrayList<AuditService.MetadataPair>();
+        pairs.add(ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR);
+
+        var requestedMethod = putRequest.request.mfaMethod();
+
+        if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
+                && requestSmsMfaDetail.otp() != null) {
+            pairs.add(pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, requestSmsMfaDetail.otp()));
+            pairs.add(pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name()));
         }
 
-        if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
-                || auditEvent.equals(AUTH_INVALID_CODE_SENT)
-                || auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
-            var priorityPair =
-                    pair(
-                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                            retrievedMfaMethod.getPriority().toLowerCase());
-            context = context.withMetadataItem(priorityPair);
-        }
+        pairs.add(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"));
+        var priority = requestedMethod.priorityIdentifier().name().toLowerCase();
+        pairs.add(pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority));
+        var mfaType = requestedMethod.method().mfaMethodType().toString();
+        pairs.add(pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType));
 
-        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-            MfaMethodUpdateRequest.MfaMethod requestedMethod = putRequest.request.mfaMethod();
-            if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
-                    && requestSmsMfaDetail.otp() != null) {
-                var codeEnteredPair =
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, requestSmsMfaDetail.otp());
-                var notificationTypePair =
-                        pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
-                context =
-                        context.withMetadataItem(codeEnteredPair)
-                                .withMetadataItem(notificationTypePair);
-            }
-            var priority = requestedMethod.priorityIdentifier().name().toLowerCase();
-            var mfaType = requestedMethod.method().mfaMethodType().toString();
-            var priorityPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, priority);
-            var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType);
-            context =
-                    context.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(mfaTypePair);
-        }
-
-        return context;
+        return pairs.toArray(AuditService.MetadataPair[]::new);
     }
 }
