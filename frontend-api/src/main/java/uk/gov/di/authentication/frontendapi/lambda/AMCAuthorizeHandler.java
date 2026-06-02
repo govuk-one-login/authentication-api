@@ -81,13 +81,6 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.auditService = new AuditService(configurationService);
     }
 
-    @SuppressWarnings("java:S1185")
-    @Override
-    public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
-    }
-
     public AMCAuthorizeHandler(
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
@@ -105,6 +98,13 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.jwkSource = jwkSource;
         this.dynamoAmcStateService = amcStateService;
         this.auditService = auditService;
+    }
+
+    @SuppressWarnings("java:S1185")
+    @Override
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return super.handleRequest(input, context);
     }
 
     @Override
