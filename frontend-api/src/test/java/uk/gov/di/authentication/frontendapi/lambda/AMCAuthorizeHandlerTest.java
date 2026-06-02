@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -22,7 +23,6 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
-import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -53,6 +53,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
@@ -140,7 +141,7 @@ class AMCAuthorizeHandlerTest {
                                     new AMCAuthorizationUrlAndCookie(expectedUrl, AMC_COOKIE)));
 
             var event =
-                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
+                    apiRequestEventWithHeadersAndBody(
                             CommonTestVariables.VALID_HEADERS,
                             format("{\"journeyType\":\"%s\"}", amcJourneyType));
 
@@ -181,19 +182,25 @@ class AMCAuthorizeHandlerTest {
 
     @Nested
     class Failure {
+        private static final APIGatewayProxyRequestEvent VALID_EVENT =
+                apiRequestEventWithHeadersAndBody(
+                        CommonTestVariables.VALID_HEADERS,
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+
+        @BeforeEach
+        void setupUserProfile() {
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+        }
+
         @Test
         void shouldReturn400WhenUserProfileNotFound() {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.empty());
 
-            var event =
-                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                            CommonTestVariables.VALID_HEADERS,
-                            format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
-
             APIGatewayProxyResponseEvent result =
                     handler.handleRequestWithUserContext(
-                            event,
+                            VALID_EVENT,
                             context,
                             new AMCAuthorizeRequest(AMCJourneyType.SFAD),
                             userContext);
@@ -207,19 +214,12 @@ class AMCAuthorizeHandlerTest {
         @Test
         void shouldReturnJwksRetrievalErrorWhenKeySourceExceptionThrown()
                 throws KeySourceException {
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
             when(jwkSource.get(any(), any()))
                     .thenThrow(new KeySourceException("JWKS endpoint unreachable"));
 
-            var event =
-                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                            CommonTestVariables.VALID_HEADERS,
-                            format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
-
             APIGatewayProxyResponseEvent result =
                     handler.handleRequestWithUserContext(
-                            event,
+                            VALID_EVENT,
                             context,
                             new AMCAuthorizeRequest(AMCJourneyType.SFAD),
                             userContext);
@@ -232,18 +232,11 @@ class AMCAuthorizeHandlerTest {
 
         @Test
         void shouldReturnJwksRetrievalErrorWhenNoRsaKeyFound() throws KeySourceException {
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
             when(jwkSource.get(any(), any())).thenReturn(List.of());
-
-            var event =
-                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                            CommonTestVariables.VALID_HEADERS,
-                            format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
 
             APIGatewayProxyResponseEvent result =
                     handler.handleRequestWithUserContext(
-                            event,
+                            VALID_EVENT,
                             context,
                             new AMCAuthorizeRequest(AMCJourneyType.SFAD),
                             userContext);
@@ -257,8 +250,6 @@ class AMCAuthorizeHandlerTest {
         @ParameterizedTest
         @EnumSource(AMCFailureReason.class)
         void shouldHandleAllFailureReasons(AMCFailureReason failureReason) {
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
             when(amcService.buildAuthorizationResult(
                             anyString(),
                             any(),
@@ -271,23 +262,17 @@ class AMCAuthorizeHandlerTest {
                             any()))
                     .thenReturn(Result.failure(failureReason));
 
-            var event =
-                    ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                            CommonTestVariables.VALID_HEADERS,
-                            format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
-
             APIGatewayProxyResponseEvent result =
                     handler.handleRequestWithUserContext(
-                            event,
+                            VALID_EVENT,
                             context,
                             new AMCAuthorizeRequest(AMCJourneyType.SFAD),
                             userContext);
 
-            var httpResponse = AMCFailureHttpMapper.toHttpResponse(failureReason);
-            int expectedStatusCode = httpResponse.statusCode();
-            ErrorResponse expectedError = httpResponse.errorResponse();
+            var expectedHttpResponse = AMCFailureHttpMapper.toHttpResponse(failureReason);
+            var expectedError = expectedHttpResponse.errorResponse();
 
-            assertEquals(expectedStatusCode, result.getStatusCode());
+            assertEquals(expectedHttpResponse.statusCode(), result.getStatusCode());
             assertTrue(result.getBody().contains(expectedError.getMessage()));
         }
     }
