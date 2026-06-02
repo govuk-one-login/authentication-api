@@ -16,6 +16,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
@@ -51,11 +52,16 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
@@ -196,6 +202,36 @@ class AMCAuthorizeHandlerTest {
                             stateCaptor.capture());
         }
 
+        @ParameterizedTest
+        @MethodSource("amcJourneyTypeAndExpectedScope")
+        void shouldEmitTheRelevantAuditEvent(
+                AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
+            var request = new AMCAuthorizeRequest(amcJourneyType);
+            var result =
+                    handler.handleRequestWithUserContext(
+                            EVENT_WITH_VALID_HEADERS, context, request, userContext);
+
+            assertEquals(200, result.getStatusCode());
+
+            var expectedAuditContext =
+                    AuditContext.emptyAuditContext()
+                            .withClientId(CLIENT_ID)
+                            .withClientSessionId(CLIENT_SESSION_ID)
+                            .withSessionId(SESSION_ID)
+                            .withSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                            .withEmail(EMAIL)
+                            .withIpAddress(IP_ADDRESS)
+                            .withPersistentSessionId(DI_PERSISTENT_SESSION_ID);
+            var expectedJourneyTypePair = pair("journey-type", SIGN_IN);
+            var expectedAmcScopePair = pair("amc_scope", amcJourneyType);
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_AMC_AUTHORISATION_REQUESTED,
+                            expectedAuditContext,
+                            expectedJourneyTypePair,
+                            expectedAmcScopePair);
+        }
+
         private static Stream<Arguments> amcJourneyTypeAndExpectedScope() {
             return Stream.of(
                     Arguments.of(AMCJourneyType.SFAD, AMCScope.ACCOUNT_DELETE),
@@ -232,6 +268,8 @@ class AMCAuthorizeHandlerTest {
             assertTrue(
                     result.getBody()
                             .contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
         }
 
         @Test
@@ -251,6 +289,8 @@ class AMCAuthorizeHandlerTest {
                     AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
             assertEquals(httpResponse.statusCode(), result.getStatusCode());
             assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
         }
 
         @Test
@@ -268,6 +308,8 @@ class AMCAuthorizeHandlerTest {
                     AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
             assertEquals(httpResponse.statusCode(), result.getStatusCode());
             assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
         }
 
         @ParameterizedTest
@@ -297,6 +339,8 @@ class AMCAuthorizeHandlerTest {
 
             assertEquals(expectedHttpResponse.statusCode(), result.getStatusCode());
             assertTrue(result.getBody().contains(expectedError.getMessage()));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
         }
     }
 }

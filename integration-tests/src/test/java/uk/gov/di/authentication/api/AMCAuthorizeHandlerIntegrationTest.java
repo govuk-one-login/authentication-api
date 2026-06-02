@@ -18,14 +18,17 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AMCStateExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
@@ -50,7 +53,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_AMC_SCOPE;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
 
 @ExtendWith(SystemStubsExtension.class)
 class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -103,6 +111,11 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         environment.set(
                 "AMC_JWKS_URL",
                 "http://localhost:" + wireMockServer.port() + "/.well-known/jwks.json");
+    }
+
+    @BeforeEach
+    void setUp() {
+        txmaAuditQueue.clear();
     }
 
     @AfterAll
@@ -195,6 +208,33 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertDoesNotThrow(() -> encryptedJWT.decrypt(decrypter));
     }
 
+    @ParameterizedTest
+    @EnumSource(AMCJourneyType.class)
+    void shouldEmitCorrectAuditEvent(AMCJourneyType amcJourneyType) {
+        handler = new AMCAuthorizeHandler();
+
+        var requestBody =
+                """
+                {
+                    "journeyType": "%s"
+                    }
+                """
+                        .formatted(amcJourneyType);
+        var response =
+                makeRequest(
+                        Optional.of(requestBody),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+
+        Map<String, Object> expectedMetadataPairs =
+                Map.ofEntries(
+                        Map.entry(EXTENSIONS_JOURNEY_TYPE, "SIGN_IN"),
+                        Map.entry(EXTENSIONS_AMC_SCOPE, amcJourneyType.name()));
+        verifyAuditEvents(Map.of(AUTH_AMC_AUTHORISATION_REQUESTED, expectedMetadataPairs));
+    }
+
     @Test
     void shouldReturn400WhenUserProfileDoesNotExist() {
         handler = new AMCAuthorizeHandler();
@@ -215,5 +255,23 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Map.of());
 
         assertThat(response, hasStatus(400));
+    }
+
+    private void verifyAuditEvents(Map<AuditableEvent, Map<String, Object>> eventExpectations) {
+        var receivedEvents =
+                assertTxmaAuditEventsReceived(txmaAuditQueue, eventExpectations.keySet());
+
+        for (Map.Entry<AuditableEvent, Map<String, Object>> eventEntry :
+                eventExpectations.entrySet()) {
+            var eventName = eventEntry.getKey().toString();
+            var attributes = eventEntry.getValue();
+
+            var expectation =
+                    new AuditEventExpectation(
+                            FrontendAuditableEvent.valueOf(eventName), attributes);
+
+            expectation.assertPublished(receivedEvents);
+            assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        }
     }
 }

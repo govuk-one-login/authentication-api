@@ -21,6 +21,7 @@ public interface AuditTestConstants {
     String EXTENSIONS_NOTIFICATION_TYPE = "extensions.notification-type";
     String EXTENSIONS_MFA_CODE_ENTERED = "extensions.MFACodeEntered";
     String EXTENSIONS_MAX_SMS_COUNT = "extensions.MaxSmsCount";
+    String EXTENSIONS_AMC_SCOPE = "extensions.amc_scope";
     String USER_EMAIL_FIELD = "user.email";
     String EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE = "extensions.phone_number_country_code";
     String EXTENSIONS_MFA_RESET_TYPE = "extensions.mfaResetType";
