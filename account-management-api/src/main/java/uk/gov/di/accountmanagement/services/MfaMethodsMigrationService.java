@@ -7,14 +7,11 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
@@ -24,11 +21,10 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
@@ -113,21 +109,13 @@ public class MfaMethodsMigrationService {
                         .withPhoneNumber(userProfile.getPhoneNumber())
                         .withTxmaAuditEncoded(AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
-        auditContext =
-                auditContext.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL, hadPartial));
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.mfaMethodType()));
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_MANAGEMENT));
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED, migrationSucceeded));
-
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
                 auditContext,
-                AUDIT_EVENT_COMPONENT_ID_HOME);
+                AUDIT_EVENT_COMPONENT_ID_HOME,
+                pair(AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL, hadPartial),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.mfaMethodType()),
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                pair(AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED, migrationSucceeded));
     }
 }

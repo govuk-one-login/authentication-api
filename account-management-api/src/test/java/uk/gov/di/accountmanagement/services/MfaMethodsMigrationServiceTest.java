@@ -237,21 +237,15 @@ class MfaMethodsMigrationServiceTest {
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
 
             // Then
-            var expectedAuditContext =
-                    BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
-
-            expectedAuditContext =
-                    expectedAuditContext
-                            .withMetadataItem(pair("had-partial", true))
-                            .withMetadataItem(pair("mfa-type", expectedMfaMethodType))
-                            .withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT))
-                            .withMetadataItem(pair("migration-succeeded", true));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
-                            expectedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber()),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("had-partial", true),
+                            pair("mfa-type", expectedMfaMethodType),
+                            pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
+                            pair("migration-succeeded", true));
         }
 
         @ParameterizedTest
@@ -268,21 +262,15 @@ class MfaMethodsMigrationServiceTest {
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
 
             // Then
-            var expectedAuditContext =
-                    BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
-
-            expectedAuditContext =
-                    expectedAuditContext
-                            .withMetadataItem(pair("had-partial", false))
-                            .withMetadataItem(pair("mfa-type", expectedMfaMethodType))
-                            .withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT))
-                            .withMetadataItem(pair("migration-succeeded", false));
-
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
-                            expectedAuditContext,
-                            AUDIT_EVENT_COMPONENT_ID_HOME);
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber()),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("had-partial", false),
+                            pair("mfa-type", expectedMfaMethodType),
+                            pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
+                            pair("migration-succeeded", false));
         }
     }
 
