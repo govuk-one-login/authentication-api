@@ -113,15 +113,6 @@ public class MfaMethodsMigrationService {
                         .withPhoneNumber(userProfile.getPhoneNumber())
                         .withTxmaAuditEncoded(AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
-        if (mfaMethod instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            auditContext =
-                    auditContext.withMetadataItem(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
-                                    PhoneNumberHelper.getCountry(
-                                            requestSmsMfaDetail.phoneNumber())));
-        }
-
         auditContext =
                 auditContext.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL, hadPartial));
         auditContext =

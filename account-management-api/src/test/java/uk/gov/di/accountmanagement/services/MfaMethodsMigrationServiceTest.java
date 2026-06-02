@@ -240,12 +240,6 @@ class MfaMethodsMigrationServiceTest {
             var expectedAuditContext =
                     BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
 
-            if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
-                expectedAuditContext =
-                        expectedAuditContext.withMetadataItem(
-                                pair("phone_number_country_code", "44"));
-            }
-
             expectedAuditContext =
                     expectedAuditContext
                             .withMetadataItem(pair("had-partial", true))
@@ -276,12 +270,6 @@ class MfaMethodsMigrationServiceTest {
             // Then
             var expectedAuditContext =
                     BASE_AUDIT_CONTEXT.withPhoneNumber(userProfile.getPhoneNumber());
-
-            if (expectedMfaMethodType.equals(MFAMethodType.SMS)) {
-                expectedAuditContext =
-                        expectedAuditContext.withMetadataItem(
-                                pair("phone_number_country_code", "44"));
-            }
 
             expectedAuditContext =
                     expectedAuditContext
