@@ -416,22 +416,19 @@ public class MFAMethodsCreateHandler
             MfaMethodCreateRequest mfaMethodCreateRequest, AuditContext baseAuditContext) {
         if (mfaMethodCreateRequest.mfaMethod().method()
                 instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            return enrichWithSmsDetails(baseAuditContext, requestSmsMfaDetail);
+            String formattedPhoneNumber;
+            try {
+                formattedPhoneNumber =
+                        PhoneNumberHelper.formatPhoneNumber(requestSmsMfaDetail.phoneNumber());
+            } catch (RuntimeException e) {
+                LOG.warn("Couldn't format phone number, audit event using raw number from request");
+                formattedPhoneNumber = requestSmsMfaDetail.phoneNumber();
+            }
+
+            return baseAuditContext.withPhoneNumber(formattedPhoneNumber);
         } else {
             return baseAuditContext;
         }
-    }
-
-    private AuditContext enrichWithSmsDetails(AuditContext context, RequestSmsMfaDetail smsDetail) {
-        String formattedPhoneNumber;
-        try {
-            formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(smsDetail.phoneNumber());
-        } catch (RuntimeException e) {
-            LOG.warn("Couldn't format phone number, audit event using raw number from request");
-            formattedPhoneNumber = smsDetail.phoneNumber();
-        }
-
-        return context.withPhoneNumber(formattedPhoneNumber);
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(
