@@ -133,8 +133,7 @@ class MFAMethodsCreateHandlerTest {
                     .withSubjectId(TEST_INTERNAL_SUBJECT)
                     .withIpAddress(IP_ADDRESS)
                     .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
-                    .withPersistentSessionId(PERSISTENT_ID)
-                    .withMetadataItem(pair("journey-type", ACCOUNT_MANAGEMENT.getValue()));
+                    .withPersistentSessionId(PERSISTENT_ID);
 
     private MFAMethodsCreateHandler handler;
 
@@ -288,6 +287,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_CODE_VERIFIED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.name()),
                             pair("mfa-method", BACKUP.name().toLowerCase()),
                             pair("account-recovery", "false"),
@@ -299,6 +299,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_COMPLETED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.name()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
 
@@ -307,6 +308,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_UPDATE_PHONE_NUMBER,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.name()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
         }
@@ -385,6 +387,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_CODE_VERIFIED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(null),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", AUTH_APP.name()),
                             pair("mfa-method", BACKUP.name().toLowerCase()),
                             pair("account-recovery", "false"));
@@ -394,6 +397,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_COMPLETED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(null),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", AUTH_APP.name()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
         }
@@ -455,6 +459,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_CODE_VERIFIED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.name()),
                             pair("mfa-method", BACKUP.name().toLowerCase()),
                             pair("account-recovery", "false"),
@@ -543,6 +548,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_FAILED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(INTERNATIONAL_MOBILE_NUMBER),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
         }
@@ -643,6 +649,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_FAILED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
         }
@@ -672,6 +679,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_FAILED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber("not a real phone number"),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
         }
@@ -697,6 +705,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_FAILED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(invalidPhoneNumber),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
 
@@ -731,6 +740,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_INVALID_CODE_SENT,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
 
@@ -759,6 +769,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_FAILED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", requestDetail.mfaMethodType().toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
         }
@@ -785,6 +796,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_FAILED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(null),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", AUTH_APP.toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
         }
@@ -815,6 +827,7 @@ class MFAMethodsCreateHandlerTest {
                             AUTH_MFA_METHOD_ADD_FAILED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(null),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", AUTH_APP.toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
         }

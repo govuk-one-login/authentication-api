@@ -47,7 +47,8 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
-import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContextWithJourneyType;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
@@ -391,11 +392,12 @@ public class MFAMethodsCreateHandler
                     AUTH_UPDATE_PHONE_NUMBER,
                     AUTH_MFA_METHOD_ADD_FAILED,
                     AUTH_INVALID_CODE_SENT -> new AuditService.MetadataPair[] {
-                mfaTypePair, mfaMethodPair
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR, mfaTypePair, mfaMethodPair
             };
             case AUTH_CODE_VERIFIED -> {
                 if (createRequest.mfaMethod().method() instanceof RequestSmsMfaDetail smsDetail) {
                     yield new AuditService.MetadataPair[] {
+                        ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
                         mfaTypePair,
                         mfaMethodPair,
                         accountRecoveryPair,
@@ -404,7 +406,10 @@ public class MFAMethodsCreateHandler
                     };
                 } else {
                     yield new AuditService.MetadataPair[] {
-                        mfaTypePair, mfaMethodPair, accountRecoveryPair
+                        ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                        mfaTypePair,
+                        mfaMethodPair,
+                        accountRecoveryPair
                     };
                 }
             }
@@ -437,7 +442,7 @@ public class MFAMethodsCreateHandler
             UserProfile userProfile,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
         var auditContextResult =
-                accountManagementAuditContextWithJourneyType(
+                accountManagementAuditContext(
                         configurationService, dynamoService, input, userProfile);
         if (auditContextResult.isFailure()) {
             LOG.error(
