@@ -124,7 +124,7 @@ Mappings:
     authdev3:
       cloudwatchLogRetentionInDays: 1
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3a47bbdd-4144-4d1a-959f-56b928fcfe3c
-      accountDataJwksUrl: https://y3s69ubaz5.execute-api.eu-west-2.amazonaws.com/authdev3/.well-known/amc-jwks.json
+      accountDataJwksUrl: https://y3s69ubaz5.execute-api.eu-west-2.amazonaws.com/authdev3/.well-known/ad-jwks.json
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
       amcClientId: auth
     dev:
