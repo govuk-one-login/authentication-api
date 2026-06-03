@@ -8,9 +8,9 @@ import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.helpers.CommonTestVariables;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.LocalDateTime;
 
@@ -33,7 +33,7 @@ import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.bu
 class DynamoPasskeyServiceIntegrationTest {
 
     DynamoPasskeyService dynamoPasskeyService =
-            new DynamoPasskeyService(ConfigurationService.getInstance());
+            new DynamoPasskeyService(new ConfigurationService());
 
     @RegisterExtension
     protected static final AuthenticatorExtension authenticatorExtension =

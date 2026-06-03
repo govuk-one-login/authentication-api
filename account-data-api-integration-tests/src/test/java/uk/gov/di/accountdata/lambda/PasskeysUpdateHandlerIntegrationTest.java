@@ -8,8 +8,8 @@ import uk.gov.di.accountdata.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.accountdata.extensions.AuthenticatorExtension;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.lambda.PasskeysUpdateHandler;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -28,7 +28,7 @@ import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.bu
 class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     DynamoPasskeyService dynamoPasskeyService =
-            new DynamoPasskeyService(ConfigurationService.getInstance());
+            new DynamoPasskeyService(new ConfigurationService());
 
     @RegisterExtension
     protected static final AuthenticatorExtension authenticatorExtension =
@@ -46,7 +46,7 @@ class PasskeysUpdateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @BeforeEach
     void setUp() {
-        handler = new PasskeysUpdateHandler(ConfigurationService.getInstance());
+        handler = new PasskeysUpdateHandler(new ConfigurationService());
         dynamoPasskeyService.savePasskeyIfUnique(EXISTING_PASSKEY);
     }
 

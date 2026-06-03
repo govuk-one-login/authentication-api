@@ -9,7 +9,6 @@ import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.Passke
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.LocalDateTime;
 import java.util.List;

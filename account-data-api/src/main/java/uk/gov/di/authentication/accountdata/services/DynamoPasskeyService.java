@@ -7,8 +7,6 @@ import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.Passke
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysDeleteFailureReason;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.services.BaseDynamoService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
 import java.util.Optional;

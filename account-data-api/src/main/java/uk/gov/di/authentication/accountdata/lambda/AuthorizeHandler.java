@@ -18,10 +18,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.accountdata.entity.AuthorizeException;
 import uk.gov.di.authentication.accountdata.entity.UnauthorizedException;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.RemoteJwksService;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.MalformedURLException;
 import java.util.Date;
@@ -37,7 +37,7 @@ public class AuthorizeHandler
     private RemoteJwksService jwksService;
 
     public AuthorizeHandler() {
-        this(ConfigurationService.getInstance());
+        this(new ConfigurationService());
     }
 
     public AuthorizeHandler(ConfigurationService configurationService) {
@@ -51,7 +51,7 @@ public class AuthorizeHandler
     }
 
     public AuthorizeHandler(RemoteJwksService jwksService) {
-        this.configurationService = ConfigurationService.getInstance();
+        this.configurationService = new ConfigurationService();
         this.jwksService = jwksService;
     }
 
