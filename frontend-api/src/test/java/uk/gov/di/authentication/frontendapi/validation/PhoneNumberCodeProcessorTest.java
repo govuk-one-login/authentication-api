@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -106,8 +105,7 @@ class PhoneNumberCodeProcessorTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                    new ArrayList<>());
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
     void setup() {

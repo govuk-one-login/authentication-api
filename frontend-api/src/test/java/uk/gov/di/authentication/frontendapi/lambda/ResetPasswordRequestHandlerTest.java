@@ -43,7 +43,6 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -143,8 +142,7 @@ class ResetPasswordRequestHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS),
-                    new ArrayList<>());
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =

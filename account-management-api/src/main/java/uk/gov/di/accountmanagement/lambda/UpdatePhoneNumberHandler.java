@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import java.util.ArrayList;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
@@ -164,8 +163,7 @@ public class UpdatePhoneNumberHandler
                             IpAddressHelper.extractIpAddress(input),
                             updatePhoneNumberRequest.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
-                            new ArrayList<>());
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
             auditService.submitAuditEvent(
                     AUTH_UPDATE_PHONE_NUMBER, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);

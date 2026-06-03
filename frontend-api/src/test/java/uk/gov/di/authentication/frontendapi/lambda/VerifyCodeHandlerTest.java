@@ -52,7 +52,6 @@ import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -174,8 +173,7 @@ class VerifyCodeHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS),
-                    new ArrayList<>());
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     private final AuditContext AUDIT_CONTEXT_FOR_TEST_CLIENT =
             AUDIT_CONTEXT.withSessionId(authSession.getSessionId()).withClientId(TEST_CLIENT_ID);

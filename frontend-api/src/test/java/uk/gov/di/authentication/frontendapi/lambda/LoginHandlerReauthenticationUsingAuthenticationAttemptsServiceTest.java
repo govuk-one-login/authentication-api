@@ -50,7 +50,6 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -134,8 +133,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty(),
-                    new ArrayList<>());
+                    Optional.empty());
 
     private LoginHandler handler;
 

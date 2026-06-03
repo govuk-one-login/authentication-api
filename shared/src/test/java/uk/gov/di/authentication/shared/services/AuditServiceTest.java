@@ -9,7 +9,6 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -48,8 +47,7 @@ class AuditServiceTest {
                     "ip-address",
                     "phone-number",
                     "persistent-session-id",
-                    Optional.empty(),
-                    new ArrayList<>());
+                    Optional.empty());
 
     enum TestEvents implements AuditableEvent {
         AUTH_TEST_EVENT_ONE;
@@ -78,8 +76,7 @@ class AuditServiceTest {
                         "ip-address",
                         "phone-number",
                         "persistent-session-id",
-                        Optional.empty(),
-                        new ArrayList<>());
+                        Optional.empty());
 
         auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, myContext);
 

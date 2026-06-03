@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -75,8 +74,7 @@ class AuthenticateHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     PERSISTENT_SESSION_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                    new ArrayList<>());
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
     private String clientSubjectId;
 
     @BeforeEach

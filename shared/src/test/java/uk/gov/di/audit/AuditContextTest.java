@@ -59,8 +59,7 @@ class AuditContextTest {
                         "ip-address",
                         "phone-number",
                         "persistent-session-id",
-                        Optional.empty(),
-                        new ArrayList<>());
+                        Optional.empty());
 
         // When
         auditContext = auditContext.withMetadataItem(pair("key1", "value1", false));
