@@ -10,38 +10,59 @@ import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
+import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.TokenResponseError;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.services.JwtService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_FAILED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_OUTCOME;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_AMC_SCOPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_STATE_MISMATCH;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final AMCService amcService;
     private final DynamoAmcStateService dynamoAmcStateService;
+    private final AuditService auditService;
 
     private static final Logger LOG = LogManager.getLogger(AMCCallbackHandler.class);
 
@@ -58,6 +79,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         new JwtService(new KmsConnectionService(configurationService)),
                         new AccessTokenConstructorService(configurationService));
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public AMCCallbackHandler(
@@ -65,7 +87,8 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
             AMCService amcService,
-            DynamoAmcStateService dynamoAmcStateService) {
+            DynamoAmcStateService dynamoAmcStateService,
+            AuditService auditService) {
         super(
                 AMCCallbackRequest.class,
                 configurationService,
@@ -73,6 +96,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                 authSessionService);
         this.amcService = amcService;
         this.dynamoAmcStateService = dynamoAmcStateService;
+        this.auditService = auditService;
     }
 
     @SuppressWarnings("java:S1185")
@@ -150,9 +174,90 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                             return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(error);
                         },
                         response -> {
+                            JourneyOutcomeResponse journeyOutcome;
+                            try {
+                                journeyOutcome =
+                                        SerializationService.getInstance()
+                                                .readValue(
+                                                        response.getContent(),
+                                                        JourneyOutcomeResponse.class);
+                            } catch (JsonException e) {
+                                LOG.error("Failed to parse journey outcome response", e);
+                                return generateApiGatewayProxyErrorResponse(
+                                        500, ErrorResponse.AMC_JOURNEY_OUTCOME_UNEXPECTED_ERROR);
+                            }
+
+                            emitAuthorisationReceivedAuditEvent(journeyOutcome, userContext, input);
+
                             LOG.info("Journey outcome received successfully");
                             return generateApiGatewayProxyResponse(200, response.getContent());
                         });
+    }
+
+    private void emitAuthorisationReceivedAuditEvent(
+            JourneyOutcomeResponse journeyOutcome,
+            UserContext userContext,
+            APIGatewayProxyRequestEvent input) {
+
+        var failedActions = new ArrayList<String>();
+        var actionErrors = new ArrayList<String>();
+        var allActions = new ArrayList<String>();
+
+        for (var action : Optional.ofNullable(journeyOutcome.actions()).orElse(List.of())) {
+            allActions.add(action.action());
+            if (!action.success()) {
+                failedActions.add(action.action());
+                if (action.details() != null && action.details().error() != null) {
+                    actionErrors.add(action.details().error().description());
+                }
+            }
+        }
+
+        AuthSessionItem authSessionItem = userContext.getAuthSession();
+
+        var auditContext =
+                new AuditContext(
+                        authSessionItem.getClientId(),
+                        userContext.getClientSessionId(),
+                        authSessionItem.getSessionId(),
+                        authSessionItem.getInternalCommonSubjectId(),
+                        authSessionItem.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()),
+                        List.of());
+
+        Object journeyType =
+                AMCScope.fromValue(journeyOutcome.scope())
+                        .<Object>map(
+                                scope ->
+                                        switch (scope) {
+                                            case PASSKEY_CREATE -> JourneyType.SIGN_IN;
+                                                // This may not be the right journey type for
+                                                // ACCOUNT_DELETE,
+                                                // this needs to be clarified as part of the SFAD
+                                                // initiative
+                                            case ACCOUNT_DELETE -> JourneyType.ACCOUNT_RECOVERY;
+                                        })
+                        .orElseGet(
+                                () -> {
+                                    LOG.info(
+                                            "Unexpected scope returned in AMC journey outcome response");
+                                    return AuditService.UNKNOWN;
+                                });
+
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_RECEIVED,
+                auditContext,
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_OUTCOME,
+                        journeyOutcome.success()),
+                pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS, allActions),
+                pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS, actionErrors),
+                pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_FAILED, failedActions),
+                pair(AUDIT_EVENT_EXTENSIONS_AMC_SCOPE, journeyOutcome.scope()),
+                pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType));
     }
 
     private Result<TokenResponseError, TokenResponse> sendTokenRequest(
