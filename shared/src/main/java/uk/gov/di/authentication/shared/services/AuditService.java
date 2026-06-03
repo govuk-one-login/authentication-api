@@ -103,6 +103,8 @@ public class AuditService {
                         .withPersistentSessionId(auditContext.persistentSessionId())
                         .withGovukSigninJourneyId(auditContext.clientSessionId());
 
+        LOG.info("audit user phone is {}", user.getPhone());
+
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(auditContext.clientId())

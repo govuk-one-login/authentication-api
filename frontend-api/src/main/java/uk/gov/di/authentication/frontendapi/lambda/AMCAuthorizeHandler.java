@@ -15,6 +15,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCookie;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
@@ -45,6 +46,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.net.MalformedURLException;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
@@ -190,6 +192,9 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         AuditService
                                 .UNKNOWN, // the schema does not include phone number for this event
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+        var redactedPhoneNumber = !Objects.equals(auditContext.phoneNumber(), AuditService.UNKNOWN)? auditContext.phoneNumber().substring(0, 3) : auditContext.phoneNumber();
+        LOG.info("BECKA phone number in user context is {}", redactedPhoneNumber);
 
         var amcScopeForAuditEvent =
                 switch (request.amcJourneyType()) {
