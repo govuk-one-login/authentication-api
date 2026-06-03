@@ -103,6 +103,7 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               authSessionUseStronglyConsistentReads,
             ]
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
         LogGroup: !Ref AMCAuthorizeFunctionLogGroup
       Policies:
@@ -110,6 +111,7 @@ Resources:
         - !Ref AuthToAMCSigningKeyPolicy
         - !Ref AuthToAccountManagementSigningKeyPolicy
         - !Ref AuthToAccountDataSigningKeyPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy

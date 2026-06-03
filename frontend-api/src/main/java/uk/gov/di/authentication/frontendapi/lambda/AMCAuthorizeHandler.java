@@ -25,11 +25,15 @@ import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -42,12 +46,18 @@ import java.net.MalformedURLException;
 import java.time.Clock;
 import java.util.List;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_AMC_SCOPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest> {
     private final AMCService amcService;
     private final JWKSource<SecurityContext> jwkSource;
+    private final AuditService auditService;
 
     private static final Logger LOG = LogManager.getLogger(AMCAuthorizeHandler.class);
     private final DynamoAmcStateService dynamoAmcStateService;
@@ -76,13 +86,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         new JwtService(new KmsConnectionService(configurationService)),
                         new AccessTokenConstructorService(configurationService));
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
-    }
-
-    @SuppressWarnings("java:S1185")
-    @Override
-    public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
+        this.auditService = new AuditService(configurationService);
     }
 
     public AMCAuthorizeHandler(
@@ -91,7 +95,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             AuthSessionService authSessionService,
             AMCService amcService,
             JWKSource<SecurityContext> jwkSource,
-            DynamoAmcStateService amcStateService) {
+            DynamoAmcStateService amcStateService,
+            AuditService auditService) {
         super(
                 AMCAuthorizeRequest.class,
                 configurationService,
@@ -100,6 +105,14 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.amcService = amcService;
         this.jwkSource = jwkSource;
         this.dynamoAmcStateService = amcStateService;
+        this.auditService = auditService;
+    }
+
+    @SuppressWarnings("java:S1185")
+    @Override
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+        return super.handleRequest(input, context);
     }
 
     @Override
@@ -149,6 +162,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                                     }
                                 });
 
+        emitAuthorizationRequestedAuditEvent(userContext, input, request);
+
         return result.fold(
                 AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,
                 success -> {
@@ -160,6 +175,33 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                                 500, ErrorResponse.SERIALIZATION_ERROR);
                     }
                 });
+    }
+
+    private void emitAuthorizationRequestedAuditEvent(
+            UserContext userContext,
+            APIGatewayProxyRequestEvent input,
+            AMCAuthorizeRequest request) {
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        userContext.getAuthSession().getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService
+                                .UNKNOWN, // the schema does not include phone number for this event
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+        var amcScopeForAuditEvent =
+                switch (request.amcJourneyType()) {
+                    case PASSKEY_CREATE -> "passkey-create";
+                    case SFAD -> "sfad"; // note we'll probably want to review this when we get to
+                        // implementing sfad fully
+                };
+
+        var journeyTypePair = pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN);
+        var amcScopePair = pair(AUDIT_EVENT_EXTENSIONS_AMC_SCOPE, amcScopeForAuditEvent);
+        auditService.submitAuditEvent(
+                AUTH_AMC_AUTHORISATION_REQUESTED, auditContext, journeyTypePair, amcScopePair);
     }
 
     private Result<AMCFailureReason, RSAKey> getAMCPublicEncryptionKey() {

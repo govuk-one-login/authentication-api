@@ -19,6 +19,11 @@ public class AuditEventExpectation {
         this.expectedAttributes = new HashMap<>();
     }
 
+    public AuditEventExpectation(AuditableEvent event, Map<String, Object> expectedAttributes) {
+        this.event = event;
+        this.expectedAttributes = expectedAttributes;
+    }
+
     public AuditEventExpectation(AuditEventExpectation expectation) {
         this.event = expectation.event;
         this.expectedAttributes = expectation.expectedAttributes;
