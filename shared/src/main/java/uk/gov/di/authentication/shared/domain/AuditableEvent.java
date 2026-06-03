@@ -17,6 +17,10 @@ public interface AuditableEvent {
     String AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE = "mfaResetType";
     String AUDIT_EVENT_EXTENSIONS_HAS_ACTIVE_PASSKEY = "has_active_passkey";
     String AUDIT_EVENT_EXTENSIONS_AMC_SCOPE = "amc_scope";
+    String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_OUTCOME = "account_action_overall_outcome";
+    String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS = "account_actions";
+    String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS = "account_actions_errors";
+    String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_FAILED = "account_actions_failed";
 
     AuditableEvent parseFromName(String name);
 }

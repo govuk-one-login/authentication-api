@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCCallbackRequest;
 import uk.gov.di.authentication.frontendapi.lambda.AMCCallbackHandler;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -21,6 +22,7 @@ import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,6 +39,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
@@ -123,7 +126,8 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @BeforeEach
     void setup() {
-        handler = new AMCCallbackHandler();
+        handler = new AMCCallbackHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
         sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
     }
@@ -189,5 +193,8 @@ class AMCCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .withHeader("user-language", equalTo("en"))
                         .withHeader(
                                 "Authorization", containing("Bearer %s".formatted(ACCESS_TOKEN))));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_RECEIVED));
     }
 }
