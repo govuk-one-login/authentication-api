@@ -47,7 +47,8 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
-import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContextWithJourneyType;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
@@ -175,7 +176,7 @@ public class MFAMethodsCreateHandler
     }
 
     private Result<ErrorResponse, MfaMethodCreateRequest> validateRequest(
-            APIGatewayProxyRequestEvent input, UserProfile userProfile) {
+            APIGatewayProxyRequestEvent input, UserProfile userProfile, AuditContext auditContext) {
         MfaMethodCreateRequest mfaMethodCreateRequest = null;
 
         try {
@@ -203,10 +204,7 @@ public class MFAMethodsCreateHandler
             if (invalidPhoneNumber.isPresent()) {
                 var auditEventStatus =
                         sendAuditEvent(
-                                AUTH_MFA_METHOD_ADD_FAILED,
-                                input,
-                                userProfile,
-                                mfaMethodCreateRequest);
+                                AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
                 if (auditEventStatus.isFailure()) {
                     LOG.error(auditEventStatus.getFailure());
                 }
@@ -222,7 +220,7 @@ public class MFAMethodsCreateHandler
                 LOG.info("Invalid OTP presented.");
                 var auditEventStatus =
                         sendAuditEvent(
-                                AUTH_INVALID_CODE_SENT, input, userProfile, mfaMethodCreateRequest);
+                                AUTH_INVALID_CODE_SENT, auditContext, mfaMethodCreateRequest);
                 if (auditEventStatus.isFailure()) {
                     LOG.error(auditEventStatus.getFailure());
                 }
@@ -248,7 +246,19 @@ public class MFAMethodsCreateHandler
 
         var userProfile = maybePassedGuardConditions.getSuccess();
 
-        var maybeValidRequest = validateRequest(input, userProfile);
+        var auditContextResult =
+                accountManagementAuditContext(
+                        configurationService, dynamoService, input, userProfile);
+        if (auditContextResult.isFailure()) {
+            LOG.error(
+                    "Error when building audit context for with error code {}. No events raised",
+                    auditContextResult.getFailure());
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
+        }
+        var auditContext = auditContextResult.getSuccess();
+
+        var maybeValidRequest = validateRequest(input, userProfile, auditContext);
 
         if (maybeValidRequest.isFailure()) {
             return generateApiGatewayProxyErrorResponse(400, maybeValidRequest.getFailure());
@@ -257,7 +267,7 @@ public class MFAMethodsCreateHandler
         MfaMethodCreateRequest mfaMethodCreateRequest = maybeValidRequest.getSuccess();
 
         var auditEventStatus =
-                sendAuditEvent(AUTH_CODE_VERIFIED, input, userProfile, mfaMethodCreateRequest);
+                sendAuditEvent(AUTH_CODE_VERIFIED, auditContext, mfaMethodCreateRequest);
         if (auditEventStatus.isFailure()) {
             LOG.error(auditEventStatus.getFailure());
             return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
@@ -278,7 +288,7 @@ public class MFAMethodsCreateHandler
         if (addBackupMfaResult.isFailure()) {
             auditEventStatus =
                     sendAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED, input, userProfile, mfaMethodCreateRequest);
+                            AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
             if (auditEventStatus.isFailure()) {
                 LOG.error(auditEventStatus.getFailure());
                 return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
@@ -293,7 +303,7 @@ public class MFAMethodsCreateHandler
             LOG.error(backupMfaMethodAsResponse.getFailure());
             auditEventStatus =
                     sendAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED, input, userProfile, mfaMethodCreateRequest);
+                            AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
             if (auditEventStatus.isFailure()) {
                 LOG.error(auditEventStatus.getFailure());
                 return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
@@ -302,8 +312,7 @@ public class MFAMethodsCreateHandler
         }
 
         var addCompletedResult =
-                sendAuditEvent(
-                        AUTH_MFA_METHOD_ADD_COMPLETED, input, userProfile, mfaMethodCreateRequest);
+                sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, mfaMethodCreateRequest);
 
         if (addCompletedResult.isFailure()) {
             LOG.error(addCompletedResult.getFailure());
@@ -317,8 +326,7 @@ public class MFAMethodsCreateHandler
 
         if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
             var updatePhoneNumberResult =
-                    sendAuditEvent(
-                            AUTH_UPDATE_PHONE_NUMBER, input, userProfile, mfaMethodCreateRequest);
+                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext, mfaMethodCreateRequest);
 
             if (updatePhoneNumberResult.isFailure()) {
                 LOG.error(updatePhoneNumberResult.getFailure());
@@ -377,80 +385,73 @@ public class MFAMethodsCreateHandler
         };
     }
 
-    private AuditContext enrichAuditContextForEvent(
-            AccountManagementAuditableEvent auditEvent,
-            MfaMethodCreateRequest mfaMethodCreateRequest,
-            AuditContext baseAuditContext) {
-        var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
+    private AuditService.MetadataPair[] metadataPairsForEvent(
+            AccountManagementAuditableEvent auditableEvent, MfaMethodCreateRequest createRequest) {
+        var mfaType = createRequest.mfaMethod().method().mfaMethodType().toString();
         var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
 
         var mfaTypePair = pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaType);
         var mfaMethodPair = pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfaPriority);
         var accountRecoveryPair = pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
 
-        var context =
-                baseAuditContext.withMetadataItem(mfaTypePair).withMetadataItem(mfaMethodPair);
-
-        if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-            context = context.withMetadataItem(accountRecoveryPair);
-        }
-
-        if (mfaMethodCreateRequest.mfaMethod().method()
-                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            context = enrichWithSmsDetails(context, auditEvent, requestSmsMfaDetail);
-        }
-
-        return context;
+        return switch (auditableEvent) {
+            case AUTH_MFA_METHOD_ADD_COMPLETED,
+                    AUTH_UPDATE_PHONE_NUMBER,
+                    AUTH_MFA_METHOD_ADD_FAILED,
+                    AUTH_INVALID_CODE_SENT -> new AuditService.MetadataPair[] {
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR, mfaTypePair, mfaMethodPair
+            };
+            case AUTH_CODE_VERIFIED -> {
+                if (createRequest.mfaMethod().method() instanceof RequestSmsMfaDetail smsDetail) {
+                    yield new AuditService.MetadataPair[] {
+                        ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                        mfaTypePair,
+                        mfaMethodPair,
+                        accountRecoveryPair,
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, smsDetail.otp()),
+                        pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name())
+                    };
+                } else {
+                    yield new AuditService.MetadataPair[] {
+                        ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                        mfaTypePair,
+                        mfaMethodPair,
+                        accountRecoveryPair
+                    };
+                }
+            }
+            default -> new AuditService.MetadataPair[] {};
+        };
     }
 
-    private AuditContext enrichWithSmsDetails(
-            AuditContext context,
-            AccountManagementAuditableEvent auditEvent,
-            RequestSmsMfaDetail smsDetail) {
-        String formattedPhoneNumber;
-        try {
-            formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(smsDetail.phoneNumber());
-        } catch (RuntimeException e) {
-            LOG.warn("Couldn't format phone number, audit event using raw number from request");
-            formattedPhoneNumber = smsDetail.phoneNumber();
+    private AuditContext addPhoneNumberToAuditContext(
+            MfaMethodCreateRequest mfaMethodCreateRequest, AuditContext baseAuditContext) {
+        if (mfaMethodCreateRequest.mfaMethod().method()
+                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+            String formattedPhoneNumber;
+            try {
+                formattedPhoneNumber =
+                        PhoneNumberHelper.formatPhoneNumber(requestSmsMfaDetail.phoneNumber());
+            } catch (RuntimeException e) {
+                LOG.warn("Couldn't format phone number, audit event using raw number from request");
+                formattedPhoneNumber = requestSmsMfaDetail.phoneNumber();
+            }
+
+            return baseAuditContext.withPhoneNumber(formattedPhoneNumber);
+        } else {
+            return baseAuditContext;
         }
-
-        var updatedContext = context.withPhoneNumber(formattedPhoneNumber);
-
-        // Note: we do not need to explicitly add the phone number country code metadata pair as
-        // this is handled already by the audit service
-
-        if (auditEvent.equals(AUTH_CODE_VERIFIED) && smsDetail.otp() != null) {
-            return updatedContext
-                    .withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, smsDetail.otp()))
-                    .withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name()));
-        }
-
-        return updatedContext;
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(
             AccountManagementAuditableEvent auditEvent,
-            APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
+            AuditContext auditContext,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
-        var auditContextResult =
-                accountManagementAuditContextWithJourneyType(
-                        configurationService, dynamoService, input, userProfile);
-        if (auditContextResult.isFailure()) {
-            LOG.error(
-                    "Error when building audit context for {} audit event with error code {}. No event raised",
-                    auditEvent,
-                    auditContextResult.getFailure());
-            return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
-        }
-
-        var baseAuditContext = auditContextResult.getSuccess();
         var enrichedAuditContext =
-                enrichAuditContextForEvent(auditEvent, mfaMethodCreateRequest, baseAuditContext);
-        return AuditHelper.sendAuditEvent(auditEvent, enrichedAuditContext, auditService, LOG)
+                addPhoneNumberToAuditContext(mfaMethodCreateRequest, auditContext);
+        var metadataPairs = metadataPairsForEvent(auditEvent, mfaMethodCreateRequest);
+        return AuditHelper.sendAuditEvent(
+                        auditEvent, enrichedAuditContext, auditService, LOG, metadataPairs)
                 .map(
                         sucess -> {
                             LOG.info("Successfully submitted audit event: {}", auditEvent.name());
