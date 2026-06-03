@@ -359,11 +359,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
         }
 
         @Override
-        public String getTokenSigningKeyAlias() {
-            return tokenSigningKey.getKeyAlias();
-        }
-
-        @Override
         public String getFrontendBaseUrl() {
             return "http://localhost:3000/reset-password?code=";
         }

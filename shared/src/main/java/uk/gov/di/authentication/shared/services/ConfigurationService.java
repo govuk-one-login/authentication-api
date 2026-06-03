@@ -433,10 +433,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("SYNTHETICS_USERS", "");
     }
 
-    public String getTokenSigningKeyAlias() {
-        return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
-    }
-
     public URL getAccessTokenJwksUrl() {
         try {
             return new URL(System.getenv().getOrDefault("ACCESS_TOKEN_JWKS_URL", ""));
@@ -444,10 +440,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             LOG.error("Invalid JWKS URL: {}", e.getMessage());
             throw new RuntimeException(e);
         }
-    }
-
-    public String getTokenSigningKeyRsaAlias() {
-        return System.getenv("TOKEN_SIGNING_KEY_RSA_ALIAS");
     }
 
     public String getTestTokenSigningKeyAlias() {
