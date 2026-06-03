@@ -146,35 +146,9 @@ class AMCCallbackHandlerTest {
     @MethodSource("scopeAndExpectedJourneyType")
     void shouldReturn200WhenTokenResponseSuccessful(AMCScope amcScope, JourneyType journeyType)
             throws IOException, ParseException {
-
-        HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
-                .thenReturn(Result.success(tokenRequest));
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-        setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
-
-        var successfulJourneyOutcomeHttpResponse = new HTTPResponse(200);
         String journeyOutcomeResult = createJourneyOutcomeResultForAMCScope(amcScope);
-        successfulJourneyOutcomeHttpResponse.setContent(journeyOutcomeResult);
 
-        when(AMC_SERVICE.requestJourneyOutcome(
-                        argThat(
-                                userInfoRequest ->
-                                        userInfoRequest
-                                                .getAccessToken()
-                                                .toString()
-                                                .equals(ACCESS_TOKEN)),
-                        any()))
-                .thenReturn(Result.success(successfulJourneyOutcomeHttpResponse));
-
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
-
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
-                        CONTEXT,
-                        request,
-                        USER_CONTEXT);
+        APIGatewayProxyResponseEvent result = invokeHandlerWithJourneyOutcome(journeyOutcomeResult);
 
         assertEquals(200, result.getStatusCode());
         assertEquals(journeyOutcomeResult, result.getBody());
@@ -195,35 +169,10 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldTolerateANullTxmaEncodedValue() throws IOException, ParseException {
         when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(null);
-        HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
-                .thenReturn(Result.success(tokenRequest));
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-        setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
-
-        var successfulJourneyOutcomeHttpResponse = new HTTPResponse(200);
         String journeyOutcomeResult =
                 createJourneyOutcomeResultForAMCScope(AMCScope.ACCOUNT_DELETE);
-        successfulJourneyOutcomeHttpResponse.setContent(journeyOutcomeResult);
 
-        when(AMC_SERVICE.requestJourneyOutcome(
-                        argThat(
-                                userInfoRequest ->
-                                        userInfoRequest
-                                                .getAccessToken()
-                                                .toString()
-                                                .equals(ACCESS_TOKEN)),
-                        any()))
-                .thenReturn(Result.success(successfulJourneyOutcomeHttpResponse));
-
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
-
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
-                        CONTEXT,
-                        request,
-                        USER_CONTEXT);
+        APIGatewayProxyResponseEvent result = invokeHandlerWithJourneyOutcome(journeyOutcomeResult);
 
         assertEquals(200, result.getStatusCode());
         assertEquals(journeyOutcomeResult, result.getBody());
@@ -416,33 +365,7 @@ class AMCCallbackHandlerTest {
     @Test
     void shouldReturn500WhenJourneyOutcomeResponseFailsToParse()
             throws ParseException, IOException {
-        HTTPRequest httpRequest = mock(HTTPRequest.class);
-        when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
-                .thenReturn(Result.success(tokenRequest));
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-        setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
-
-        var journeyOutcomeHttpResponse = new HTTPResponse(200);
-        journeyOutcomeHttpResponse.setContent("not valid json");
-
-        when(AMC_SERVICE.requestJourneyOutcome(
-                        argThat(
-                                userInfoRequest ->
-                                        userInfoRequest
-                                                .getAccessToken()
-                                                .toString()
-                                                .equals(ACCESS_TOKEN)),
-                        any()))
-                .thenReturn(Result.success(journeyOutcomeHttpResponse));
-
-        AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
-
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
-                        CONTEXT,
-                        request,
-                        USER_CONTEXT);
+        APIGatewayProxyResponseEvent result = invokeHandlerWithJourneyOutcome("not valid json");
 
         assertEquals(500, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.AMC_JOURNEY_OUTCOME_UNEXPECTED_ERROR));
@@ -475,6 +398,23 @@ class AMCCallbackHandlerTest {
                         }
                         """;
 
+        APIGatewayProxyResponseEvent result = invokeHandlerWithJourneyOutcome(failedJourneyOutcome);
+
+        assertEquals(200, result.getStatusCode());
+
+        verifyAuditEvent(
+                new AuditService.MetadataPair[] {
+                    pair("account_action_overall_outcome", false),
+                    pair("account_actions", List.of("passkey-create")),
+                    pair("account_actions_errors", List.of("UserBackedOutOfJourney")),
+                    pair("account_actions_failed", List.of("passkey-create")),
+                    pair("amc_scope", "passkey-create"),
+                    pair("journey-type", JourneyType.SIGN_IN),
+                });
+    }
+
+    private APIGatewayProxyResponseEvent invokeHandlerWithJourneyOutcome(
+            String journeyOutcomeContent) throws IOException, ParseException {
         HTTPRequest httpRequest = mock(HTTPRequest.class);
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
                 .thenReturn(Result.success(tokenRequest));
@@ -482,7 +422,7 @@ class AMCCallbackHandlerTest {
         setupTokenHttpResponse(httpRequest, 200, SUCCESSFUL_TOKEN_RESPONSE);
 
         var journeyOutcomeHttpResponse = new HTTPResponse(200);
-        journeyOutcomeHttpResponse.setContent(failedJourneyOutcome);
+        journeyOutcomeHttpResponse.setContent(journeyOutcomeContent);
 
         when(AMC_SERVICE.requestJourneyOutcome(
                         argThat(
@@ -496,24 +436,11 @@ class AMCCallbackHandlerTest {
 
         AMCCallbackRequest request = new AMCCallbackRequest(AUTH_CODE, STATE, USED_REDIRECT_URL);
 
-        APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
-                        CONTEXT,
-                        request,
-                        USER_CONTEXT);
-
-        assertEquals(200, result.getStatusCode());
-
-        verifyAuditEvent(
-                new AuditService.MetadataPair[] {
-                    pair("account_action_overall_outcome", false),
-                    pair("account_actions", List.of("passkey-create")),
-                    pair("account_actions_errors", List.of("UserBackedOutOfJourney")),
-                    pair("account_actions_failed", List.of("passkey-create")),
-                    pair("amc_scope", "passkey-create"),
-                    pair("journey-type", JourneyType.SIGN_IN),
-                });
+        return handler.handleRequestWithUserContext(
+                apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                CONTEXT,
+                request,
+                USER_CONTEXT);
     }
 
     private void setupTokenHttpResponse(
