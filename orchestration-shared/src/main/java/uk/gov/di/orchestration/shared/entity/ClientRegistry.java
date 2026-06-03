@@ -1,6 +1,7 @@
 package uk.gov.di.orchestration.shared.entity;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
@@ -8,6 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -397,6 +399,9 @@ public class ClientRegistry {
 
     @DynamoDbAttribute("TokenAuthMethod")
     public String getTokenAuthMethod() {
+        if (Objects.isNull(tokenAuthMethod)) {
+            return ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue();
+        }
         return tokenAuthMethod;
     }
 

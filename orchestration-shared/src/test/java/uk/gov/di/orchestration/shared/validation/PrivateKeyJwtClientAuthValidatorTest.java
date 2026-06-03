@@ -21,7 +21,6 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.net.URI;
@@ -47,7 +46,6 @@ class PrivateKeyJwtClientAuthValidatorTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSignatureValidationService clientSignatureValidationService =
             mock(ClientSignatureValidationService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private OidcAPI oidcAPI = mock(OidcAPI.class);
     private static final URI OIDC_TOKEN_URL = URI.create("https://example.com/token");
     private static final ClientID CLIENT_ID = new ClientID();
@@ -59,9 +57,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
         when(oidcAPI.tokenURI()).thenReturn(OIDC_TOKEN_URL);
         privateKeyJwtClientAuthValidator =
                 new PrivateKeyJwtClientAuthValidator(
-                        dynamoClientService,
-                        clientSignatureValidationService,
-                        configurationService);
+                        dynamoClientService, clientSignatureValidationService);
     }
 
     private static Stream<JWSAlgorithm> supportedAlgorithms() {

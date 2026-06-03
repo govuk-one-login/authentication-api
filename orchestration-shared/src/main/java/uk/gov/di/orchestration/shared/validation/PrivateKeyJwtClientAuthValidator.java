@@ -15,7 +15,6 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.Date;
@@ -25,21 +24,17 @@ import java.util.Objects;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.orchestration.shared.utils.ClientUtils.getTokenAuthMethodOrDefault;
 
 public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
 
     private final ClientSignatureValidationService clientSignatureValidationService;
-    private final ConfigurationService configurationService;
     private static final String UNKNOWN_CLIENT_ID = "unknown";
 
     public PrivateKeyJwtClientAuthValidator(
             DynamoClientService dynamoClientService,
-            ClientSignatureValidationService clientSignatureValidationService,
-            ConfigurationService configurationService) {
+            ClientSignatureValidationService clientSignatureValidationService) {
         super(dynamoClientService);
         this.clientSignatureValidationService = clientSignatureValidationService;
-        this.configurationService = configurationService;
     }
 
     @Override
@@ -56,7 +51,7 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
             var clientRegistry = getClientRegistryFromTokenAuth(privateKeyJWT.getClientID());
             attachLogFieldToLogs(CLIENT_ID, clientRegistry.getClientID());
             addAnnotation("client_id", clientRegistry.getClientID());
-            var tokenAuthMethod = getTokenAuthMethodOrDefault(clientRegistry);
+            var tokenAuthMethod = clientRegistry.getTokenAuthMethod();
             if (Objects.nonNull(tokenAuthMethod)
                     && !tokenAuthMethod.equals(
                             ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue())) {

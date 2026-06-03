@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.Argon2EncoderHelper;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.Objects;
@@ -31,7 +30,6 @@ import static org.mockito.Mockito.when;
 class ClientSecretPostClientAuthValidatorTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private ClientSecretPostClientAuthValidator clientSecretPostClientAuthValidator;
 
     private static final ClientID CLIENT_ID = new ClientID();
@@ -40,7 +38,7 @@ class ClientSecretPostClientAuthValidatorTest {
     @BeforeEach
     void setUp() {
         clientSecretPostClientAuthValidator =
-                new ClientSecretPostClientAuthValidator(dynamoClientService, configurationService);
+                new ClientSecretPostClientAuthValidator(dynamoClientService);
     }
 
     @Test

@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.utils.ClientUtils.getTokenAuthMethodOrDefault;
-
 public abstract class BaseAuthorizeValidator {
 
     protected static final String VTR_PARAM = "vtr";
@@ -212,7 +210,7 @@ public abstract class BaseAuthorizeValidator {
     protected Optional<ErrorObject>
             errorForIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
                     List<VectorOfTrust> vtrList, ClientRegistry client) {
-        String tokenAuthMethod = getTokenAuthMethodOrDefault(client);
+        String tokenAuthMethod = client.getTokenAuthMethod();
 
         if (requestContainsIdentityLoC(vtrList) && ("client_secret_post".equals(tokenAuthMethod))) {
             logErrorInProdElseWarn(
