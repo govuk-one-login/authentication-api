@@ -225,8 +225,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()),
-                        List.of());
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
         Object journeyType =
                 AMCScope.fromValue(journeyOutcome.scope())

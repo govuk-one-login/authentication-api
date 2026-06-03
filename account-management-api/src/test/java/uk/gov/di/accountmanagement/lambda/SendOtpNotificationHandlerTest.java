@@ -129,8 +129,7 @@ class SendOtpNotificationHandlerTest {
                     "123.123.123.123",
                     TEST_PHONE_NUMBER,
                     PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                    new ArrayList<>());
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     private static APIGatewayProxyRequestEvent.ProxyRequestContext eventContext;
 
@@ -720,8 +719,7 @@ class SendOtpNotificationHandlerTest {
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
                         PERSISTENT_ID,
-                        Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                        new ArrayList<>());
+                        Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
         @BeforeEach
         void setup() {
