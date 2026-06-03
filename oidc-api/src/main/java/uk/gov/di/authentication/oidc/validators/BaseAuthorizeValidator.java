@@ -212,7 +212,7 @@ public abstract class BaseAuthorizeValidator {
     protected Optional<ErrorObject>
             errorForIdentityJourneyRequestWithInsufficientlySecureTokenAuthMethod(
                     List<VectorOfTrust> vtrList, ClientRegistry client) {
-        String tokenAuthMethod = getTokenAuthMethodOrDefault(client, configurationService);
+        String tokenAuthMethod = getTokenAuthMethodOrDefault(client);
 
         if (requestContainsIdentityLoC(vtrList) && ("client_secret_post".equals(tokenAuthMethod))) {
             logErrorInProdElseWarn(

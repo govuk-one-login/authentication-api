@@ -462,10 +462,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("SYNC_WAIT_FOR_SPOT_TIMEOUT", "5000"));
     }
 
-    public boolean isUseDefaultTokenAuthMethod() {
-        return getFlagOrFalse("USE_DEFAULT_TOKEN_AUTH_METHOD");
-    }
-
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }

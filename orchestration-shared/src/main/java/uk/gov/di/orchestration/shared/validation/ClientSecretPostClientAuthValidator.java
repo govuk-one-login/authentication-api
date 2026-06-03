@@ -62,7 +62,7 @@ public class ClientSecretPostClientAuthValidator extends TokenClientAuthValidato
 
     private void validateTokenAuthMethod(ClientRegistry clientRegistry)
             throws TokenAuthInvalidException {
-        var tokenAuthMethod = getTokenAuthMethodOrDefault(clientRegistry, configurationService);
+        var tokenAuthMethod = getTokenAuthMethodOrDefault(clientRegistry);
         if (Objects.isNull(tokenAuthMethod)
                 || !tokenAuthMethod.equals(
                         ClientAuthenticationMethod.CLIENT_SECRET_POST.getValue())) {

@@ -56,7 +56,7 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
             var clientRegistry = getClientRegistryFromTokenAuth(privateKeyJWT.getClientID());
             attachLogFieldToLogs(CLIENT_ID, clientRegistry.getClientID());
             addAnnotation("client_id", clientRegistry.getClientID());
-            var tokenAuthMethod = getTokenAuthMethodOrDefault(clientRegistry, configurationService);
+            var tokenAuthMethod = getTokenAuthMethodOrDefault(clientRegistry);
             if (Objects.nonNull(tokenAuthMethod)
                     && !tokenAuthMethod.equals(
                             ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue())) {
