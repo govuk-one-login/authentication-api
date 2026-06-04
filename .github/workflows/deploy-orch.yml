@@ -139,7 +139,7 @@ jobs:
 
       - name: SAM build
         run: |
-          ./gradlew --no-daemon --parallel :oidc:buildZip :ipv-api:buildZip :doc-checking-app-api:buildZip :client-registry-api:buildZip
+          ./gradlew --no-daemon --parallel :oidc:buildAllLambdas :ipv-api:buildZip :doc-checking-app-api:buildZip :client-registry-api:buildZip
           sam build --parallel
 
       - name: Deploy SAM app

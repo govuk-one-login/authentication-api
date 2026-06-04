@@ -88,6 +88,47 @@ task buildZip(type: Zip) {
     }
 }
 
+FileTree handlerFiles = fileTree(dir: 'src/main/java/uk/gov/di/authentication/oidc/lambda/').include('**/*Handler.java')
+
+// 2. Iterate through every discovered file path
+handlerFiles.each { File file ->
+    // Extract the class name (e.g., "GetUsersHandler")
+    def lambdaName = file.name.replace('.java', '')
+
+    // Get the path relative to the src/main/java folder for the include rule
+    def relativePath = rootProject.file('src/main/java').toURI().relativize(file.toURI()).toString()
+
+    // 3. Dynamically build an isolated SourceSet for this specific class
+    def sourceSetName = "sourceSet_${lambdaName}"
+    sourceSets.create(sourceSetName) {
+        java {
+            srcDir 'src/main/java'
+            include relativePath
+        }
+    }
+
+    // 4. Register a ZIP packaging task for this specific class
+    tasks.register("buildZip_${lambdaName}", Zip) {
+        group = 'lambda deployment'
+        description = "Packages a standalone ZIP for ${lambdaName}"
+
+        archiveBaseName = lambdaName
+
+        from sourceSets."${sourceSetName}".output
+
+        into('lib') {
+            from configurations.runtimeClasspath
+        }
+    }
+}
+
+// Helper task to compile and package all discovered handlers at once
+task buildAllLambdas {
+    group = 'lambda deployment'
+    dependsOn tasks.matching { it.name.startsWith('buildZip_') }
+}
+
+
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
