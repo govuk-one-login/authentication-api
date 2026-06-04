@@ -13,7 +13,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
@@ -353,27 +352,15 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.INVALID_EMAIL_CODE_ENTERED));
         verifyNoInteractions(accountModifiersService);
 
-        ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
-                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
-
         verify(auditService)
                 .submitAuditEvent(
-                        eq(FrontendAuditableEvent.AUTH_INVALID_CODE_SENT),
-                        any(AuditContext.class),
-                        metadataCaptor.capture());
-
-        List<AuditService.MetadataPair> expected =
-                List.of(
+                        FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
+                        AUDIT_CONTEXT,
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
                         pair("journey-type", expectedJourneyType.name()));
-
-        List<AuditService.MetadataPair> actual = Arrays.asList(metadataCaptor.getValue());
-
-        assertTrue(expected.containsAll(actual));
-        assertTrue(actual.containsAll(expected));
 
         verifyNoInteractions(authenticationAttemptsService);
     }
@@ -768,19 +755,11 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.INVALID_MFA_CODE_ENTERED));
         verifyNoInteractions(accountModifiersService);
 
-        ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
-                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
-
         verify(auditService)
                 .submitAuditEvent(
-                        eq(FrontendAuditableEvent.AUTH_INVALID_CODE_SENT),
-                        eq(
-                                AUDIT_CONTEXT.withMetadataItem(
-                                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"))),
-                        metadataCaptor.capture());
-
-        List<AuditService.MetadataPair> expected =
-                List.of(
+                        FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
+                        AUDIT_CONTEXT.withMetadataItem(
+                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", SIGN_IN.name()),
@@ -788,11 +767,6 @@ class VerifyCodeHandlerTest {
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "6543221"),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
-
-        List<AuditService.MetadataPair> actual = Arrays.asList(metadataCaptor.getValue());
-
-        assertTrue(expected.containsAll(actual));
-        assertTrue(actual.containsAll(expected));
     }
 
     @ParameterizedTest
