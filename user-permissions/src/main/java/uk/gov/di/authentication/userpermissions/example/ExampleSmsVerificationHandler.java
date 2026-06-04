@@ -3,6 +3,7 @@ package uk.gov.di.authentication.userpermissions.example;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.PermissionDecisions;
@@ -10,6 +11,8 @@ import uk.gov.di.authentication.userpermissions.UserActions;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
+
+import java.util.Arrays;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -52,9 +55,9 @@ public class ExampleSmsVerificationHandler {
         if (decision instanceof Decision.TemporarilyLockedOut lockedOut) {
             sendAuditEvent(
                     "LOCKED_OUT",
-                    AuditContext.emptyAuditContext()
-                            .withMetadataItem(pair("reason", lockedOut.forbiddenReason()))
-                            .withMetadataItem(pair("until", lockedOut.lockedUntil())));
+                    AuditContext.emptyAuditContext(),
+                    pair("reason", lockedOut.forbiddenReason()),
+                    pair("until", lockedOut.lockedUntil()));
             return (format(
                     "403: User is temporarily locked out due to %s until %s",
                     lockedOut.forbiddenReason(), lockedOut.lockedUntil()));
@@ -67,14 +70,17 @@ public class ExampleSmsVerificationHandler {
 
         sendAuditEvent(
                 "OTP_VERIFIED",
-                AuditContext.emptyAuditContext()
-                        .withMetadataItem(pair("attempts", decision.attemptCount() + 1)));
+                AuditContext.emptyAuditContext(),
+                pair("attempts", decision.attemptCount() + 1));
 
         userActions.correctSmsOtpReceived(journeyType, permissionContext);
         return ("200: Success");
     }
 
-    private void sendAuditEvent(String eventName, AuditContext auditContext) {
-        System.out.println(eventName + auditContext.toString());
+    private void sendAuditEvent(
+            String eventName,
+            AuditContext auditContext,
+            AuditService.MetadataPair... metadataPairs) {
+        System.out.println(eventName + auditContext.toString() + Arrays.toString(metadataPairs));
     }
 }
