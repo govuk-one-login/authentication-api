@@ -561,19 +561,11 @@ public class MFAMethodsPutHandler
             AuditContext auditContext,
             ValidPutRequest putRequest,
             MFAMethod postUpdateDefaultMfaMethod) {
-
-        var maybeCompletedAuditEvent =
-                sendAuditEvent(
-                        AUTH_MFA_METHOD_SWITCH_COMPLETED,
-                        putRequest,
-                        postUpdateDefaultMfaMethod,
-                        auditContext);
-
-        if (maybeCompletedAuditEvent.isFailure()) {
-            return maybeCompletedAuditEvent;
-        }
-
-        return Result.success(null);
+        return sendAuditEvent(
+                AUTH_MFA_METHOD_SWITCH_COMPLETED,
+                putRequest,
+                postUpdateDefaultMfaMethod,
+                auditContext);
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
