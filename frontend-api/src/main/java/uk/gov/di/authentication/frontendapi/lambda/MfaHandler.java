@@ -179,12 +179,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             AuditService.UNKNOWN,
                             persistentSessionId);
 
-            auditContext =
-                    auditContext.withMetadataItem(
-                            pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType));
-            auditContext =
-                    auditContext.withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue()));
-
             CodeRequestType.SupportedCodeType supportedCodeType =
                     CodeRequestType.SupportedCodeType.getFromMfaMethodType(
                             NotificationType.MFA_SMS.getMfaMethodType());
@@ -196,9 +190,13 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
             }
 
+            var journeyTypePair = pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType);
+            var mfaTypePair = pair("mfa-type", MFAMethodType.SMS.getValue());
+
             if (!userContext.getAuthSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
-                auditService.submitAuditEvent(AUTH_MFA_MISMATCHED_EMAIL, auditContext);
+                auditService.submitAuditEvent(
+                        AUTH_MFA_MISMATCHED_EMAIL, auditContext, journeyTypePair, mfaTypePair);
 
                 return generateApiGatewayProxyErrorResponse(400, SESSION_ID_MISSING);
             }
@@ -233,7 +231,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             retrievedMfaMethods, request.getMfaMethodId(), MFAMethodType.SMS);
 
             if (maybeRequestedSmsMfaMethod.isEmpty()) {
-                auditService.submitAuditEvent(AUTH_MFA_MISSING_PHONE_NUMBER, auditContext);
+                auditService.submitAuditEvent(
+                        AUTH_MFA_MISSING_PHONE_NUMBER, auditContext, journeyTypePair, mfaTypePair);
                 return generateApiGatewayProxyErrorResponse(400, PHONE_NUMBER_NOT_REGISTERED);
             }
 
@@ -265,7 +264,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             permissionContext,
                             auditContext,
                             lockoutStateHolder,
-                            false);
+                            false,
+                            journeyTypePair,
+                            mfaTypePair);
             if (maybeResponseIfNotPermitted.isPresent()) {
                 return maybeResponseIfNotPermitted.get();
             }
@@ -277,7 +278,13 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             maybeResponseIfNotPermitted =
                     getResponseIfNotPermitted(
-                            journeyType, permissionContext, auditContext, lockoutStateHolder, true);
+                            journeyType,
+                            permissionContext,
+                            auditContext,
+                            lockoutStateHolder,
+                            true,
+                            journeyTypePair,
+                            mfaTypePair);
             if (maybeResponseIfNotPermitted.isPresent()) {
                 return maybeResponseIfNotPermitted.get();
             }
@@ -290,12 +297,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             .getOtpCode(codeIdentifier, notificationType)
                             .orElseGet(
                                     () -> generateAndSaveNewCode(codeIdentifier, notificationType));
-
-            auditContext =
-                    auditContext.withMetadataItem(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                    requestSmsMfaMethod.getPriority().toLowerCase()));
 
             AuditableEvent auditableEvent;
             if (testUserHelper.isTestJourney(userContext)) {
@@ -321,7 +322,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 auditableEvent = FrontendAuditableEvent.AUTH_MFA_CODE_SENT;
             }
 
-            auditService.submitAuditEvent(auditableEvent, auditContext);
+            auditService.submitAuditEvent(
+                    auditableEvent,
+                    auditContext,
+                    journeyTypePair,
+                    mfaTypePair,
+                    pair(
+                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                            requestSmsMfaMethod.getPriority().toLowerCase()));
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();
@@ -346,7 +354,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             PermissionContext permissionContext,
             AuditContext auditContext,
             InMemoryLockoutStateHolder lockoutStateHolder,
-            boolean afterActionRecorded) {
+            boolean afterActionRecorded,
+            AuditService.MetadataPair... metadataPairs) {
         var canSendSmsResult =
                 permissionDecisionManager.canSendSmsOtpNotification(
                         journeyType, permissionContext, lockoutStateHolder);
@@ -362,7 +371,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         }
         if (canSendSmsResult.getSuccess() instanceof Decision.ReauthLockedOut
                 || canSendSmsResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-            auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_MFA_INVALID_CODE_REQUEST, auditContext, metadataPairs);
             var errorResponse =
                     afterActionRecorded ? TOO_MANY_MFA_OTPS_SENT : BLOCKED_FOR_SENDING_MFA_OTPS;
             return Optional.of(generateApiGatewayProxyErrorResponse(400, errorResponse));
@@ -383,7 +393,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR));
         }
         if (canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
-            auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_MFA_INVALID_CODE_REQUEST, auditContext, metadataPairs);
             return Optional.of(
                     generateApiGatewayProxyErrorResponse(400, TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         }
