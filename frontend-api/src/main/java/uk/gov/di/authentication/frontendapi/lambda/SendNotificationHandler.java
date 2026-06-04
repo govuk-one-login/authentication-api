@@ -270,21 +270,21 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 return postSendNotificationBlockResponse.get();
             }
 
-            switch (request.getNotificationType()) {
-                case VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                    return handleNotificationRequest(
-                            request.getEmail(),
-                            request.getNotificationType(),
-                            userContext,
-                            request.isRequestNewCode(),
-                            request,
-                            input,
-                            auditContext);
-                case VERIFY_PHONE_NUMBER:
-                    return handlePhoneNumberVerification(input, request, userContext, auditContext);
-                default:
-                    return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
-            }
+            return switch (request.getNotificationType()) {
+                case VERIFY_EMAIL,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> handleNotificationRequest(
+                        request.getEmail(),
+                        request.getNotificationType(),
+                        userContext,
+                        request.isRequestNewCode(),
+                        request,
+                        input,
+                        auditContext);
+                case VERIFY_PHONE_NUMBER -> handlePhoneNumberVerification(
+                        input, request, userContext, auditContext);
+                default -> generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
+            };
+
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
