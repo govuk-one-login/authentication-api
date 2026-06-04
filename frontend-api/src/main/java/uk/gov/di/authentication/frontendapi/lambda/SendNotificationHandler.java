@@ -73,6 +73,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.FraudCheckMetricsHelper.incrementUserSubmittedCredentialIfNotificationSetupJourney;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class SendNotificationHandler extends BaseFrontendHandler<SendNotificationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -316,20 +317,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return generateApiGatewayProxyResponse(400, errorResponse.get());
         }
 
-        auditContext =
-                auditContext.withMetadataItem(
-                        new AuditService.MetadataPair(
-                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                AUDIT_EVENT_DEFAULT_MFA_VALUE,
-                                false));
-
-        auditContext =
-                auditContext.withMetadataItem(
-                        new AuditService.MetadataPair(
-                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                request.getJourneyType(),
-                                false));
-
         return handleNotificationRequest(
                 PhoneNumberHelper.removeWhitespaceFromPhoneNumber(request.getPhoneNumber()),
                 request.getNotificationType(),
@@ -436,10 +423,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     notifyRequest.getUniqueNotificationReference());
         }
 
-        auditService.submitAuditEvent(
-                getSuccessfulAuditEventFromNotificationType(
-                        notificationType, testClientWithAllowedEmail),
-                auditContext);
+        if (!testClientWithAllowedEmail && notificationType.isForPhoneNumber()) {
+            auditService.submitAuditEvent(
+                    getSuccessfulAuditEventFromNotificationType(notificationType, false),
+                    auditContext,
+                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, AUDIT_EVENT_DEFAULT_MFA_VALUE),
+                    pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, request.getJourneyType()));
+        } else {
+            auditService.submitAuditEvent(
+                    getSuccessfulAuditEventFromNotificationType(
+                            notificationType, testClientWithAllowedEmail),
+                    auditContext);
+        }
 
         return generateEmptySuccessApiGatewayResponse();
     }

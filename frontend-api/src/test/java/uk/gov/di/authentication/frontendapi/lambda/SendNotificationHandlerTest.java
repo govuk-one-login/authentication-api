@@ -486,14 +486,12 @@ class SendNotificationHandlerTest {
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
-            var priorityPair = pair("mfa-method", "default");
-            var journeyTypePair = pair("journey-type", REGISTRATION);
-            var expectedAuditContext =
-                    auditContext
-                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(journeyTypePair);
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_PHONE_CODE_SENT,
+                            auditContext.withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER),
+                            pair("mfa-method", "default"),
+                            pair("journey-type", REGISTRATION));
         }
 
         @ParameterizedTest
@@ -604,12 +602,12 @@ class SendNotificationHandlerTest {
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
-            var expectedAuditContext =
-                    auditContext
-                            .withPhoneNumber(phoneNumber)
-                            .withMetadataItem(pair("mfa-method", "default"))
-                            .withMetadataItem(pair("journey-type", REGISTRATION));
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_PHONE_CODE_SENT,
+                            auditContext.withPhoneNumber(phoneNumber),
+                            pair("mfa-method", "default"),
+                            pair("journey-type", REGISTRATION));
         }
 
         @ParameterizedTest
@@ -720,14 +718,12 @@ class SendNotificationHandlerTest {
 
             handler.handleRequest(event, context);
 
-            var priorityPair = pair("mfa-method", "default");
-            var journeyTypePair = pair("journey-type", REGISTRATION);
-            var expectedAuditContext =
-                    auditContext
-                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(journeyTypePair);
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_PHONE_CODE_SENT,
+                            auditContext.withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER),
+                            pair("mfa-method", "default"),
+                            pair("journey-type", REGISTRATION));
         }
 
         @Test
@@ -748,14 +744,12 @@ class SendNotificationHandlerTest {
 
             handler.handleRequest(event, context);
 
-            var priorityPair = pair("mfa-method", "default");
-            var journeyTypePair = pair("journey-type", REGISTRATION);
-            var expectedAuditContext =
-                    auditContext
-                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(journeyTypePair);
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_PHONE_CODE_SENT,
+                            auditContext.withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER),
+                            pair("mfa-method", "default"),
+                            pair("journey-type", REGISTRATION));
         }
 
         @Test
@@ -769,14 +763,12 @@ class SendNotificationHandlerTest {
 
             handler.handleRequest(event, context);
 
-            var priorityPair = pair("mfa-method", "default");
-            var journeyTypePair = pair("journey-type", REGISTRATION);
-            var expectedAuditContext =
-                    auditContext
-                            .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(journeyTypePair);
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_PHONE_CODE_SENT,
+                            auditContext.withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER),
+                            pair("mfa-method", "default"),
+                            pair("journey-type", REGISTRATION));
         }
 
         @Test
@@ -832,14 +824,12 @@ class SendNotificationHandlerTest {
 
             // Business rule: new phone numbers should be reported as the default mfa method in
             // audit events
-            var priorityPair = pair("mfa-method", "default");
-            var journeyTypePair = pair("journey-type", REGISTRATION);
-            var expectedAuditContext =
-                    auditContext
-                            .withPhoneNumber(newPhoneNumber)
-                            .withMetadataItem(priorityPair)
-                            .withMetadataItem(journeyTypePair);
-            verify(auditService).submitAuditEvent(AUTH_PHONE_CODE_SENT, expectedAuditContext);
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_PHONE_CODE_SENT,
+                            auditContext.withPhoneNumber(newPhoneNumber),
+                            pair("mfa-method", "default"),
+                            pair("journey-type", REGISTRATION));
         }
     }
 
