@@ -608,8 +608,8 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT.withMetadataItem(
-                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
+                        AUDIT_CONTEXT,
+                        pair("mfa-method", "default"),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair(
@@ -621,8 +621,8 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                        AUDIT_CONTEXT.withMetadataItem(
-                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
+                        AUDIT_CONTEXT,
+                        pair("mfa-method", "default"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
@@ -666,8 +666,8 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT.withMetadataItem(
-                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "backup")),
+                        AUDIT_CONTEXT,
+                        pair("mfa-method", "backup"),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
@@ -701,8 +701,8 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT.withMetadataItem(
-                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
+                        AUDIT_CONTEXT,
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
@@ -774,13 +774,12 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         eq(FrontendAuditableEvent.AUTH_INVALID_CODE_SENT),
-                        eq(
-                                AUDIT_CONTEXT.withMetadataItem(
-                                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"))),
+                        eq(AUDIT_CONTEXT),
                         metadataCaptor.capture());
 
         List<AuditService.MetadataPair> expected =
                 List.of(
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", SIGN_IN.name()),
@@ -831,7 +830,8 @@ class VerifyCodeHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                            AUDIT_CONTEXT.withMetadataItem(pair("mfa-method", "default")),
+                            AUDIT_CONTEXT,
+                            pair("mfa-method", "default"),
                             pair("notification-type", MFA_SMS.name()),
                             pair("account-recovery", false),
                             pair(
@@ -868,7 +868,8 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                        AUDIT_CONTEXT.withMetadataItem(pair("mfa-method", "default")),
+                        AUDIT_CONTEXT,
+                        pair("mfa-method", "default"),
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "PASSWORD_RESET"));
