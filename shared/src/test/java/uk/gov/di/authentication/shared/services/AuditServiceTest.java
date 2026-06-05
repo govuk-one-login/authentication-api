@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -49,6 +51,12 @@ class AuditServiceTest {
                     "persistent-session-id",
                     Optional.empty());
 
+    record NestedMetadataObject(@Expose @SerializedName("fieldThree") String FieldThree) {}
+
+    record ComplexMetadataObject(
+            @Expose @SerializedName("fieldOne") String FieldOne,
+            @Expose @SerializedName("fieldTwo") NestedMetadataObject FieldTwo) {}
+
     enum TestEvents implements AuditableEvent {
         AUTH_TEST_EVENT_ONE;
 
@@ -86,26 +94,26 @@ class AuditServiceTest {
 
         var expected =
                 """
-                {
-                "timestamp":1630534200,
-                "event_timestamp_ms":1630534200012,
-                "event_name":"AUTH_TEST_EVENT_ONE",
-                "client_id":"client-id",
-                "component_id":"AUTH",
-                "user": {
-                    "user_id":"subject-id",
-                    "transaction_id":null,
-                    "email":"email",
-                    "phone":"phone-number",
-                    "ip_address":"ip-address",
-                    "session_id":"session-id",
-                    "persistent_session_id":"persistent-session-id",
-                    "govuk_signin_journey_id":"request-id"
-                },
-                "platform":null,
-                "restricted":null,
-                "extensions":null}
-                """;
+                        {
+                        "timestamp":1630534200,
+                        "event_timestamp_ms":1630534200012,
+                        "event_name":"AUTH_TEST_EVENT_ONE",
+                        "client_id":"client-id",
+                        "component_id":"AUTH",
+                        "user": {
+                            "user_id":"subject-id",
+                            "transaction_id":null,
+                            "email":"email",
+                            "phone":"phone-number",
+                            "ip_address":"ip-address",
+                            "session_id":"session-id",
+                            "persistent_session_id":"persistent-session-id",
+                            "govuk_signin_journey_id":"request-id"
+                        },
+                        "platform":null,
+                        "restricted":null,
+                        "extensions":null}
+                        """;
 
         assertEquals(asJson(expected), txmaMessage);
     }
@@ -135,6 +143,78 @@ class AuditServiceTest {
 
         assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
         assertThat(restricted, hasFieldWithValue("restrictedKey2", equalTo("restrictedValue2")));
+    }
+
+    @Test
+    void shouldAddComplexObjectInMetadataPairs() {
+        var metadataObject =
+                new ComplexMetadataObject("value1", new NestedMetadataObject("value3"));
+        auditService.submitAuditEvent(
+                AUTH_TEST_EVENT_ONE,
+                AUDIT_CONTEXT,
+                pair("key", "value"),
+                pair("foo", metadataObject));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+
+        assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
+        assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions").getAsJsonObject();
+        var expectedExtensions =
+                """
+                        {
+                          "key": "value",
+                          "foo": {
+                            "fieldOne": "value1",
+                            "fieldTwo": {
+                              "fieldThree": "value3"
+                            }
+                          }
+                        }
+                        """;
+        assertEquals(asJson(expectedExtensions), extensions);
+    }
+
+    @Test
+    void shouldAddComplexObjectInRestrictedMetadataPairs() {
+        var metadataObject =
+                new ComplexMetadataObject("value1", new NestedMetadataObject("value3"));
+        auditService.submitAuditEvent(
+                AUTH_TEST_EVENT_ONE,
+                AUDIT_CONTEXT,
+                pair("key", "value"),
+                pair("foo", metadataObject, true));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+
+        assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
+        assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions").getAsJsonObject();
+        var expectedExtensions =
+                """
+                        {
+                          "key": "value"
+                        }
+                        """;
+        assertEquals(asJson(expectedExtensions), extensions);
+
+        var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
+        var expectedRestricted =
+                """
+                        {
+                          "foo": {
+                            "fieldOne": "value1",
+                            "fieldTwo": {
+                              "fieldThree": "value3"
+                            }
+                          }
+                        }
+                        """;
+        assertEquals(asJson(expectedRestricted), restricted);
     }
 
     @Test
