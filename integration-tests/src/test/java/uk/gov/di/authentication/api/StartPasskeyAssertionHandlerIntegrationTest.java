@@ -163,7 +163,7 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                               "journey-type": "SIGN_IN",
                               "passkey": {
                                 "passkey_authentication_request": {
-                                  "passkey_request_user_verification": "required"
+                                  "passkey_request_user_verification": ""
                                 }
                               }
                             }
@@ -181,16 +181,14 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                               "passkey": {
                                 "passkey_allowed_credentials": [
                                   {
-                                    "passkey_credential_id": "credential-id",
-                                    "passkey_credential_transports": [
-                                      "some transport"
-                                    ]
+                                    "passkey_credential_id": "%s",
+                                    "passkey_credential_transports": []
                                   }
                                 ]
                               }
                             }
                             """,
-                            ENCODED_DEVICE_INFORMATION);
+                            ENCODED_DEVICE_INFORMATION, FIRST_PASSKEY_ID);
 
             var restricted = message.getAsJsonObject().get("restricted").getAsJsonObject();
             assertEquals(asJson(expectedAuditEventRestrictedSection), restricted);
