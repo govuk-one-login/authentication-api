@@ -29,8 +29,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 
 @ExtendWith(SystemStubsExtension.class)
 class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -125,6 +128,48 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
             var allowCredentials =
                     body.getAsJsonObject("publicKey").getAsJsonArray("allowCredentials");
             assertThat(allowCredentials.size(), equalTo(2));
+        }
+
+        @Test
+        void shouldEmitTheCorrectAuditEvent() {
+            var sessionId = setupUserAndSession();
+            var publicSubjectId = userStore.getPublicSubjectIdForEmail(TEST_EMAIL);
+
+            stubPasskeysRetrieveEndpoint(
+                    publicSubjectId, 200, passkeysResponse(passkeyJson(FIRST_PASSKEY_ID)));
+
+            var response =
+                    makeRequest(
+                            Optional.of(new StartPasskeyAssertionRequest()),
+                            constructFrontendHeaders(sessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+
+            var receivedEvents = txmaAuditQueue.getRawMessages();
+
+            assertEquals(1, receivedEvents.size());
+
+            var message = asJson(receivedEvents.get(0));
+
+            assertThat(
+                    message,
+                    hasFieldWithValue(
+                            "event_name", equalTo("AUTH_PASSKEY_AUTHENTICATION_GENERATED")));
+
+            var expectedAuditEventExtensions =
+                    """
+                    {
+                      "journey-type": "SIGN_IN",
+                      "passkey": {
+                        "passkey_authentication_request": {
+                          "passkey_request_user_verification": "required"
+                        }
+                      }
+                    }
+                    """;
+            var extensions = message.getAsJsonObject().get("extensions").getAsJsonObject();
+            assertEquals(asJson(expectedAuditEventExtensions), extensions);
         }
     }
 
