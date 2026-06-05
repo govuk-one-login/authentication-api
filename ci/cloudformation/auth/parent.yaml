@@ -2330,34 +2330,13 @@ Resources:
               - sqs:SendMessage
               - sqs:ChangeMessageVisibility
               - sqs:GetQueueAttributes
-            Resource: !Sub
-              - arn:aws:sqs:eu-west-2:${DataStoreAccountId}:${Env}-experian-phone-check-queue
-              - DataStoreAccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    dataStoreAccountId,
-                  ]
-                Env:
-                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          - Sid: AllowLambdasToEncryptWithCustomKey
+            Resource: !GetAtt ExperianPhoneCheckQueue.Arn
+          - Sid: AllowLambdasToEncryptWithQueueKmsKey
             Effect: Allow
             Action:
               - kms:GenerateDataKey
               - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    experianPhoneCheckQueueEncryptionKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    experianPhoneCheckQueueEncryptionKey,
-                  ]
+            Resource: !GetAtt PendingPhoneCheckQueueEncryptionKey.Arn
 
   IPVPublicEncryptionKeyParameterPolicy:
     Type: AWS::IAM::ManagedPolicy

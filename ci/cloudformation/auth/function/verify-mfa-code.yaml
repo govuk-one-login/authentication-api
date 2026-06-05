@@ -25,14 +25,8 @@ Resources:
                   dataStoreAccountId,
                 ]
           EXPERIAN_PHONE_CHECKER_QUEUE_URL: !Sub
-            - https://sqs.eu-west-2.amazonaws.com/${DataStoreAccountId}/${Env}-experian-phone-check-queue
-            - DataStoreAccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  dataStoreAccountId,
-                ]
-              Env:
+            - https://sqs.eu-west-2.amazonaws.com/${AWS::AccountId}/${Env}-experian-phone-check-queue
+            - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
