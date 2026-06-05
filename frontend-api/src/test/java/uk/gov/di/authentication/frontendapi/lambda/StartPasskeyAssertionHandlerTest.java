@@ -4,8 +4,11 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
+import com.yubico.webauthn.data.AuthenticatorTransport;
 import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import com.yubico.webauthn.data.PublicKeyCredentialRequestOptions;
+import com.yubico.webauthn.data.UserVerificationRequirement;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -29,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -122,7 +126,8 @@ class StartPasskeyAssertionHandlerTest {
             authSession.setEmailAddress(EMAIL);
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(USER_PROFILE));
-            var assertionRequest = createAssertionRequest();
+            var assertionRequest =
+                    createAssertionRequest(List.of(), UserVerificationRequirement.REQUIRED);
             var expectedJson = assertionRequest.toJson();
             when(passkeyAssertionService.startAssertion(any())).thenReturn(assertionRequest);
 
@@ -136,6 +141,36 @@ class StartPasskeyAssertionHandlerTest {
                                     session ->
                                             session.getPasskeyAssertionRequest()
                                                     .equals(expectedJson)));
+        }
+
+        @Test
+        void shouldEmitTheRelevantAuditEvent() {
+            authSession.setEmailAddress(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(USER_PROFILE));
+
+            ByteArray credentialId =
+                    new ByteArray("test-credential-id".getBytes(StandardCharsets.UTF_8));
+
+            String credentialIdBase64 = credentialId.getBase64Url();
+
+            var transports = Set.of(AuthenticatorTransport.BLE, AuthenticatorTransport.INTERNAL);
+            var expectedTransportsInAuditEvent = List.of("ble", "internal");
+
+            var allowCredentials =
+                    PublicKeyCredentialDescriptor.builder()
+                            .id(credentialId)
+                            .transports(transports)
+                            .build();
+
+            var assertionRequest =
+                    createAssertionRequest(
+                            List.of(allowCredentials), UserVerificationRequirement.REQUIRED);
+            when(passkeyAssertionService.startAssertion(any())).thenReturn(assertionRequest);
+
+            var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            assertThat(result, hasStatus(200));
 
             var expectedUnrestrictedPasskeyPair =
                     pair(
@@ -147,7 +182,7 @@ class StartPasskeyAssertionHandlerTest {
                             List.of(
                                     new PasskeyAuthenticationAuditRestricted
                                             .PasskeyAllowedCredential(
-                                            "credential-id", List.of("some transport"))));
+                                            credentialIdBase64, expectedTransportsInAuditEvent)));
 
             var expectedRestrictedPasskeyPair =
                     pair("passkey", expectedPasskeyAuthenticationAuditRestricted, true);
@@ -203,7 +238,8 @@ class StartPasskeyAssertionHandlerTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(USER_PROFILE));
 
-            var spyAssertionRequest = spy(createAssertionRequest());
+            var spyAssertionRequest =
+                    spy(createAssertionRequest(List.of(), UserVerificationRequirement.REQUIRED));
             doThrow(new JsonProcessingException("test") {})
                     .when(spyAssertionRequest)
                     .toCredentialsGetJson();
@@ -221,7 +257,8 @@ class StartPasskeyAssertionHandlerTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(USER_PROFILE));
 
-            var spyAssertionRequest = spy(createAssertionRequest());
+            var spyAssertionRequest =
+                    spy(createAssertionRequest(List.of(), UserVerificationRequirement.REQUIRED));
             doThrow(new JsonProcessingException("test") {}).when(spyAssertionRequest).toJson();
             when(passkeyAssertionService.startAssertion(any())).thenReturn(spyAssertionRequest);
 
@@ -240,10 +277,16 @@ class StartPasskeyAssertionHandlerTest {
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 
-    private AssertionRequest createAssertionRequest() {
+    private AssertionRequest createAssertionRequest(
+            List<PublicKeyCredentialDescriptor> allowCredentials,
+            UserVerificationRequirement userVerificationRequirement) {
         var challenge = new ByteArray("test-challenge".getBytes(StandardCharsets.UTF_8));
         var publicKeyCredentialRequestOptions =
-                PublicKeyCredentialRequestOptions.builder().challenge(challenge).build();
+                PublicKeyCredentialRequestOptions.builder()
+                        .challenge(challenge)
+                        .userVerification(userVerificationRequirement)
+                        .allowCredentials(allowCredentials)
+                        .build();
         return AssertionRequest.builder()
                 .publicKeyCredentialRequestOptions(publicKeyCredentialRequestOptions)
                 .build();
