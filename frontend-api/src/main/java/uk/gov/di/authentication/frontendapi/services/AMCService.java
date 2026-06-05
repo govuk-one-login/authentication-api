@@ -51,7 +51,7 @@ public class AMCService {
     private final JwtService jwtService;
     private final AccessTokenConstructorService accessTokenConstructorService;
     private static final Logger LOG = LogManager.getLogger(AMCService.class);
-    private static final Long CLIENT_ASSERTION_LIFETIME = 5L;
+    private static final Long CLIENT_ASSERTION_LIFETIME = 60L;
 
     public AMCService(
             ConfigurationService configurationService,
