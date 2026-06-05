@@ -21,6 +21,7 @@ public interface AuditableEvent {
     String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS = "account_actions";
     String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS = "account_actions_errors";
     String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_FAILED = "account_actions_failed";
+    String AUDIT_EXTENSIONS_PASSKEY = "passkey";
 
     AuditableEvent parseFromName(String name);
 }

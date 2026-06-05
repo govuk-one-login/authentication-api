@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditExtension;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -131,11 +132,17 @@ class StartPasskeyAssertionHandlerTest {
                                             session.getPasskeyAssertionRequest()
                                                     .equals(expectedJson)));
 
+            var expectedUnrestrictedPasskeyPair =
+                    pair(
+                            "passkey",
+                            PasskeyAuthenticationAuditExtension.fromUserVerification("required"));
+
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_PASSKEY_AUTHENTICATION_GENERATED,
                             AUDIT_CONTEXT,
-                            pair("journey-type", "SIGN_IN"));
+                            pair("journey-type", "SIGN_IN"),
+                            expectedUnrestrictedPasskeyPair);
         }
     }
 
