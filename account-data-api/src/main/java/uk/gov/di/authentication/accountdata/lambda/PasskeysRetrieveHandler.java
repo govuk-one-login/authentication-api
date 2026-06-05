@@ -10,12 +10,12 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.Passkey;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
 
@@ -34,7 +34,7 @@ public class PasskeysRetrieveHandler
     private final PasskeysService passkeysService;
 
     public PasskeysRetrieveHandler() {
-        this(ConfigurationService.getInstance());
+        this(new ConfigurationService());
     }
 
     public PasskeysRetrieveHandler(

@@ -9,12 +9,12 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysUpdateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.DateTimeException;
@@ -36,7 +36,7 @@ public class PasskeysUpdateHandler
     private final PasskeysService passkeysService;
 
     public PasskeysUpdateHandler() {
-        this(ConfigurationService.getInstance());
+        this(new ConfigurationService());
     }
 
     public PasskeysUpdateHandler(

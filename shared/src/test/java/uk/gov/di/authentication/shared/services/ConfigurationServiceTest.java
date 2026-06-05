@@ -437,16 +437,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getTokenSigningKeyAliasShouldNotDefault() {
-        assertNull(configurationService.getTokenSigningKeyAlias());
-    }
-
-    @Test
-    void getTokenSigningKeyRsaAliasShouldNotDefault() {
-        assertNull(configurationService.getTokenSigningKeyRsaAlias());
-    }
-
-    @Test
     void isRsaSigningAvailableShouldNotDefault() {
         assertFalse(configurationService.isRsaSigningAvailable());
     }

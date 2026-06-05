@@ -7,10 +7,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountdata.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.accountdata.extensions.AuthenticatorExtension;
 import uk.gov.di.authentication.accountdata.lambda.PasskeysCreateHandler;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.DynamoPasskeyService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +31,7 @@ import static uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper.bu
 
 class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private final ConfigurationService configurationService = ConfigurationService.getInstance();
+    private final ConfigurationService configurationService = new ConfigurationService();
     DynamoPasskeyService dynamoPasskeyService = new DynamoPasskeyService(configurationService);
     private static final Map<String, Object> AUTHORIZER_PARAMS =
             Map.of("principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-create");

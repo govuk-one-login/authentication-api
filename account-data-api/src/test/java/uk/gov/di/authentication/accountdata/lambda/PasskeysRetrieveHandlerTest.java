@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysRetrieveFailureReasons;
 import uk.gov.di.authentication.accountdata.helpers.PasskeysTestHelper;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
 import java.util.Map;
