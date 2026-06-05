@@ -63,6 +63,7 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcClientId,
             ]
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           WEBAUTHN_RELYING_PARTY_ID:
             !FindInMap [
               EnvironmentConfiguration,
@@ -82,6 +83,7 @@ Resources:
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
         - !Ref AuthToAccountDataSigningKeyPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions:
