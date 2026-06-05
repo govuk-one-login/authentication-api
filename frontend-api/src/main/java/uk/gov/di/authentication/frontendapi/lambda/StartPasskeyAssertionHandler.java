@@ -5,6 +5,10 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.yubico.webauthn.AssertionRequest;
+import com.yubico.webauthn.data.AuthenticatorTransport;
+import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
+import com.yubico.webauthn.data.UserVerificationRequirement;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.StartPasskeyAssertionRequest;
@@ -111,12 +115,16 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                         .getAuthSession()
                         .withPasskeyAssertionRequest(assertionRequestJsonToStore));
 
-        emitAuthPasskeyAuthenticationGeneratedAuditEvent(userContext, input, emailAddress);
+        emitAuthPasskeyAuthenticationGeneratedAuditEvent(
+                userContext, input, emailAddress, assertionRequest);
         return generateApiGatewayProxyResponse(200, credentialsJson);
     }
 
     private void emitAuthPasskeyAuthenticationGeneratedAuditEvent(
-            UserContext userContext, APIGatewayProxyRequestEvent input, String emailAddress) {
+            UserContext userContext,
+            APIGatewayProxyRequestEvent input,
+            String emailAddress,
+            AssertionRequest assertionRequest) {
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
@@ -128,21 +136,34 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
 
         var journeyTypePair =
                 pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN.getValue());
-        // TODO work out how to derive this user verification value
+
+        var maybeUserVerification =
+                assertionRequest
+                        .getPublicKeyCredentialRequestOptions()
+                        .getUserVerification()
+                        .map(UserVerificationRequirement::getValue);
         var passkeyUnrestrictedPair =
                 pair(
                         AUDIT_EXTENSIONS_PASSKEY,
-                        PasskeyAuthenticationAuditExtension.fromUserVerification("required"));
+                        PasskeyAuthenticationAuditExtension.fromUserVerification(
+                                maybeUserVerification.orElse(AuditService.UNKNOWN)));
 
-        var dummyAllowedCredentials =
-                new PasskeyAuthenticationAuditRestricted.PasskeyAllowedCredential(
-                        "credential-id", List.of("some transport"));
-        var dummyPasskeyAuthenticationAuditRestrictedObject =
-                new PasskeyAuthenticationAuditRestricted(List.of(dummyAllowedCredentials));
+        var allowedCredentials =
+                assertionRequest
+                        .getPublicKeyCredentialRequestOptions()
+                        .getAllowCredentials()
+                        .map(
+                                allowCredentials ->
+                                        allowCredentials.stream()
+                                                .map(
+                                                        StartPasskeyAssertionHandler
+                                                                ::allowCredentialFrom)
+                                                .toList())
+                        .orElse(List.of());
         var restrictedPasskeyPair =
                 pair(
                         AUDIT_EXTENSIONS_PASSKEY,
-                        dummyPasskeyAuthenticationAuditRestrictedObject,
+                        new PasskeyAuthenticationAuditRestricted(allowedCredentials),
                         true);
 
         auditService.submitAuditEvent(
@@ -151,5 +172,15 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                 journeyTypePair,
                 passkeyUnrestrictedPair,
                 restrictedPasskeyPair);
+    }
+
+    private static PasskeyAuthenticationAuditRestricted.PasskeyAllowedCredential
+            allowCredentialFrom(PublicKeyCredentialDescriptor credentialDescriptor) {
+        return new PasskeyAuthenticationAuditRestricted.PasskeyAllowedCredential(
+                credentialDescriptor.getId().getBase64Url(),
+                credentialDescriptor
+                        .getTransports()
+                        .map(set -> set.stream().map(AuthenticatorTransport::getId).toList())
+                        .orElse(List.of()));
     }
 }
