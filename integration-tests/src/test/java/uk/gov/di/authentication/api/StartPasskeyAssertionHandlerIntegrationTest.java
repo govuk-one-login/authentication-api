@@ -159,17 +159,41 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
 
             var expectedAuditEventExtensions =
                     """
-                    {
-                      "journey-type": "SIGN_IN",
-                      "passkey": {
-                        "passkey_authentication_request": {
-                          "passkey_request_user_verification": "required"
-                        }
-                      }
-                    }
-                    """;
+                            {
+                              "journey-type": "SIGN_IN",
+                              "passkey": {
+                                "passkey_authentication_request": {
+                                  "passkey_request_user_verification": "required"
+                                }
+                              }
+                            }
+                            """;
             var extensions = message.getAsJsonObject().get("extensions").getAsJsonObject();
             assertEquals(asJson(expectedAuditEventExtensions), extensions);
+
+            var expectedAuditEventRestrictedSection =
+                    String.format(
+                            """
+                                                {
+                              "device_information": {
+                                "encoded": "%s"
+                              },
+                              "passkey": {
+                                "passkey_allowed_credentials": [
+                                  {
+                                    "passkey_credential_id": "credential-id",
+                                    "passkey_credential_transports": [
+                                      "some transport"
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                            """,
+                            ENCODED_DEVICE_INFORMATION);
+
+            var restricted = message.getAsJsonObject().get("restricted").getAsJsonObject();
+            assertEquals(asJson(expectedAuditEventRestrictedSection), restricted);
         }
     }
 

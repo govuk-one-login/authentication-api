@@ -13,9 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditExtension;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditRestricted;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -24,6 +26,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -137,12 +140,23 @@ class StartPasskeyAssertionHandlerTest {
                             "passkey",
                             PasskeyAuthenticationAuditExtension.fromUserVerification("required"));
 
+            var expectedPasskeyAuthenticationAuditRestricted =
+                    new PasskeyAuthenticationAuditRestricted(
+                            List.of(
+                                    new PasskeyAuthenticationAuditRestricted
+                                            .PasskeyAllowedCredential(
+                                            "credential-id", List.of("some transport"))));
+
+            var expectedRestrictedPasskeyPair =
+                    pair("passkey", expectedPasskeyAuthenticationAuditRestricted, true);
+
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_PASSKEY_AUTHENTICATION_GENERATED,
                             AUDIT_CONTEXT,
-                            pair("journey-type", "SIGN_IN"),
-                            expectedUnrestrictedPasskeyPair);
+                            pair("journey-type", JourneyType.SIGN_IN.getValue()),
+                            expectedUnrestrictedPasskeyPair,
+                            expectedRestrictedPasskeyPair);
         }
     }
 

@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.StartPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditExtension;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditRestricted;
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
@@ -22,6 +23,8 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.util.List;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSKEY_AUTHENTICATION_GENERATED;
@@ -123,17 +126,30 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var journeyTypePair = pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN);
+        var journeyTypePair =
+                pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN.getValue());
         // TODO work out how to derive this user verification value
         var passkeyUnrestrictedPair =
                 pair(
                         AUDIT_EXTENSIONS_PASSKEY,
                         PasskeyAuthenticationAuditExtension.fromUserVerification("required"));
 
+        var dummyAllowedCredentials =
+                new PasskeyAuthenticationAuditRestricted.PasskeyAllowedCredential(
+                        "credential-id", List.of("some transport"));
+        var dummyPasskeyAuthenticationAuditRestrictedObject =
+                new PasskeyAuthenticationAuditRestricted(List.of(dummyAllowedCredentials));
+        var restrictedPasskeyPair =
+                pair(
+                        AUDIT_EXTENSIONS_PASSKEY,
+                        dummyPasskeyAuthenticationAuditRestrictedObject,
+                        true);
+
         auditService.submitAuditEvent(
                 AUTH_PASSKEY_AUTHENTICATION_GENERATED,
                 auditContext,
                 journeyTypePair,
-                passkeyUnrestrictedPair);
+                passkeyUnrestrictedPair,
+                restrictedPasskeyPair);
     }
 }
