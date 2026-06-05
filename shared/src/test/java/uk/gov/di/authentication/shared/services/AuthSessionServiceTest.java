@@ -56,6 +56,7 @@ class AuthSessionServiceTest {
         var session = authSessionService.generateNewAuthSession(SESSION_ID);
         assertEquals(SESSION_ID, session.getSessionId());
         assertEquals(AuthSessionItem.AccountState.UNKNOWN, session.getIsNewAccount());
+        assertEquals(false, session.getIsPartiallyCreatedAccount());
         assertTrue(session.getTimeToLive() > Instant.now().getEpochSecond());
 
         for (CodeRequestType requestType : CodeRequestType.values()) {
@@ -204,6 +205,18 @@ class AuthSessionServiceTest {
         assertThrows(
                 AuthSessionException.class,
                 () -> authSessionService.getSessionFromRequestHeaders(headerMap));
+    }
+
+    @Test
+    void shouldSetAndGetIsPartiallyCreatedAccount() {
+        var session = new AuthSessionItem();
+        assertThat(session.getIsPartiallyCreatedAccount(), is(false));
+
+        session.setIsPartiallyCreatedAccount(true);
+        assertThat(session.getIsPartiallyCreatedAccount(), is(true));
+
+        var builtSession = new AuthSessionItem().withIsPartiallyCreatedAccount(true);
+        assertThat(builtSession.getIsPartiallyCreatedAccount(), is(true));
     }
 
     private AuthSessionItem withValidSession() {

@@ -47,6 +47,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_HAS_VERIFIED_PASSWORD = "HasVerifiedPassword";
     public static final String ATTRIBUTE_HAS_VERIFIED_MFA = "HasVerifiedMfa";
     public static final String ATTRIBUTE_HAS_VERIFIED_PASSKEY = "HasVerifiedPasskey";
+    public static final String ATTRIBUTE_IS_PARTIALLY_CREATED_ACCOUNT = "IsPartiallyCreatedAccount";
 
     public enum AccountState {
         NEW,
@@ -93,6 +94,7 @@ public class AuthSessionItem {
     private boolean hasVerifiedPassword;
     private boolean hasVerifiedMfa;
     private boolean hasVerifiedPasskey;
+    private boolean isPartiallyCreatedAccount;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -537,6 +539,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withHasVerifiedPasskey(boolean hasVerifiedPasskey) {
         this.hasVerifiedPasskey = hasVerifiedPasskey;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_PARTIALLY_CREATED_ACCOUNT)
+    public boolean getIsPartiallyCreatedAccount() {
+        return isPartiallyCreatedAccount;
+    }
+
+    public void setIsPartiallyCreatedAccount(boolean isPartiallyCreatedAccount) {
+        this.isPartiallyCreatedAccount = isPartiallyCreatedAccount;
+    }
+
+    public AuthSessionItem withIsPartiallyCreatedAccount(boolean isPartiallyCreatedAccount) {
+        this.isPartiallyCreatedAccount = isPartiallyCreatedAccount;
         return this;
     }
 
