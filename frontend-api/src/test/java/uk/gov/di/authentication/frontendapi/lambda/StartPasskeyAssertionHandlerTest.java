@@ -11,10 +11,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -29,13 +31,21 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSKEY_AUTHENTICATION_GENERATED;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
@@ -58,8 +68,25 @@ class StartPasskeyAssertionHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeyAssertionService passkeyAssertionService =
             mock(PasskeyAssertionService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private StartPasskeyAssertionHandler handler;
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withClientId(CLIENT_ID)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    INTERNAL_COMMON_SUBJECT_ID,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    ENCODED_DEVICE_DETAILS);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -80,7 +107,8 @@ class StartPasskeyAssertionHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        passkeyAssertionService);
+                        passkeyAssertionService,
+                        auditService);
     }
 
     @Nested
@@ -104,6 +132,12 @@ class StartPasskeyAssertionHandlerTest {
                                     session ->
                                             session.getPasskeyAssertionRequest()
                                                     .equals(expectedJson)));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_PASSKEY_AUTHENTICATION_GENERATED,
+                            AUDIT_CONTEXT,
+                            pair("journey-type", "SIGN_IN"));
         }
     }
 
@@ -115,6 +149,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -125,6 +164,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -137,6 +181,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
     }
 
@@ -158,6 +207,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -175,6 +229,11 @@ class StartPasskeyAssertionHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
             verify(authSessionService, never()).updateSession(any());
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
     }
 

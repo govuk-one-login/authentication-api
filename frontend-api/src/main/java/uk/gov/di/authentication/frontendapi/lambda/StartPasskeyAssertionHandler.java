@@ -12,19 +12,28 @@ import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJson
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSKEY_AUTHENTICATION_GENERATED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPasskeyAssertionRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(StartPasskeyAssertionHandler.class);
+    private final AuditService auditService;
     private final PasskeyAssertionService passkeyAssertionService;
 
     public StartPasskeyAssertionHandler() {
@@ -35,13 +44,15 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
-            PasskeyAssertionService passkeyAssertionService) {
+            PasskeyAssertionService passkeyAssertionService,
+            AuditService auditService) {
         super(
                 StartPasskeyAssertionRequest.class,
                 configurationService,
                 authenticationService,
                 authSessionService);
         this.passkeyAssertionService = passkeyAssertionService;
+        this.auditService = auditService;
     }
 
     public StartPasskeyAssertionHandler(ConfigurationService configurationService) {
@@ -50,6 +61,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                 new PasskeyAssertionService(
                         RelyingPartyProvider.provide(configurationService),
                         new DefaultPasskeyJsonParser());
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
@@ -69,11 +81,12 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
         if (emailAddress == null || emailAddress.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.EMAIL_ADDRESS_EMPTY);
         }
-        var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
-        if (userProfile.isEmpty()) {
+        var maybeUserProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
+        if (maybeUserProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.USER_NOT_FOUND);
         }
-        var publicSubjectId = userProfile.get().getPublicSubjectID();
+        var userProfile = maybeUserProfile.get();
+        var publicSubjectId = userProfile.getPublicSubjectID();
 
         var assertionRequest = passkeyAssertionService.startAssertion(publicSubjectId);
 
@@ -92,6 +105,19 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                 userContext
                         .getAuthSession()
                         .withPasskeyAssertionRequest(assertionRequestJsonToStore));
+
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        emailAddress,
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+        var journeyTypePair =
+                pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN.getValue());
+        auditService.submitAuditEvent(
+                AUTH_PASSKEY_AUTHENTICATION_GENERATED, auditContext, journeyTypePair);
         return generateApiGatewayProxyResponse(200, credentialsJson);
     }
 }
