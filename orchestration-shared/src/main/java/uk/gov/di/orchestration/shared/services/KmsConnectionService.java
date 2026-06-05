@@ -46,8 +46,12 @@ public class KmsConnectionService {
                             .credentialsProvider(DefaultCredentialsProvider.builder().build())
                             .build();
         }
-        warmUp(tokenSigningKeyId);
-        warmUp(newTokenSigningKeyIdV2);
+        if (tokenSigningKeyId != null) {
+            warmUp(tokenSigningKeyId);
+        }
+        if (newTokenSigningKeyIdV2 != null) {
+            warmUp(newTokenSigningKeyIdV2);
+        }
     }
 
     public GetPublicKeyResponse getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
