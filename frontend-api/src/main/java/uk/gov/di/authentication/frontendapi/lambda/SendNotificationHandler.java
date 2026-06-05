@@ -73,6 +73,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.FraudCheckMetricsHelper.incrementUserSubmittedCredentialIfNotificationSetupJourney;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class SendNotificationHandler extends BaseFrontendHandler<SendNotificationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -270,21 +271,21 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 return postSendNotificationBlockResponse.get();
             }
 
-            switch (request.getNotificationType()) {
-                case VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                    return handleNotificationRequest(
-                            request.getEmail(),
-                            request.getNotificationType(),
-                            userContext,
-                            request.isRequestNewCode(),
-                            request,
-                            input,
-                            auditContext);
-                case VERIFY_PHONE_NUMBER:
-                    return handlePhoneNumberVerification(input, request, userContext, auditContext);
-                default:
-                    return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
-            }
+            return switch (request.getNotificationType()) {
+                case VERIFY_EMAIL,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> handleNotificationRequest(
+                        request.getEmail(),
+                        request.getNotificationType(),
+                        userContext,
+                        request.isRequestNewCode(),
+                        request,
+                        input,
+                        auditContext);
+                case VERIFY_PHONE_NUMBER -> handlePhoneNumberVerification(
+                        input, request, userContext, auditContext);
+                default -> generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
+            };
+
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
@@ -315,20 +316,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         if (errorResponse.isPresent()) {
             return generateApiGatewayProxyResponse(400, errorResponse.get());
         }
-
-        auditContext =
-                auditContext.withMetadataItem(
-                        new AuditService.MetadataPair(
-                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                AUDIT_EVENT_DEFAULT_MFA_VALUE,
-                                false));
-
-        auditContext =
-                auditContext.withMetadataItem(
-                        new AuditService.MetadataPair(
-                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                                request.getJourneyType(),
-                                false));
 
         return handleNotificationRequest(
                 PhoneNumberHelper.removeWhitespaceFromPhoneNumber(request.getPhoneNumber()),
@@ -436,10 +423,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     notifyRequest.getUniqueNotificationReference());
         }
 
-        auditService.submitAuditEvent(
-                getSuccessfulAuditEventFromNotificationType(
-                        notificationType, testClientWithAllowedEmail),
-                auditContext);
+        if (!testClientWithAllowedEmail && notificationType.isForPhoneNumber()) {
+            auditService.submitAuditEvent(
+                    getSuccessfulAuditEventFromNotificationType(notificationType, false),
+                    auditContext,
+                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, AUDIT_EVENT_DEFAULT_MFA_VALUE),
+                    pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, request.getJourneyType()));
+        } else {
+            auditService.submitAuditEvent(
+                    getSuccessfulAuditEventFromNotificationType(
+                            notificationType, testClientWithAllowedEmail),
+                    auditContext);
+        }
 
         return generateEmptySuccessApiGatewayResponse();
     }
