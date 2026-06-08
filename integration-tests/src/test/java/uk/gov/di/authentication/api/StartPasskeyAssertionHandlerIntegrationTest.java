@@ -181,8 +181,7 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                               "passkey": {
                                 "passkey_allowed_credentials": [
                                   {
-                                    "passkey_credential_id": "%s",
-                                    "passkey_credential_transports": []
+                                    "passkey_credential_id": "%s"
                                   }
                                 ]
                               }
