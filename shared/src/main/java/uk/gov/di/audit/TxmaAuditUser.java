@@ -7,7 +7,6 @@ import java.util.Objects;
 public class TxmaAuditUser {
 
     @Expose private String userId;
-    @Expose private String transactionId;
     @Expose private String email;
     @Expose private String phone;
     @Expose private String ipAddress;
@@ -21,11 +20,6 @@ public class TxmaAuditUser {
 
     public TxmaAuditUser withUserId(String userId) {
         this.userId = userId;
-        return this;
-    }
-
-    public TxmaAuditUser withTransactionId(String transactionId) {
-        this.transactionId = transactionId;
         return this;
     }
 
@@ -69,7 +63,6 @@ public class TxmaAuditUser {
         if (o == null || getClass() != o.getClass()) return false;
         TxmaAuditUser that = (TxmaAuditUser) o;
         return Objects.equals(userId, that.userId)
-                && Objects.equals(transactionId, that.transactionId)
                 && Objects.equals(email, that.email)
                 && Objects.equals(phone, that.phone)
                 && Objects.equals(ipAddress, that.ipAddress)
@@ -82,7 +75,6 @@ public class TxmaAuditUser {
     public int hashCode() {
         return Objects.hash(
                 userId,
-                transactionId,
                 email,
                 phone,
                 ipAddress,

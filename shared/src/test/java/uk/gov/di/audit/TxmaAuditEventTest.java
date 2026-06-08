@@ -64,7 +64,6 @@ class TxmaAuditEventTest {
                         .withPersistentSessionId("persistent-id")
                         .withPhone("01110")
                         .withSessionId("session-id")
-                        .withTransactionId("transaction-id")
                         .withGovukSigninJourneyId("journey-id");
 
         var event = auditEvent(AUTH_TEST_EVENT).withUser(user);
@@ -77,7 +76,6 @@ class TxmaAuditEventTest {
         assertThat(payload, hasFieldWithValue("persistent_session_id", is("persistent-id")));
         assertThat(payload, hasFieldWithValue("phone", is("01110")));
         assertThat(payload, hasFieldWithValue("session_id", is("session-id")));
-        assertThat(payload, hasFieldWithValue("transaction_id", is("transaction-id")));
         assertThat(payload, hasFieldWithValue("govuk_signin_journey_id", is("journey-id")));
     }
 
