@@ -186,8 +186,7 @@ class DocAppCallbackHandlerTest {
         responseHeaders.put("state", STATE.getValue());
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
-        when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(tokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
         when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
                 .thenReturn(List.of("a-verifiable-credential"));
 
@@ -351,14 +350,12 @@ class DocAppCallbackHandlerTest {
         usingValidClientSession();
         usingValidOrchSession();
         var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("Error object"));
-        var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
-        when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(unsuccessfulTokenResponse);
+        when(tokenService.getToken(AUTH_CODE.getValue())).thenReturn(unsuccessfulTokenResponse);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
@@ -408,8 +405,7 @@ class DocAppCallbackHandlerTest {
         responseHeaders.put("state", STATE.getValue());
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
-        when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(tokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
         when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
                 .thenThrow(UnsuccessfulCredentialResponseException.class);
 
@@ -553,14 +549,12 @@ class DocAppCallbackHandlerTest {
         usingValidOrchSession();
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
-        var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
-        when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(tokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
         when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
                 .thenThrow(
                         new UnsuccessfulCredentialResponseException(

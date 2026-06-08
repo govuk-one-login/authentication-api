@@ -218,10 +218,7 @@ public class DocAppCallbackHandler
             auditService.submitAuditEvent(
                     DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
-            var tokenRequest =
-                    tokenService.constructTokenRequest(
-                            input.getQueryStringParameters().get("code"));
-            var tokenResponse = tokenService.sendTokenRequest(tokenRequest);
+            var tokenResponse = tokenService.getToken(input.getQueryStringParameters().get("code"));
             if (tokenResponse.indicatesSuccess()) {
                 LOG.info("TokenResponse was successful");
                 auditService.submitAuditEvent(
