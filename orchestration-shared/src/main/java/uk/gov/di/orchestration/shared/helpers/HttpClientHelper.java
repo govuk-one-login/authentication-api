@@ -11,6 +11,6 @@ public class HttpClientHelper {
     public static HttpClient newInstrumentedHttpClient() {
         return JavaHttpClientTelemetry.builder(GlobalOpenTelemetry.get())
                 .build()
-                .newHttpClient(HttpClient.newHttpClient());
+                .wrap(HttpClient.newHttpClient());
     }
 }
