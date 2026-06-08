@@ -138,7 +138,12 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
             var publicSubjectId = userStore.getPublicSubjectIdForEmail(TEST_EMAIL);
 
             stubPasskeysRetrieveEndpoint(
-                    publicSubjectId, 200, passkeysResponse(passkeyJson(FIRST_PASSKEY_ID), passkeyJsonWithTransports(SECOND_PASSKEY_ID, List.of("BLE"))));
+                    publicSubjectId,
+                    200,
+                    passkeysResponse(
+                            passkeyJson(FIRST_PASSKEY_ID),
+                            passkeyJsonWithTransports(
+                                    SECOND_PASSKEY_ID, List.of("BLE", "INTERNAL"))));
 
             var response =
                     makeRequest(
@@ -183,14 +188,20 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                               "passkey": {
                                 "passkey_allowed_credentials": [
                                   {
+                                    "passkey_credential_id": "%s"
+                                  },
+                                  {
                                     "passkey_credential_id": "%s",
-                                    "passkey_credential_transports": []
+                                    "passkey_credential_transports": [%s]
                                   }
                                 ]
                               }
                             }
                             """,
-                            ENCODED_DEVICE_INFORMATION, FIRST_PASSKEY_ID);
+                            ENCODED_DEVICE_INFORMATION,
+                            FIRST_PASSKEY_ID,
+                            SECOND_PASSKEY_ID,
+                            "\"ble\", \"internal\"");
 
             var restricted = message.getAsJsonObject().get("restricted").getAsJsonObject();
             assertEquals(asJson(expectedAuditEventRestrictedSection), restricted);
@@ -286,9 +297,7 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
 
     private static String passkeyJsonWithTransports(String passkeyId, List<String> transports) {
         var transportsList =
-                transports.stream()
-                        .map(t -> '"' + t + '"')
-                        .collect(Collectors.joining(", "));
+                transports.stream().map(t -> '"' + t + '"').collect(Collectors.joining(", "));
         return """
                 {
                   "id": "%s",
