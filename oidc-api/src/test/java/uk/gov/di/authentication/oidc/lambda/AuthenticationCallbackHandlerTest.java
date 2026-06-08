@@ -317,7 +317,7 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
 
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
@@ -526,7 +526,7 @@ class AuthenticationCallbackHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.getToken(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
 
         var response = handler.handleRequest(event, CONTEXT);
 
@@ -551,7 +551,7 @@ class AuthenticationCallbackHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                 .thenThrow(new UnsuccessfulCredentialResponseException(TEST_ERROR_MESSAGE));
 
@@ -579,7 +579,7 @@ class AuthenticationCallbackHandlerTest {
         usingValidClient();
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
         handler.handleRequest(event, CONTEXT);
@@ -606,7 +606,7 @@ class AuthenticationCallbackHandlerTest {
         usingValidClient();
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
         handler.handleRequest(event, CONTEXT);
@@ -640,7 +640,7 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
 
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
@@ -673,7 +673,7 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
 
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
         when(USER_INFO.getStringClaim(AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH.getValue()))
@@ -709,7 +709,7 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
 
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
@@ -763,7 +763,7 @@ class AuthenticationCallbackHandlerTest {
                                             .withAuthenticated(authenticated)));
             usingValidClientSession();
             usingValidClient();
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                     .thenReturn(USER_INFO);
             when(USER_INFO.getBooleanClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()))
@@ -791,7 +791,7 @@ class AuthenticationCallbackHandlerTest {
         @BeforeEach
         void setup() throws UnsuccessfulCredentialResponseException {
             mockedIdentityHelper = mockStatic(IdentityHelper.class);
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                     .thenReturn(USER_INFO);
             when(USER_INFO.getSubject()).thenReturn(new Subject(TEST_INTERNAL_COMMON_SUBJECT_ID));
@@ -1138,7 +1138,7 @@ class AuthenticationCallbackHandlerTest {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
             withPreviousOrchSessionDueToMaxAge();
 
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                     .thenReturn(USER_INFO);
             when(USER_INFO.getSubject()).thenReturn(new Subject(INTERNAL_COMMON_SUBJECT_ID));
@@ -1177,7 +1177,7 @@ class AuthenticationCallbackHandlerTest {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
             withNoPreviousOrchSession();
 
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                     .thenReturn(USER_INFO);
             when(USER_INFO.getSubject()).thenReturn(new Subject(INTERNAL_COMMON_SUBJECT_ID));
@@ -1212,7 +1212,7 @@ class AuthenticationCallbackHandlerTest {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
             var previousOrchSession = withPreviousOrchSessionDueToMaxAge();
 
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                     .thenReturn(USER_INFO);
             when(USER_INFO.getSubject())
@@ -1314,7 +1314,7 @@ class AuthenticationCallbackHandlerTest {
                                         .requestObject(encryptedJwt)
                                         .build());
                 var event = createRequestForSfadJourney();
-                when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+                when(tokenService.getToken(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
                 when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                         .thenReturn(USER_INFO);

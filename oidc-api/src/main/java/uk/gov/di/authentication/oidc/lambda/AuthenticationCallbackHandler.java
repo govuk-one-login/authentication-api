@@ -6,7 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
-import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
@@ -322,10 +321,7 @@ public class AuthenticationCallbackHandler
                         Map.of(ResponseHeaders.SET_COOKIE, List.of(newSessionCookie)));
             }
 
-            var tokenRequest =
-                    tokenService.constructTokenRequest(
-                            input.getQueryStringParameters().get("code"));
-            TokenResponse tokenResponse = tokenService.sendTokenRequest(tokenRequest);
+            var tokenResponse = tokenService.getToken(input.getQueryStringParameters().get("code"));
             if (tokenResponse.indicatesSuccess()) {
                 LOG.info("TokenResponse was successful");
                 auditService.submitAuditEvent(
