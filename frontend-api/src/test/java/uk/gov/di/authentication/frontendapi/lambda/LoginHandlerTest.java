@@ -59,7 +59,6 @@ import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -183,8 +182,7 @@ class LoginHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty(),
-                    new ArrayList<>());
+                    Optional.empty());
 
     private final AuditContext auditContextWithoutUserInfo =
             auditContextWithAllUserInfo

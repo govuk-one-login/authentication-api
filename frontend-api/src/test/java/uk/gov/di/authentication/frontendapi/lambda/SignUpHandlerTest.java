@@ -27,7 +27,6 @@ import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -102,8 +101,7 @@ class SignUpHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS),
-                    new ArrayList<>());
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

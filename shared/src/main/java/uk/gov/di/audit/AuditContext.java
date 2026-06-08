@@ -19,6 +19,29 @@ public record AuditContext(
         Optional<String> txmaAuditEncoded,
         List<AuditService.MetadataPair> metadata) {
 
+    public AuditContext(
+            String clientId,
+            String clientSessionId,
+            String sessionId,
+            String subjectId,
+            String email,
+            String ipAddress,
+            String phoneNumber,
+            String persistentSessionId,
+            Optional<String> txmaAuditEncoded) {
+        this(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded,
+                List.of());
+    }
+
     public static AuditContext auditContextFromUserContext(
             UserContext userContext,
             String subjectId,
@@ -35,8 +58,7 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                Optional.ofNullable(userContext.getTxmaAuditEncoded()),
-                new ArrayList<>());
+                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
     }
 
     public static AuditContext emptyAuditContext() {
@@ -49,8 +71,7 @@ public record AuditContext(
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                Optional.empty(),
-                new ArrayList<>());
+                Optional.empty());
     }
 
     public AuditContext withPhoneNumber(String phoneNumber) {

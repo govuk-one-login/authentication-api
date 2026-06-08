@@ -44,7 +44,6 @@ import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -163,8 +162,7 @@ class MfaHandlerTest {
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS),
-                    new ArrayList<>());
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     private final AuthSessionItem authSession =
             new AuthSessionItem()

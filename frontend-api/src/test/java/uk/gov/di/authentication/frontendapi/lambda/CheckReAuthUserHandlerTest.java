@@ -33,7 +33,6 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -114,8 +113,7 @@ class CheckReAuthUserHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty(),
-                    new ArrayList<>());
+                    Optional.empty());
 
     private final AuditContext testAuditContextWithAuditEncoded =
             testAuditContextWithoutAuditEncoded.withTxmaAuditEncoded(

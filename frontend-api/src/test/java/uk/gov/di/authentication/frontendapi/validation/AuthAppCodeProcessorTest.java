@@ -96,8 +96,7 @@ class AuthAppCodeProcessorTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                    new ArrayList<>());
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
     void setUp() {

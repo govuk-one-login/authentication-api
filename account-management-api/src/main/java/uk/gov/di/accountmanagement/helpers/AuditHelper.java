@@ -17,7 +17,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -75,8 +74,7 @@ public class AuditHelper {
                             IpAddressHelper.extractIpAddress(input),
                             null,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            getTxmaAuditEncoded(input.getHeaders()),
-                            List.of()));
+                            getTxmaAuditEncoded(input.getHeaders())));
         } catch (Exception e) {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);

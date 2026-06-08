@@ -54,6 +54,7 @@ Resources:
               amcPrivateAudience,
             ]
           SESSION_EXPIRY: "3600"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
         LogGroup: !Ref AMCCallbackFunctionLogGroup
       Policies:
@@ -64,6 +65,7 @@ Resources:
         - !Ref AuthToAMCSigningKeyPolicy
         - !Ref DynamoAMCStateReadAccessPolicy
         - !Ref DynamoAMCStateDeleteAccessPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

@@ -42,7 +42,6 @@ import uk.gov.di.authentication.shared.services.RemoteJwksService;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -313,8 +312,7 @@ class TokenHandlerTest {
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
-                                Optional.empty(),
-                                new ArrayList<>()));
+                                Optional.empty()));
     }
 
     private Map<String, List<String>> privateKeyJWTParams() throws JOSEException {
