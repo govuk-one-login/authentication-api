@@ -40,6 +40,16 @@ Parameters:
     Type: String
     AllowedValues: ["true", "false"]
     Default: "true"
+  ApiGatewayOriginDomain:
+    Description: An origin domain which points to an API Gateway execute endpoint.
+    Type: String
+    AllowedPattern: ^(none|((.+)\.execute-api\.eu-west-2\.amazonaws\.com))$
+    Default: "none"
+  OriginPath:
+    Description: A custom origin path. Will be appended on all request to the origin
+    Type: String
+    AllowedPattern: ^(none|(\/\w+))$
+    Default: "none"
 
   OriginCloakingHeaderManagedSecretVersion:
     Description: |
@@ -192,6 +202,8 @@ Conditions:
           "none",
         ],
       ]
+  UseApiGatewayOrigin: !Not [!Equals [!Ref ApiGatewayOriginDomain, "none"]]
+  UseOriginPath: !Not [!Equals [!Ref OriginPath, "none"]]
 
 Resources:
   # Secrets
@@ -555,8 +567,14 @@ Resources:
               ResponsePagePath: /cloudfront-error/504.html
           - !Ref AWS::NoValue
         Origins:
-          - DomainName: !Sub "origin.${DistributionAlias}"
-            OriginPath: ""
+          - DomainName: !If
+              - UseApiGatewayOrigin
+              - !Sub "${ApiGatewayOriginDomain}"
+              - !Sub "origin.${DistributionAlias}"
+            OriginPath: !If
+              - UseOriginPath
+              - !Sub "${OriginPath}"
+              - ""
             Id: Origin
             CustomOriginConfig:
               OriginProtocolPolicy: "https-only"
@@ -584,7 +602,10 @@ Resources:
             - DELETE
           CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad #Managed-CachingDisabled
           TargetOriginId: Origin
-          OriginRequestPolicyId: !Ref OriginRequestPolicy
+          OriginRequestPolicyId: !If
+            - UseApiGatewayOrigin
+            - b689b0a8-53d0-40ab-baf2-68738e2966ac #Managed-AllViewerExceptHostHeader
+            - !Ref OriginRequestPolicy
           ViewerProtocolPolicy: redirect-to-https
           FunctionAssociations:
             - !If
