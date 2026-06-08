@@ -5,7 +5,7 @@ set -euo pipefail
 #Ensure we are in the same dir as the script
 cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 || exit
 
-CLOUDFRONT_DISTRIBUTION_STACK_VERSION="v2.3.9"
+CLOUDFRONT_DISTRIBUTION_STACK_VERSION="v3.0.0" # We will need this when we move back to the dev-platform managed version
 CERTIFICATE_STACK_VERSION="v1.1.4"
 CLOUDFRONT_MONITORING_STACK_VERSION="v2.1.0"
 
