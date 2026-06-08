@@ -98,24 +98,6 @@ class TxmaAuditEventTest {
     }
 
     @Test
-    void shouldSerializePlatformSubObject() {
-        var event =
-                auditEvent(AUTH_TEST_EVENT)
-                        .addPlatform("key1", "value1")
-                        .addPlatform("key2", 2)
-                        .addPlatform("sub-object", Map.of("key3", "value3"));
-
-        var payload = asJson(event.serialize()).getAsJsonObject().get("platform");
-
-        assertThat(payload, hasFieldWithValue("key1", is("value1")));
-        assertThat(payload, hasNumericFieldWithValue("key2", is(2L)));
-
-        var subObject = payload.getAsJsonObject().get("sub-object");
-
-        assertThat(subObject, hasFieldWithValue("key3", is("value3")));
-    }
-
-    @Test
     void shouldSerializeExtensionsSubObject() {
         var event =
                 auditEvent(AUTH_TEST_EVENT)

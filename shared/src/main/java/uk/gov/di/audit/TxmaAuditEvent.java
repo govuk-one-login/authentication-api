@@ -24,7 +24,6 @@ public class TxmaAuditEvent {
 
     @Expose private TxmaAuditUser user;
 
-    @Expose private Map<String, Object> platform;
     @Expose private Map<String, Object> restricted;
     @Expose private Map<String, Object> extensions;
 
@@ -62,16 +61,6 @@ public class TxmaAuditEvent {
 
     public TxmaAuditEvent withUser(TxmaAuditUser user) {
         this.user = user;
-        return this;
-    }
-
-    public TxmaAuditEvent addPlatform(String key, Object value) {
-        if (this.platform == null) {
-            this.platform = new HashMap<>();
-        }
-
-        this.platform.put(key, value);
-
         return this;
     }
 

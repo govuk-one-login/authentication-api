@@ -101,7 +101,6 @@ class AuditServiceTest {
                     "persistent_session_id":"persistent-session-id",
                     "govuk_signin_journey_id":"request-id"
                 },
-                "platform":null,
                 "restricted":null,
                 "extensions":null}
                 """;
