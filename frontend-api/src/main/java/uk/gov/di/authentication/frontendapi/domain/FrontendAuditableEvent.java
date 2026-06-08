@@ -61,6 +61,7 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     AUTH_REAUTH_SUCCESS,
     AUTH_EMAIL_FRAUD_CHECK_DECISION_USED,
     AUTH_MFA_RESET_REQUESTED,
+    // a comment
     AUTH_AMC_AUTHORISATION_REQUESTED;
 
     public AuditableEvent parseFromName(String name) {
