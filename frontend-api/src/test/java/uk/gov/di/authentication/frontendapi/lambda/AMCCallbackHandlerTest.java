@@ -116,8 +116,7 @@ class AMCCallbackHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS),
-                    List.of());
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     @BeforeAll
     static void setUp() {
