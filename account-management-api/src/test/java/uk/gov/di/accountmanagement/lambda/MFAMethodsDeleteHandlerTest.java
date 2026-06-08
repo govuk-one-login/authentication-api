@@ -138,7 +138,7 @@ class MFAMethodsDeleteHandlerTest {
                             .withClientSessionId(SESSION_ID)
                             .withSubjectId(TEST_INTERNAL_SUBJECT)
                             .withIpAddress(IP_ADDRESS)
-                            .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                            .withTxmaAuditEncoded(TXMA_ENCODED_HEADER_VALUE)
                             .withPersistentSessionId(PERSISTENT_ID);
 
             verify(auditService)

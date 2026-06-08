@@ -92,7 +92,7 @@ class RemoveAccountHandlerTest {
                 .removeAccount(
                         Optional.of(event),
                         userProfile,
-                        Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                        TXMA_ENCODED_HEADER_VALUE,
                         AccountDeletionReason.USER_INITIATED);
     }
 
@@ -114,7 +114,7 @@ class RemoveAccountHandlerTest {
                 .removeAccount(
                         Optional.of(event),
                         userProfile,
-                        Optional.empty(),
+                        AuditService.UNKNOWN,
                         AccountDeletionReason.USER_INITIATED);
     }
 

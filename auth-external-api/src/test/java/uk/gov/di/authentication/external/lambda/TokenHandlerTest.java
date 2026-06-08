@@ -312,7 +312,7 @@ class TokenHandlerTest {
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
-                                Optional.empty()));
+                                AuditService.UNKNOWN));
     }
 
     private Map<String, List<String>> privateKeyJWTParams() throws JOSEException {

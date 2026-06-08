@@ -111,7 +111,7 @@ class AccountDeletionServiceTest {
         underTest.removeAccount(
                 Optional.of(input),
                 userProfile,
-                Optional.empty(),
+                AuditService.UNKNOWN,
                 AccountDeletionReason.USER_INITIATED);
         // then
         verify(dynamoDeleteService).deleteAccount(eq(expectedEmail), any());
@@ -132,7 +132,7 @@ class AccountDeletionServiceTest {
                         underTest.removeAccount(
                                 Optional.of(input),
                                 userProfile,
-                                Optional.empty(),
+                                AuditService.UNKNOWN,
                                 AccountDeletionReason.USER_INITIATED));
     }
 
@@ -147,7 +147,7 @@ class AccountDeletionServiceTest {
         underTest.removeAccount(
                 Optional.of(input),
                 userProfile,
-                Optional.empty(),
+                AuditService.UNKNOWN,
                 AccountDeletionReason.USER_INITIATED);
 
         // then
@@ -173,7 +173,7 @@ class AccountDeletionServiceTest {
                         underTest.removeAccount(
                                 Optional.of(input),
                                 userProfile,
-                                Optional.empty(),
+                                AuditService.UNKNOWN,
                                 AccountDeletionReason.USER_INITIATED));
         assertThat(
                 logging.events(),
@@ -204,7 +204,7 @@ class AccountDeletionServiceTest {
                 .thenReturn(TEST_IP_ADDRESS);
 
         // when
-        underTest.removeAccount(Optional.of(input), userProfile, Optional.empty(), reason);
+        underTest.removeAccount(Optional.of(input), userProfile, AuditService.UNKNOWN, reason);
 
         // then
         verify(auditService)
@@ -242,7 +242,7 @@ class AccountDeletionServiceTest {
                         underTest.removeAccount(
                                 Optional.of(input),
                                 userProfile,
-                                Optional.empty(),
+                                AuditService.UNKNOWN,
                                 AccountDeletionReason.USER_INITIATED));
         assertThat(
                 logging.events(),

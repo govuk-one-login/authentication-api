@@ -403,7 +403,7 @@ public class SendOtpNotificationHandler
                         IpAddressHelper.extractIpAddress(input),
                         sendNotificationRequest.phoneNumber(),
                         extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                        AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input.getHeaders()));
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_SEND_OTP,

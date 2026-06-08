@@ -107,7 +107,7 @@ class UpdateEmailHandlerTest {
                     "123.123.123.123",
                     null,
                     PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                    TXMA_ENCODED_HEADER_VALUE);
 
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);

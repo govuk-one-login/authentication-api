@@ -59,7 +59,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceI
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class StartHandler
@@ -225,7 +225,7 @@ public class StartHandler
                             input.getHeaders(),
                             CLIENT_SESSION_ID_HEADER,
                             configurationService.getHeadersCaseInsensitive());
-            var txmaAuditHeader = getTxmaAuditEncodedHeader(input);
+            var txmaAuditHeader = getTxmaAuditEncodedHeaderOrUnknown(input);
             String phoneNumber = AuditService.UNKNOWN;
 
             var auditContext =

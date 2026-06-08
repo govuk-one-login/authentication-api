@@ -9,6 +9,7 @@ import uk.gov.di.accountmanagement.entity.LegacyAccountDeletionMessage;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -52,7 +53,7 @@ public class ManualAccountDeletionService {
             accountDeletionService.removeAccount(
                     Optional.empty(),
                     userProfile,
-                    Optional.empty(),
+                    AuditService.UNKNOWN,
                     accountDeletionReason,
                     sendNotification);
             var deletedAccountPayload =

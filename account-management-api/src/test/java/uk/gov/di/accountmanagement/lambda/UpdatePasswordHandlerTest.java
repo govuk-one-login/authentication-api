@@ -123,7 +123,7 @@ class UpdatePasswordHandlerTest {
                                 "123.123.123.123",
                                 userProfile.getPhoneNumber(),
                                 PERSISTENT_ID,
-                                Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                                TXMA_ENCODED_HEADER_VALUE),
                         AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 

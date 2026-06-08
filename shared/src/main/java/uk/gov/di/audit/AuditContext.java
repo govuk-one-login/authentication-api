@@ -3,8 +3,6 @@ package uk.gov.di.audit;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Optional;
-
 public record AuditContext(
         String clientId,
         String clientSessionId,
@@ -14,7 +12,7 @@ public record AuditContext(
         String ipAddress,
         String phoneNumber,
         String persistentSessionId,
-        Optional<String> txmaAuditEncoded) {
+        String txmaAuditEncoded) {
 
     public static AuditContext auditContextFromUserContext(
             UserContext userContext,
@@ -32,7 +30,7 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                userContext.getTxmaAuditEncoded());
     }
 
     public static AuditContext emptyAuditContext() {
@@ -45,7 +43,7 @@ public record AuditContext(
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                Optional.empty());
+                AuditService.UNKNOWN);
     }
 
     public AuditContext withPhoneNumber(String phoneNumber) {
@@ -65,7 +63,7 @@ public record AuditContext(
         return withSubjectId(subjectId);
     }
 
-    public AuditContext withTxmaAuditEncoded(Optional<String> txmaAuditEncoded) {
+    public AuditContext withTxmaAuditEncoded(String txmaAuditEncoded) {
         return new AuditContext(
                 clientId,
                 clientSessionId,

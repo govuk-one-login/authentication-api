@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.audit.TxmaAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
@@ -18,7 +16,6 @@ import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
 
 public class AuditService {
-    private static final Logger LOG = LogManager.getLogger(AuditService.class);
 
     public static final String UNKNOWN = "";
     public static final String COMPONENT_ID = "AUTH";
@@ -41,22 +38,14 @@ public class AuditService {
     }
 
     private static void addRestrictedSectionToAuditEvent(
-            Optional<String> txmaAuditEncoded,
-            TxmaAuditEvent txmaAuditEvent,
-            MetadataPair... metadataPairs) {
+            String txmaAuditEncoded, TxmaAuditEvent txmaAuditEvent, MetadataPair... metadataPairs) {
         Arrays.stream(metadataPairs)
                 .filter(MetadataPair::isRestricted)
                 .forEach(pair -> txmaAuditEvent.addRestricted(pair.key(), pair.value()));
 
-        txmaAuditEncoded.ifPresentOrElse(
-                s -> {
-                    if (!s.isEmpty()) {
-                        txmaAuditEvent.addRestricted("device_information", Map.of("encoded", s));
-                    } else {
-                        LOG.warn("Encoded device information for audit event present but empty.");
-                    }
-                },
-                () -> LOG.warn("Encoded device information for audit event is not present."));
+        if (!txmaAuditEncoded.isEmpty()) {
+            txmaAuditEvent.addRestricted("device_information", Map.of("encoded", txmaAuditEncoded));
+        }
     }
 
     private static void addExtensionSectionToAuditEvent(

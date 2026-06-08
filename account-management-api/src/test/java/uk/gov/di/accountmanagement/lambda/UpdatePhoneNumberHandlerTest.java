@@ -119,7 +119,7 @@ class UpdatePhoneNumberHandlerTest {
                                 "123.123.123.123",
                                 NEW_PHONE_NUMBER,
                                 PERSISTENT_ID,
-                                Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                                TXMA_ENCODED_HEADER_VALUE),
                         AUDIT_EVENT_COMPONENT_ID_HOME);
     }
 

@@ -196,7 +196,7 @@ public class UpdateEmailHandler
                             IpAddressHelper.extractIpAddress(input),
                             userProfile.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input.getHeaders()));
 
             if (emailCheckResultStatus.equals(EmailCheckResultStatus.PENDING)) {
                 submitEmailFraudCheckBypassedAuditEvent(auditContext);

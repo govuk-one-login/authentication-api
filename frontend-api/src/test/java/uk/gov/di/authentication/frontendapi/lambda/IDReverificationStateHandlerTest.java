@@ -73,7 +73,7 @@ public class IDReverificationStateHandlerTest {
                         AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED,
                         AuditContext.emptyAuditContext()
                                 .withClientSessionId(CLIENT_SESSION_ID)
-                                .withTxmaAuditEncoded(Optional.of(ENCODED_DEVICE_DETAILS)),
+                                .withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("journey-type", "ACCOUNT_RECOVERY"));
     }
 

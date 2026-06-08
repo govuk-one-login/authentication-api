@@ -79,7 +79,7 @@ class MfaMethodsMigrationServiceTest {
                     .withSessionId(SESSION_ID)
                     .withSubjectId(TEST_PUBLIC_SUBJECT)
                     .withClientSessionId(TEST_CLIENT)
-                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                    .withTxmaAuditEncoded(TXMA_ENCODED_HEADER_VALUE);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =

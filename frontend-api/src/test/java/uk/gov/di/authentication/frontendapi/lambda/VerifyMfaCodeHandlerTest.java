@@ -192,7 +192,7 @@ class VerifyMfaCodeHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     @BeforeEach
     void setUp() {
@@ -301,7 +301,7 @@ class VerifyMfaCodeHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                            AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
+                            AUDIT_CONTEXT.withTxmaAuditEncoded(AuditService.UNKNOWN),
                             pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                             pair("account-recovery", false),
                             pair("journey-type", REGISTRATION),

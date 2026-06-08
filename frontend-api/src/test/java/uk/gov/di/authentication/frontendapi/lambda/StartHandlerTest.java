@@ -117,7 +117,7 @@ class StartHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     @BeforeEach
     void beforeEach() {
@@ -261,7 +261,7 @@ class StartHandlerTest {
                         FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
                         AUDIT_CONTEXT
                                 .withSubjectId(TEST_SUBJECT_ID)
-                                .withTxmaAuditEncoded(Optional.empty()));
+                                .withTxmaAuditEncoded(AuditService.UNKNOWN));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
@@ -271,7 +271,7 @@ class StartHandlerTest {
                         FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT
                                 .withSubjectId(TEST_SUBJECT_ID)
-                                .withTxmaAuditEncoded(Optional.empty()),
+                                .withTxmaAuditEncoded(AuditService.UNKNOWN),
                         pair("internalSubjectId", TEST_SUBJECT_ID));
     }
 

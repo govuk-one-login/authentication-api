@@ -123,7 +123,7 @@ public class RemoveAccountHandler
             accountDeletionService.removeAccount(
                     Optional.of(input),
                     userProfile,
-                    AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                    AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input.getHeaders()),
                     AccountDeletionReason.USER_INITIATED);
 
             return generateEmptySuccessApiGatewayResponse();

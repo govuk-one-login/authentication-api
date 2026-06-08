@@ -107,7 +107,8 @@ public class MfaMethodsMigrationService {
                         .withPersistentSessionId(persistentSessionId)
                         .withSubjectId(input.getPathParameters().get("publicSubjectId"))
                         .withPhoneNumber(userProfile.getPhoneNumber())
-                        .withTxmaAuditEncoded(AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                        .withTxmaAuditEncoded(
+                                AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input.getHeaders()));
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,

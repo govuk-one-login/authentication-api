@@ -133,7 +133,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    AuditService.UNKNOWN);
 
     private LoginHandler handler;
 
@@ -239,7 +239,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                                    ENCODED_DEVICE_DETAILS),
                             pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                             pair("incorrect_email_attempt_count", 0),
                             pair("incorrect_password_attempt_count", 5),
@@ -259,7 +259,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .submitAuditEvent(
                             AUTH_INVALID_CREDENTIALS,
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                                    ENCODED_DEVICE_DETAILS),
                             pair("internalSubjectId", userProfile.getSubjectID()),
                             pair("incorrectPasswordCount", MAX_ALLOWED_RETRIES),
                             pair(
@@ -362,7 +362,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                                    ENCODED_DEVICE_DETAILS),
                             pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                             pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
                             pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
@@ -442,7 +442,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                                    ENCODED_DEVICE_DETAILS),
                             pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                             pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
                             pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
@@ -502,7 +502,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                                    ENCODED_DEVICE_DETAILS),
                             pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                             pair("incorrect_email_attempt_count", 0),
                             pair("incorrect_password_attempt_count", MAX_ALLOWED_RETRIES),

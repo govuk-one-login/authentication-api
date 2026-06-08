@@ -85,19 +85,10 @@ class UpdateProfileHandlerTest {
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     private final AuditContext auditContextWithOnlyClientSession =
-            new AuditContext(
-                    "",
-                    CLIENT_SESSION_ID,
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+            new AuditContext("", CLIENT_SESSION_ID, "", "", "", "", "", "", ENCODED_DEVICE_DETAILS);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -171,12 +162,13 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
+                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(
+                                AuditService.UNKNOWN));
 
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(Optional.empty()));
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(AuditService.UNKNOWN));
     }
 
     @Test
@@ -217,11 +209,13 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
+                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(
+                                AuditService.UNKNOWN));
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_REQUEST_ERROR,
-                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
+                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(
+                                AuditService.UNKNOWN));
     }
 
     private void usingValidSession() {

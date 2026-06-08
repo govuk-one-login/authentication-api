@@ -55,7 +55,7 @@ public class AccountDeletionService {
     public void removeAccount(
             Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
-            Optional<String> txmaAuditEncoded,
+            String txmaAuditEncoded,
             AccountDeletionReason reason)
             throws Json.JsonException {
         removeAccount(input, userProfile, txmaAuditEncoded, reason, true);
@@ -64,7 +64,7 @@ public class AccountDeletionService {
     public void removeAccount(
             Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
-            Optional<String> txmaAuditEncoded,
+            String txmaAuditEncoded,
             AccountDeletionReason reason,
             boolean sendNotification)
             throws Json.JsonException {

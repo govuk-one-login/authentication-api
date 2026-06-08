@@ -74,7 +74,7 @@ class AuthenticateHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     PERSISTENT_SESSION_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                    TXMA_ENCODED_HEADER_VALUE);
     private String clientSubjectId;
 
     @BeforeEach
@@ -144,7 +144,7 @@ class AuthenticateHandlerTest {
                         auditContext
                                 .withClientSessionId("unknown")
                                 .withSubjectId(clientSubjectId)
-                                .withTxmaAuditEncoded(Optional.empty()),
+                                .withTxmaAuditEncoded(AuditService.UNKNOWN),
                         AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 

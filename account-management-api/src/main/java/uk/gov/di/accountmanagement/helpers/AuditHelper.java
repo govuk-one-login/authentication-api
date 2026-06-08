@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -38,16 +37,19 @@ public class AuditHelper {
 
     private AuditHelper() {}
 
-    public static Optional<String> getTxmaAuditEncoded(Map<String, String> headers) {
+    public static String getTxmaAuditEncodedHeaderOrUnknown(Map<String, String> headers) {
         String txmaEncodedValue =
                 RequestHeaderHelper.getHeaderValueFromHeaders(
                         headers, TXMA_ENCODED_HEADER_NAME, false);
-        if (txmaEncodedValue != null && !txmaEncodedValue.isEmpty()) {
-            return Optional.of(txmaEncodedValue);
-        } else {
-            LOG.warn("Audit header field value cannot be empty");
-            return Optional.empty();
+        if (txmaEncodedValue == null) {
+            LOG.warn("Encoded device information for audit event is not present.");
+            return AuditService.UNKNOWN;
         }
+        if (txmaEncodedValue.isEmpty()) {
+            LOG.warn("Encoded device information for audit event present but empty.");
+            return AuditService.UNKNOWN;
+        }
+        return txmaEncodedValue;
     }
 
     public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
@@ -74,7 +76,7 @@ public class AuditHelper {
                             IpAddressHelper.extractIpAddress(input),
                             null,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            getTxmaAuditEncoded(input.getHeaders())));
+                            getTxmaAuditEncodedHeaderOrUnknown(input.getHeaders())));
         } catch (Exception e) {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);

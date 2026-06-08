@@ -182,7 +182,7 @@ class LoginHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    AuditService.UNKNOWN);
 
     private final AuditContext auditContextWithoutUserInfo =
             auditContextWithAllUserInfo
@@ -258,8 +258,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -302,8 +301,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -353,8 +351,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -403,8 +400,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -730,8 +726,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
         verifyNoInteractions(cloudwatchMetricsService);
@@ -800,8 +795,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -842,8 +836,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair(
                                 "incorrectPasswordCount",
@@ -883,8 +876,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair(
@@ -962,8 +954,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("incorrectPasswordCount", 1),
                         pair("attemptNoFailedAt", MAX_ALLOWED_PASSWORD_RETRIES));
@@ -1075,8 +1066,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_NO_ACCOUNT_WITH_EMAIL,
-                        auditContextWithoutUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)));
+                        auditContextWithoutUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));

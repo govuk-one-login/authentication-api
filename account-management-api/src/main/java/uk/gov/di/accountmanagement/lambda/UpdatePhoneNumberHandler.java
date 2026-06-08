@@ -163,7 +163,7 @@ public class UpdatePhoneNumberHandler
                             IpAddressHelper.extractIpAddress(input),
                             updatePhoneNumberRequest.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input.getHeaders()));
 
             auditService.submitAuditEvent(
                     AUTH_UPDATE_PHONE_NUMBER, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);

@@ -24,7 +24,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown;
 
 public class IDReverificationStateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -59,7 +59,7 @@ public class IDReverificationStateHandler
         try {
             ThreadContext.clearMap();
             attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-            var txmaAuditEncoded = getTxmaAuditEncodedHeader(input);
+            var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
             var auditContext =
                     AuditContext.emptyAuditContext().withTxmaAuditEncoded(txmaAuditEncoded);
             var request =

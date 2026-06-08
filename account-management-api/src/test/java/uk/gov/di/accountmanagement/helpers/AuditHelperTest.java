@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -18,7 +19,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -56,26 +56,33 @@ class AuditHelperTest {
         void shouldRetrieveATxmaAuditEncodedFieldFromAHeader() {
             String auditValue = "validHeaderValue";
             var result =
-                    AuditHelper.getTxmaAuditEncoded(Map.of(TXMA_ENCODED_HEADER_NAME, auditValue));
-            assertEquals(Optional.of(auditValue), result);
+                    AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(
+                            Map.of(TXMA_ENCODED_HEADER_NAME, auditValue));
+            assertEquals(auditValue, result);
         }
 
         @Test
         void shouldLogAwarningWhenMissingHeader() {
-            var result = AuditHelper.getTxmaAuditEncoded(Map.of());
-            assertEquals(Optional.empty(), result);
+            var result = AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(Map.of());
+            assertEquals(AuditService.UNKNOWN, result);
             assertThat(
                     logging.events(),
-                    hasItem(withMessageContaining("Audit header field value cannot be empty")));
+                    hasItem(
+                            withMessageContaining(
+                                    "Encoded device information for audit event is not present")));
         }
 
         @Test
         void shouldLogAWarningWhenEmptyHeader() {
-            var result = AuditHelper.getTxmaAuditEncoded(Map.of(TXMA_ENCODED_HEADER_NAME, ""));
-            assertEquals(Optional.empty(), result);
+            var result =
+                    AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(
+                            Map.of(TXMA_ENCODED_HEADER_NAME, ""));
+            assertEquals(AuditService.UNKNOWN, result);
             assertThat(
                     logging.events(),
-                    hasItem(withMessageContaining("Audit header field value cannot be empty")));
+                    hasItem(
+                            withMessageContaining(
+                                    "Encoded device information for audit event present but empty")));
         }
     }
 
@@ -107,9 +114,7 @@ class AuditHelperTest {
             assertEquals(CommonTestVariables.SESSION_ID, context.sessionId());
             assertEquals(pairwiseId, context.subjectId());
             assertEquals(TEST_IP_ADDRESS, context.ipAddress());
-            assertEquals(
-                    Optional.of(CommonTestVariables.TXMA_ENCODED_HEADER_VALUE),
-                    context.txmaAuditEncoded());
+            assertEquals(CommonTestVariables.TXMA_ENCODED_HEADER_VALUE, context.txmaAuditEncoded());
         }
 
         @Test

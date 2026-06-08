@@ -10,6 +10,7 @@ import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.nio.ByteBuffer;
@@ -65,7 +66,7 @@ class ManualAccountDeletionServiceTest {
                 .removeAccount(
                         Optional.empty(),
                         USER_PROFILE,
-                        Optional.empty(),
+                        AuditService.UNKNOWN,
                         AccountDeletionReason.SUPPORT_INITIATED,
                         true);
     }

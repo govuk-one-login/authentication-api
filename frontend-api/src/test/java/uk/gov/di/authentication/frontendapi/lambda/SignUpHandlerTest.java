@@ -101,7 +101,7 @@ class SignUpHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -217,7 +217,7 @@ class SignUpHandlerTest {
                         FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,
                         AUDIT_CONTEXT
                                 .withSubjectId(expectedCommonSubject)
-                                .withTxmaAuditEncoded(Optional.empty()),
+                                .withTxmaAuditEncoded(AuditService.UNKNOWN),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
     }
@@ -302,7 +302,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(AuditService.UNKNOWN));
     }
 
     @Test

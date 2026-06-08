@@ -68,7 +68,7 @@ class AccountRecoveryHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     @BeforeEach
     void setup() {
@@ -133,7 +133,7 @@ class AccountRecoveryHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_RECOVERY_PERMITTED,
-                        auditContext.withTxmaAuditEncoded(Optional.empty()));
+                        auditContext.withTxmaAuditEncoded(AuditService.UNKNOWN));
     }
 
     private void usingValidSession() {
