@@ -1,0 +1,781 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  devplatform-deploy cloudfront-distribution template version: v2.3.9
+Parameters:
+  DistributionAlias:
+    Description: The DNS name to be used by cloudfront distribution, e.g. your frontend domain
+    Type: String
+  CloudFrontCertArn:
+    Description: The ARN for the CloudFront certificate
+    Type: String
+  AddWWWPrefix:
+    Description: Add a 'www' subdomain to the CloudFront distribution
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+  FraudHeaderEnabled:
+    Description: Adds the fraud header to viewer-requests
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+  FraudHeadersFunctionName:
+    Description: Name of the TICF Fraud Headers Function. It will only be applied if FraudHeaderEnabled is set to 'true'.
+    Type: String
+    AllowedValues:
+      ["TICFFraudHeadersFunction", "TICFFraudHeadersCloudFrontFunction"]
+    Default: "TICFFraudHeadersFunction"
+  OriginCloakingHeader:
+    Description: (Deprecated) The secret value to be used for the origin-cloaking-secret. Set the value to `none` to remove the WAF rules and AWS secret. Please migrate to the managed secret as soon as possible.
+    Type: String
+    NoEcho: true
+    AllowedPattern: ^(none|.*)$
+  PreviousOriginCloakingHeader:
+    Description: (Deprecated) If rotating secrets, The previous secret value for the origin-cloaking-secret. Set the value to `none` to remove the WAF rules and AWS secret.Please migrate to the managed secret as soon as possible.
+    Type: String
+    NoEcho: true
+    AllowedPattern: ^(none|.*)$
+  EnableCustomErrorPages:
+    Description: Adds custom error page response to CloudFront distribution
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+
+  OriginCloakingHeaderManagedSecretVersion:
+    Description: |
+      A secret version of the OCH managed secret representing the current version. This value forms the cloudformation resolve string to retrieve the secret value and so the format is either `${version-label}` or `:${version-id}`. Note the ':' before the version-id.
+      In standard operations the users of this template should only ever use the `AWSCURRENT` value. The OCH Managed Secret Rotation Lambda uses this parameter to update the stack resources with the new secret value. Assuming secret rotation has completed successfully the secret version id used here will be equivalent to the AWSCURRENT secret version and so redeploying with AWSCURRENT will not cause any changes. Since the secret rotation alters this value users should expect to see a stack update after a secret rotation. This is intended behavior and the secret values in use will not change.
+    Type: String
+    Default: AWSCURRENT
+    AllowedPattern: ^(AWSCURRENT|:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+
+  OriginCloakingHeaderManagedSecretPreviousVersion:
+    Description: |
+      A secret version of the OCH managed secret. This value forms the cloudformation resolve string to retrieve the secret value and so the format is either `${version-label}` or `:${version-id}`. Note the ':' before the version-id.
+      In standard operations the users of this template should only ever use the `AWSPREVIOUS` value. The OCH Managed Secret Rotation Lambda uses this parameter to update the stack resources with the new secret value. Assuming secret rotation has completed successfully the secret version id used here will be equivalent to the AWSPREVIOUS secret version and so redeploying with AWSPREVIOUS will not cause any changes. Since the secret rotation alters this value users should expect to see a stack update after a secret rotation. This is intended behavior and the secret values in use will not change.
+    Type: String
+    Default: AWSPREVIOUS
+    AllowedPattern: ^(AWSPREVIOUS|:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+
+  OriginCloakingHeaderManagedSecretRotationMonthWeekDaySchedule:
+    Description: "Forms part of the cron definition of the secret rotation schedule. This value is of the form <DAY#NUM> where day is MON -> FRI and NUM is on of 1,2, or 3. Example Values: MON#1, THU#2, TUE#3. The aim is to ensure the rotation happens during office hours. This parameter allows you to choose the day of the week and which numbered appearance of that day it is. To reduce the potential of coinciding incidents please randomise your schedule. https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_schedule.html"
+    Type: String
+    AllowedPattern: ^((MON|TUE|WED|THU|FRI)#(1|2|3))$
+
+  OriginCloakingHeaderManagedSecretAlarmSNSTopicARN:
+    Description: The SNS topic used when the secret rotation lambda has triggered a cloudwatch alarm. This should send a notification to the team responsible for deploying this stack. By default the secret rotation is scheduled for 10am so this is unlikely to trigger outside of office hours, however please be careful if using an SNS Topic which triggers PagerDuty.
+    Type: String
+    Default: none
+    AllowedPattern: ^(none|arn:aws:sns:(eu-west-2|us-east-1):[0-9]{12}:[A-Za-z0-9_-]+)$
+
+  OriginCloakingHeaderManagedSecretNotificationSNSTopicARN:
+    Description: The SNS topic used for notifications of successful secret rotations. This should send a notification to the team responsible for deploying this stack. By default the secret rotation is scheduled for 10am so this is unlikely to trigger outside of office hours, however please be careful if using an SNS Topic which triggers PagerDuty.
+    Type: String
+    Default: none
+    AllowedPattern: ^(none|arn:aws:sns:(eu-west-2|us-east-1):[0-9]{12}:[A-Za-z0-9_-]+)$
+
+  OriginCloakingHeaderManagedSecretNotificationSNSTopicKMSKeyARN:
+    Description: The KMS ARN used for encrypting the SNS Topic used for the Success notification. This is required to provide the lambda permission to publish a message to the SNS topic.
+    Type: String
+    Default: none
+    AllowedPattern: ^(none|arn:aws:kms:(eu-west-2|us-east-1):[0-9]{12}:key/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+
+  CloudFrontWafACL:
+    Type: String
+    Description: The ARN of the External Global Cloudfront Web ACL.
+    AllowedPattern: "(arn:aws:wafv2:.*:.*:global.*)|(none)"
+    ConstraintDescription: The service protection ACL must be Global to apply to an Cloudfront, or 'none'
+    Default: "none"
+  StandardLoggingEnabled:
+    Description: Adds standard logging to an S3 bucket
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+  DistAliasOne:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasTwo:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasThree:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasFour:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasFive:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasSix:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasSeven:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasEight:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasNine:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  DistAliasTen:
+    Description: An alias domain for the distribution
+    Type: String
+    Default: ""
+  LogDestination:
+    Type: String
+    Description: "The suffix of the CSLS Kinesis Data Stream for CloudWatch logs. Default: csls_cw_logs_destination_prodpython-2"
+    AllowedValues:
+      [
+        "csls_cw_logs_destination_prodpython",
+        "csls_cw_logs_destination_prodpython-2",
+        "none",
+      ]
+    Default: "csls_cw_logs_destination_prodpython-2"
+
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Conditions:
+  UseCustomErrorPages: !Equals [true, !Ref EnableCustomErrorPages]
+  CreateWWWPrefix: !Equals [true, !Ref AddWWWPrefix]
+  AddFraudHeader: !Equals [true, !Ref FraudHeaderEnabled]
+  ApplyCloudfrontWaf: !Not [!Equals [!Ref CloudFrontWafACL, "none"]]
+  AddStandardLogging: !Equals [true, !Ref StandardLoggingEnabled]
+  CreateAliasOne: !Not [!Equals ["", !Ref DistAliasOne]]
+  CreateAliasTwo: !Not [!Equals ["", !Ref DistAliasTwo]]
+  CreateAliasThree: !Not [!Equals ["", !Ref DistAliasThree]]
+  CreateAliasFour: !Not [!Equals ["", !Ref DistAliasFour]]
+  CreateAliasFive: !Not [!Equals ["", !Ref DistAliasFive]]
+  CreateAliasSix: !Not [!Equals ["", !Ref DistAliasSix]]
+  CreateAliasSeven: !Not [!Equals ["", !Ref DistAliasSeven]]
+  CreateAliasEight: !Not [!Equals ["", !Ref DistAliasEight]]
+  CreateAliasNine: !Not [!Equals ["", !Ref DistAliasNine]]
+  CreateAliasTen: !Not [!Equals ["", !Ref DistAliasTen]]
+  AddWafACLLogging: !Not [!Equals [!Ref LogDestination, "none"]]
+  # Conditions controlling the usage of the OriginCloakingHeaderParameterValues. These parameters are now deprecated in favor of the managed secret. They should be set to `none` when possible.
+  DeployOriginCloakingHeaderParameter:
+    !Not [!Equals [!Ref OriginCloakingHeader, "none"]]
+  DeployPreviousOriginCloakingHeaderParameter:
+    !Not [!Equals [!Ref PreviousOriginCloakingHeader, "none"]]
+
+  DeployOriginCloakingHeaderManagedSecretAlarms:
+    !Not [
+      !Equals [!Ref OriginCloakingHeaderManagedSecretAlarmSNSTopicARN, "none"],
+    ]
+  DeployOriginCloakingHeaderManagedSecretNotifications:
+    !Not [
+      !Equals [
+        !Ref OriginCloakingHeaderManagedSecretNotificationSNSTopicARN,
+        "none",
+      ],
+    ]
+  DeployOriginCloakingHeaderManagedSecretNotificationsKMSKeyPermissions: !And
+    - !Not [
+        !Equals [
+          !Ref OriginCloakingHeaderManagedSecretNotificationSNSTopicARN,
+          "none",
+        ],
+      ]
+    - !Not [
+        !Equals [
+          !Ref OriginCloakingHeaderManagedSecretNotificationSNSTopicKMSKeyARN,
+          "none",
+        ],
+      ]
+
+Resources:
+  # Secrets
+  OriginCloakingHeaderSecret:
+    #checkov:skip=CKV_AWS_149: Secrets Manager secret is not encrypted using KMS CMK
+    Condition: DeployOriginCloakingHeaderParameter
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: "Current secret for CloudFront->Origin authentication"
+      SecretString: !Ref OriginCloakingHeader
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+
+  PreviousOriginCloakingHeaderSecret:
+    #checkov:skip=CKV_AWS_149: Secrets Manager secret is not encrypted using KMS CMK
+    Type: AWS::SecretsManager::Secret
+    Condition: DeployPreviousOriginCloakingHeaderParameter
+    Properties:
+      Description: "Previous secret for CloudFront->Origin authentication"
+      SecretString: !Ref PreviousOriginCloakingHeader
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    # WAF to ensure traffic to Origin is from CloudFront
+
+  OriginCloakingHeaderManagedSecret:
+    #checkov:skip=CKV_AWS_149: Secrets Manager secret is not encrypted using KMS CMK
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Type: AWS::SecretsManager::Secret
+    #checkov:skip=CKV_AWS_149: Secrets Manager secret is not encrypted using KMS CMK
+    Properties:
+      Name: !Sub ${AWS::StackName}-origin-cloaking-header-managed
+      Description: !Sub "Current secret for CloudFront->Origin authentication. WARNING: Do not update manually. To update the value please trigger the secret rotation lambda for the ${AWS::StackName}-origin-cloaking-header-managed secret."
+      GenerateSecretString:
+        ExcludePunctuation: true
+
+  OriginCloakingHeaderSecretRotationSchedule:
+    DependsOn: OriginCloakingHeaderSecretRotationFunctionSecretsManagerInvokePermission
+    Type: AWS::SecretsManager::RotationSchedule
+    Properties:
+      RotationLambdaARN: !GetAtt OriginCloakingHeaderSecretRotationFunction.Arn
+      RotateImmediatelyOnUpdate: true # To provide an AWSPREVIOUS secret. Deployments will timeout without immediate rotation.
+      RotationRules:
+        ScheduleExpression: !Sub "cron(0 10 ? 1/2 ${OriginCloakingHeaderManagedSecretRotationMonthWeekDaySchedule} *)" # https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_schedule.html
+        Duration: 2h
+      SecretId: !Ref OriginCloakingHeaderManagedSecret
+
+  OriginCloakingHeaderSecretRotationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      ##checkov:skip=CKV_AWS_115: Ensure that AWS Lambda function is configured for function-level concurrent execution limit
+      ##checkov:skip=CKV_AWS_116: Ensure that AWS Lambda function is configured for a Dead Letter Queue(DLQ)
+      ##checkov:skip=CKV_AWS_117: Ensure that AWS Lambda function is configured inside a VPC
+      ##checkov:skip=CKV_AWS_173: Check encryption settings for Lambda environmental variable
+      FunctionName: !Sub ${AWS::StackName}-och-secret-rotation
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.13
+      Environment:
+        Variables:
+          ORIGIN_CLOAKING_HEADER_MANAGED_SECRET: !Ref OriginCloakingHeaderManagedSecret
+          STACK_ID: !Ref AWS::StackId
+          WAIT_CONDITION_LOGICAL_ID: WaitConditionInitialSecretRotation
+          # If the condition is not set then the environment variable is not set for the lambda at all.
+          NOTIFICATION_SNS_ARN: !If
+            - DeployOriginCloakingHeaderManagedSecretNotifications
+            - !Ref OriginCloakingHeaderManagedSecretNotificationSNSTopicARN
+            - !Ref AWS::NoValue
+      Timeout: 300
+      CodeUri: secretRotationLambda/
+      Role: !GetAtt OriginCloakingHeaderSecretRotationFunctionRole.Arn
+
+  OriginCloakingHeaderSecretRotationFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-och-secret-rotation
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-och-secret-rotation-on-create
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:UpdateStack
+                  - cloudformation:SignalResource
+                Resource:
+                  - !Sub ${AWS::StackId}
+              - Effect: Allow
+                Action:
+                  - secretsmanager:DescribeSecret # pragma: allowlist secret
+                  - secretsmanager:GetSecretValue # pragma: allowlist secret
+                  - secretsmanager:PutSecretValue # pragma: allowlist secret
+                  - secretsmanager:UpdateSecretVersionStage # pragma: allowlist secret
+                Resource:
+                  - !Ref OriginCloakingHeaderManagedSecret
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetRandomPassword # pragma: allowlist secret
+                Resource:
+                  - "*"
+              - !If
+                - AddWafACLLogging
+                - Effect: Allow
+                  Action:
+                    - logs:DescribeLogGroups
+                  Resource:
+                    - "*"
+                - !Ref AWS::NoValue
+              - !If
+                - DeployOriginCloakingHeaderManagedSecretNotifications
+                - Effect: Allow
+                  Action:
+                    - sns:Publish
+                  Resource:
+                    - !Sub "${OriginCloakingHeaderManagedSecretNotificationSNSTopicARN}"
+                - !Ref AWS::NoValue
+              - !If
+                - DeployOriginCloakingHeaderManagedSecretNotificationsKMSKeyPermissions
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                    - kms:GenerateDataKey
+                  Resource:
+                    - !Sub "${OriginCloakingHeaderManagedSecretNotificationSNSTopicKMSKeyARN}"
+                - !Ref AWS::NoValue
+
+  OriginCloakingHeaderSecretRotationFunctionPolicyOnUpdate:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref OriginCloakingHeaderSecretRotationFunctionRole
+      PolicyName: !Sub ${AWS::StackName}-och-secret-rotation-on-update
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - wafv2:GetWebACL
+              - wafv2:UpdateWebACL
+              - wafv2:ListTagsForResource
+            Resource:
+              - !GetAtt CloakingOriginWebACL.Arn
+              - !Sub "arn:${AWS::Partition}:wafv2:${AWS::Region}:127546899672:*"
+          - Effect: Allow
+            Action:
+              - cloudfront:GetDistribution
+              - cloudfront:UpdateDistribution
+              - cloudfront:ListTagsForResource
+              - cloudfront:TagResource
+              - cloudfront:UntagResource
+            Resource:
+              - !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${CloudfrontDistribution}
+          - Effect: Allow
+            Action:
+              - cloudfront:GetOriginAccessControl # Required to generate the cloudfront config
+            Resource:
+              - !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:origin-access-control/${ErrorBucketOAC}
+
+  OriginCloakingHeaderSecretRotationFunctionSecretsManagerInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt OriginCloakingHeaderSecretRotationFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: secretsmanager.amazonaws.com
+      SourceArn: !Ref OriginCloakingHeaderManagedSecret
+
+  OriginCloakingHeaderSecretRotationFunctionFailureAlarm:
+    Condition: DeployOriginCloakingHeaderManagedSecretAlarms
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-och-secret-rotation-failure
+      AlarmDescription: Notifying that the Origin cloaking Header Manager Secret rotation has failed at some step. Seeing this alarm indicates that manual intervention is required to ensure the secrets and the stack resources are in a correct state.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref OriginCloakingHeaderSecretRotationFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref OriginCloakingHeaderManagedSecretAlarmSNSTopicARN
+      TreatMissingData: notBreaching
+
+  OriginCloakingHeaderSecretRotationFunctionSuccessNotificationFailureMetricLogFilter:
+    Condition: DeployOriginCloakingHeaderManagedSecretAlarms
+    DependsOn: WaitConditionInitialSecretRotation
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: Success Notification Failures
+      FilterPattern: "ERROR finishSecret SNS success notification FAILED" # Set in ./secretRotationLambda/lambda_function.py
+      LogGroupName: !Sub "/aws/lambda/${OriginCloakingHeaderSecretRotationFunction}"
+      MetricTransformations:
+        - MetricValue: 1
+          MetricNamespace: DevPlatform/Lambda
+          MetricName: !Sub "${OriginCloakingHeaderSecretRotationFunction}/SecretRotationSuccessNotificationFailure"
+
+  OriginCloakingHeaderSecretRotationFunctionSuccessNotificationFailureAlarm:
+    Condition: DeployOriginCloakingHeaderManagedSecretAlarms
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-och-secret-rotation-success-notification-failure
+      AlarmDescription: Tracks the logs to see if the Success Notification fails to send. The failure log is only created when the success notification is configured. Seeing this alarm indicates that the secret rotation has succeeded, but the intended notification has failed.
+      Namespace: DevPlatform/Lambda
+      MetricName: !Sub "${OriginCloakingHeaderSecretRotationFunction}/SecretRotationSuccessNotificationFailure"
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref OriginCloakingHeaderManagedSecretAlarmSNSTopicARN
+      TreatMissingData: notBreaching
+
+  # This resource completes creation once a SUCCESS signal is received.
+  # The secret rotation lambda sends this signal during the finishSecret() function.
+  # This only waits during creation and will not require a signal on stack updates.
+  WaitConditionInitialSecretRotation:
+    DependsOn: OriginCloakingHeaderSecretRotationSchedule
+    Type: AWS::CloudFormation::WaitCondition
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M # 10 minutes in ISO8601 duration format.
+        Count: 1
+
+  CloakingOriginWebACL:
+    Type: AWS::WAFv2::WebACL
+    DependsOn: WaitConditionInitialSecretRotation
+    Properties:
+      Name: !Sub "${AWS::StackName}-CloakingOriginWebACL"
+      Scope: REGIONAL
+      DefaultAction:
+        Block: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub "${AWS::StackName}-CloakingOriginWebACLMetric"
+      Rules:
+        ##checkov:skip=CKV_AWS_192: Ensure WAF prevents message lookup in Log4j2
+        - Name: !Sub "${AWS::StackName}-CloakingOriginRuleSet"
+          Priority: 0
+          Action:
+            Allow: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "${AWS::StackName}-CloakingOriginRuleSet"
+          Statement:
+            OrStatement:
+              Statements:
+                - ByteMatchStatement:
+                    FieldToMatch:
+                      SingleHeader:
+                        Name: "origin-cloaking-secret"
+                    PositionalConstraint: EXACTLY
+                    SearchString: !Sub "{{resolve:secretsmanager:${OriginCloakingHeaderManagedSecret}:SecretString::${OriginCloakingHeaderManagedSecretVersion}}}" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references-secretsmanager.html
+                    TextTransformations:
+                      - Priority: 0
+                        Type: NONE
+                - ByteMatchStatement:
+                    FieldToMatch:
+                      SingleHeader:
+                        Name: "origin-cloaking-secret"
+                    PositionalConstraint: EXACTLY
+                    SearchString: !Sub "{{resolve:secretsmanager:${OriginCloakingHeaderManagedSecret}:SecretString::${OriginCloakingHeaderManagedSecretPreviousVersion}}}" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references-secretsmanager.html
+                    TextTransformations:
+                      - Priority: 0
+                        Type: NONE
+                - !If
+                  - DeployPreviousOriginCloakingHeaderParameter
+                  - ByteMatchStatement:
+                      FieldToMatch:
+                        SingleHeader:
+                          Name: "origin-cloaking-secret"
+                      PositionalConstraint: EXACTLY
+                      SearchString: !Ref PreviousOriginCloakingHeader
+                      TextTransformations:
+                        - Priority: 0
+                          Type: NONE
+                  - !Ref AWS::NoValue
+                - !If
+                  - DeployOriginCloakingHeaderParameter
+                  - ByteMatchStatement:
+                      FieldToMatch:
+                        SingleHeader:
+                          Name: "origin-cloaking-secret"
+                      PositionalConstraint: EXACTLY
+                      SearchString: !Ref OriginCloakingHeader
+                      TextTransformations:
+                        - Priority: 0
+                          Type: NONE
+                  - !Ref AWS::NoValue
+
+  OriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub "${AWS::StackName}-AllViewerAndNeededCloudFrontHeaders"
+        Comment: "Policy that includes all viewer headers, and needed Cloudfront headers for the fraud function"
+        CookiesConfig:
+          CookieBehavior: "all"
+        HeadersConfig:
+          HeaderBehavior: "allViewerAndWhitelistCloudFront"
+          Headers:
+            - "CloudFront-Viewer-JA3-Fingerprint"
+            - "CloudFront-Viewer-Country"
+            - "CloudFront-Viewer-Address"
+            - "CloudFront-Forwarded-Proto"
+        QueryStringsConfig:
+          QueryStringBehavior: "all"
+
+  # CloudFront Distribution
+  CloudfrontDistribution:
+    #checkov:skip=CKV_AWS_86: No Access Logs setup is required
+    #checkov:skip=CKV_AWS_68: No WAF is required
+    Type: AWS::CloudFront::Distribution
+    DependsOn: CloakingOriginWebACL
+    Properties:
+      DistributionConfig:
+        Comment: !Sub "${AWS::StackName}"
+        Aliases:
+          - !Ref DistributionAlias
+          - !If [
+              CreateWWWPrefix,
+              !Sub "www.${DistributionAlias}",
+              !Ref "AWS::NoValue",
+            ]
+          - !If [CreateAliasOne, !Ref DistAliasOne, !Ref "AWS::NoValue"]
+          - !If [CreateAliasTwo, !Ref DistAliasTwo, !Ref "AWS::NoValue"]
+          - !If [CreateAliasThree, !Ref DistAliasThree, !Ref "AWS::NoValue"]
+          - !If [CreateAliasFour, !Ref DistAliasFour, !Ref "AWS::NoValue"]
+          - !If [CreateAliasFive, !Ref DistAliasFive, !Ref "AWS::NoValue"]
+          - !If [CreateAliasSix, !Ref DistAliasSix, !Ref "AWS::NoValue"]
+          - !If [CreateAliasSeven, !Ref DistAliasSeven, !Ref "AWS::NoValue"]
+          - !If [CreateAliasEight, !Ref DistAliasEight, !Ref "AWS::NoValue"]
+          - !If [CreateAliasNine, !Ref DistAliasNine, !Ref "AWS::NoValue"]
+          - !If [CreateAliasTen, !Ref DistAliasTen, !Ref "AWS::NoValue"]
+        CustomErrorResponses: !If
+          - UseCustomErrorPages
+          - - ErrorCode: 502
+              ResponseCode: 502
+              ResponsePagePath: /cloudfront-error/502.html
+            - ErrorCode: 503
+              ResponseCode: 503
+              ResponsePagePath: /cloudfront-error/503.html
+            - ErrorCode: 504
+              ResponseCode: 504
+              ResponsePagePath: /cloudfront-error/504.html
+          - !Ref AWS::NoValue
+        Origins:
+          - DomainName: !Sub "origin.${DistributionAlias}"
+            OriginPath: ""
+            Id: Origin
+            CustomOriginConfig:
+              OriginProtocolPolicy: "https-only"
+              OriginSSLProtocols:
+                - TLSv1.2
+            OriginCustomHeaders:
+              - HeaderName: "origin-cloaking-secret"
+                HeaderValue: !Sub "{{resolve:secretsmanager:${OriginCloakingHeaderManagedSecret}:SecretString::${OriginCloakingHeaderManagedSecretVersion}}}" # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references-secretsmanager.html
+          - DomainName: error-page-pipeline-cferrorpagebucket-pu7snxsncu6d.s3.eu-west-2.amazonaws.com
+            Id: Error-Bucket
+            OriginAccessControlId: !GetAtt ErrorBucketOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        HttpVersion: "http2"
+        Enabled: "true"
+        PriceClass: PriceClass_100 #eu/us
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+            - PUT
+            - PATCH
+            - POST
+            - DELETE
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad #Managed-CachingDisabled
+          TargetOriginId: Origin
+          OriginRequestPolicyId: !Ref OriginRequestPolicy
+          ViewerProtocolPolicy: redirect-to-https
+          FunctionAssociations:
+            - !If
+              - AddFraudHeader
+              - EventType: viewer-request
+                FunctionARN: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:function/${FraudHeadersFunctionName}" #Placed in every account that hosts a frontend
+              - !Ref "AWS::NoValue"
+        CacheBehaviors:
+          - PathPattern: /cloudfront-error/*
+            TargetOriginId: Error-Bucket
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 #Managed-CachingOptimised
+
+        ViewerCertificate:
+          MinimumProtocolVersion: TLSv1.2_2018
+          SslSupportMethod: sni-only
+          AcmCertificateArn: !Ref CloudFrontCertArn
+        Logging: !If
+          - AddStandardLogging
+          - Bucket: "log-archive-cloudfront-logs-523017967436-eu-west-2.s3.amazonaws.com"
+            Prefix: !Sub "${AWS::AccountId}/${AWS::StackName}/"
+          - !Ref "AWS::NoValue"
+        WebACLId:
+          !If [ApplyCloudfrontWaf, !Ref CloudFrontWafACL, !Ref "AWS::NoValue"]
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-CloudfrontDistribution"
+        - Key: "Service"
+          Value: "ci/cd"
+        - Key: "Source"
+          Value: "govuk-one-login/devplatform-deploy/cloudfront-distribution/template.yaml"
+
+  CloakingOriginWebACLCloudWatchLogsGroup:
+    Condition: AddWafACLLogging
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Join
+        - "-"
+        - - aws-waf-logs
+          - !Ref AWS::StackName
+          - "cloaking"
+          - Fn::Select:
+              - 4
+              - Fn::Split:
+                  - "-"
+                  - Fn::Select:
+                      - 2
+                      - Fn::Split:
+                          - /
+                          - Ref: AWS::StackId
+      KmsKeyId: !GetAtt CloakingOriginWebACLLoggingKmsKey.Arn
+      RetentionInDays: 30
+
+  CSLSCloudWatchSubscription:
+    Condition: AddWafACLLogging
+    Type: AWS::Logs::SubscriptionFilter
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - I3042
+    Properties:
+      DestinationArn: !Sub "arn:aws:logs:eu-west-2:885513274347:destination:${LogDestination}"
+      FilterPattern: ""
+      LogGroupName: !Ref CloakingOriginWebACLCloudWatchLogsGroup
+
+  CloakingOriginWebACLLogging:
+    Condition: AddWafACLLogging
+    Type: AWS::WAFv2::LoggingConfiguration
+    Properties:
+      ResourceArn: !GetAtt
+        - CloakingOriginWebACL
+        - Arn
+      LogDestinationConfigs:
+        - !GetAtt CloakingOriginWebACLCloudWatchLogsGroup.Arn
+      LoggingFilter:
+        DefaultBehavior: !If [ApplyCloudfrontWaf, DROP, KEEP]
+        Filters:
+          - Behavior: KEEP
+            Conditions:
+              - ActionCondition:
+                  Action: BLOCK
+              - ActionCondition:
+                  Action: COUNT
+            Requirement: MEETS_ANY
+
+  CloakingOriginWebACLLoggingKmsKeyAlias:
+    Condition: AddWafACLLogging
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Join
+        - ""
+        - - "alias/"
+          - Fn::Join:
+              - "-"
+              - - !Ref AWS::StackName
+                - "CloakingKey"
+                - Fn::Select:
+                    - 4
+                    - Fn::Split:
+                        - "-"
+                        - Fn::Select:
+                            - 2
+                            - Fn::Split:
+                                - "/"
+                                - Ref: AWS::StackId
+      TargetKeyId: !Ref CloakingOriginWebACLLoggingKmsKey
+
+  CloakingOriginWebACLLoggingKmsKey:
+    Condition: AddWafACLLogging
+    Type: AWS::KMS::Key
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub ${AWS::AccountId}
+            Action:
+              - kms:*
+            Resource: "*"
+          - Effect: Allow
+            Principal:
+              Service: !Sub "logs.${AWS::Region}.amazonaws.com"
+            Action:
+              - "kms:Encrypt*"
+              - "kms:Decrypt*"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:Describe*"
+            Resource: "*"
+            Condition:
+              ArnLike:
+                "kms:EncryptionContext:aws:logs:arn": !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  # Unable to retrieve Id attribute for AWS::CloudFront::OriginAccessControl, with error message Access denied for operation 'AWS::CloudFront::OriginAccessControl'.
+  ErrorBucketOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-ErrorBucketOAC"
+        Description: Allow CFN Distribution access to the error pages S3 bucket
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+Outputs:
+  DistributionId:
+    Description: The ID of the distribution.
+    Value: !Ref CloudfrontDistribution
+    Export:
+      Name: !Sub "${AWS::StackName}-DistributionId"
+
+  DistributionDomain:
+    Description: AWS assigned domain for the distribution
+    Value: !GetAtt CloudfrontDistribution.DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-DistributionDomain"
+
+  CloakingSecretArn:
+    Description: ARN of the secret which holds the value of the origin-cloaking-secret set by the cloudfront distribution. This value is not used if OriginCloakingHeaderManagedSecretArn is also set.
+    Value: !Ref OriginCloakingHeaderSecret
+    Export:
+      Name: !Sub ${AWS::StackName}-CloakingSecretARN
+    Condition: DeployOriginCloakingHeaderParameter
+
+  CloakingOriginWebACLArn:
+    Description: The ARN of the WebACL for cloaking the origin
+    Value: !GetAtt CloakingOriginWebACL.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CloakingOriginWebACLArn"
+
+  CloudWatchLogsGroupArn:
+    Condition: AddWafACLLogging
+    Description: ARN of CloudWatch Logs Group for the WebACL that cloaks the origin
+    Value: !GetAtt
+      - CloakingOriginWebACLCloudWatchLogsGroup
+      - Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CloakingOriginWAFCloudWatchLogsGroupArn"
+
+  OriginCloakingHeaderManagedSecretArn:
+    Description: ARN of the managed secret which holds the value of the origin-cloaking-secret set by the cloudfront distribution. Takes precedence over CloakingSecretArn if both are set.
+    Value: !Ref OriginCloakingHeaderManagedSecret
+    Export:
+      Name: !Sub ${AWS::StackName}-OriginCloakingHeaderManagerSecretARN
