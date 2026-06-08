@@ -49,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,7 +94,7 @@ class IPVTokenServiceTest {
 
     @BeforeEach
     void setUp() throws JOSEException {
-        ipvTokenService = new IPVTokenService(configService, kmsService, jwksService);
+        ipvTokenService = spy(new IPVTokenService(configService, kmsService, jwksService));
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
@@ -142,25 +143,31 @@ class IPVTokenServiceTest {
     }
 
     @Test
-    void shouldRetryTokenEndpointOnceAndParseSuccessFulSecondResponse() throws IOException {
+    void shouldRetryTokenEndpointOnceAndParseSuccessfulSecondResponse() throws Exception {
+        mockKmsSigningJwt();
+        when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         when(tokenRequest.toHTTPRequest().send())
                 .thenReturn(new HTTPResponse(500))
                 .thenReturn(getSuccessfulTokenHttpResponse());
 
-        var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+        var tokenResponse = ipvTokenService.getToken(AUTH_CODE.getValue());
 
         assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+        verify(ipvTokenService, times(2)).constructTokenRequest(AUTH_CODE.getValue());
     }
 
     @Test
-    void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVTokenEndpointFail() throws IOException {
+    void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVTokenEndpointFail() throws Exception {
+        mockKmsSigningJwt();
+        when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         when(tokenRequest.toHTTPRequest().send()).thenReturn(new HTTPResponse(500));
 
-        var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+        var tokenResponse = ipvTokenService.getToken(AUTH_CODE.getValue());
 
         assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+        verify(ipvTokenService, times(2)).constructTokenRequest(AUTH_CODE.getValue());
         verify(tokenRequest.toHTTPRequest(), times(2)).send();
     }
 
