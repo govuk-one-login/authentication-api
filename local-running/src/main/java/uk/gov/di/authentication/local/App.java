@@ -47,6 +47,8 @@ public class App {
         kmsInitialiser.createKey(
                 "alias/local-mfa-reset-storage-token-signing-key", KeyUsageType.SIGN_VERIFY);
         kmsInitialiser.createKey("alias/local-mfa-reset-jar-signing-key", KeyUsageType.SIGN_VERIFY);
+        kmsInitialiser.createKey(
+                "alias/local-auth-to-account-data-signing-key", KeyUsageType.SIGN_VERIFY);
 
         // Set up localstack SQS queues
         //

@@ -102,7 +102,7 @@ public class LocalAuthApi {
                             config.routes.get("/userinfo", handlerFor(new UserInfoHandler()));
 
                             // Account Data API
-                            config.routes.post(
+                            config.routes.get(
                                     "/accounts/{publicSubjectId}/authenticators/passkeys",
                                     handlerFor(new PasskeysRetrieveHandler()));
                         });
