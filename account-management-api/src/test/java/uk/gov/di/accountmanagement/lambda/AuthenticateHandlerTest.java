@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
@@ -17,6 +16,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -50,7 +50,7 @@ class AuthenticateHandlerTest {
             Map.of(
                     PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                     PERSISTENT_SESSION_ID,
-                    AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                    TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER,
                     TXMA_ENCODED_HEADER_VALUE,
                     ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
                     SESSION_ID);

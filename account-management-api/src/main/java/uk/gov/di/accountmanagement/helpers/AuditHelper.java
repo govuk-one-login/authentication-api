@@ -13,11 +13,10 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-
-import java.util.Map;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -30,27 +29,11 @@ import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair
 public class AuditHelper {
 
     private static final Logger LOG = LogManager.getLogger(AuditHelper.class);
-    public static final String TXMA_ENCODED_HEADER_NAME = "txma-audit-encoded";
     public static final String ERROR_BUILDING_AUDIT_CONTEXT = "Error building audit context";
     public static final AuditService.MetadataPair ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR =
             pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue());
 
     private AuditHelper() {}
-
-    public static String getTxmaAuditEncodedHeaderOrUnknown(Map<String, String> headers) {
-        String txmaEncodedValue =
-                RequestHeaderHelper.getHeaderValueFromHeaders(
-                        headers, TXMA_ENCODED_HEADER_NAME, false);
-        if (txmaEncodedValue == null) {
-            LOG.warn("Encoded device information for audit event is not present.");
-            return AuditService.UNKNOWN;
-        }
-        if (txmaEncodedValue.isEmpty()) {
-            LOG.warn("Encoded device information for audit event present but empty.");
-            return AuditService.UNKNOWN;
-        }
-        return txmaEncodedValue;
-    }
 
     public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
             ConfigurationService configurationService,
@@ -76,7 +59,7 @@ public class AuditHelper {
                             IpAddressHelper.extractIpAddress(input),
                             null,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            getTxmaAuditEncodedHeaderOrUnknown(input.getHeaders())));
+                            TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input)));
         } catch (Exception e) {
             LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);

@@ -11,7 +11,6 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -26,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -49,42 +47,6 @@ class AuditHelperTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     userProfile.getSubjectID(), URI.create(TEST_INTERNAL_SECTOR_URI), TEST_SALT);
     private APIGatewayProxyRequestEvent input;
-
-    @Nested
-    class TxmaAuditEncodedTests {
-        @Test
-        void shouldRetrieveATxmaAuditEncodedFieldFromAHeader() {
-            String auditValue = "validHeaderValue";
-            var result =
-                    AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(
-                            Map.of(TXMA_ENCODED_HEADER_NAME, auditValue));
-            assertEquals(auditValue, result);
-        }
-
-        @Test
-        void shouldLogAwarningWhenMissingHeader() {
-            var result = AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(Map.of());
-            assertEquals(AuditService.UNKNOWN, result);
-            assertThat(
-                    logging.events(),
-                    hasItem(
-                            withMessageContaining(
-                                    "Encoded device information for audit event is not present")));
-        }
-
-        @Test
-        void shouldLogAWarningWhenEmptyHeader() {
-            var result =
-                    AuditHelper.getTxmaAuditEncodedHeaderOrUnknown(
-                            Map.of(TXMA_ENCODED_HEADER_NAME, ""));
-            assertEquals(AuditService.UNKNOWN, result);
-            assertThat(
-                    logging.events(),
-                    hasItem(
-                            withMessageContaining(
-                                    "Encoded device information for audit event present but empty")));
-        }
-    }
 
     @Nested
     class BuildAuditContextTests {
