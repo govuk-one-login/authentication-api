@@ -1,4 +1,5 @@
 module "oidc_api_authentication_callback_role_1" {
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-api-authentication-callback-role"
@@ -20,6 +21,7 @@ module "oidc_api_authentication_callback_role_1" {
 }
 
 module "authentication_callback" {
+  count  = var.deploy_orch_oidc_lambdas ? 1 : 0
   source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "orchestration-redirect"
@@ -68,7 +70,7 @@ module "authentication_callback" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_api_authentication_callback_role_1.arn
+  lambda_role_arn                        = module.oidc_api_authentication_callback_role_1[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention

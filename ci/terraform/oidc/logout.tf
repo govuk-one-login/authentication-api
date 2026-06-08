@@ -1,5 +1,6 @@
 module "oidc_logout_role" {
   source      = "../modules/lambda-role"
+  count       = var.deploy_orch_oidc_lambdas ? 1 : 0
   environment = var.environment
   role_name   = "oidc-logout-role"
   vpc_arn     = local.authentication_vpc_arn
@@ -23,6 +24,7 @@ module "oidc_logout_role" {
 
 module "logout" {
   source = "../modules/endpoint-module-v2"
+  count  = var.deploy_orch_oidc_lambdas ? 1 : 0
 
   endpoint_name   = "logout"
   path_part       = var.orch_logout_enabled ? "logout-auth" : "logout"
@@ -57,7 +59,7 @@ module "logout" {
   ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
 
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_logout_role.arn
+  lambda_role_arn                        = module.oidc_logout_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
