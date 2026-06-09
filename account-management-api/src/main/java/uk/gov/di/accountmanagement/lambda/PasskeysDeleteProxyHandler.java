@@ -11,6 +11,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.PasskeysDeleteProxyFailureReason;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -24,12 +25,19 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
+import java.util.Map;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_SUCCESSFUL;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_RESTRICTED_PASSKEY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_RESTRICTED_PASSKEY_CREDENTIAL_ID;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class PasskeysDeleteProxyHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -93,6 +101,18 @@ public class PasskeysDeleteProxyHandler
         var userProfile = userProfileResult.getSuccess();
         var userEmail = userProfile.getEmail();
 
+        var auditContextResult =
+                accountManagementAuditContext(
+                        configurationService, dynamoService, input, userProfile);
+        if (auditContextResult.isFailure()) {
+            LOG.error(
+                    "Error when building audit context with error code {}. No events raised",
+                    auditContextResult.getFailure());
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
+        }
+        var auditContext = auditContextResult.getSuccess();
+
         var currentPasskeyCountResult = getPasskeyCount(request);
         if (currentPasskeyCountResult.isFailure()) {
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
@@ -115,6 +135,7 @@ public class PasskeysDeleteProxyHandler
                     deletePasskeyResponse.statusCode(),
                     request.publicSubjectId);
         } else {
+            emitSuccessAuditEvent(auditContext, request, currentPasskeyCount);
             sendEmailNotification(request, userEmail, currentPasskeyCount);
         }
 
@@ -203,6 +224,23 @@ public class PasskeysDeleteProxyHandler
                 "Notify request sent with notification type '{}' and publicSubjectId '{}'",
                 notificationType,
                 request.publicSubjectId);
+    }
+
+    private void emitSuccessAuditEvent(
+            AuditContext auditContext, PasskeysDeleteRequest request, int currentPasskeyCount) {
+        var contextWithPasskeyCount = auditContext.withPasskeyCount(currentPasskeyCount - 1);
+
+        var restrictedPasskeyPair =
+                pair(
+                        AUDIT_EVENT_RESTRICTED_PASSKEY,
+                        Map.of(AUDIT_EVENT_RESTRICTED_PASSKEY_CREDENTIAL_ID, request.passkeyId),
+                        true);
+
+        auditService.submitAuditEvent(
+                AUTH_PASSKEY_DELETE_SUCCESSFUL,
+                contextWithPasskeyCount,
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                restrictedPasskeyPair);
     }
 
     private record PasskeysDeleteRequest(
