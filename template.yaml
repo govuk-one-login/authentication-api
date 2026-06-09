@@ -125,6 +125,7 @@ Conditions:
   ProvisionNewApiClientRegistryApiKey:
     !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
   UseCloudfront: !Equals [dev, !Ref Environment]
+  CreateApiGwCustomDomain: !Equals [dev, !Ref Environment]
   #endregion
 
 Mappings:
@@ -5931,7 +5932,7 @@ Resources:
 
   OrchestrationOidcApiCustomDomain:
     Type: AWS::ApiGatewayV2::DomainName
-    Condition: UseCloudfront
+    Condition: CreateApiGwCustomDomain
     Properties:
       DomainName:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
@@ -5941,7 +5942,7 @@ Resources:
 
   OrchestrationOidcApiBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
-    Condition: UseCloudfront
+    Condition: CreateApiGwCustomDomain
     Properties:
       DomainName:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
@@ -5952,7 +5953,7 @@ Resources:
 
   OrchestrationOidcOriginRecordSet:
     Type: AWS::Route53::RecordSet
-    Condition: UseCloudfront
+    Condition: CreateApiGwCustomDomain
     Properties:
       Name: !Sub
         - "origin.${oidcDomain}"
