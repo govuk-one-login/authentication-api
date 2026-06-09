@@ -12,6 +12,8 @@ import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyDeleteSuccessful;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
@@ -25,6 +27,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +36,8 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,6 +58,8 @@ class PasskeysDeleteProxyHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
 
     private static final String ADAPI_TOKEN_HEADER = "X-ADAPI-AccessToken";
     private static final String TOKEN = "token";
@@ -66,6 +73,9 @@ class PasskeysDeleteProxyHandlerTest {
                 new UserProfile().withSubjectID(PUBLIC_SUBJECT_ID).withEmail(TEST_EMAIL_ADDRESS);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getOrGenerateSalt(any(UserProfile.class)))
+                .thenReturn("test-salt".getBytes(StandardCharsets.UTF_8));
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
 
         handler =
                 new PasskeysDeleteProxyHandler(
@@ -73,7 +83,8 @@ class PasskeysDeleteProxyHandlerTest {
                         accountDataApiService,
                         sqsClient,
                         dynamoService,
-                        auditService);
+                        auditService,
+                        structuredAuditService);
     }
 
     private static final String PASSKEY_IDENTIFIER = "test-passkey-id";
@@ -146,6 +157,39 @@ class PasskeysDeleteProxyHandlerTest {
             assertThat(sentNotifyRequest.getNotificationType(), equalTo(expectedNotificationType));
             assertThat(sentNotifyRequest.getLanguage(), equalTo(SupportedLanguage.EN));
         }
+
+        @Test
+        void shouldEmitSuccessAuditEventOnSuccessfulDeletion()
+                throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+                    .thenReturn(
+                            new PasskeysRetrieveResponse(
+                                    List.of(
+                                            aPasskeyResponse(PASSKEY_IDENTIFIER),
+                                            aPasskeyResponse(OTHER_PASSKEY_IDENTIFIER))));
+            when(mockHttpResponse.statusCode()).thenReturn(204);
+            when(mockHttpResponse.body()).thenReturn("");
+            when(accountDataApiService.deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN))
+                    .thenReturn(mockHttpResponse);
+
+            // Act
+            handler.handleRequest(passkeysDeleteProxyRequest(), context);
+
+            // Assert
+
+            ArgumentCaptor<AuthPasskeyDeleteSuccessful> auditEventCaptor =
+                    ArgumentCaptor.forClass(AuthPasskeyDeleteSuccessful.class);
+            verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
+            var submittedAuditEvent = auditEventCaptor.getValue();
+
+            assertEquals("AUTH_PASSKEY_DELETE_SUCCESSFUL", submittedAuditEvent.eventName());
+            assertEquals(1, submittedAuditEvent.user().passkeyCount());
+            assertEquals(
+                    PASSKEY_IDENTIFIER,
+                    submittedAuditEvent.restricted().passkey().passkeyCredentialId());
+        }
     }
 
     @Nested
@@ -176,13 +220,16 @@ class PasskeysDeleteProxyHandlerTest {
         var headersWithToken = new HashMap<>(VALID_HEADERS);
         headersWithToken.put(ADAPI_TOKEN_HEADER, TOKEN);
 
+        var requestContext = contextWithSourceIp(IP_ADDRESS);
+        requestContext.setAuthorizer(Map.of("clientId", "test-client-id"));
+
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(
                         Map.of(
                                 "publicSubjectId", PUBLIC_SUBJECT_ID,
                                 "passkeyIdentifier", PASSKEY_IDENTIFIER))
                 .withHeaders(headersWithToken)
-                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+                .withRequestContext(requestContext);
     }
 
     private static PasskeysRetrieveResponse.PasskeyResponse aPasskeyResponse(String passkeyId) {
