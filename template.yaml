@@ -102,10 +102,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
-  UseCloudfront: !Equals [dev, !Ref Environment]
-  ProvisionNewApiClientRegistryApiKey:
-    !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
   UseStoredOldIdTokenPublicKeys:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -122,6 +118,14 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
+
+  #region API Migration Feature Flags
+  # Please keep separate from the other ones
+  ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
+  ProvisionNewApiClientRegistryApiKey:
+    !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
+  UseCloudfront: !Equals [dev, !Ref Environment]
+  #endregion
 
 Mappings:
   EnvironmentConfiguration:
