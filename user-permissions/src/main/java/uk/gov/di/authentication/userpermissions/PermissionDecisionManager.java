@@ -388,21 +388,30 @@ public class PermissionDecisionManager implements PermissionDecisions {
         var achievedCredentialStrength = authSession.getAchievedCredentialStrength();
         var requestedCredentialStrength = authSession.getRequestedCredentialStrength();
         var hasVerifiedPasskey = authSession.getHasVerifiedPasskey();
+        var hasVerifiedWithPasskey = authSession.getHasVerifiedWithPasskey();
         var hasVerifiedPassword = authSession.getHasVerifiedPassword();
+        var hasVerifiedWithPassword = authSession.getHasVerifiedWithPassword();
         var hasVerifiedMfa = authSession.getHasVerifiedMfa();
+        var hasVerifiedWithMfa = authSession.getHasVerifiedWithMfa();
 
         LOG.info(
                 "Checking if auth code is blocked - "
                         + "achievedCredentialStrength='{}', "
                         + "requestedCredentialStrength='{}', "
                         + "hasVerifiedPasskey='{}', "
+                        + "hasVerifiedWithPasskey='{}', "
                         + "hasVerifiedPassword='{}', "
-                        + "hasVerifiedMfa='{}'",
+                        + "hasVerifiedWithPassword='{}', "
+                        + "hasVerifiedMfa='{}', "
+                        + "hasVerifiedWithMfa='{}'",
                 achievedCredentialStrength == null ? null : achievedCredentialStrength.getValue(),
                 requestedCredentialStrength == null ? null : requestedCredentialStrength.getValue(),
                 hasVerifiedPasskey,
+                hasVerifiedWithPasskey,
                 hasVerifiedPassword,
-                hasVerifiedMfa);
+                hasVerifiedWithPassword,
+                hasVerifiedMfa,
+                hasVerifiedWithMfa);
 
         if (achievedCredentialStrength == null) {
             LOG.info("Auth code blocked: no credential strength achieved");
