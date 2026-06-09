@@ -23,7 +23,6 @@ Resources:
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          MFA_METHOD_MANAGEMENT_API_ENABLED: "true"
           EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
