@@ -21,8 +21,10 @@ import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -136,7 +138,7 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
             var publicSubjectId = userStore.getPublicSubjectIdForEmail(TEST_EMAIL);
 
             stubPasskeysRetrieveEndpoint(
-                    publicSubjectId, 200, passkeysResponse(passkeyJson(FIRST_PASSKEY_ID)));
+                    publicSubjectId, 200, passkeysResponse(passkeyJson(FIRST_PASSKEY_ID), passkeyJsonWithTransports(SECOND_PASSKEY_ID, List.of("BLE"))));
 
             var response =
                     makeRequest(
@@ -182,12 +184,15 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                                 "passkey_allowed_credentials": [
                                   {
                                     "passkey_credential_id": "%s"
+                                  },
+                                  {
+                                    "passkey_credential_transports": ["%s"]
                                   }
                                 ]
                               }
                             }
                             """,
-                            ENCODED_DEVICE_INFORMATION, FIRST_PASSKEY_ID);
+                            ENCODED_DEVICE_INFORMATION, FIRST_PASSKEY_ID, SECOND_PASSKEY_ID, "BLE");
 
             var restricted = message.getAsJsonObject().get("restricted").getAsJsonObject();
             assertEquals(asJson(expectedAuditEventRestrictedSection), restricted);
@@ -279,6 +284,27 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                   "lastUsedAt": "another-timestamp"
                 }"""
                 .formatted(passkeyId, COSE_PUBLIC_KEY_BASE64URL);
+    }
+
+    private static String passkeyJsonWithTransports(String passkeyId, List<String> transports) {
+        var transportsList =
+                transports.stream()
+                        .map(t -> '"' + t + '"')
+                        .collect(Collectors.joining(", "));
+        return """
+                {
+                  "id": "%s",
+                  "credential": "%s",
+                  "aaguid": "authenticator-1",
+                  "isAttested": true,
+                  "signCount": 5,
+                  "transports": [%s],
+                  "isBackUpEligible": true,
+                  "isBackedUp": true,
+                  "createdAt": "some-timestamp",
+                  "lastUsedAt": "another-timestamp"
+                }"""
+                .formatted(passkeyId, COSE_PUBLIC_KEY_BASE64URL, transportsList);
     }
 
     private static String passkeysResponse(String... passkeys) {
