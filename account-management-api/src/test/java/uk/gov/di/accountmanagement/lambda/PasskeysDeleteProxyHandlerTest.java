@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResp
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -51,6 +52,7 @@ class PasskeysDeleteProxyHandlerTest {
     private final AccountDataApiService accountDataApiService = mock(AccountDataApiService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private static final String ADAPI_TOKEN_HEADER = "X-ADAPI-AccessToken";
     private static final String TOKEN = "token";
@@ -67,7 +69,11 @@ class PasskeysDeleteProxyHandlerTest {
 
         handler =
                 new PasskeysDeleteProxyHandler(
-                        configurationService, accountDataApiService, sqsClient, dynamoService);
+                        configurationService,
+                        accountDataApiService,
+                        sqsClient,
+                        dynamoService,
+                        auditService);
     }
 
     private static final String PASSKEY_IDENTIFIER = "test-passkey-id";

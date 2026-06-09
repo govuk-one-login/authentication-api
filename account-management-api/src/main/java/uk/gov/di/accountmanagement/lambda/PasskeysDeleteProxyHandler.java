@@ -13,10 +13,12 @@ import uk.gov.di.accountmanagement.entity.PasskeysDeleteProxyFailureReason;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -38,6 +40,7 @@ public class PasskeysDeleteProxyHandler
     private final SerializationService serializationService = SerializationService.getInstance();
     private final AwsSqsClient sqsClient;
     private final DynamoService dynamoService;
+    private final AuditService auditService;
 
     public PasskeysDeleteProxyHandler() {
         this(ConfigurationService.getInstance());
@@ -52,17 +55,20 @@ public class PasskeysDeleteProxyHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.dynamoService = new DynamoService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public PasskeysDeleteProxyHandler(
             ConfigurationService configurationService,
             AccountDataApiService accountDataApiService,
             AwsSqsClient sqsClient,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.accountDataApiService = accountDataApiService;
         this.sqsClient = sqsClient;
         this.dynamoService = dynamoService;
+        this.auditService = auditService;
     }
 
     @Override
@@ -80,11 +86,12 @@ public class PasskeysDeleteProxyHandler
 
         PasskeysDeleteRequest request = extractPasskeyDeleteRequest(input);
 
-        var userEmailResult = getUserEmailFromPublicSubjectId(request.publicSubjectId);
-        if (userEmailResult.isFailure()) {
+        var userProfileResult = getUserProfile(request.publicSubjectId);
+        if (userProfileResult.isFailure()) {
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
-        var userEmail = userEmailResult.getSuccess();
+        var userProfile = userProfileResult.getSuccess();
+        var userEmail = userProfile.getEmail();
 
         var currentPasskeyCountResult = getPasskeyCount(request);
         if (currentPasskeyCountResult.isFailure()) {
@@ -138,7 +145,7 @@ public class PasskeysDeleteProxyHandler
         return new PasskeysDeleteRequest(publicSubjectId, token, passkeyIdentifier, userLanguage);
     }
 
-    private Result<PasskeysDeleteProxyFailureReason, String> getUserEmailFromPublicSubjectId(
+    private Result<PasskeysDeleteProxyFailureReason, UserProfile> getUserProfile(
             String publicSubjectId) {
         var userProfile = dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
 
@@ -147,7 +154,7 @@ public class PasskeysDeleteProxyHandler
             return Result.failure(PasskeysDeleteProxyFailureReason.FAILED_TO_FIND_USER_PROFILE);
         }
 
-        return Result.success(userProfile.get().getEmail());
+        return Result.success(userProfile.get());
     }
 
     private Result<PasskeysDeleteProxyFailureReason, Integer> getPasskeyCount(
