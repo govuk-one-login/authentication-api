@@ -573,7 +573,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     authSession.withResetMfaState(AuthSessionItem.ResetMfaState.SUCCEEDED));
         }
 
-        LOG.info("Setting hasVerifiedMfa to true");
+        LOG.info("Setting hasVerifiedWithMfa to true");
         PermissionContext permissionContext =
                 PermissionContext.builder().withAuthSessionItem(authSession).build();
         if (codeRequest.getMfaMethodType() == MFAMethodType.SMS) {

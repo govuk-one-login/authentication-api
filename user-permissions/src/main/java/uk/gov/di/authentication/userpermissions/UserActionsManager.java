@@ -202,7 +202,7 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> createdPassword(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedPassword(true);
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedWithPassword(true);
         getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }
@@ -210,7 +210,7 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctPasswordReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedPassword(true);
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedWithPassword(true);
         getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }
@@ -224,7 +224,7 @@ public class UserActionsManager implements UserActions {
         getCodeStorageService()
                 .deleteBlockForEmail(permissionContext.emailAddress(), codeBlockedKeyPrefix);
 
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedPassword(true);
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedWithPassword(true);
         getAuthSessionService().updateSession(updatedSession);
 
         return Result.success(null);
@@ -276,7 +276,7 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctSmsOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedWithMfa(true);
         getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }
@@ -290,7 +290,7 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedMfa(true);
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedWithMfa(true);
         getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }
@@ -301,7 +301,7 @@ public class UserActionsManager implements UserActions {
         var updatedSession =
                 permissionContext
                         .authSessionItem()
-                        .withHasVerifiedPasskey(true)
+                        .withHasVerifiedWithPasskey(true)
                         .withAchievedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
         getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
@@ -310,7 +310,7 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectPasskeyReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedPasskey(false);
+        var updatedSession = permissionContext.authSessionItem().withHasVerifiedWithPasskey(false);
         getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }

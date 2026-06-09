@@ -211,10 +211,10 @@ public class StartHandler
 
             if (reauthenticate) {
                 LOG.info(
-                        "Reauthentication - Setting hasVerifiedPassword, hasVerifiedMfa & hasVerifiedPasskey to false");
-                authSession.setHasVerifiedPassword(false);
-                authSession.setHasVerifiedMfa(false);
-                authSession.setHasVerifiedPasskey(false);
+                        "Reauthentication - Setting hasVerifiedWithPassword, hasVerifiedWithMfa & hasVerifiedWithPasskey to false");
+                authSession.setHasVerifiedWithPassword(false);
+                authSession.setHasVerifiedWithMfa(false);
+                authSession.setHasVerifiedWithPasskey(false);
             }
 
             Optional<String> maybeInternalSubject =

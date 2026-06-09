@@ -153,7 +153,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             .withEmailAddress(request.getEmail())
                             .withInternalCommonSubjectId(internalCommonSubjectId.getValue()));
 
-            LOG.info("Setting hasVerifiedPassword to true");
+            LOG.info("Setting hasVerifiedWithPassword to true");
             var permissionContext =
                     PermissionContext.builder().withAuthSessionItem(authSessionItem).build();
             userActionsManager.createdPassword(JourneyType.REGISTRATION, permissionContext);

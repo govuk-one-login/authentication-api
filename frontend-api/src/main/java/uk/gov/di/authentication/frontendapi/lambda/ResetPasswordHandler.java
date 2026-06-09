@@ -212,7 +212,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                         .withEmailAddress(userCredentials.getEmail())
                         .withAuthSessionItem(userContext.getAuthSession());
 
-        LOG.info("Setting hasVerifiedPassword to true");
+        LOG.info("Setting hasVerifiedWithPassword to true");
         userActionsManager.passwordReset(
                 JourneyType.PASSWORD_RESET, permissionContextBuilder.build());
 
