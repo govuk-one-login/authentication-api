@@ -149,6 +149,7 @@ public abstract class BaseAuthorizeValidator {
                             "Invalid value for code_challenge_method parameter."));
         }
 
+        LOG.info("PKCE parameters successfully validated");
         return Optional.empty();
     }
 
