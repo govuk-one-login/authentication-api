@@ -3,8 +3,6 @@ openapi: 3.0.1
 info:
   title: "Authentication Internal API"
   version: "1.0.0"
-security:
-  - api_key: []
 components:
   securitySchemes:
     api_key:
@@ -14,6 +12,7 @@ components:
 paths:
   /.well-known/mfa-reset-jwk.json:
     get:
+      security: []
       responses:
         "200":
           description: "Successfully retrieved MFA reset storage token JWK set"
@@ -28,6 +27,7 @@ paths:
         timeoutInMillis: 29000
   /.well-known/reverification-jwk.json:
     get:
+      security: []
       responses:
         "200":
           description: "Successfully retrieved reverification JAR JWK set"
@@ -42,6 +42,7 @@ paths:
         timeoutInMillis: 29000
   /.well-known/amc-jwks.json:
     get:
+      security: []
       responses:
         "200":
           description: "Successfully retrieved JWKS"
@@ -83,6 +84,7 @@ paths:
             statusCode: "200"
   /.well-known/ad-jwks.json:
     get:
+      security: []
       responses:
         "200":
           description: "Successfully retrieved JWKS"
@@ -124,6 +126,8 @@ paths:
             statusCode: "200"
   /account-interventions:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully retrieved account interventions status"
@@ -146,6 +150,8 @@ paths:
         timeoutInMillis: 29000
   /account-recovery:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully determined account recovery permission"
@@ -162,6 +168,8 @@ paths:
         timeoutInMillis: 29000
   /amc-authorize:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully generated AMC authorization URL and cookie"
@@ -178,6 +186,8 @@ paths:
         timeoutInMillis: 29000
   /amc-callback:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully retrieved AMC journey outcome"
@@ -194,6 +204,8 @@ paths:
         timeoutInMillis: 29000
   /check-email-fraud-block:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully checked email fraud block status"
@@ -210,6 +222,8 @@ paths:
         timeoutInMillis: 29000
   /check-reauth-user:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Re-authentication user check passed"
@@ -228,6 +242,8 @@ paths:
         timeoutInMillis: 29000
   /id-reverification-state:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully retrieved orchestration redirect URL"
@@ -242,6 +258,8 @@ paths:
         timeoutInMillis: 29000
   /login:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully authenticated user"
@@ -260,6 +278,8 @@ paths:
         timeoutInMillis: 29000
   /mfa:
     post:
+      security:
+        - api_key: []
       responses:
         "204":
           description: "MFA code sent successfully"
@@ -276,6 +296,8 @@ paths:
         timeoutInMillis: 29000
   /mfa-reset-authorize:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully generated MFA reset IPV reverification redirect URI"
@@ -292,6 +314,8 @@ paths:
         timeoutInMillis: 29000
   /orch-auth-code:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully generated authentication auth code"
@@ -308,6 +332,8 @@ paths:
         timeoutInMillis: 29000
   /reset-password:
     post:
+      security:
+        - api_key: []
       responses:
         "204":
           description: "Password reset successfully"
@@ -322,6 +348,8 @@ paths:
         timeoutInMillis: 29000
   /reset-password-request:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Password reset request processed with MFA method info"
@@ -340,6 +368,8 @@ paths:
         timeoutInMillis: 29000
   /reverification-result:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Successfully retrieved reverification result from IPV"
@@ -354,6 +384,8 @@ paths:
         timeoutInMillis: 29000
   /send-notification:
     post:
+      security:
+        - api_key: []
       responses:
         "204":
           description: "Notification sent successfully"
@@ -370,6 +402,8 @@ paths:
         timeoutInMillis: 29000
   /signup:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "User signed up successfully"
@@ -384,6 +418,8 @@ paths:
         timeoutInMillis: 29000
   /start:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Session started successfully"
@@ -398,6 +434,8 @@ paths:
         timeoutInMillis: 29000
   /update-profile:
     post:
+      security:
+        - api_key: []
       responses:
         "204":
           description: "Profile updated successfully"
@@ -412,6 +450,8 @@ paths:
         timeoutInMillis: 29000
   /user-exists:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "User existence check completed"
@@ -428,6 +468,8 @@ paths:
         timeoutInMillis: 29000
   /verify-code:
     post:
+      security:
+        - api_key: []
       responses:
         "204":
           description: "Code verified successfully"
@@ -444,6 +486,8 @@ paths:
         timeoutInMillis: 29000
   /verify-mfa-code:
     post:
+      security:
+        - api_key: []
       responses:
         "204":
           description: "MFA code verified successfully"
@@ -458,6 +502,8 @@ paths:
         timeoutInMillis: 29000
   /processing-identity:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Processing identity status returned (PROCESSING, COMPLETED, NO_ENTRY, ERROR, or INTERVENTION)"
@@ -474,6 +520,8 @@ paths:
         timeoutInMillis: 29000
   /start-passkey-assertion:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Passkey assertion request started successfully"
@@ -490,6 +538,8 @@ paths:
         timeoutInMillis: 29000
   /finish-passkey-assertion:
     post:
+      security:
+        - api_key: []
       responses:
         "200":
           description: "Passkey assertion completed successfully"
