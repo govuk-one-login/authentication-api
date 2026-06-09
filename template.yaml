@@ -5870,7 +5870,8 @@ Resources:
       AlwaysDeploy: true
       AccessLogSetting:
         DestinationArn: !GetAtt OidcApiAccessLogGroup.Arn
-        Format: '{"requestId": "$context.requestId", "ip": "$context.identity.sourceIp", "userAgent": "$context.identity.userAgent", "requestTime": "$context.requestTime", "httpMethod": "$context.httpMethod", "resourcePath": "$context.resourcePath", "status": "$context.status", "protocol": "$context.protocol", "responseLength": "$context.responseLength", "integrationStatus": "$context.integration.integrationStatus", "integrationLatency": "$context.integration.latency", "integrationRequestId": "$context.integration.requestId" }'
+        # We should remove DomainName from this after we've done the migration
+        Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","userAgent":"$context.identity.userAgent","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength","integrationStatus":"$context.integration.integrationStatus","integrationLatency":"$context.integration.latency","integrationRequestId":"$context.integration.requestId","domainName":"$context.domainName"}'
       DefinitionBody:
         openapi: "3.0.1" # workaround to get `sam validate` to work
         Fn::Transform:
