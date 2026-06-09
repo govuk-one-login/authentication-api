@@ -9,12 +9,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyDeleteSuccessful;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
@@ -38,6 +39,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,7 +51,6 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class PasskeysDeleteProxyHandlerTest {
@@ -195,7 +197,7 @@ class PasskeysDeleteProxyHandlerTest {
     @Nested
     class FailedRequest {
         @Test
-        void shouldReturn500IfServiceThrowsException()
+        void shouldEmitFailedAuditEventWhenDeleteThrowsException()
                 throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
             // Arrange
             when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
@@ -210,9 +212,67 @@ class PasskeysDeleteProxyHandlerTest {
 
             // Assert
             assertThat(result, hasStatus(500));
-            assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
-            verify(accountDataApiService)
-                    .deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN);
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
+                            any(),
+                            eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
+                            argThat(
+                                    metadataPair ->
+                                            metadataPair.key().equals("passkey")
+                                                    && metadataPair.isRestricted()));
+        }
+
+        @Test
+        void shouldEmitFailedAuditEventWhenDeleteReturnsNon204()
+                throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+                    .thenReturn(
+                            new PasskeysRetrieveResponse(
+                                    List.of(aPasskeyResponse(PASSKEY_IDENTIFIER))));
+            when(mockHttpResponse.statusCode()).thenReturn(404);
+            when(mockHttpResponse.body()).thenReturn("{\"error\": \"not found\"}");
+            when(accountDataApiService.deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN))
+                    .thenReturn(mockHttpResponse);
+
+            // Act
+            handler.handleRequest(passkeysDeleteProxyRequest(), context);
+
+            // Assert
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
+                            any(),
+                            eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
+                            argThat(
+                                    metadataPair ->
+                                            metadataPair.key().equals("passkey")
+                                                    && metadataPair.isRestricted()));
+        }
+
+        @Test
+        void shouldEmitFailedAuditEventWhenPasskeyCountRetrievalFails()
+                throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
+            // Arrange
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+                    .thenThrow(new UnsuccessfulAccountDataApiResponseException("error", 0));
+
+            // Act
+            var result = handler.handleRequest(passkeysDeleteProxyRequest(), context);
+
+            // Assert
+            assertThat(result, hasStatus(500));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
+                            any(),
+                            eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
+                            argThat(
+                                    metadataPair ->
+                                            metadataPair.key().equals("passkey")
+                                                    && metadataPair.isRestricted()));
         }
     }
 

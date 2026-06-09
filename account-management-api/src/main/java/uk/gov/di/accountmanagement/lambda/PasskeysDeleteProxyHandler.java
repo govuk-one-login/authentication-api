@@ -28,13 +28,19 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
 import java.time.Clock;
+import java.util.Map;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_RESTRICTED_PASSKEY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_RESTRICTED_PASSKEY_CREDENTIAL_ID;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class PasskeysDeleteProxyHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -116,12 +122,14 @@ public class PasskeysDeleteProxyHandler
 
         var currentPasskeyCountResult = getPasskeyCount(request);
         if (currentPasskeyCountResult.isFailure()) {
+            emitFailedAuditEvent(auditContext, request);
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
         var currentPasskeyCount = currentPasskeyCountResult.getSuccess();
 
         var deletePasskeyResponseResult = deletePasskey(request);
         if (deletePasskeyResponseResult.isFailure()) {
+            emitFailedAuditEvent(auditContext, request);
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
         HttpResponse<String> deletePasskeyResponse = deletePasskeyResponseResult.getSuccess();
@@ -135,6 +143,7 @@ public class PasskeysDeleteProxyHandler
                     "Passkey Deleted Email notification not sent because delete passkey response was {} for Public Subject ID {}",
                     deletePasskeyResponse.statusCode(),
                     request.publicSubjectId);
+            emitFailedAuditEvent(auditContext, request);
         } else {
             emitSuccessAuditEvent(auditContext, request, currentPasskeyCount);
             sendEmailNotification(request, userEmail, currentPasskeyCount);
@@ -237,6 +246,20 @@ public class PasskeysDeleteProxyHandler
                         auditContext, newPasskeyCount, passkeyId, Clock.systemUTC());
 
         structuredAuditService.submitAuditEvent(event);
+    }
+
+    private void emitFailedAuditEvent(AuditContext auditContext, PasskeysDeleteRequest request) {
+        var restrictedPasskeyPair =
+                pair(
+                        AUDIT_EVENT_RESTRICTED_PASSKEY,
+                        Map.of(AUDIT_EVENT_RESTRICTED_PASSKEY_CREDENTIAL_ID, request.passkeyId),
+                        true);
+
+        auditService.submitAuditEvent(
+                AUTH_PASSKEY_DELETE_FAILED,
+                auditContext,
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                restrictedPasskeyPair);
     }
 
     private record PasskeysDeleteRequest(
