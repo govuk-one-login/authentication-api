@@ -213,11 +213,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                         public boolean isAccountManagementInternationalSmsEnabled() {
                             return false;
                         }
-
-                        @Override
-                        public boolean isMfaMethodManagementApiEnabled() {
-                            return true;
-                        }
                     };
 
     protected static final ConfigurationService
