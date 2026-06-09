@@ -136,14 +136,6 @@ public class MFAMethodsCreateHandler
 
     private Result<APIGatewayProxyResponseEvent, UserProfile>
             getUserProfileWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
-        if (!configurationService.isMfaMethodManagementApiEnabled()) {
-            LOG.error(
-                    "Request to create MFA method in {} environment but feature is switched off.",
-                    configurationService.getEnvironment());
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.MM_API_NOT_AVAILABLE));
-        }
-
         var subject = input.getPathParameters().get("publicSubjectId");
 
         if (subject == null) {

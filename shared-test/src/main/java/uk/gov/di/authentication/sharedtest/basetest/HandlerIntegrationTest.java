@@ -200,6 +200,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 }
             };
 
+    // TODO remove
     protected static final ConfigurationService
             ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE =
                     new IntegrationTestConfigurationService(

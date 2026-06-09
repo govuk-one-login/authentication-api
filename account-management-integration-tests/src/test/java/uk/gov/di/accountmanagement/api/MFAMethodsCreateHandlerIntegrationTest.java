@@ -101,7 +101,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @BeforeEach
     void setUp() {
-        handler = new MFAMethodsCreateHandler(ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE);
+        handler = new MFAMethodsCreateHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
         testPublicSubject =
                 userStore.getUserProfileFromEmail(TEST_EMAIL).get().getPublicSubjectID();
