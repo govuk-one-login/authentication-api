@@ -39,6 +39,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -203,6 +204,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -213,6 +219,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -225,6 +236,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
     }
 
@@ -247,6 +263,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -265,6 +286,11 @@ class StartPasskeyAssertionHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
             verify(authSessionService, never()).updateSession(any());
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
     }
 
