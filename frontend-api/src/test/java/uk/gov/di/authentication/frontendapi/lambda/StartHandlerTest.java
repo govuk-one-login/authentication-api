@@ -902,8 +902,11 @@ class StartHandlerTest {
                         .withClientId(CLIENT_ID)
                         .withInternalCommonSubjectId(TEST_SUBJECT_ID)
                         .withHasVerifiedPassword(true)
+                        .withHasVerifiedWithPassword(true)
                         .withHasVerifiedMfa(true)
-                        .withHasVerifiedPasskey(true);
+                        .withHasVerifiedWithMfa(true)
+                        .withHasVerifiedPasskey(true)
+                        .withHasVerifiedWithPasskey(true);
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
                 .thenReturn(authSession);
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
@@ -917,7 +920,10 @@ class StartHandlerTest {
         // Assert
         assertThat(result, hasStatus(200));
         assertFalse(authSession.getHasVerifiedPassword());
+        assertFalse(authSession.getHasVerifiedWithPassword());
         assertFalse(authSession.getHasVerifiedMfa());
+        assertFalse(authSession.getHasVerifiedWithMfa());
         assertFalse(authSession.getHasVerifiedPasskey());
+        assertFalse(authSession.getHasVerifiedWithPasskey());
     }
 }

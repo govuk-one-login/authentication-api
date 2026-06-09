@@ -213,8 +213,11 @@ public class StartHandler
                 LOG.info(
                         "Reauthentication - Setting hasVerifiedPassword, hasVerifiedMfa & hasVerifiedPasskey to false");
                 authSession.setHasVerifiedPassword(false);
+                authSession.setHasVerifiedWithPassword(false);
                 authSession.setHasVerifiedMfa(false);
+                authSession.setHasVerifiedWithMfa(false);
                 authSession.setHasVerifiedPasskey(false);
+                authSession.setHasVerifiedWithPasskey(false);
             }
 
             Optional<String> maybeInternalSubject =
