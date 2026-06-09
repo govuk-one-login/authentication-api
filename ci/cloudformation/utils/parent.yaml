@@ -354,13 +354,13 @@ Mappings:
       frontendApiFMSTagValue: "authenticationfrontend"
 
     production:
-      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/8c0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
-      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/9c0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
-      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/ac0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
-      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/bc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
-      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/cc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/aca649a0-488b-4696-b94a-49156254afd2
+      cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
       s3EncryptionKey: arn:aws:kms:eu-west-2:172348255554:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/dc0e9e3e-9e3e-4e3e-9e3e-9e3e9e3e9e3e
+      sqsEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
       dataStoreAccountId: 172348255554
       lambdaMinConcurrency: 5
       emailCheckResultsWriterProvisionedConcurrency: "10"
