@@ -142,7 +142,7 @@ class ResetPasswordRequestHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -333,7 +333,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED,
-                            auditContext.withTxmaAuditEncoded(Optional.empty()),
+                            auditContext.withTxmaAuditEncoded(AuditService.UNKNOWN),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
@@ -410,7 +410,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
-                            auditContext.withTxmaAuditEncoded(Optional.empty()),
+                            auditContext.withTxmaAuditEncoded(AuditService.UNKNOWN),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }

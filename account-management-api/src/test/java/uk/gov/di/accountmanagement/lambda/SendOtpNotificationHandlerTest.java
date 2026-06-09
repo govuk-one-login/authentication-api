@@ -71,12 +71,12 @@ import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.A
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_EMAIL_FORMAT;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.PERSISTENT_ID_HEADER_NAME;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -129,7 +129,7 @@ class SendOtpNotificationHandlerTest {
                     "123.123.123.123",
                     TEST_PHONE_NUMBER,
                     PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                    TXMA_ENCODED_HEADER_VALUE);
 
     private static APIGatewayProxyRequestEvent.ProxyRequestContext eventContext;
 
@@ -198,7 +198,7 @@ class SendOtpNotificationHandlerTest {
                         Map.entry(PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
                         Map.entry(SESSION_ID_HEADER, "some-session-id"),
                         Map.entry(CLIENT_SESSION_ID_HEADER, "some-client-session-id"),
-                        Map.entry(TXMA_ENCODED_HEADER_NAME, TXMA_ENCODED_HEADER_VALUE)));
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, TXMA_ENCODED_HEADER_VALUE)));
 
         event.setRequestContext(eventContext);
         return event;
@@ -719,7 +719,7 @@ class SendOtpNotificationHandlerTest {
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
                         PERSISTENT_ID,
-                        Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                        TXMA_ENCODED_HEADER_VALUE);
 
         @BeforeEach
         void setup() {

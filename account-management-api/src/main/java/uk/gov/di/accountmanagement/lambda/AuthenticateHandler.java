@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
-import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -90,7 +89,7 @@ public class AuthenticateHandler
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                        TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input));
 
         try {
             AuthenticateRequest loginRequest =

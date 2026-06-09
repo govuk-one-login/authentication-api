@@ -9,7 +9,6 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
-import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -21,6 +20,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
@@ -123,7 +123,7 @@ class UpdatePasswordHandlerTest {
                                 "123.123.123.123",
                                 userProfile.getPhoneNumber(),
                                 PERSISTENT_ID,
-                                Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                                TXMA_ENCODED_HEADER_VALUE),
                         AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
@@ -237,7 +237,7 @@ class UpdatePasswordHandlerTest {
                         PERSISTENT_ID,
                         ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
                         SESSION_ID,
-                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER,
                         TXMA_ENCODED_HEADER_VALUE));
 
         return event;

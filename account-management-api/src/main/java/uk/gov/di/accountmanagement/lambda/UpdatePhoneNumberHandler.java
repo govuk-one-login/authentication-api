@@ -11,7 +11,6 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
-import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
@@ -24,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -163,7 +163,7 @@ public class UpdatePhoneNumberHandler
                             IpAddressHelper.extractIpAddress(input),
                             updatePhoneNumberRequest.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input));
 
             auditService.submitAuditEvent(
                     AUTH_UPDATE_PHONE_NUMBER, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);

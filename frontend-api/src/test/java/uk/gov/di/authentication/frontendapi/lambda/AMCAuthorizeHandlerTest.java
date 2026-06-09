@@ -124,6 +124,7 @@ class AMCAuthorizeHandlerTest {
                 .thenReturn(Optional.of(authSession));
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
     }
 
     @Nested

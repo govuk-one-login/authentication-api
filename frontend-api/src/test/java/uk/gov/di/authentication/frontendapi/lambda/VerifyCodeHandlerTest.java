@@ -173,7 +173,7 @@ class VerifyCodeHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     private final AuditContext AUDIT_CONTEXT_FOR_TEST_CLIENT =
             AUDIT_CONTEXT.withSessionId(authSession.getSessionId()).withClientId(TEST_CLIENT_ID);
@@ -311,7 +311,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(AuditService.UNKNOWN),
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",

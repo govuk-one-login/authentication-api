@@ -72,7 +72,7 @@ public class UserContext {
         private boolean userAuthenticated = false;
         private SupportedLanguage userLanguage;
         private String clientSessionId;
-        private String txmaAuditEncoded;
+        private String txmaAuditEncoded = "";
 
         protected Builder(AuthSessionItem authSession) {
             this.authSession = authSession;

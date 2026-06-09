@@ -116,7 +116,7 @@ class AMCCallbackHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     @BeforeAll
     static void setUp() {
@@ -188,7 +188,7 @@ class AMCCallbackHandlerTest {
 
     @Test
     void shouldTolerateANullTxmaEncodedValue() throws IOException, ParseException {
-        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(null);
+        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
         String journeyOutcomeResult =
                 createJourneyOutcomeResultForAMCScope(AMCScope.ACCOUNT_DELETE);
         setupSuccessfulTokenResponse();

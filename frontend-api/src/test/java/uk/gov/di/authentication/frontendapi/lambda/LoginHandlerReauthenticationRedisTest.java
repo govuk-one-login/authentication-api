@@ -135,7 +135,7 @@ class LoginHandlerReauthenticationRedisTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    AuditService.UNKNOWN);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -206,8 +206,7 @@ class LoginHandlerReauthenticationRedisTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair(
                                 "incorrectPasswordCount",

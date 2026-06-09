@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.helpers;
 
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 
 import java.util.Map;
 
@@ -16,6 +17,6 @@ public class CommonTestVariables {
                     PERSISTENT_ID,
                     ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
                     SESSION_ID,
-                    AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                    TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER,
                     TXMA_ENCODED_HEADER_VALUE);
 }

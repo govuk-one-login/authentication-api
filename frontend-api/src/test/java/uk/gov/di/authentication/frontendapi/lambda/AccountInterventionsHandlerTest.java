@@ -125,7 +125,7 @@ class AccountInterventionsHandlerTest {
                     CommonTestVariables.IP_ADDRESS,
                     AuditService.UNKNOWN,
                     CommonTestVariables.DI_PERSISTENT_SESSION_ID,
-                    Optional.of(CommonTestVariables.ENCODED_DEVICE_DETAILS));
+                    CommonTestVariables.ENCODED_DEVICE_DETAILS);
     private static final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension
@@ -632,7 +632,7 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(
                         generateAccountInterventionResponse(
                                 blocked, suspended, reproveIdentity, resetPassword));
-        when(userContext.getTxmaAuditEncoded()).thenReturn(null);
+        when(userContext.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -642,7 +642,8 @@ class AccountInterventionsHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        AUTH_NO_INTERVENTION, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
+                        AUTH_NO_INTERVENTION,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(AuditService.UNKNOWN));
     }
 
     private UserProfile generateUserProfile() {

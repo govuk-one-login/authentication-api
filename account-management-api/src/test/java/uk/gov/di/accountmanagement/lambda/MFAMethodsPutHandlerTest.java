@@ -116,12 +116,12 @@ class MFAMethodsPutHandlerTest {
     public static final String INCORRECT_OTP = "111111";
     private static final AuditContext BASE_AUDIT_CONTEXT =
             AuditContext.emptyAuditContext()
-                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                    .withTxmaAuditEncoded(TXMA_ENCODED_HEADER_VALUE)
                     .withEmail(EMAIL)
                     .withClientSessionId(SESSION_ID)
                     .withSubjectId(TEST_INTERNAL_SUBJECT)
                     .withIpAddress(IP_ADDRESS)
-                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                    .withTxmaAuditEncoded(TXMA_ENCODED_HEADER_VALUE)
                     .withPersistentSessionId(PERSISTENT_ID);
     private static final String NON_MIGRATED_EMAIL = "non-migrated-email@example.com";
     private static final UserProfile NON_MIGRATED_USER =

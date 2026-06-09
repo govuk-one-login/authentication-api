@@ -44,7 +44,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS;
@@ -143,7 +142,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         additionalAmcHeaders.put("x-forwarded-for", IpAddressHelper.extractIpAddress(input));
         additionalAmcHeaders.put("user-language", userContext.getUserLanguage().getLanguage());
 
-        if (Objects.nonNull(userContext.getTxmaAuditEncoded())) {
+        if (!userContext.getTxmaAuditEncoded().isEmpty()) {
             additionalAmcHeaders.put("txma-audit-encoded", userContext.getTxmaAuditEncoded());
         } else {
             LOG.warn("No txma audit header included");
@@ -225,7 +224,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        userContext.getTxmaAuditEncoded());
 
         Object journeyType =
                 AMCScope.fromValue(journeyOutcome.scope())

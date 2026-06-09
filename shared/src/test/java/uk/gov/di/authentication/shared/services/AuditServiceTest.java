@@ -9,7 +9,6 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
@@ -47,7 +46,7 @@ class AuditServiceTest {
                     "ip-address",
                     "phone-number",
                     "persistent-session-id",
-                    Optional.empty());
+                    AuditService.UNKNOWN);
 
     enum TestEvents implements AuditableEvent {
         AUTH_TEST_EVENT_ONE;
@@ -76,7 +75,7 @@ class AuditServiceTest {
                         "ip-address",
                         "phone-number",
                         "persistent-session-id",
-                        Optional.empty());
+                        AuditService.UNKNOWN);
 
         auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, myContext);
 
@@ -164,7 +163,7 @@ class AuditServiceTest {
 
         auditService.submitAuditEvent(
                 AUTH_TEST_EVENT_ONE,
-                AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.of(auditEncodedHeaderValue)),
+                AUDIT_CONTEXT.withTxmaAuditEncoded(auditEncodedHeaderValue),
                 pair("restrictedKey1", "restrictedValue1", true));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
@@ -174,8 +173,7 @@ class AuditServiceTest {
 
     @Test
     void anEmptyTXMAHeaderShouldNotBeAddedToAuditEventWhenNoOtherRestrictedData() {
-        auditService.submitAuditEvent(
-                AUTH_TEST_EVENT_ONE, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
+        auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, AUDIT_CONTEXT);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         assertThatTheRestrictedSectionDoesNotExist();
@@ -185,7 +183,7 @@ class AuditServiceTest {
     void anEmptyTXMAHeaderShouldNotBeAddedToAuditEventWhenOtherRestrictedDataHasBeenWritten() {
         auditService.submitAuditEvent(
                 AUTH_TEST_EVENT_ONE,
-                AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
+                AUDIT_CONTEXT,
                 pair("restrictedKey1", "restrictedValue1", true));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());

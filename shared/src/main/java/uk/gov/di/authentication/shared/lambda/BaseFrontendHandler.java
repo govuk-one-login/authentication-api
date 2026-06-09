@@ -39,7 +39,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessio
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown;
 
 public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -121,7 +121,7 @@ public abstract class BaseFrontendHandler<T>
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         }
 
-        String txmaAuditEncoded = getTxmaAuditEncodedHeader(input).orElse(null);
+        String txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
 
         var sessionId =
                 getOptionalHeaderValueFromHeaders(

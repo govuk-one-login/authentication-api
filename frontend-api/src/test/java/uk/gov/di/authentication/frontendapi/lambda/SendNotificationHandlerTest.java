@@ -158,7 +158,7 @@ class SendNotificationHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
@@ -300,7 +300,8 @@ class SendNotificationHandlerTest {
 
                     if (!ticfHeaderPresent) {
                         event.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
-                        expectedAuditContext = auditContext.withTxmaAuditEncoded(Optional.empty());
+                        expectedAuditContext =
+                                auditContext.withTxmaAuditEncoded(AuditService.UNKNOWN);
                     }
 
                     var result = handler.handleRequest(event, context);
@@ -937,7 +938,7 @@ class SendNotificationHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_EMAIL_INVALID_CODE_REQUEST,
-                            auditContext.withTxmaAuditEncoded(Optional.empty()));
+                            auditContext.withTxmaAuditEncoded(AuditService.UNKNOWN));
         }
 
         @Nested

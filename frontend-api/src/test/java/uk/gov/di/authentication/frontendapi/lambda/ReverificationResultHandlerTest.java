@@ -109,7 +109,7 @@ class ReverificationResultHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    AuditService.UNKNOWN);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -137,6 +137,7 @@ class ReverificationResultHandlerTest {
                 .thenReturn(new URI("https://api.identity.account.gov.uk/token"));
         when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
         when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
         var userProfile = mock(UserProfile.class);
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
         when(USER_CONTEXT.getUserProfile()).thenReturn(Optional.of(userProfile));

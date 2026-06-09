@@ -113,11 +113,10 @@ class CheckReAuthUserHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    AuditService.UNKNOWN);
 
     private final AuditContext testAuditContextWithAuditEncoded =
-            testAuditContextWithoutAuditEncoded.withTxmaAuditEncoded(
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+            testAuditContextWithoutAuditEncoded.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS);
 
     private final UserContext userContext = mock(UserContext.class);
 

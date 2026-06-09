@@ -135,7 +135,7 @@ class ResetPasswordHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     private ResetPasswordHandler handler;
     private final AuthSessionItem authSession =
@@ -211,7 +211,7 @@ class ResetPasswordHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
-                            auditContext.withTxmaAuditEncoded(Optional.empty()));
+                            auditContext.withTxmaAuditEncoded(AuditService.UNKNOWN));
         }
 
         @Test

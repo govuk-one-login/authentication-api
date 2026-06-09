@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
-import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
@@ -16,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -92,7 +92,7 @@ class RemoveAccountHandlerTest {
                 .removeAccount(
                         Optional.of(event),
                         userProfile,
-                        Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                        TXMA_ENCODED_HEADER_VALUE,
                         AccountDeletionReason.USER_INITIATED);
     }
 
@@ -114,7 +114,7 @@ class RemoveAccountHandlerTest {
                 .removeAccount(
                         Optional.of(event),
                         userProfile,
-                        Optional.empty(),
+                        AuditService.UNKNOWN,
                         AccountDeletionReason.USER_INITIATED);
     }
 
@@ -169,7 +169,7 @@ class RemoveAccountHandlerTest {
                 Map.of(
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_ID,
-                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER,
                         TXMA_ENCODED_HEADER_VALUE));
 
         return event;

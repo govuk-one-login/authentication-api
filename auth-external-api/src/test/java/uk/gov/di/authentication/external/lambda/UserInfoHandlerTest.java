@@ -126,7 +126,7 @@ class UserInfoHandlerTest {
                                 "",
                                 "0123456789",
                                 "",
-                                Optional.empty()));
+                                AuditService.UNKNOWN));
     }
 
     @Test
@@ -168,7 +168,7 @@ class UserInfoHandlerTest {
                                 "",
                                 "0123456789",
                                 "",
-                                Optional.empty()));
+                                AuditService.UNKNOWN));
     }
 
     @Test

@@ -162,7 +162,7 @@ class MfaHandlerTest {
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     private final AuthSessionItem authSession =
             new AuthSessionItem()
@@ -417,7 +417,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
-                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(AuditService.UNKNOWN),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()),
                         pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));

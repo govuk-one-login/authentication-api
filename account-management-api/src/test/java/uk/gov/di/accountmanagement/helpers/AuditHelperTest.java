@@ -18,7 +18,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -26,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -49,35 +47,6 @@ class AuditHelperTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     userProfile.getSubjectID(), URI.create(TEST_INTERNAL_SECTOR_URI), TEST_SALT);
     private APIGatewayProxyRequestEvent input;
-
-    @Nested
-    class TxmaAuditEncodedTests {
-        @Test
-        void shouldRetrieveATxmaAuditEncodedFieldFromAHeader() {
-            String auditValue = "validHeaderValue";
-            var result =
-                    AuditHelper.getTxmaAuditEncoded(Map.of(TXMA_ENCODED_HEADER_NAME, auditValue));
-            assertEquals(Optional.of(auditValue), result);
-        }
-
-        @Test
-        void shouldLogAwarningWhenMissingHeader() {
-            var result = AuditHelper.getTxmaAuditEncoded(Map.of());
-            assertEquals(Optional.empty(), result);
-            assertThat(
-                    logging.events(),
-                    hasItem(withMessageContaining("Audit header field value cannot be empty")));
-        }
-
-        @Test
-        void shouldLogAWarningWhenEmptyHeader() {
-            var result = AuditHelper.getTxmaAuditEncoded(Map.of(TXMA_ENCODED_HEADER_NAME, ""));
-            assertEquals(Optional.empty(), result);
-            assertThat(
-                    logging.events(),
-                    hasItem(withMessageContaining("Audit header field value cannot be empty")));
-        }
-    }
 
     @Nested
     class BuildAuditContextTests {
@@ -107,9 +76,7 @@ class AuditHelperTest {
             assertEquals(CommonTestVariables.SESSION_ID, context.sessionId());
             assertEquals(pairwiseId, context.subjectId());
             assertEquals(TEST_IP_ADDRESS, context.ipAddress());
-            assertEquals(
-                    Optional.of(CommonTestVariables.TXMA_ENCODED_HEADER_VALUE),
-                    context.txmaAuditEncoded());
+            assertEquals(CommonTestVariables.TXMA_ENCODED_HEADER_VALUE, context.txmaAuditEncoded());
         }
 
         @Test

@@ -10,7 +10,6 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
-import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -19,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -123,7 +123,7 @@ public class RemoveAccountHandler
             accountDeletionService.removeAccount(
                     Optional.of(input),
                     userProfile,
-                    AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                    TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
                     AccountDeletionReason.USER_INITIATED);
 
             return generateEmptySuccessApiGatewayResponse();

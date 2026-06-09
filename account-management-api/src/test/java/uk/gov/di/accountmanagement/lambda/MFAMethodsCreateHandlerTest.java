@@ -126,13 +126,13 @@ class MFAMethodsCreateHandlerTest {
     private final Json objectMapper = SerializationService.getInstance();
     private static final AuditContext BASE_AUDIT_CONTEXT =
             AuditContext.emptyAuditContext()
-                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                    .withTxmaAuditEncoded(TXMA_ENCODED_HEADER_VALUE)
                     .withEmail(TEST_EMAIL)
                     .withClientSessionId(SESSION_ID)
                     .withSessionId(TEST_NON_CLIENT_SESSION_ID)
                     .withSubjectId(TEST_INTERNAL_SUBJECT)
                     .withIpAddress(IP_ADDRESS)
-                    .withTxmaAuditEncoded(Optional.of(TXMA_ENCODED_HEADER_VALUE))
+                    .withTxmaAuditEncoded(TXMA_ENCODED_HEADER_VALUE)
                     .withPersistentSessionId(PERSISTENT_ID);
 
     private MFAMethodsCreateHandler handler;

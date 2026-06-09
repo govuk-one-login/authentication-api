@@ -127,7 +127,7 @@ class CheckUserExistsHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    ENCODED_DEVICE_DETAILS);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -320,7 +320,7 @@ class CheckUserExistsHandlerTest {
                             FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL,
                             AUDIT_CONTEXT
                                     .withSubjectId(getExpectedInternalPairwiseId())
-                                    .withTxmaAuditEncoded(Optional.empty()),
+                                    .withTxmaAuditEncoded(AuditService.UNKNOWN),
                             pair("has_active_passkey", AuditService.UNKNOWN),
                             pair("rpPairwiseId", getExpectedRpPairwiseId()));
         }
