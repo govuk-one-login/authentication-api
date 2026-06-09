@@ -9,7 +9,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.Collections;
@@ -33,14 +32,7 @@ class MFAMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
     @BeforeEach
     void setUp() {
         publicSubjectId = userStore.signUp(EMAIL, PASSWORD);
-        ConfigurationService mfaMethodEnabledConfigurationService =
-                new ConfigurationService() {
-                    @Override
-                    public boolean isMfaMethodManagementApiEnabled() {
-                        return true;
-                    }
-                };
-        handler = new MFAMethodsRetrieveHandler(mfaMethodEnabledConfigurationService);
+        handler = new MFAMethodsRetrieveHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         byte[] salt = userStore.addSalt(EMAIL);
         testInternalSubject =
                 ClientSubjectHelper.calculatePairwiseIdentifier(

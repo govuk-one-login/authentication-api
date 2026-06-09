@@ -67,13 +67,6 @@ public class MFAMethodsRetrieveHandler
 
         addSessionIdToLogs(input);
 
-        if (!configurationService.isMfaMethodManagementApiEnabled()) {
-            LOG.error(
-                    "Request to create MFA method in {} environment but feature is switched off.",
-                    configurationService.getEnvironment());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MM_API_NOT_AVAILABLE);
-        }
-
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
 
         if (publicSubjectId.isEmpty()) {
