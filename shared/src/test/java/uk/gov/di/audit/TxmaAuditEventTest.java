@@ -82,6 +82,28 @@ class TxmaAuditEventTest {
     }
 
     @Test
+    void shouldSerializePasskeyCountWhenSet() {
+        var user = TxmaAuditUser.user().withPasskeyCount(2);
+
+        var event = auditEvent(AUTH_TEST_EVENT).withUser(user);
+
+        var payload = asJson(event.serialize()).getAsJsonObject().get("user");
+
+        assertThat(payload, hasNumericFieldWithValue("passkey_count", is(2L)));
+    }
+
+    @Test
+    void shouldOmitPasskeyCountWhenNull() {
+        var user = TxmaAuditUser.user().withUserId("user-id");
+
+        var event = auditEvent(AUTH_TEST_EVENT).withUser(user);
+
+        var payload = asJson(event.serialize()).getAsJsonObject().get("user").getAsJsonObject();
+
+        assertThat(payload.get("passkey_count").isJsonNull(), is(true));
+    }
+
+    @Test
     void shouldSerializeRestrictedSubObject() {
         var event =
                 auditEvent(AUTH_TEST_EVENT)

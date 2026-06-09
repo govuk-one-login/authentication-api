@@ -99,7 +99,8 @@ class AuditServiceTest {
                     "ip_address":"ip-address",
                     "session_id":"session-id",
                     "persistent_session_id":"persistent-session-id",
-                    "govuk_signin_journey_id":"request-id"
+                    "govuk_signin_journey_id":"request-id",
+                    "passkey_count":null
                 },
                 "platform":null,
                 "restricted":null,
