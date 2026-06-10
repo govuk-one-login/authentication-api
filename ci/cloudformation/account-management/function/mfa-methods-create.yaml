@@ -26,7 +26,6 @@ Resources:
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          MFA_METHOD_MANAGEMENT_API_ENABLED: "true"
           ACCOUNT_MANAGEMENT_INTERNATIONAL_SMS_ENABLED:
             !FindInMap [
               EnvironmentConfiguration,

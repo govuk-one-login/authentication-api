@@ -98,13 +98,6 @@ public class MFAMethodsDeleteHandler
 
         addSessionIdToLogs(input);
 
-        if (!configurationService.isMfaMethodManagementApiEnabled()) {
-            LOG.error(
-                    "Request to delete MFA method in {} environment but feature is switched off.",
-                    configurationService.getEnvironment());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MM_API_NOT_AVAILABLE);
-        }
-
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
         var mfaIdentifier = input.getPathParameters().get("mfaIdentifier");
 

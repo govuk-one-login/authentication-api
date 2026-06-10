@@ -53,7 +53,6 @@ class MFAMethodsRetrieveHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
                 new MFAMethodsRetrieveHandler(
                         configurationService, dynamoService, mfaMethodsService);
@@ -88,16 +87,6 @@ class MFAMethodsRetrieveHandlerTest {
         var event =
                 generateApiGatewayEvent(TEST_INTERNAL_SUBJECT)
                         .withPathParameters((Map.of("publicSubjectId", "")));
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-    }
-
-    @Test
-    void shouldReturn400IfRequestIsMadeInEnvironmentWhereApiIsDisabled() {
-        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
 

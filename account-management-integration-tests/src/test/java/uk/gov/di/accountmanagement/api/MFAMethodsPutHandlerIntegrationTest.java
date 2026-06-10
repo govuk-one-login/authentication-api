@@ -151,7 +151,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         userProfile.getSubjectID(), INTERNAL_SECTOR_HOST, salt);
 
-        handler = new MFAMethodsPutHandler(ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE);
+        handler = new MFAMethodsPutHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
 
         notificationsQueue.clear();
         txmaAuditQueue.clear();

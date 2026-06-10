@@ -97,7 +97,6 @@ class MFAMethodsDeleteHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
                 new MFAMethodsDeleteHandler(
                         configurationService,
@@ -245,18 +244,6 @@ class MFAMethodsDeleteHandlerTest {
             var result = handler.handleRequest(eventWithoutMfaIdentifier, context);
 
             assertThat(result, hasStatus(400));
-
-            verifyNoInteractions(sqsClient);
-        }
-
-        @Test
-        void shouldReturn400WhenFeatureFlagDisabled() {
-            when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
-
-            var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-
-            var result = handler.handleRequest(event, context);
-            assertEquals(400, result.getStatusCode());
 
             verifyNoInteractions(sqsClient);
         }

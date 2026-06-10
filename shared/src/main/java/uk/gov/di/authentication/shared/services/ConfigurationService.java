@@ -835,12 +835,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals(FEATURE_SWITCH_ON);
     }
 
-    public boolean isMfaMethodManagementApiEnabled() {
-        return System.getenv()
-                .getOrDefault("MFA_METHOD_MANAGEMENT_API_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public boolean isAuthSessionUsingStronglyConsistentReads() {
         return System.getenv()
                 .getOrDefault("AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_OFF)

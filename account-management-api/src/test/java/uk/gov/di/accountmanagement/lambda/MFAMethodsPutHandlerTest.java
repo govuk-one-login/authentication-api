@@ -144,7 +144,6 @@ class MFAMethodsPutHandlerTest {
                 sqsClient,
                 mfaMethodsMigrationService);
 
-        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         when(configurationService.isAccountManagementInternationalSmsEnabled()).thenReturn(true);
         when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
@@ -1170,19 +1169,6 @@ class MFAMethodsPutHandlerTest {
                 .updateMfaMethod(
                         eq(EMAIL), eq(DEFAULT_SMS_METHOD), eq(List.of(DEFAULT_SMS_METHOD)), any());
         verify(sqsClient).send(any());
-    }
-
-    @Test
-    void shouldReturn400WhenFeatureFlagDisabled() {
-        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
-
-        var event = requestWithPublicSubjectAndMfaIdentifier(TEST_PUBLIC_SUBJECT, MFA_IDENTIFIER);
-
-        var result = handler.handleRequest(event, context);
-        assertEquals(400, result.getStatusCode());
-
-        verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
     }
 
     @Test

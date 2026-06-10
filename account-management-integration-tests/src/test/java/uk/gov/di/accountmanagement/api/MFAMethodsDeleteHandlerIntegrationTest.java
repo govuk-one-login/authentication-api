@@ -73,7 +73,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @BeforeEach
     void setUp() {
-        handler = new MFAMethodsDeleteHandler(ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE);
+        handler = new MFAMethodsDeleteHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         publicSubjectId = userStore.signUp(EMAIL, PASSWORD);
         byte[] salt = userStore.addSalt(EMAIL);
         testInternalSubject =

@@ -139,13 +139,6 @@ public class MFAMethodsPutHandler
             APIGatewayProxyRequestEvent input, Context context) throws Json.JsonException {
         addSessionIdToLogs(input);
 
-        if (!configurationService.isMfaMethodManagementApiEnabled()) {
-            LOG.error(
-                    "Request to update MFA method in {} environment but feature is switched off.",
-                    configurationService.getEnvironment());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MM_API_NOT_AVAILABLE);
-        }
-
         var validRequestOrErrorResponse = validatePutRequest(input);
 
         if (validRequestOrErrorResponse.isFailure()) {
