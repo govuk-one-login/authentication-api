@@ -12,6 +12,9 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.PasskeysDeleteProxyFailureReason;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyDeleteSuccessful;
+import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -25,6 +28,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
+import java.time.Clock;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED;
@@ -50,6 +54,7 @@ public class PasskeysDeleteProxyHandler
     private final AwsSqsClient sqsClient;
     private final DynamoService dynamoService;
     private final AuditService auditService;
+    private final StructuredAuditService structuredAuditService;
 
     public PasskeysDeleteProxyHandler() {
         this(ConfigurationService.getInstance());
@@ -65,6 +70,7 @@ public class PasskeysDeleteProxyHandler
                         configurationService.getSqsEndpointUri());
         this.dynamoService = new DynamoService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     public PasskeysDeleteProxyHandler(
@@ -72,12 +78,14 @@ public class PasskeysDeleteProxyHandler
             AccountDataApiService accountDataApiService,
             AwsSqsClient sqsClient,
             DynamoService dynamoService,
-            AuditService auditService) {
+            AuditService auditService,
+            StructuredAuditService structuredAuditService) {
         this.configurationService = configurationService;
         this.accountDataApiService = accountDataApiService;
         this.sqsClient = sqsClient;
         this.dynamoService = dynamoService;
         this.auditService = auditService;
+        this.structuredAuditService = structuredAuditService;
     }
 
     @Override
@@ -232,19 +240,12 @@ public class PasskeysDeleteProxyHandler
 
     private void emitSuccessAuditEvent(
             AuditContext auditContext, PasskeysDeleteRequest request, int currentPasskeyCount) {
-        var contextWithPasskeyCount = auditContext.withPasskeyCount(currentPasskeyCount - 1);
+        var newPasskeyCount = currentPasskeyCount - 1;
+        var passkeyId = request.passkeyId;
 
-        var restrictedPasskeyPair =
-                pair(
-                        AUDIT_EVENT_RESTRICTED_PASSKEY,
-                        Map.of(AUDIT_EVENT_RESTRICTED_PASSKEY_CREDENTIAL_ID, request.passkeyId),
-                        true);
+        var event = AuthPasskeyDeleteSuccessful.create(auditContext, newPasskeyCount, passkeyId, Clock.systemUTC());
 
-        auditService.submitAuditEvent(
-                AUTH_PASSKEY_DELETE_SUCCESSFUL,
-                contextWithPasskeyCount,
-                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
-                restrictedPasskeyPair);
+        structuredAuditService.submitAuditEvent(event);
     }
 
     private void emitFailedAuditEvent(AuditContext auditContext, PasskeysDeleteRequest request) {

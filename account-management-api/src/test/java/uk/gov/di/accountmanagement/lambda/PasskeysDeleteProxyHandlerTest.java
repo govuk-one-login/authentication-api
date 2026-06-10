@@ -14,6 +14,8 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyDeleteSuccessful;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
@@ -35,6 +37,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -57,6 +60,7 @@ class PasskeysDeleteProxyHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final StructuredAuditService structuredAuditService = mock(StructuredAuditService.class);
 
     private static final String ADAPI_TOKEN_HEADER = "X-ADAPI-AccessToken";
     private static final String TOKEN = "token";
@@ -80,7 +84,8 @@ class PasskeysDeleteProxyHandlerTest {
                         accountDataApiService,
                         sqsClient,
                         dynamoService,
-                        auditService);
+                        auditService,
+                        structuredAuditService);
     }
 
     private static final String PASSKEY_IDENTIFIER = "test-passkey-id";
@@ -174,18 +179,14 @@ class PasskeysDeleteProxyHandlerTest {
             handler.handleRequest(passkeysDeleteProxyRequest(), context);
 
             // Assert
-            verify(auditService)
-                    .submitAuditEvent(
-                            eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_SUCCESSFUL),
-                            argThat(
-                                    auditContext ->
-                                            auditContext.passkeyCount() != null
-                                                    && auditContext.passkeyCount() == 1),
-                            eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
-                            argThat(
-                                    metadataPair ->
-                                            metadataPair.key().equals("passkey")
-                                                    && metadataPair.isRestricted()));
+
+            ArgumentCaptor<AuthPasskeyDeleteSuccessful> auditEventCaptor = ArgumentCaptor.forClass(AuthPasskeyDeleteSuccessful.class);
+            verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
+            var submittedAuditEvent = auditEventCaptor.getValue();
+
+            assertEquals("AUTH_PASSKEY_DELETE_SUCCESSFUL", submittedAuditEvent.eventName());
+            assertEquals(1, submittedAuditEvent.user().passkeyCount());
+            assertEquals(PASSKEY_IDENTIFIER, submittedAuditEvent.restricted().passkey().passkeyCredentialId());
         }
     }
 
