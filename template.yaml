@@ -111,14 +111,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
     ]
   PublishOldExternalTokenSigningKeys: !Equals [production, !Ref Environment]
-  UseDefaultTokenAuthMethod:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
@@ -2355,10 +2347,6 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          USE_DEFAULT_TOKEN_AUTH_METHOD: !If
-            - UseDefaultTokenAuthMethod
-            - true
-            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -3957,10 +3945,6 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
-          USE_DEFAULT_TOKEN_AUTH_METHOD: !If
-            - UseDefaultTokenAuthMethod
-            - true
-            - false
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy

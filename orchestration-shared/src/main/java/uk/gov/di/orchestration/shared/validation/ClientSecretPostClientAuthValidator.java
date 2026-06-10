@@ -9,7 +9,6 @@ import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.Argon2MatcherHelper;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.Map;
@@ -18,16 +17,11 @@ import java.util.Objects;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.orchestration.shared.utils.ClientUtils.getTokenAuthMethodOrDefault;
 
 public class ClientSecretPostClientAuthValidator extends TokenClientAuthValidator {
 
-    private final ConfigurationService configurationService;
-
-    public ClientSecretPostClientAuthValidator(
-            DynamoClientService dynamoClientService, ConfigurationService configurationService) {
+    public ClientSecretPostClientAuthValidator(DynamoClientService dynamoClientService) {
         super(dynamoClientService);
-        this.configurationService = configurationService;
     }
 
     @Override
@@ -62,7 +56,7 @@ public class ClientSecretPostClientAuthValidator extends TokenClientAuthValidato
 
     private void validateTokenAuthMethod(ClientRegistry clientRegistry)
             throws TokenAuthInvalidException {
-        var tokenAuthMethod = getTokenAuthMethodOrDefault(clientRegistry, configurationService);
+        var tokenAuthMethod = clientRegistry.getTokenAuthMethod();
         if (Objects.isNull(tokenAuthMethod)
                 || !tokenAuthMethod.equals(
                         ClientAuthenticationMethod.CLIENT_SECRET_POST.getValue())) {

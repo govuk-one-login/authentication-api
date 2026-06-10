@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.shared.validation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.Map;
@@ -13,16 +12,13 @@ import java.util.Optional;
 public class TokenClientAuthValidatorFactory {
     private final DynamoClientService dynamoClientService;
     private final ClientSignatureValidationService clientSignatureValidationService;
-    private final ConfigurationService configurationService;
     private static final Logger LOG = LogManager.getLogger(TokenClientAuthValidatorFactory.class);
 
     public TokenClientAuthValidatorFactory(
             DynamoClientService dynamoClientService,
-            ClientSignatureValidationService clientSignatureValidationService,
-            ConfigurationService configurationService) {
+            ClientSignatureValidationService clientSignatureValidationService) {
         this.clientSignatureValidationService = clientSignatureValidationService;
         this.dynamoClientService = dynamoClientService;
-        this.configurationService = configurationService;
     }
 
     public Optional<TokenClientAuthValidator> getTokenAuthenticationValidator(
@@ -35,16 +31,12 @@ public class TokenClientAuthValidatorFactory {
             checkAssertionType(requestBody);
             return Optional.of(
                     new PrivateKeyJwtClientAuthValidator(
-                            dynamoClientService,
-                            clientSignatureValidationService,
-                            configurationService));
+                            dynamoClientService, clientSignatureValidationService));
         }
 
         if (requestBody.containsKey("client_secret") && requestBody.containsKey("client_id")) {
             LOG.info("Client auth method is: client_secret_post");
-            return Optional.of(
-                    new ClientSecretPostClientAuthValidator(
-                            dynamoClientService, configurationService));
+            return Optional.of(new ClientSecretPostClientAuthValidator(dynamoClientService));
         }
         return Optional.empty();
     }
