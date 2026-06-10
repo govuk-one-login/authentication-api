@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2086
+# shellcheck disable=SC2086,SC2046
 set -euo pipefail
 
 #Ensure we are in the same dir as the script
 cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 || exit
 
-CLOUDFRONT_DISTRIBUTION_STACK_VERSION="v2.3.9"
+#CLOUDFRONT_DISTRIBUTION_STACK_VERSION="v3.0.0" # We will need this when we move back to the dev-platform managed version
 CERTIFICATE_STACK_VERSION="v1.1.4"
 CLOUDFRONT_MONITORING_STACK_VERSION="v2.1.0"
 
@@ -170,7 +170,22 @@ function provision_cloudfront_distribution() {
   tmp_params_file="$(mktemp)"
   jq "map(if .ParameterKey == \"PreviousOriginCloakingHeader\" then .ParameterValue = \"${PREVIOUS_ORIGIN_CLOAKING_SECRET}\" else . end)" "${params_file}" > "${tmp_params_file}"
 
-  TAGS_FILE="${tmp_tags_file}" PARAMETERS_FILE="${tmp_params_file}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${ENVIRONMENT}-oidc-cloudfront" "cloudfront-distribution" "${CLOUDFRONT_DISTRIBUTION_STACK_VERSION}"
+  # We can uncomment this once we migrate back to the dev platform cloudfront template
+  # TAGS_FILE="${tmp_tags_file}" PARAMETERS_FILE="${tmp_params_file}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${ENVIRONMENT}-oidc-cloudfront" "cloudfront-distribution" "${CLOUDFRONT_DISTRIBUTION_STACK_VERSION}"
+
+  pushd "$(pwd)/manual-stacks/cloudfront-distribution"
+  sam build
+  sam deploy \
+    --stack-name "${ENVIRONMENT}-oidc-cloudfront" \
+    --resolve-s3 true \
+    --s3-prefix "${ENVIRONMENT}-oidc-cloudfront" \
+    --region "eu-west-2" \
+    --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+    --confirm-changeset \
+    --no-fail-on-empty-changeset \
+    --parameter-overrides $(jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' "${tmp_params_file}") \
+    --tags $(jq -r '.[] | "\(.Key)=\(.Value)" | gsub(" ";"-")' "${tmp_tags_file}")
+  popd
 
   # Remove temp params file
   rm -f "${tmp_params_file}"
