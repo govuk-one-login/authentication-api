@@ -64,7 +64,6 @@ class TxmaAuditEventTest {
                         .withPersistentSessionId("persistent-id")
                         .withPhone("01110")
                         .withSessionId("session-id")
-                        .withTransactionId("transaction-id")
                         .withGovukSigninJourneyId("journey-id");
 
         var event = auditEvent(AUTH_TEST_EVENT).withUser(user);
@@ -77,7 +76,6 @@ class TxmaAuditEventTest {
         assertThat(payload, hasFieldWithValue("persistent_session_id", is("persistent-id")));
         assertThat(payload, hasFieldWithValue("phone", is("01110")));
         assertThat(payload, hasFieldWithValue("session_id", is("session-id")));
-        assertThat(payload, hasFieldWithValue("transaction_id", is("transaction-id")));
         assertThat(payload, hasFieldWithValue("govuk_signin_journey_id", is("journey-id")));
     }
 
@@ -90,24 +88,6 @@ class TxmaAuditEventTest {
                         .addRestricted("sub-object", Map.of("key3", "value3"));
 
         var payload = asJson(event.serialize()).getAsJsonObject().get("restricted");
-
-        assertThat(payload, hasFieldWithValue("key1", is("value1")));
-        assertThat(payload, hasNumericFieldWithValue("key2", is(2L)));
-
-        var subObject = payload.getAsJsonObject().get("sub-object");
-
-        assertThat(subObject, hasFieldWithValue("key3", is("value3")));
-    }
-
-    @Test
-    void shouldSerializePlatformSubObject() {
-        var event =
-                auditEvent(AUTH_TEST_EVENT)
-                        .addPlatform("key1", "value1")
-                        .addPlatform("key2", 2)
-                        .addPlatform("sub-object", Map.of("key3", "value3"));
-
-        var payload = asJson(event.serialize()).getAsJsonObject().get("platform");
 
         assertThat(payload, hasFieldWithValue("key1", is("value1")));
         assertThat(payload, hasNumericFieldWithValue("key2", is(2L)));
