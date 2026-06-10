@@ -162,6 +162,15 @@ class TicfCriHandlerTest {
         assertEquals(expectedRequestBody, actualRequestBody);
     }
 
+    private static List<Arguments> resetPassword() {
+        return List.of(
+                Arguments.of(false, ResetPasswordState.NONE, false),
+                Arguments.of(true, ResetPasswordState.NONE, false),
+                Arguments.of(false, ResetPasswordState.ATTEMPTED, true),
+                Arguments.of(true, ResetPasswordState.ATTEMPTED, false),
+                Arguments.of(true, ResetPasswordState.SUCCEEDED, true));
+    }
+
     @ParameterizedTest
     @MethodSource("resetPassword")
     void shouldMakeTheCorrectCallToTheTicfCriForResetPassword(
@@ -203,13 +212,14 @@ class TicfCriHandlerTest {
         assertEquals(expectedRequestBody, actualRequestBody);
     }
 
-    private static List<Arguments> resetPassword() {
+    private static List<Arguments> resetMfa() {
         return List.of(
-                Arguments.of(false, ResetPasswordState.NONE, false),
-                Arguments.of(true, ResetPasswordState.NONE, false),
-                Arguments.of(false, ResetPasswordState.ATTEMPTED, true),
-                Arguments.of(true, ResetPasswordState.ATTEMPTED, false),
-                Arguments.of(true, ResetPasswordState.SUCCEEDED, true));
+                Arguments.of(false, ResetMfaState.NONE, false),
+                Arguments.of(true, ResetMfaState.NONE, false),
+                Arguments.of(false, ResetMfaState.ATTEMPTED, true),
+                Arguments.of(true, ResetMfaState.ATTEMPTED, false),
+                Arguments.of(false, ResetMfaState.SUCCEEDED, true),
+                Arguments.of(true, ResetMfaState.SUCCEEDED, true));
     }
 
     @ParameterizedTest
@@ -251,14 +261,12 @@ class TicfCriHandlerTest {
         assertEquals(expectedRequestBody, actualRequestBody);
     }
 
-    private static List<Arguments> resetMfa() {
+    private static List<Arguments> usedMfaMethodType() {
         return List.of(
-                Arguments.of(false, ResetMfaState.NONE, false),
-                Arguments.of(true, ResetMfaState.NONE, false),
-                Arguments.of(false, ResetMfaState.ATTEMPTED, true),
-                Arguments.of(true, ResetMfaState.ATTEMPTED, false),
-                Arguments.of(false, ResetMfaState.SUCCEEDED, true),
-                Arguments.of(true, ResetMfaState.SUCCEEDED, true));
+                Arguments.of(MFAMethodType.NONE, null),
+                Arguments.of(MFAMethodType.EMAIL, null),
+                Arguments.of(MFAMethodType.SMS, "SMS"),
+                Arguments.of(MFAMethodType.AUTH_APP, "AUTH_APP"));
     }
 
     @ParameterizedTest
@@ -301,12 +309,11 @@ class TicfCriHandlerTest {
         assertEquals(expectedRequestBody, actualRequestBody);
     }
 
-    private static List<Arguments> usedMfaMethodType() {
+    private static List<Arguments> statusCodes() {
         return List.of(
-                Arguments.of(MFAMethodType.NONE, null),
-                Arguments.of(MFAMethodType.EMAIL, null),
-                Arguments.of(MFAMethodType.SMS, "SMS"),
-                Arguments.of(MFAMethodType.AUTH_APP, "AUTH_APP"));
+                Arguments.of(200, Level.INFO),
+                Arguments.of(404, Level.ERROR),
+                Arguments.of(500, Level.INFO));
     }
 
     @ParameterizedTest
@@ -344,11 +351,18 @@ class TicfCriHandlerTest {
                                         statusCode))));
     }
 
-    private static List<Arguments> statusCodes() {
+    private static List<Arguments> exceptions() {
         return List.of(
-                Arguments.of(200, Level.INFO),
-                Arguments.of(404, Level.ERROR),
-                Arguments.of(500, Level.INFO));
+                Arguments.of(
+                        new IOException("an IO Exception"), "TicfCriServiceError", Level.ERROR),
+                Arguments.of(
+                        new InterruptedException("an Interrputed exception"),
+                        "TicfCriServiceError",
+                        Level.ERROR),
+                Arguments.of(
+                        new HttpTimeoutException("timed out"),
+                        "TicfCriServiceTimeout",
+                        Level.WARN));
     }
 
     @ParameterizedTest
@@ -373,20 +387,6 @@ class TicfCriHandlerTest {
         assertThat(
                 logging.events(),
                 hasItem(withLevelAndMessageContaining(expectedLogLevel, format(e.getMessage()))));
-    }
-
-    private static List<Arguments> exceptions() {
-        return List.of(
-                Arguments.of(
-                        new IOException("an IO Exception"), "TicfCriServiceError", Level.ERROR),
-                Arguments.of(
-                        new InterruptedException("an Interrputed exception"),
-                        "TicfCriServiceError",
-                        Level.ERROR),
-                Arguments.of(
-                        new HttpTimeoutException("timed out"),
-                        "TicfCriServiceTimeout",
-                        Level.WARN));
     }
 
     private JsonArray jsonArrayFrom(List<String> elements) {
