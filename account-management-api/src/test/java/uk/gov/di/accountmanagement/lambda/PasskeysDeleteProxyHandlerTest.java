@@ -9,21 +9,24 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,9 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,7 +48,6 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class PasskeysDeleteProxyHandlerTest {
@@ -51,6 +56,7 @@ class PasskeysDeleteProxyHandlerTest {
     private final AccountDataApiService accountDataApiService = mock(AccountDataApiService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private static final String ADAPI_TOKEN_HEADER = "X-ADAPI-AccessToken";
     private static final String TOKEN = "token";
@@ -64,10 +70,17 @@ class PasskeysDeleteProxyHandlerTest {
                 new UserProfile().withSubjectID(PUBLIC_SUBJECT_ID).withEmail(TEST_EMAIL_ADDRESS);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getOrGenerateSalt(any(UserProfile.class)))
+                .thenReturn("test-salt".getBytes(StandardCharsets.UTF_8));
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
 
         handler =
                 new PasskeysDeleteProxyHandler(
-                        configurationService, accountDataApiService, sqsClient, dynamoService);
+                        configurationService,
+                        accountDataApiService,
+                        sqsClient,
+                        dynamoService,
+                        auditService);
     }
 
     private static final String PASSKEY_IDENTIFIER = "test-passkey-id";
@@ -140,12 +153,46 @@ class PasskeysDeleteProxyHandlerTest {
             assertThat(sentNotifyRequest.getNotificationType(), equalTo(expectedNotificationType));
             assertThat(sentNotifyRequest.getLanguage(), equalTo(SupportedLanguage.EN));
         }
+
+        @Test
+        void shouldEmitSuccessAuditEventOnSuccessfulDeletion()
+                throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+                    .thenReturn(
+                            new PasskeysRetrieveResponse(
+                                    List.of(
+                                            aPasskeyResponse(PASSKEY_IDENTIFIER),
+                                            aPasskeyResponse(OTHER_PASSKEY_IDENTIFIER))));
+            when(mockHttpResponse.statusCode()).thenReturn(204);
+            when(mockHttpResponse.body()).thenReturn("");
+            when(accountDataApiService.deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN))
+                    .thenReturn(mockHttpResponse);
+
+            // Act
+            handler.handleRequest(passkeysDeleteProxyRequest(), context);
+
+            // Assert
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_SUCCESSFUL),
+                            argThat(
+                                    auditContext ->
+                                            auditContext.passkeyCount() != null
+                                                    && auditContext.passkeyCount() == 1),
+                            eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
+                            argThat(
+                                    metadataPair ->
+                                            metadataPair.key().equals("passkey")
+                                                    && metadataPair.isRestricted()));
+        }
     }
 
     @Nested
     class FailedRequest {
         @Test
-        void shouldReturn500IfServiceThrowsException()
+        void shouldEmitFailedAuditEventWhenDeleteThrowsException()
                 throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
             // Arrange
             when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
@@ -160,9 +207,67 @@ class PasskeysDeleteProxyHandlerTest {
 
             // Assert
             assertThat(result, hasStatus(500));
-            assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
-            verify(accountDataApiService)
-                    .deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN);
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
+                            any(),
+                            eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
+                            argThat(
+                                    metadataPair ->
+                                            metadataPair.key().equals("passkey")
+                                                    && metadataPair.isRestricted()));
+        }
+
+        @Test
+        void shouldEmitFailedAuditEventWhenDeleteReturnsNon204()
+                throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+                    .thenReturn(
+                            new PasskeysRetrieveResponse(
+                                    List.of(aPasskeyResponse(PASSKEY_IDENTIFIER))));
+            when(mockHttpResponse.statusCode()).thenReturn(404);
+            when(mockHttpResponse.body()).thenReturn("{\"error\": \"not found\"}");
+            when(accountDataApiService.deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN))
+                    .thenReturn(mockHttpResponse);
+
+            // Act
+            handler.handleRequest(passkeysDeleteProxyRequest(), context);
+
+            // Assert
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
+                            any(),
+                            eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
+                            argThat(
+                                    metadataPair ->
+                                            metadataPair.key().equals("passkey")
+                                                    && metadataPair.isRestricted()));
+        }
+
+        @Test
+        void shouldEmitFailedAuditEventWhenPasskeyCountRetrievalFails()
+                throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
+            // Arrange
+            when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
+                    .thenThrow(new UnsuccessfulAccountDataApiResponseException("error", 0));
+
+            // Act
+            var result = handler.handleRequest(passkeysDeleteProxyRequest(), context);
+
+            // Assert
+            assertThat(result, hasStatus(500));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
+                            any(),
+                            eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
+                            argThat(
+                                    metadataPair ->
+                                            metadataPair.key().equals("passkey")
+                                                    && metadataPair.isRestricted()));
         }
     }
 
@@ -170,13 +275,16 @@ class PasskeysDeleteProxyHandlerTest {
         var headersWithToken = new HashMap<>(VALID_HEADERS);
         headersWithToken.put(ADAPI_TOKEN_HEADER, TOKEN);
 
+        var requestContext = contextWithSourceIp(IP_ADDRESS);
+        requestContext.setAuthorizer(Map.of("clientId", "test-client-id"));
+
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(
                         Map.of(
                                 "publicSubjectId", PUBLIC_SUBJECT_ID,
                                 "passkeyIdentifier", PASSKEY_IDENTIFIER))
                 .withHeaders(headersWithToken)
-                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+                .withRequestContext(requestContext);
     }
 
     private static PasskeysRetrieveResponse.PasskeyResponse aPasskeyResponse(String passkeyId) {

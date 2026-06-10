@@ -57,6 +57,8 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                     }
                     """;
 
+    private static final String TEST_CLIENT_ID = "test-client-id";
+
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
 
     @BeforeEach
@@ -69,6 +71,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                 "ACCOUNT_DATA_API_URI", "http://localhost:" + accountDataApiWireMockServer.port());
 
         notificationsQueue.clear();
+        txmaAuditQueue.clear();
     }
 
     @AfterAll
@@ -82,7 +85,11 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     void shouldProxy204ResponseFromAccountDataApi() {
         // Arrange
         var publicSubjectId = userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
-        handler = new PasskeysDeleteProxyHandler(TEST_CONFIGURATION_SERVICE);
+        userStore.addSalt(TEST_EMAIL);
+        handler =
+                new PasskeysDeleteProxyHandler(
+                        supportPasskeysAndTxmaEnabledConfigurationService(
+                                "http://localhost:" + accountDataApiWireMockServer.port()));
 
         var passkeyId = "def";
         var token = "hij";
@@ -108,7 +115,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
-                        Collections.emptyMap(),
+                        Map.ofEntries(Map.entry("clientId", TEST_CLIENT_ID)),
                         Optional.of("delete"));
 
         // Assert
@@ -128,7 +135,11 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     void shouldSendPasskeyDeletedEmailNotification() {
         // Arrange
         var publicSubjectId = userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
-        handler = new PasskeysDeleteProxyHandler(TEST_CONFIGURATION_SERVICE);
+        userStore.addSalt(TEST_EMAIL);
+        handler =
+                new PasskeysDeleteProxyHandler(
+                        supportPasskeysAndTxmaEnabledConfigurationService(
+                                "http://localhost:" + accountDataApiWireMockServer.port()));
 
         var passkeyId = "def";
         var token = "hij";
@@ -175,7 +186,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
-                        Collections.emptyMap(),
+                        Map.ofEntries(Map.entry("clientId", TEST_CLIENT_ID)),
                         Optional.of("delete"));
 
         // Assert
@@ -202,7 +213,11 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     void shouldProxy404ResponseFromAccountDataApi() {
         // Arrange
         var publicSubjectId = userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
-        handler = new PasskeysDeleteProxyHandler(TEST_CONFIGURATION_SERVICE);
+        userStore.addSalt(TEST_EMAIL);
+        handler =
+                new PasskeysDeleteProxyHandler(
+                        supportPasskeysAndTxmaEnabledConfigurationService(
+                                "http://localhost:" + accountDataApiWireMockServer.port()));
 
         var passkeyId = "def";
         var token = "hij";
@@ -235,7 +250,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
-                        Collections.emptyMap(),
+                        Map.ofEntries(Map.entry("clientId", TEST_CLIENT_ID)),
                         Optional.of("delete"));
 
         // Assert
@@ -256,7 +271,11 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     void shouldProxy500ResponseFromAccountDataApi() {
         // Arrange
         var publicSubjectId = userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
-        handler = new PasskeysDeleteProxyHandler(TEST_CONFIGURATION_SERVICE);
+        userStore.addSalt(TEST_EMAIL);
+        handler =
+                new PasskeysDeleteProxyHandler(
+                        supportPasskeysAndTxmaEnabledConfigurationService(
+                                "http://localhost:" + accountDataApiWireMockServer.port()));
 
         var passkeyId = "def";
         var token = "hij";
@@ -289,7 +308,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
-                        Collections.emptyMap(),
+                        Map.ofEntries(Map.entry("clientId", TEST_CLIENT_ID)),
                         Optional.of("delete"));
 
         // Assert
@@ -310,7 +329,11 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     void shouldNotDeletePasskeyIfPasskeysRetrievalFails() {
         // Arrange
         var publicSubjectId = userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
-        handler = new PasskeysDeleteProxyHandler(TEST_CONFIGURATION_SERVICE);
+        userStore.addSalt(TEST_EMAIL);
+        handler =
+                new PasskeysDeleteProxyHandler(
+                        supportPasskeysAndTxmaEnabledConfigurationService(
+                                "http://localhost:" + accountDataApiWireMockServer.port()));
 
         var passkeyId = "def";
         var token = "hij";
@@ -326,7 +349,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
-                        Collections.emptyMap(),
+                        Map.ofEntries(Map.entry("clientId", TEST_CLIENT_ID)),
                         Optional.of("delete"));
 
         // Assert

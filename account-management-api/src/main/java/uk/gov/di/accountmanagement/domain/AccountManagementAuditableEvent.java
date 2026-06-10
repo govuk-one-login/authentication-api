@@ -22,7 +22,9 @@ public enum AccountManagementAuditableEvent implements AuditableEvent {
     AUTH_INVALID_CODE_SENT,
     AUTH_PHONE_CODE_SENT,
     AUTH_UPDATE_PROFILE_AUTH_APP,
-    AUTH_EMAIL_FRAUD_CHECK_DECISION_USED;
+    AUTH_EMAIL_FRAUD_CHECK_DECISION_USED,
+    AUTH_PASSKEY_DELETE_SUCCESSFUL,
+    AUTH_PASSKEY_DELETE_FAILED;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);

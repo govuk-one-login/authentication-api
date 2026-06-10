@@ -90,7 +90,8 @@ public class AuditService {
                         .withIpAddress(auditContext.ipAddress())
                         .withSessionId(auditContext.sessionId())
                         .withPersistentSessionId(auditContext.persistentSessionId())
-                        .withGovukSigninJourneyId(auditContext.clientSessionId());
+                        .withGovukSigninJourneyId(auditContext.clientSessionId())
+                        .withPasskeyCount(auditContext.passkeyCount());
 
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
