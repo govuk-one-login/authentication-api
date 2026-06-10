@@ -12,31 +12,7 @@ public record AuditContext(
         String ipAddress,
         String phoneNumber,
         String persistentSessionId,
-        String txmaAuditEncoded,
-        Integer passkeyCount) {
-
-    public AuditContext(
-            String clientId,
-            String clientSessionId,
-            String sessionId,
-            String subjectId,
-            String email,
-            String ipAddress,
-            String phoneNumber,
-            String persistentSessionId,
-            String txmaAuditEncoded) {
-        this(
-                clientId,
-                clientSessionId,
-                sessionId,
-                subjectId,
-                email,
-                ipAddress,
-                phoneNumber,
-                persistentSessionId,
-                txmaAuditEncoded,
-                null);
-    }
+        String txmaAuditEncoded) {
 
     public static AuditContext auditContextFromUserContext(
             UserContext userContext,
@@ -189,19 +165,5 @@ public record AuditContext(
                 phoneNumber,
                 persistentSessionId,
                 txmaAuditEncoded);
-    }
-
-    public AuditContext withPasskeyCount(Integer passkeyCount) {
-        return new AuditContext(
-                clientId,
-                clientSessionId,
-                sessionId,
-                subjectId,
-                email,
-                ipAddress,
-                phoneNumber,
-                persistentSessionId,
-                txmaAuditEncoded,
-                passkeyCount);
     }
 }

@@ -14,7 +14,6 @@ public class TxmaAuditUser {
     @Expose private String sessionId;
     @Expose private String persistentSessionId;
     @Expose private String govukSigninJourneyId;
-    @Expose private Integer passkeyCount;
 
     public static TxmaAuditUser user() {
         return new TxmaAuditUser();
@@ -60,11 +59,6 @@ public class TxmaAuditUser {
         return this;
     }
 
-    public TxmaAuditUser withPasskeyCount(Integer passkeyCount) {
-        this.passkeyCount = passkeyCount;
-        return this;
-    }
-
     public String getPhone() {
         return phone;
     }
@@ -81,8 +75,7 @@ public class TxmaAuditUser {
                 && Objects.equals(ipAddress, that.ipAddress)
                 && Objects.equals(sessionId, that.sessionId)
                 && Objects.equals(persistentSessionId, that.persistentSessionId)
-                && Objects.equals(govukSigninJourneyId, that.govukSigninJourneyId)
-                && Objects.equals(passkeyCount, that.passkeyCount);
+                && Objects.equals(govukSigninJourneyId, that.govukSigninJourneyId);
     }
 
     @Override
@@ -95,7 +88,6 @@ public class TxmaAuditUser {
                 ipAddress,
                 sessionId,
                 persistentSessionId,
-                govukSigninJourneyId,
-                passkeyCount);
+                govukSigninJourneyId);
     }
 }
