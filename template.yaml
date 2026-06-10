@@ -122,7 +122,8 @@ Conditions:
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
-  ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
+  ProvisionNewApiGateway:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   ProvisionNewApiClientRegistryApiKey:
     !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
   UseCloudfront: !Equals [dev, !Ref Environment]
