@@ -21,16 +21,21 @@ import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 
 @ExtendWith(SystemStubsExtension.class)
 class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -126,6 +131,81 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                     body.getAsJsonObject("publicKey").getAsJsonArray("allowCredentials");
             assertThat(allowCredentials.size(), equalTo(2));
         }
+
+        @Test
+        void shouldEmitTheCorrectAuditEvent() {
+            var sessionId = setupUserAndSession();
+            var publicSubjectId = userStore.getPublicSubjectIdForEmail(TEST_EMAIL);
+
+            stubPasskeysRetrieveEndpoint(
+                    publicSubjectId,
+                    200,
+                    passkeysResponse(
+                            passkeyJson(FIRST_PASSKEY_ID),
+                            passkeyJsonWithTransports(
+                                    SECOND_PASSKEY_ID, List.of("BLE", "INTERNAL"))));
+
+            var response =
+                    makeRequest(
+                            Optional.of(new StartPasskeyAssertionRequest()),
+                            constructFrontendHeaders(sessionId),
+                            Map.of());
+
+            assertThat(response, hasStatus(200));
+
+            var receivedEvents = txmaAuditQueue.getRawMessages();
+
+            assertEquals(1, receivedEvents.size());
+
+            var message = asJson(receivedEvents.get(0));
+
+            assertThat(
+                    message,
+                    hasFieldWithValue(
+                            "event_name", equalTo("AUTH_PASSKEY_AUTHENTICATION_GENERATED")));
+
+            var expectedAuditEventExtensions =
+                    """
+                            {
+                              "journey-type": "SIGN_IN",
+                              "passkey": {
+                                "passkey_authentication_request": {
+                                  "passkey_request_user_verification": ""
+                                }
+                              }
+                            }
+                            """;
+            var extensions = message.getAsJsonObject().get("extensions").getAsJsonObject();
+            assertEquals(asJson(expectedAuditEventExtensions), extensions);
+
+            var expectedAuditEventRestrictedSection =
+                    String.format(
+                            """
+                                                {
+                              "device_information": {
+                                "encoded": "%s"
+                              },
+                              "passkey": {
+                                "passkey_allowed_credentials": [
+                                  {
+                                    "passkey_credential_id": "%s"
+                                  },
+                                  {
+                                    "passkey_credential_id": "%s",
+                                    "passkey_credential_transports": [%s]
+                                  }
+                                ]
+                              }
+                            }
+                            """,
+                            ENCODED_DEVICE_INFORMATION,
+                            FIRST_PASSKEY_ID,
+                            SECOND_PASSKEY_ID,
+                            "\"ble\", \"internal\"");
+
+            var restricted = message.getAsJsonObject().get("restricted").getAsJsonObject();
+            assertEquals(asJson(expectedAuditEventRestrictedSection), restricted);
+        }
     }
 
     @Nested
@@ -213,6 +293,25 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                   "lastUsedAt": "another-timestamp"
                 }"""
                 .formatted(passkeyId, COSE_PUBLIC_KEY_BASE64URL);
+    }
+
+    private static String passkeyJsonWithTransports(String passkeyId, List<String> transports) {
+        var transportsList =
+                transports.stream().map(t -> '"' + t + '"').collect(Collectors.joining(", "));
+        return """
+                {
+                  "id": "%s",
+                  "credential": "%s",
+                  "aaguid": "authenticator-1",
+                  "isAttested": true,
+                  "signCount": 5,
+                  "transports": [%s],
+                  "isBackUpEligible": true,
+                  "isBackedUp": true,
+                  "createdAt": "some-timestamp",
+                  "lastUsedAt": "another-timestamp"
+                }"""
+                .formatted(passkeyId, COSE_PUBLIC_KEY_BASE64URL, transportsList);
     }
 
     private static String passkeysResponse(String... passkeys) {

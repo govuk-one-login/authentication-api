@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.services.webauthn;
 
 import com.yubico.webauthn.CredentialRepository;
+import com.yubico.webauthn.data.AuthenticatorTransport;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.PublicKeyCredentialType;
 import org.junit.jupiter.api.Nested;
@@ -16,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -62,6 +64,13 @@ class AccountDataCredentialRepositoryTest {
                     descriptor.getId(),
                     equalTo(new ByteArray(Base64.getUrlDecoder().decode(PASSKEY_ID_BASE64URL))));
             assertThat(descriptor.getType(), equalTo(PublicKeyCredentialType.PUBLIC_KEY));
+            assertThat(
+                    descriptor.getTransports(),
+                    equalTo(
+                            Optional.of(
+                                    Set.of(
+                                            AuthenticatorTransport.BLE,
+                                            AuthenticatorTransport.INTERNAL))));
         }
 
         @Test
@@ -231,7 +240,7 @@ class AccountDataCredentialRepositoryTest {
                 "some-aaguid",
                 true,
                 5,
-                List.of(),
+                List.of("BLE", "internal"),
                 true,
                 true,
                 true,

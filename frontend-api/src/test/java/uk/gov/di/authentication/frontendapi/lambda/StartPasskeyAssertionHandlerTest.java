@@ -4,24 +4,34 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
+import com.yubico.webauthn.data.AuthenticatorTransport;
 import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import com.yubico.webauthn.data.PublicKeyCredentialRequestOptions;
+import com.yubico.webauthn.data.UserVerificationRequirement;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditExtension;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditRestricted;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -29,13 +39,21 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSKEY_AUTHENTICATION_GENERATED;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
@@ -58,8 +76,25 @@ class StartPasskeyAssertionHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasskeyAssertionService passkeyAssertionService =
             mock(PasskeyAssertionService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private StartPasskeyAssertionHandler handler;
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withClientId(CLIENT_ID)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    INTERNAL_COMMON_SUBJECT_ID,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    ENCODED_DEVICE_DETAILS);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -80,7 +115,8 @@ class StartPasskeyAssertionHandlerTest {
                         configurationService,
                         authenticationService,
                         authSessionService,
-                        passkeyAssertionService);
+                        passkeyAssertionService,
+                        auditService);
     }
 
     @Nested
@@ -90,7 +126,8 @@ class StartPasskeyAssertionHandlerTest {
             authSession.setEmailAddress(EMAIL);
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(USER_PROFILE));
-            var assertionRequest = createAssertionRequest();
+            var assertionRequest =
+                    createAssertionRequest(List.of(), UserVerificationRequirement.REQUIRED);
             var expectedJson = assertionRequest.toJson();
             when(passkeyAssertionService.startAssertion(any())).thenReturn(assertionRequest);
 
@@ -105,6 +142,59 @@ class StartPasskeyAssertionHandlerTest {
                                             session.getPasskeyAssertionRequest()
                                                     .equals(expectedJson)));
         }
+
+        @Test
+        void shouldEmitTheRelevantAuditEvent() {
+            authSession.setEmailAddress(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(USER_PROFILE));
+
+            ByteArray credentialId =
+                    new ByteArray("test-credential-id".getBytes(StandardCharsets.UTF_8));
+
+            String credentialIdBase64 = credentialId.getBase64Url();
+
+            var transports = Set.of(AuthenticatorTransport.BLE, AuthenticatorTransport.INTERNAL);
+            var expectedTransportsInAuditEvent = List.of("ble", "internal");
+
+            var allowCredentials =
+                    PublicKeyCredentialDescriptor.builder()
+                            .id(credentialId)
+                            .transports(transports)
+                            .build();
+
+            var assertionRequest =
+                    createAssertionRequest(
+                            List.of(allowCredentials), UserVerificationRequirement.REQUIRED);
+            when(passkeyAssertionService.startAssertion(any())).thenReturn(assertionRequest);
+
+            var result = handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            assertThat(result, hasStatus(200));
+
+            var expectedUnrestrictedPasskeyPair =
+                    pair(
+                            "passkey",
+                            PasskeyAuthenticationAuditExtension.fromUserVerification("required"));
+
+            var expectedPasskeyAuthenticationAuditRestricted =
+                    new PasskeyAuthenticationAuditRestricted(
+                            List.of(
+                                    new PasskeyAuthenticationAuditRestricted
+                                            .PasskeyAllowedCredential(
+                                            credentialIdBase64, expectedTransportsInAuditEvent)));
+
+            var expectedRestrictedPasskeyPair =
+                    pair("passkey", expectedPasskeyAuthenticationAuditRestricted, true);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_PASSKEY_AUTHENTICATION_GENERATED,
+                            AUDIT_CONTEXT,
+                            pair("journey-type", JourneyType.SIGN_IN.getValue()),
+                            expectedUnrestrictedPasskeyPair,
+                            expectedRestrictedPasskeyPair);
+        }
     }
 
     @Nested
@@ -115,6 +205,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -125,6 +220,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -137,6 +237,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
     }
 
@@ -148,7 +253,8 @@ class StartPasskeyAssertionHandlerTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(USER_PROFILE));
 
-            var spyAssertionRequest = spy(createAssertionRequest());
+            var spyAssertionRequest =
+                    spy(createAssertionRequest(List.of(), UserVerificationRequirement.REQUIRED));
             doThrow(new JsonProcessingException("test") {})
                     .when(spyAssertionRequest)
                     .toCredentialsGetJson();
@@ -158,6 +264,11 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -166,7 +277,8 @@ class StartPasskeyAssertionHandlerTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(USER_PROFILE));
 
-            var spyAssertionRequest = spy(createAssertionRequest());
+            var spyAssertionRequest =
+                    spy(createAssertionRequest(List.of(), UserVerificationRequirement.REQUIRED));
             doThrow(new JsonProcessingException("test") {}).when(spyAssertionRequest).toJson();
             when(passkeyAssertionService.startAssertion(any())).thenReturn(spyAssertionRequest);
 
@@ -175,6 +287,11 @@ class StartPasskeyAssertionHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
             verify(authSessionService, never()).updateSession(any());
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
         }
     }
 
@@ -185,10 +302,16 @@ class StartPasskeyAssertionHandlerTest {
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 
-    private AssertionRequest createAssertionRequest() {
+    private AssertionRequest createAssertionRequest(
+            List<PublicKeyCredentialDescriptor> allowCredentials,
+            UserVerificationRequirement userVerificationRequirement) {
         var challenge = new ByteArray("test-challenge".getBytes(StandardCharsets.UTF_8));
         var publicKeyCredentialRequestOptions =
-                PublicKeyCredentialRequestOptions.builder().challenge(challenge).build();
+                PublicKeyCredentialRequestOptions.builder()
+                        .challenge(challenge)
+                        .userVerification(userVerificationRequirement)
+                        .allowCredentials(allowCredentials)
+                        .build();
         return AssertionRequest.builder()
                 .publicKeyCredentialRequestOptions(publicKeyCredentialRequestOptions)
                 .build();

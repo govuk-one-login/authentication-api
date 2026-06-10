@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.services.webauthn;
 
 import com.yubico.webauthn.CredentialRepository;
 import com.yubico.webauthn.RegisteredCredential;
+import com.yubico.webauthn.data.AuthenticatorTransport;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import com.yubico.webauthn.data.PublicKeyCredentialType;
@@ -51,12 +52,19 @@ public class AccountDataCredentialRepository implements CredentialRepository {
             return Optional.of(
                     PublicKeyCredentialDescriptor.builder()
                             .id(ByteArray.fromBase64Url(passkey.passkeyId()))
+                            .transports(Optional.of(transportStringsToSet(passkey.transports())))
                             .type(PublicKeyCredentialType.PUBLIC_KEY)
                             .build());
         } catch (Base64UrlException e) {
             LOG.warn("Invalid Base64Url credential ID, skipping passkey", e);
             return Optional.empty();
         }
+    }
+
+    Set<AuthenticatorTransport> transportStringsToSet(List<String> passkeyTransports) {
+        return passkeyTransports.stream()
+                .map(s -> AuthenticatorTransport.valueOf(s.toUpperCase()))
+                .collect(Collectors.toSet());
     }
 
     private Optional<String> resolvePublicSubjectId(String email) {
