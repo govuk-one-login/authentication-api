@@ -11,6 +11,7 @@ Metadata:
             - none
       ignore_checks:
         - E1011 # FindInMap within FindInMap DefaultValue is currently not working w/ cfn-lint
+        - W1028 # Our API Migration flags currently have "unreachable" If conditions because they all apply to one env
 
 Parameters:
   Environment:
@@ -102,10 +103,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
-  UseCloudfront: !Equals [dev, !Ref Environment]
-  ProvisionNewApiClientRegistryApiKey:
-    !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
   UseStoredOldIdTokenPublicKeys:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -122,6 +119,34 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
+
+  #region API Migration Feature Flags
+  # Please keep separate from the other ones
+  ProvisionNewApiGateway: !Equals [dev, !Ref Environment]
+  ProvisionNewApiClientRegistryApiKey:
+    !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
+  UseCloudfront: !Equals [dev, !Ref Environment]
+  DeployAlternateDomainRecord:
+    !Not [
+      !Or [
+        !Equals [dev, !Ref Environment],
+        !Equals [build, !Ref Environment],
+        !Equals [staging, !Ref Environment],
+        !Equals [integration, !Ref Environment],
+        !Equals [production, !Ref Environment],
+      ],
+    ]
+  DeployMigratedRecords: !Equals [dev, !Ref Environment]
+  SwapLiveTrafficToCloudfront:
+    !And [!Condition DeployMigratedRecords, !Equals [dev, !Ref Environment]]
+  CreateApiGwCustomDomain:
+    !And [
+      !Condition SwapLiveTrafficToCloudfront,
+      !Equals [dev, !Ref Environment],
+    ]
+  SwapOriginToApiGateway:
+    !And [!Condition CreateApiGwCustomDomain, !Equals [dev, !Ref Environment]]
+  #endregion
 
 Mappings:
   EnvironmentConfiguration:
@@ -161,6 +186,7 @@ Mappings:
         "alg": "ES256"
         }]'
       oidcDomainName: "oidc.dev.account.gov.uk"
+      oidcAlternateDomainName: "oidc-orch.dev.account.gov.uk"
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -196,6 +222,8 @@ Mappings:
         "y": "7UOFJn9pipVDB1PlAbD57wk6a7RzjjyjIvJTbPGIfNw",
         "alg": "ES256"
         }]'
+      oidcDomainName: "oidc.build.account.gov.uk"
+      oidcAlternateDomainName: "oidc-orch.build.account.gov.uk"
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -233,6 +261,8 @@ Mappings:
         "y": "KCkzB3M9l4tcDchHM8agucY05giwCvSuNTB0M-W3--Y",
         "alg": "ES256"
         }]'
+      oidcDomainName: "oidc.staging.account.gov.uk"
+      oidcAlternateDomainName: "oidc-orch.staging.account.gov.uk"
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -268,6 +298,8 @@ Mappings:
         "y": "QzrvsnDy3oY1yuz55voaAq9B1M5tfhgW3FBjh_n_F0U",
         "alg": "ES256"
         }]'
+      oidcDomainName: "oidc.integration.account.gov.uk"
+      oidcAlternateDomainName: "oidc-orch.integration.account.gov.uk"
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -303,6 +335,8 @@ Mappings:
         "y": "ONF88GoP9xQJtq8RRV6zquggcd7xtggzZ20yW-PljHE",
         "alg": "ES256"
         }]'
+      oidcDomainName: "oidc.account.gov.uk"
+      oidcAlternateDomainName: "oidc-orch.account.gov.uk"
 
 Globals:
   Function:
@@ -5928,7 +5962,7 @@ Resources:
 
   OrchestrationOidcApiCustomDomain:
     Type: AWS::ApiGatewayV2::DomainName
-    Condition: UseCloudfront
+    Condition: CreateApiGwCustomDomain
     Properties:
       DomainName:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
@@ -5938,7 +5972,7 @@ Resources:
 
   OrchestrationOidcApiBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
-    Condition: UseCloudfront
+    Condition: CreateApiGwCustomDomain
     Properties:
       DomainName:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
@@ -5949,7 +5983,7 @@ Resources:
 
   OrchestrationOidcOriginRecordSet:
     Type: AWS::Route53::RecordSet
-    Condition: UseCloudfront
+    Condition: DeployMigratedRecords
     Properties:
       Name: !Sub
         - "origin.${oidcDomain}"
@@ -5962,23 +5996,52 @@ Resources:
       Type: A
       HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc/hosted-zone-id}}"
       AliasTarget:
-        DNSName: !GetAtt OrchestrationOidcApiCustomDomain.RegionalDomainName
-        HostedZoneId: !GetAtt OrchestrationOidcApiCustomDomain.RegionalHostedZoneId
+        DNSName: !If
+          - SwapOriginToApiGateway
+          - !GetAtt OrchestrationOidcApiCustomDomain.RegionalDomainName
+          - "{{resolve:ssm:/deploy/api-migration/old-api-gateway-regional-domain-name}}"
+        HostedZoneId: !If
+          - SwapOriginToApiGateway
+          - !GetAtt OrchestrationOidcApiCustomDomain.RegionalHostedZoneId
+          - "{{resolve:ssm:/deploy/api-migration/old-api-gateway-regional-hosted-zone-id}}"
         EvaluateTargetHealth: false
 
   OrchestrationOidcCloudFrontRecordSet:
     Type: AWS::Route53::RecordSet
-    Condition: UseCloudfront
+    Condition: DeployMigratedRecords
     Properties:
       Name:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
       Type: A
       HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc/hosted-zone-id}}"
       AliasTarget:
+        DNSName: !If
+          - SwapLiveTrafficToCloudfront
+          - Fn::ImportValue: !Sub "${Environment}-oidc-cloudfront-DistributionDomain"
+          - "{{resolve:ssm:/deploy/api-migration/old-cloudfront-distribution-domain}}"
+        HostedZoneId: "Z2FDTNDATAQYW2" # Cloudfront Hosted Zone ID: https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-route53-recordset-aliastarget.html#:~:text=vpc%2Dendpoints.-,CloudFront%20distribution,-Specify%20Z2FDTNDATAQYW2.%20This
+        EvaluateTargetHealth: false
+
+  #region AlternateDomainRecordSet
+  OrchestrationOidcAlternateCloudFrontRecordSet:
+    Type: AWS::Route53::RecordSet
+    Condition: DeployAlternateDomainRecord
+    Properties:
+      Name:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          oidcAlternateDomainName,
+        ]
+      Type: A
+      HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc-orch/hosted-zone-id}}"
+      AliasTarget:
         DNSName:
           Fn::ImportValue: !Sub "${Environment}-oidc-cloudfront-DistributionDomain"
         HostedZoneId: "Z2FDTNDATAQYW2" # Cloudfront Hosted Zone ID: https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-route53-recordset-aliastarget.html#:~:text=vpc%2Dendpoints.-,CloudFront%20distribution,-Specify%20Z2FDTNDATAQYW2.%20This
         EvaluateTargetHealth: false
+
+  #endregion
 
   #endregion
 
