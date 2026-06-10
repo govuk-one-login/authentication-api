@@ -66,7 +66,11 @@ class AccountDataCredentialRepositoryTest {
             assertThat(descriptor.getType(), equalTo(PublicKeyCredentialType.PUBLIC_KEY));
             assertThat(
                     descriptor.getTransports(),
-                    equalTo(Optional.of(Set.of(AuthenticatorTransport.BLE))));
+                    equalTo(
+                            Optional.of(
+                                    Set.of(
+                                            AuthenticatorTransport.BLE,
+                                            AuthenticatorTransport.INTERNAL))));
         }
 
         @Test
@@ -236,7 +240,7 @@ class AccountDataCredentialRepositoryTest {
                 "some-aaguid",
                 true,
                 5,
-                List.of("BLE"),
+                List.of("BLE", "internal"),
                 true,
                 true,
                 true,
