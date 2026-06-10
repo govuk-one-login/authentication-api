@@ -56,7 +56,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
         LOG.debug("received request to TICF CRI Handler");
         var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
-            var response = sendRequest(input);
+            var response = sendRequest(input, configurationService.supportPasskeys());
             var statusCode = response.statusCode();
             var logMessage =
                     format("Response received from TICF CRI Service with status %s", statusCode);
@@ -96,9 +96,11 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
                 metric, Map.of("Environment", configurationService.getEnvironment()));
     }
 
-    private HttpResponse<String> sendRequest(InternalTICFCRIRequest internalTICFCRIRequest)
+    private HttpResponse<String> sendRequest(
+            InternalTICFCRIRequest internalTICFCRIRequest, boolean supportPasskeys)
             throws IOException, InterruptedException {
-        var externalRequest = ExternalTICFCRIRequest.fromInternalRequest(internalTICFCRIRequest);
+        var externalRequest =
+                ExternalTICFCRIRequest.fromInternalRequest(internalTICFCRIRequest, supportPasskeys);
         var body = serialisationService.writeValueAsStringNoNulls(externalRequest);
         var timeoutInMilliseconds =
                 Duration.ofMillis(configurationService.getTicfCriServiceCallTimeout());

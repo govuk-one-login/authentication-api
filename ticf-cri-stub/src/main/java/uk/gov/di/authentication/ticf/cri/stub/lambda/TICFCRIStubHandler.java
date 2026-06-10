@@ -27,14 +27,15 @@ public class TICFCRIStubHandler
         try {
             var request = objectMapper.readValue(input.getBody(), ExternalTICFCRIRequest.class);
             LOG.info(
-                    "TICF Request - govuk_signin_journey_id: {}, vtr: {}, authenticated: {}, initial_registration: {}, password_reset: {}, 2fa_reset: {}, 2fa_method: {}",
+                    "TICF Request - govuk_signin_journey_id: {}, vtr: {}, authenticated: {}, initial_registration: {}, password_reset: {}, 2fa_reset: {}, 2fa_method: {}, passkey: {}",
                     request.govukSigninJourneyId(),
                     request.vtr(),
                     request.authenticated(),
                     request.initialRegistration(),
                     request.passwordReset(),
                     request.mfaReset(),
-                    request.mfaMethod());
+                    request.mfaMethod(),
+                    request.passkey());
         } catch (Json.JsonException e) {
             LOG.error("Invalid ExternalTICFCRIRequest", e.getMessage());
             throw new RuntimeException(e);
