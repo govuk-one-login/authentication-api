@@ -118,17 +118,9 @@ Conditions:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   ProvisionNewApiClientRegistryApiKey:
     !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
-  UseCloudfront: !Equals [dev, !Ref Environment]
-  DeployAlternateDomainRecord:
-    !Not [
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
+  UseCloudfront:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
+  DeployAlternateDomainRecord: !Equals [build, !Ref Environment]
   DeployMigratedRecords: !Equals [dev, !Ref Environment]
   SwapLiveTrafficToCloudfront:
     !And [!Condition DeployMigratedRecords, !Equals [dev, !Ref Environment]]
