@@ -5,7 +5,7 @@
   },
   {
     "ParameterKey": "DeployCertificate",
-    "ParameterValue": "No"
+    "ParameterValue": "Yes"
   },
   {
     "ParameterKey": "EndpointSuffix",
