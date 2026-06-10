@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Comparator;
 import java.util.List;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -158,6 +159,11 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                                                 .map(
                                                         StartPasskeyAssertionHandler
                                                                 ::allowCredentialFrom)
+                                                .sorted(
+                                                        Comparator.comparing(
+                                                                PasskeyAuthenticationAuditRestricted
+                                                                                .PasskeyAllowedCredential
+                                                                        ::passkeyCredentialId))
                                                 .toList())
                         .orElse(List.of());
         var restrictedPasskeyPair =
