@@ -157,6 +157,25 @@ class AccountDataApiServiceTest {
             assertThat(result.passkeys().get(1).passkeyId(), equalTo("credential-id-456"));
             assertThat(result.passkeys().get(1).isAttested(), equalTo(false));
         }
+
+        @Test
+        void shouldNotAttemptToDeserialiseIfResponseStatusIsNot200()
+                throws IOException, InterruptedException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(mockHttpResponse.statusCode()).thenReturn(404);
+            String errorResponse =
+                    """
+                    {
+                        "error": "this will not decode as a passkeys response"
+                    """;
+            when(mockHttpResponse.body()).thenReturn(errorResponse);
+            when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
+
+            assertThrows(
+                    UnsuccessfulAccountDataApiResponseException.class,
+                    () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
+        }
     }
 
     @Nested
