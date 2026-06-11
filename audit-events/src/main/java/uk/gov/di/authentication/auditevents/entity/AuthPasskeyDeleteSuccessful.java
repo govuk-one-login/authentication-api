@@ -34,7 +34,7 @@ public record AuthPasskeyDeleteSuccessful(
                         passkeyCount);
         var restrictedSection =
                 new Restricted(
-                        new EncodedDeviceInformation(auditContext.txmaAuditEncoded()),
+                        EncodedDeviceInformation.from(auditContext),
                         new PasskeyWithCredentialId(deletedCredentialId));
         var extensions = new Extensions(JourneyType.ACCOUNT_MANAGEMENT.getValue());
         return new AuthPasskeyDeleteSuccessful(

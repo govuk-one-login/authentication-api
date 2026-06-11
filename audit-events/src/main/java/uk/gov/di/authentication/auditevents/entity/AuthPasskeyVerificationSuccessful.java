@@ -33,7 +33,7 @@ public record AuthPasskeyVerificationSuccessful(
         var user = UserWithoutPhone.fromAuditContext(auditContext);
         var restricted =
                 new Restricted(
-                        new EncodedDeviceInformation(auditContext.txmaAuditEncoded()),
+                        EncodedDeviceInformation.from(auditContext),
                         new RestrictedPasskeySection(passkeyAllowedCredentials),
                         credentialId);
         var extensions = new Extensions(journeyType.getValue(), passkey);

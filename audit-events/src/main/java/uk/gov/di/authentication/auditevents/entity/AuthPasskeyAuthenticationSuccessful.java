@@ -34,7 +34,7 @@ public record AuthPasskeyAuthenticationSuccessful(
         var restricted =
                 new Restricted(
                         new PasskeyWithCredentialId(passkeyCredentialId),
-                        new EncodedDeviceInformation(auditContext.txmaAuditEncoded()));
+                        EncodedDeviceInformation.from(auditContext));
         return new AuthPasskeyAuthenticationSuccessful(
                 eventName,
                 now.getEpochSecond(),
