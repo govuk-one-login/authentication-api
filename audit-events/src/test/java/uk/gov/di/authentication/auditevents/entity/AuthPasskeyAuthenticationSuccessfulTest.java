@@ -2,6 +2,7 @@ package uk.gov.di.authentication.auditevents.entity;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -28,8 +29,7 @@ class AuthPasskeyAuthenticationSuccessfulTest {
         var fixedInstant = Instant.parse("2026-06-10T13:13:04.730565Z");
         var fixedClock = Clock.fixed(fixedInstant, ZoneOffset.UTC);
 
-        var passkey =
-                new AuthPasskeyAuthenticationSuccessful.Passkey(5, true, "multi-device", false);
+        var passkey = PasskeyDetail.authenticationSuccessful(5, true, "multi-device");
 
         var event =
                 AuthPasskeyAuthenticationSuccessful.create(

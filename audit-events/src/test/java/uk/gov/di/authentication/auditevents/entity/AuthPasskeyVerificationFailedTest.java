@@ -3,7 +3,7 @@ package uk.gov.di.authentication.auditevents.entity;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
-import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAuthenticationRequest;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -37,15 +37,9 @@ class AuthPasskeyVerificationFailedTest {
                         new PasskeyAllowCredentials("credential-1", null),
                         new PasskeyAllowCredentials("credential-2", List.of("ble")));
 
-        var passkeyAuthenticationRequest = new PasskeyAuthenticationRequest("required");
         var passkeyVerificationFailed =
-                new AuthPasskeyVerificationFailed.PasskeyVerificationFailed(
-                        passkeyAuthenticationRequest,
-                        0,
-                        true,
-                        "multi-device",
-                        false,
-                        "UserVerificationError");
+                PasskeyDetail.verificationFailed(
+                        "required", 0, true, "multi-device", "UserVerificationError");
 
         var event =
                 AuthPasskeyVerificationFailed.create(

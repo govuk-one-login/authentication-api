@@ -5,6 +5,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformation;
 import uk.gov.di.authentication.auditevents.entity.shared.PasskeyWithCredentialId;
 import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithoutPhone;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -23,7 +24,7 @@ public record AuthPasskeyAuthenticationSuccessful(
 
     public static AuthPasskeyAuthenticationSuccessful create(
             AuditContext auditContext,
-            Passkey passkey,
+            PasskeyDetail passkey,
             String passkeyCredentialId,
             JourneyType journeyType,
             Clock clock) {
@@ -46,13 +47,8 @@ public record AuthPasskeyAuthenticationSuccessful(
                 extensions);
     }
 
-    public record Passkey(
-            int passkeyCounter,
-            boolean passkeyCredentialBackedUp,
-            String passkeyCredentialDeviceType,
-            boolean passkeyUserVerified) {}
-
-    public record Extensions(Passkey passkey, @SerializedName("journey-type") String journeyType) {}
+    public record Extensions(
+            PasskeyDetail passkey, @SerializedName("journey-type") String journeyType) {}
 
     public record Restricted(
             PasskeyWithCredentialId passkey, EncodedDeviceInformation deviceInformation) {}

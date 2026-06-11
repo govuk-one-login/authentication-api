@@ -3,7 +3,7 @@ package uk.gov.di.authentication.auditevents.entity;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
-import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAuthenticationRequest;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -36,13 +36,7 @@ class AuthPasskeyVerificationSuccessfulTest {
                 List.of(
                         new PasskeyAllowCredentials("credential-1", null),
                         new PasskeyAllowCredentials("credential-2", List.of("ble")));
-        var passkey =
-                new AuthPasskeyVerificationSuccessful.Passkey(
-                        0,
-                        true,
-                        "multi-device",
-                        true,
-                        new PasskeyAuthenticationRequest("required"));
+        var passkey = PasskeyDetail.verificationSuccessful("required", 0, true, "multi-device");
         var event =
                 AuthPasskeyVerificationSuccessful.create(
                         auditContext,
@@ -92,13 +86,13 @@ class AuthPasskeyVerificationSuccessfulTest {
                   "extensions": {
                     "journey-type": "SIGN_IN",
                     "passkey": {
+                      "passkey_authentication_request": {
+                        "passkey_request_user_verification": "required"
+                      },
                       "passkey_counter": 0,
                       "passkey_credential_backed_up": true,
                       "passkey_credential_device_type": "multi-device",
-                      "passkey_user_verified": true,
-                      "passkey_authentication_request": {
-                        "passkey_request_user_verification": "required"
-                      }
+                      "passkey_user_verified": true
                     }
                   }
                 }
