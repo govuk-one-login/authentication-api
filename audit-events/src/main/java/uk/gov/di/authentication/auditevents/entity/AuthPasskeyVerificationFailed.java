@@ -5,7 +5,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformation;
 import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithoutPhone;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
-import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAuthenticationRequest;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -28,7 +28,7 @@ public record AuthPasskeyVerificationFailed(
             JourneyType journeyType,
             List<PasskeyAllowCredentials> passkeyAllowCredentials,
             String passkeyCredentialId,
-            PasskeyVerificationFailed passkeyVerificationFailed,
+            PasskeyDetail passkeyVerificationFailed,
             Clock clock) {
         var eventName = "AUTH_PASSKEY_VERIFICATION_FAILED";
         Instant now = clock.instant();
@@ -49,17 +49,8 @@ public record AuthPasskeyVerificationFailed(
                 extensions);
     }
 
-    public record PasskeyVerificationFailed(
-            PasskeyAuthenticationRequest passkeyAuthenticationRequest,
-            int passkeyCounter,
-            boolean passkeyCredentialBackedUp,
-            String passkeyCredentialDeviceType,
-            boolean passkeyUserVerified,
-            String passkeyVerificationFailureReason) {}
-
     public record Extensions(
-            @SerializedName("journey-type") String journeyType,
-            PasskeyVerificationFailed passkey) {}
+            @SerializedName("journey-type") String journeyType, PasskeyDetail passkey) {}
 
     public record RestrictedPasskeySection(
             List<PasskeyAllowCredentials> passkeyAllowedCredentials, String passkeyCredentialId) {}

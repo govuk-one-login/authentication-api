@@ -6,6 +6,7 @@ import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformati
 import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithoutPhone;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAuthenticationRequest;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -27,7 +28,7 @@ public record AuthPasskeyVerificationSuccessful(
             AuditContext auditContext,
             JourneyType journeyType,
             List<PasskeyAllowCredentials> passkeyAllowedCredentials,
-            Passkey passkey,
+            PasskeyDetail passkey,
             String credentialId,
             Clock clock) {
         var eventName = "AUTH_PASSKEY_VERIFICATION_SUCCESSFUL";
@@ -65,5 +66,6 @@ public record AuthPasskeyVerificationSuccessful(
             RestrictedPasskeySection passkey,
             String passkeyCredentialId) {}
 
-    public record Extensions(@SerializedName("journey-type") String journeyType, Passkey passkey) {}
+    public record Extensions(
+            @SerializedName("journey-type") String journeyType, PasskeyDetail passkey) {}
 }
