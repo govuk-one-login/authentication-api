@@ -12,7 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
-public record AuthPasskeyVerificationSuccessful(
+public record AuthPasskeyVerificationFailed(
         String eventName,
         long timestamp,
         long eventTimestampMs,
@@ -23,23 +23,22 @@ public record AuthPasskeyVerificationSuccessful(
         Extensions extensions)
         implements StructuredAuditEvent {
 
-    public static AuthPasskeyVerificationSuccessful create(
+    public static AuthPasskeyVerificationFailed create(
             AuditContext auditContext,
             JourneyType journeyType,
-            List<PasskeyAllowCredentials> passkeyAllowedCredentials,
-            Passkey passkey,
-            String credentialId,
+            List<PasskeyAllowCredentials> passkeyAllowCredentials,
+            String passkeyCredentialId,
+            PasskeyVerificationFailed passkeyVerificationFailed,
             Clock clock) {
-        var eventName = "AUTH_PASSKEY_VERIFICATION_SUCCESSFUL";
+        var eventName = "AUTH_PASSKEY_VERIFICATION_FAILED";
         Instant now = clock.instant();
         var user = UserWithoutPhone.fromAuditContext(auditContext);
+        var extensions = new Extensions(journeyType.getValue(), passkeyVerificationFailed);
         var restricted =
                 new Restricted(
                         EncodedDeviceInformation.from(auditContext),
-                        new RestrictedPasskeySection(passkeyAllowedCredentials),
-                        credentialId);
-        var extensions = new Extensions(journeyType.getValue(), passkey);
-        return new AuthPasskeyVerificationSuccessful(
+                        new RestrictedPasskeySection(passkeyAllowCredentials, passkeyCredentialId));
+        return new AuthPasskeyVerificationFailed(
                 eventName,
                 now.getEpochSecond(),
                 now.toEpochMilli(),
@@ -50,20 +49,21 @@ public record AuthPasskeyVerificationSuccessful(
                 extensions);
     }
 
-    public record Passkey(
+    public record PasskeyVerificationFailed(
+            PasskeyAuthenticationRequest passkeyAuthenticationRequest,
             int passkeyCounter,
             boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType,
             boolean passkeyUserVerified,
-            PasskeyAuthenticationRequest passkeyAuthenticationRequest) {}
+            String passkeyVerificationFailureReason) {}
+
+    public record Extensions(
+            @SerializedName("journey-type") String journeyType,
+            PasskeyVerificationFailed passkey) {}
 
     public record RestrictedPasskeySection(
-            List<PasskeyAllowCredentials> passkeyAllowedCredentials) {}
+            List<PasskeyAllowCredentials> passkeyAllowedCredentials, String passkeyCredentialId) {}
 
     public record Restricted(
-            EncodedDeviceInformation deviceInformation,
-            RestrictedPasskeySection passkey,
-            String passkeyCredentialId) {}
-
-    public record Extensions(@SerializedName("journey-type") String journeyType, Passkey passkey) {}
+            EncodedDeviceInformation deviceInformation, RestrictedPasskeySection passkey) {}
 }
