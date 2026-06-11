@@ -45,7 +45,7 @@ public class UnsuccessfulAccountDataApiResponseException extends Exception {
             Integer statusCode, Object body) {
         return new UnsuccessfulAccountDataApiResponseException(
                 format(
-                        "Error %s when attempting to call Account Data API outbound endpoint: %s",
+                        "Received response with status code %s when attempting to call Account Data API outbound endpoint: %s",
                         statusCode, body),
                 statusCode);
     }
