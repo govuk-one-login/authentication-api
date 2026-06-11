@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.entity.PasskeysDeleteProxyFailureReason;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyDeleteSuccessful;
+import uk.gov.di.authentication.auditevents.entity.ComponentId;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -258,6 +259,7 @@ public class PasskeysDeleteProxyHandler
         auditService.submitAuditEvent(
                 AUTH_PASSKEY_DELETE_FAILED,
                 auditContext,
+                ComponentId.HOME.getValue(),
                 ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
                 restrictedPasskeyPair);
     }

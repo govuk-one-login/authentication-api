@@ -216,6 +216,7 @@ class PasskeysDeleteProxyHandlerTest {
                     .submitAuditEvent(
                             eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
                             any(),
+                            eq("HOME"),
                             eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
                             argThat(
                                     metadataPair ->
@@ -245,6 +246,7 @@ class PasskeysDeleteProxyHandlerTest {
                     .submitAuditEvent(
                             eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
                             any(),
+                            eq("HOME"),
                             eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
                             argThat(
                                     metadataPair ->
@@ -268,6 +270,7 @@ class PasskeysDeleteProxyHandlerTest {
                     .submitAuditEvent(
                             eq(AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED),
                             any(),
+                            eq("HOME"),
                             eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
                             argThat(
                                     metadataPair ->
