@@ -13,7 +13,6 @@ jobs:
           - account-management
           - oidc
           - shared
-          - test-services
           - utils
     steps:
       - name: Check out repository code
