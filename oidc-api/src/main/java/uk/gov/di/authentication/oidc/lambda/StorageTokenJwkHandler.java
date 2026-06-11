@@ -51,6 +51,11 @@ public class StorageTokenJwkHandler
     public void beforeCheckpoint(org.crac.Context<? extends Resource> context) throws Exception {
         LOG.info("Executing before checkpoint");
         this.storageTokenJwkRequestHandler();
+        // Empty key cache, so we can force the key to be re-fetched everytime
+        // the SnapStart image is restored. This allows us to fetch the key
+        // on every restore, but continue to cache it for the duration that
+        // the same lambda exists.
+        this.jwksService.emptyCache();
     }
 
     @Override
