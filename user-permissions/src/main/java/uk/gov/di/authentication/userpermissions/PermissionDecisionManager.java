@@ -387,30 +387,21 @@ public class PermissionDecisionManager implements PermissionDecisions {
     public boolean canIssueAuthCode(AuthSessionItem authSession) {
         var achievedCredentialStrength = authSession.getAchievedCredentialStrength();
         var requestedCredentialStrength = authSession.getRequestedCredentialStrength();
-        var hasVerifiedPasskey = authSession.getHasVerifiedPasskey();
         var hasVerifiedWithPasskey = authSession.getHasVerifiedWithPasskey();
-        var hasVerifiedPassword = authSession.getHasVerifiedPassword();
         var hasVerifiedWithPassword = authSession.getHasVerifiedWithPassword();
-        var hasVerifiedMfa = authSession.getHasVerifiedMfa();
         var hasVerifiedWithMfa = authSession.getHasVerifiedWithMfa();
 
         LOG.info(
                 "Checking if auth code is blocked - "
                         + "achievedCredentialStrength='{}', "
                         + "requestedCredentialStrength='{}', "
-                        + "hasVerifiedPasskey='{}', "
                         + "hasVerifiedWithPasskey='{}', "
-                        + "hasVerifiedPassword='{}', "
                         + "hasVerifiedWithPassword='{}', "
-                        + "hasVerifiedMfa='{}', "
                         + "hasVerifiedWithMfa='{}'",
                 achievedCredentialStrength == null ? null : achievedCredentialStrength.getValue(),
                 requestedCredentialStrength == null ? null : requestedCredentialStrength.getValue(),
-                hasVerifiedPasskey,
                 hasVerifiedWithPasskey,
-                hasVerifiedPassword,
                 hasVerifiedWithPassword,
-                hasVerifiedMfa,
                 hasVerifiedWithMfa);
 
         if (achievedCredentialStrength == null) {
@@ -429,20 +420,20 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return false;
         }
 
-        if (hasVerifiedPasskey) {
+        if (hasVerifiedWithPasskey) {
             LOG.info("Auth code permitted");
             return true;
         }
 
         LOG.info("Passkey not verified");
 
-        if (!hasVerifiedPassword) {
+        if (!hasVerifiedWithPassword) {
             LOG.info("Auth code blocked: password not verified");
             return false;
         }
 
         if (requestedCredentialStrength == CredentialTrustLevel.MEDIUM_LEVEL) {
-            if (!hasVerifiedMfa) {
+            if (!hasVerifiedWithMfa) {
                 LOG.info("Auth code blocked: mfa not verified");
                 return false;
             }

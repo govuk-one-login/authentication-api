@@ -194,7 +194,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         authSession.getResetPasswordState(),
                         authSession.getResetMfaState(),
                         authSession.getVerifiedMfaMethodType(),
-                        authSession.getHasVerifiedPasskey());
+                        authSession.getHasVerifiedWithPasskey());
             }
 
             LOG.info("Generating Account Interventions outbound response for frontend");
