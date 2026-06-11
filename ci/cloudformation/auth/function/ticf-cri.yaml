@@ -42,6 +42,12 @@ Resources:
               - "{{resolve:secretsmanager:/deploy/${env}/ticf_cri_service_uri}}"
               - env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          SUPPORT_PASSKEYS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              supportPasskeys,
+            ]
       LoggingConfig:
         LogGroup: !Ref TicfCriFunctionLogGroup
       Policies:
