@@ -193,7 +193,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                                 : authSession.getIsNewAccount(),
                         authSession.getResetPasswordState(),
                         authSession.getResetMfaState(),
-                        authSession.getVerifiedMfaMethodType());
+                        authSession.getVerifiedMfaMethodType(),
+                        authSession.getHasVerifiedPasskey());
             }
 
             LOG.info("Generating Account Interventions outbound response for frontend");
@@ -214,7 +215,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             AuthSessionItem.AccountState accountState,
             AuthSessionItem.ResetPasswordState resetPasswordState,
             AuthSessionItem.ResetMfaState resetMfaState,
-            MFAMethodType verifiedMfaMethodType) {
+            MFAMethodType verifiedMfaMethodType,
+            boolean hasVerifiedWithPasskey) {
         var vtr = new ArrayList<String>();
 
         try {
@@ -237,7 +239,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         accountState,
                         resetPasswordState,
                         resetMfaState,
-                        verifiedMfaMethodType);
+                        verifiedMfaMethodType,
+                        hasVerifiedWithPasskey);
 
         String payload;
 

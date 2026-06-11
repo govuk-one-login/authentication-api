@@ -16,4 +16,5 @@ public record InternalTICFCRIRequest(
         @Expose AccountState accountState,
         @Expose ResetPasswordState resetPasswordState,
         @Expose ResetMfaState resetMfaState,
-        MFAMethodType mfaMethodType) {}
+        MFAMethodType mfaMethodType,
+        @Expose boolean hasVerifiedWithPasskey) {}

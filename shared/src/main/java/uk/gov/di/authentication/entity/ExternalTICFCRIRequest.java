@@ -19,10 +19,11 @@ public record ExternalTICFCRIRequest(
         @Expose @SerializedName("initial_registration") String initialRegistration,
         @Expose @SerializedName("password_reset") String passwordReset,
         @Expose @SerializedName("2fa_reset") String mfaReset,
-        @Expose @SerializedName("2fa_method") List<String> mfaMethod) {
+        @Expose @SerializedName("2fa_method") List<String> mfaMethod,
+        @Expose String passkey) {
 
     public static ExternalTICFCRIRequest fromInternalRequest(
-            InternalTICFCRIRequest internalRequest) {
+            InternalTICFCRIRequest internalRequest, boolean supportPasskeys) {
         boolean passwordResetSuccess =
                 internalRequest.resetPasswordState().equals(ResetPasswordState.SUCCEEDED);
         boolean reportablePasswordAttempted =
@@ -54,7 +55,8 @@ public record ExternalTICFCRIRequest(
                 mfaReset ? "Y" : null,
                 sanitisedMfaMethodType != null
                         ? Collections.singletonList(sanitisedMfaMethodType)
-                        : null);
+                        : null,
+                internalRequest.hasVerifiedWithPasskey() && supportPasskeys ? "Y" : null);
     }
 
     @Override
@@ -76,6 +78,8 @@ public record ExternalTICFCRIRequest(
                 + mfaReset
                 + "', mfaMethod='"
                 + mfaMethod
+                + "', passkey='"
+                + passkey
                 + "'}";
     }
 }

@@ -90,7 +90,8 @@ class TicfCriServiceTest {
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.NONE,
-                        MFAMethodType.SMS);
+                        MFAMethodType.SMS,
+                        false);
 
         assertDoesNotThrow(() -> ticfCriHandler.handleRequest(request, null));
         verify(configService).getTicfCriServiceURI();
@@ -128,7 +129,8 @@ class TicfCriServiceTest {
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.ATTEMPTED,
                         AuthSessionItem.ResetMfaState.NONE,
-                        MFAMethodType.SMS);
+                        MFAMethodType.SMS,
+                        false);
 
         assertDoesNotThrow(() -> ticfCriHandler.handleRequest(request, null));
         verify(configService).getTicfCriServiceURI();
@@ -178,7 +180,8 @@ class TicfCriServiceTest {
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.NONE,
-                        MFAMethodType.SMS);
+                        MFAMethodType.SMS,
+                        false);
 
         assertDoesNotThrow(() -> ticfCriHandler.handleRequest(request, null));
         verify(configService).getTicfCriServiceURI();
@@ -207,7 +210,8 @@ class TicfCriServiceTest {
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.NONE,
-                        MFAMethodType.SMS);
+                        MFAMethodType.SMS,
+                        false);
 
         assertDoesNotThrow(() -> ticfCriHandler.handleRequest(request, null));
         verify(configService).getTicfCriServiceURI();

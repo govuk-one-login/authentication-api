@@ -1,10 +1,12 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -32,6 +34,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -100,7 +103,8 @@ class TicfCriHandlerTest {
                         EXISTING_ACCOUNT_STATE,
                         NA_RESET_PASSWORD_STATE,
                         NA_RESET_MFA_STATE,
-                        NA_USED_MFA_METHOD_TYPE);
+                        NA_USED_MFA_METHOD_TYPE,
+                        false);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"}",
@@ -137,7 +141,8 @@ class TicfCriHandlerTest {
                         accountState,
                         NA_RESET_PASSWORD_STATE,
                         NA_RESET_MFA_STATE,
-                        NA_USED_MFA_METHOD_TYPE);
+                        NA_USED_MFA_METHOD_TYPE,
+                        false);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
@@ -146,47 +151,6 @@ class TicfCriHandlerTest {
                         JOURNEY_ID,
                         "Y",
                         accountState == AccountState.NEW ? ",\"initial_registration\":\"Y\"" : "");
-
-        when(httpResponse.statusCode()).thenReturn(200);
-        when(httpClient.send(any(), any())).thenReturn(httpResponse);
-        handler.handleRequest(ticfRequest, context);
-
-        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(httpClient).send(httpRequestCaptor.capture(), ArgumentMatchers.any());
-
-        var actualRequestBody =
-                bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
-
-        var expectedUri = URI.create(SERVICE_URI + "/auth");
-        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
-        assertEquals(expectedRequestBody, actualRequestBody);
-    }
-
-    @ParameterizedTest
-    @MethodSource("resetPassword")
-    void shouldMakeTheCorrectCallToTheTicfCriForResetPassword(
-            boolean authenticated,
-            ResetPasswordState resetPasswordState,
-            boolean expectPasswordReset)
-            throws IOException, InterruptedException, ExecutionException {
-        var ticfRequest =
-                new InternalTICFCRIRequest(
-                        COMMON_SUBJECTID,
-                        VECTORS_OF_TRUST,
-                        JOURNEY_ID,
-                        authenticated,
-                        EXISTING_ACCOUNT_STATE,
-                        resetPasswordState,
-                        NA_RESET_MFA_STATE,
-                        NA_USED_MFA_METHOD_TYPE);
-        var expectedRequestBody =
-                format(
-                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
-                        COMMON_SUBJECTID,
-                        jsonArrayFrom(VECTORS_OF_TRUST),
-                        JOURNEY_ID,
-                        authenticated ? "Y" : "N",
-                        expectPasswordReset ? ",\"password_reset\":\"Y\"" : "");
 
         when(httpResponse.statusCode()).thenReturn(200);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -213,9 +177,11 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("resetMfa")
-    void shouldMakeTheCorrectCallToTheTicfCriForResetMfa(
-            boolean authenticated, ResetMfaState resetMfaState, boolean expectMfaReset)
+    @MethodSource("resetPassword")
+    void shouldMakeTheCorrectCallToTheTicfCriForResetPassword(
+            boolean authenticated,
+            ResetPasswordState resetPasswordState,
+            boolean expectPasswordReset)
             throws IOException, InterruptedException, ExecutionException {
         var ticfRequest =
                 new InternalTICFCRIRequest(
@@ -224,9 +190,10 @@ class TicfCriHandlerTest {
                         JOURNEY_ID,
                         authenticated,
                         EXISTING_ACCOUNT_STATE,
-                        NA_RESET_PASSWORD_STATE,
-                        resetMfaState,
-                        NA_USED_MFA_METHOD_TYPE);
+                        resetPasswordState,
+                        NA_RESET_MFA_STATE,
+                        NA_USED_MFA_METHOD_TYPE,
+                        false);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
@@ -234,7 +201,7 @@ class TicfCriHandlerTest {
                         jsonArrayFrom(VECTORS_OF_TRUST),
                         JOURNEY_ID,
                         authenticated ? "Y" : "N",
-                        expectMfaReset ? ",\"2fa_reset\":\"Y\"" : "");
+                        expectPasswordReset ? ",\"password_reset\":\"Y\"" : "");
 
         when(httpResponse.statusCode()).thenReturn(200);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -262,29 +229,29 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("usedMfaMethodType")
-    void shouldMakeTheCorrectCallToTheTicfCriForUsedMfaMethodType(
-            MFAMethodType usedMfaMethodType, String expectedMfaMethodType)
+    @MethodSource("resetMfa")
+    void shouldMakeTheCorrectCallToTheTicfCriForResetMfa(
+            boolean authenticated, ResetMfaState resetMfaState, boolean expectMfaReset)
             throws IOException, InterruptedException, ExecutionException {
         var ticfRequest =
                 new InternalTICFCRIRequest(
                         COMMON_SUBJECTID,
                         VECTORS_OF_TRUST,
                         JOURNEY_ID,
-                        true,
+                        authenticated,
                         EXISTING_ACCOUNT_STATE,
                         NA_RESET_PASSWORD_STATE,
-                        NA_RESET_MFA_STATE,
-                        usedMfaMethodType);
+                        resetMfaState,
+                        NA_USED_MFA_METHOD_TYPE,
+                        false);
         var expectedRequestBody =
                 format(
-                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"Y\"%s}",
+                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
                         COMMON_SUBJECTID,
                         jsonArrayFrom(VECTORS_OF_TRUST),
                         JOURNEY_ID,
-                        expectedMfaMethodType != null
-                                ? ",\"2fa_method\":[\"" + expectedMfaMethodType + "\"]"
-                                : "");
+                        authenticated ? "Y" : "N",
+                        expectMfaReset ? ",\"2fa_reset\":\"Y\"" : "");
 
         when(httpResponse.statusCode()).thenReturn(200);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -310,6 +277,131 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
+    @MethodSource("usedMfaMethodType")
+    void shouldMakeTheCorrectCallToTheTicfCriForUsedMfaMethodType(
+            MFAMethodType usedMfaMethodType, String expectedMfaMethodType)
+            throws IOException, InterruptedException, ExecutionException {
+        var ticfRequest =
+                new InternalTICFCRIRequest(
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        true,
+                        EXISTING_ACCOUNT_STATE,
+                        NA_RESET_PASSWORD_STATE,
+                        NA_RESET_MFA_STATE,
+                        usedMfaMethodType,
+                        false);
+        var expectedRequestBody =
+                format(
+                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"Y\"%s}",
+                        COMMON_SUBJECTID,
+                        jsonArrayFrom(VECTORS_OF_TRUST),
+                        JOURNEY_ID,
+                        expectedMfaMethodType != null
+                                ? ",\"2fa_method\":[\"" + expectedMfaMethodType + "\"]"
+                                : "");
+
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        handler.handleRequest(ticfRequest, context);
+
+        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(httpRequestCaptor.capture(), ArgumentMatchers.any());
+
+        var actualRequestBody =
+                bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
+
+        var expectedUri = URI.create(SERVICE_URI + "/auth");
+        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
+        assertEquals(expectedRequestBody, actualRequestBody);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldMakeTheCorrectCallToTheTicfCriForPasskey(boolean hasVerifiedWithPasskey)
+            throws IOException, InterruptedException, ExecutionException {
+        var ticfRequest =
+                new InternalTICFCRIRequest(
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        true,
+                        EXISTING_ACCOUNT_STATE,
+                        NA_RESET_PASSWORD_STATE,
+                        NA_RESET_MFA_STATE,
+                        NA_USED_MFA_METHOD_TYPE,
+                        hasVerifiedWithPasskey);
+
+        var expectedBody = new LinkedHashMap<String, Object>();
+        expectedBody.put("sub", COMMON_SUBJECTID);
+        expectedBody.put("vtr", VECTORS_OF_TRUST);
+        expectedBody.put("govuk_signin_journey_id", JOURNEY_ID);
+        expectedBody.put("authenticated", "Y");
+        if (hasVerifiedWithPasskey) {
+            expectedBody.put("passkey", "Y");
+        }
+        var expectedRequestBody = new Gson().toJson(expectedBody);
+
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        when(configurationService.supportPasskeys()).thenReturn(true);
+        handler.handleRequest(ticfRequest, context);
+
+        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(httpRequestCaptor.capture(), ArgumentMatchers.any());
+
+        var actualRequestBody =
+                bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
+
+        var expectedUri = URI.create(SERVICE_URI + "/auth");
+        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
+        assertEquals(expectedRequestBody, actualRequestBody);
+    }
+
+    @Test
+    void shouldNotIncludePasskeyInCallToTicfIfPasskeysNotEnabled()
+            throws IOException, InterruptedException, ExecutionException {
+        var ticfRequest =
+                new InternalTICFCRIRequest(
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        true,
+                        EXISTING_ACCOUNT_STATE,
+                        NA_RESET_PASSWORD_STATE,
+                        NA_RESET_MFA_STATE,
+                        NA_USED_MFA_METHOD_TYPE,
+                        true);
+        var expectedRequestBody =
+                format(
+                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"}",
+                        COMMON_SUBJECTID, jsonArrayFrom(VECTORS_OF_TRUST), JOURNEY_ID, "Y");
+
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        when(configurationService.supportPasskeys()).thenReturn(false);
+        handler.handleRequest(ticfRequest, context);
+
+        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(httpRequestCaptor.capture(), ArgumentMatchers.any());
+
+        var actualRequestBody =
+                bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
+
+        var expectedUri = URI.create(SERVICE_URI + "/auth");
+        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
+        assertEquals(expectedRequestBody, actualRequestBody);
+    }
+
+    private static List<Arguments> statusCodes() {
+        return List.of(
+                Arguments.of(200, Level.INFO),
+                Arguments.of(404, Level.ERROR),
+                Arguments.of(500, Level.INFO));
+    }
+
+    @ParameterizedTest
     @MethodSource("statusCodes")
     void sendsMetricsAndLogsBasedOnTheHttpStatusCode(Integer statusCode, Level expectedLogLevel)
             throws IOException, InterruptedException {
@@ -322,7 +414,8 @@ class TicfCriHandlerTest {
                         EXISTING_ACCOUNT_STATE,
                         NA_RESET_PASSWORD_STATE,
                         NA_RESET_MFA_STATE,
-                        NA_USED_MFA_METHOD_TYPE);
+                        NA_USED_MFA_METHOD_TYPE,
+                        false);
         when(httpResponse.statusCode()).thenReturn(statusCode);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
@@ -344,11 +437,18 @@ class TicfCriHandlerTest {
                                         statusCode))));
     }
 
-    private static List<Arguments> statusCodes() {
+    private static List<Arguments> exceptions() {
         return List.of(
-                Arguments.of(200, Level.INFO),
-                Arguments.of(404, Level.ERROR),
-                Arguments.of(500, Level.INFO));
+                Arguments.of(
+                        new IOException("an IO Exception"), "TicfCriServiceError", Level.ERROR),
+                Arguments.of(
+                        new InterruptedException("an Interrputed exception"),
+                        "TicfCriServiceError",
+                        Level.ERROR),
+                Arguments.of(
+                        new HttpTimeoutException("timed out"),
+                        "TicfCriServiceTimeout",
+                        Level.WARN));
     }
 
     @ParameterizedTest
@@ -366,27 +466,14 @@ class TicfCriHandlerTest {
                         EXISTING_ACCOUNT_STATE,
                         NA_RESET_PASSWORD_STATE,
                         NA_RESET_MFA_STATE,
-                        NA_USED_MFA_METHOD_TYPE),
+                        NA_USED_MFA_METHOD_TYPE,
+                        false),
                 context);
 
         verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);
         assertThat(
                 logging.events(),
                 hasItem(withLevelAndMessageContaining(expectedLogLevel, format(e.getMessage()))));
-    }
-
-    private static List<Arguments> exceptions() {
-        return List.of(
-                Arguments.of(
-                        new IOException("an IO Exception"), "TicfCriServiceError", Level.ERROR),
-                Arguments.of(
-                        new InterruptedException("an Interrputed exception"),
-                        "TicfCriServiceError",
-                        Level.ERROR),
-                Arguments.of(
-                        new HttpTimeoutException("timed out"),
-                        "TicfCriServiceTimeout",
-                        Level.WARN));
     }
 
     private JsonArray jsonArrayFrom(List<String> elements) {

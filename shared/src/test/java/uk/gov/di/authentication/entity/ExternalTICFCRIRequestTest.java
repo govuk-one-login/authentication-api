@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.entity;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -26,12 +27,14 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.NONE,
                                 ResetMfaState.NONE,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
                                 "test-journey-id",
                                 "Y",
+                                null,
                                 null,
                                 null,
                                 null,
@@ -45,12 +48,14 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.NONE,
                                 ResetMfaState.NONE,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
                                 "test-journey-id",
                                 "N",
+                                null,
                                 null,
                                 null,
                                 null,
@@ -66,13 +71,15 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.NEW,
                                 ResetPasswordState.NONE,
                                 ResetMfaState.NONE,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
                                 "test-journey-id",
                                 "Y",
                                 "Y",
+                                null,
                                 null,
                                 null,
                                 null)),
@@ -85,13 +92,15 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.NEW,
                                 ResetPasswordState.NONE,
                                 ResetMfaState.NONE,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
                                 "test-journey-id",
                                 "N",
                                 "Y",
+                                null,
                                 null,
                                 null,
                                 null)),
@@ -105,7 +114,8 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.SUCCEEDED,
                                 ResetMfaState.NONE,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
@@ -113,6 +123,7 @@ class ExternalTICFCRIRequestTest {
                                 "Y",
                                 null,
                                 "Y",
+                                null,
                                 null,
                                 null)),
                 Arguments.of(
@@ -124,7 +135,8 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.ATTEMPTED,
                                 ResetMfaState.NONE,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
@@ -132,6 +144,7 @@ class ExternalTICFCRIRequestTest {
                                 "N",
                                 null,
                                 "Y",
+                                null,
                                 null,
                                 null)),
                 Arguments.of(
@@ -143,12 +156,14 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.ATTEMPTED,
                                 ResetMfaState.NONE,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
                                 "test-journey-id",
                                 "Y",
+                                null,
                                 null,
                                 null,
                                 null,
@@ -163,7 +178,8 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.NONE,
                                 ResetMfaState.SUCCEEDED,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
@@ -172,6 +188,7 @@ class ExternalTICFCRIRequestTest {
                                 null,
                                 null,
                                 "Y",
+                                null,
                                 null)),
                 Arguments.of(
                         new InternalTICFCRIRequest(
@@ -182,12 +199,14 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.NONE,
                                 ResetMfaState.ATTEMPTED,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
                                 "test-journey-id",
                                 "Y",
+                                null,
                                 null,
                                 null,
                                 null,
@@ -201,7 +220,8 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.NONE,
                                 ResetMfaState.ATTEMPTED,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
@@ -210,6 +230,7 @@ class ExternalTICFCRIRequestTest {
                                 null,
                                 null,
                                 "Y",
+                                null,
                                 null)),
 
                 // Testing mfa method combinations
@@ -222,12 +243,14 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.NONE,
                                 ResetMfaState.NONE,
-                                MFAMethodType.NONE),
+                                MFAMethodType.NONE,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
                                 "test-journey-id",
                                 "Y",
+                                null,
                                 null,
                                 null,
                                 null,
@@ -241,12 +264,14 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.ATTEMPTED,
                                 ResetMfaState.NONE,
-                                MFAMethodType.EMAIL),
+                                MFAMethodType.EMAIL,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
                                 "test-journey-id",
                                 "Y",
+                                null,
                                 null,
                                 null,
                                 null,
@@ -260,7 +285,8 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.ATTEMPTED,
                                 ResetMfaState.NONE,
-                                MFAMethodType.SMS),
+                                MFAMethodType.SMS,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
@@ -269,7 +295,8 @@ class ExternalTICFCRIRequestTest {
                                 null,
                                 null,
                                 null,
-                                List.of("SMS"))),
+                                List.of("SMS"),
+                                null)),
                 Arguments.of(
                         new InternalTICFCRIRequest(
                                 "test-sub",
@@ -279,7 +306,8 @@ class ExternalTICFCRIRequestTest {
                                 AccountState.EXISTING,
                                 ResetPasswordState.ATTEMPTED,
                                 ResetMfaState.NONE,
-                                MFAMethodType.AUTH_APP),
+                                MFAMethodType.AUTH_APP,
+                                false),
                         new ExternalTICFCRIRequest(
                                 "test-sub",
                                 List.of("Cl.Cm"),
@@ -288,13 +316,90 @@ class ExternalTICFCRIRequestTest {
                                 null,
                                 null,
                                 null,
-                                List.of("AUTH_APP"))));
+                                List.of("AUTH_APP"),
+                                null)),
+
+                // Testing passkey combinations
+                Arguments.of(
+                        new InternalTICFCRIRequest(
+                                "test-sub",
+                                List.of("Cl.Cm"),
+                                "test-journey-id",
+                                true,
+                                AccountState.EXISTING,
+                                ResetPasswordState.NONE,
+                                ResetMfaState.NONE,
+                                MFAMethodType.NONE,
+                                false),
+                        new ExternalTICFCRIRequest(
+                                "test-sub",
+                                List.of("Cl.Cm"),
+                                "test-journey-id",
+                                "Y",
+                                null,
+                                null,
+                                null,
+                                null,
+                                null)),
+                Arguments.of(
+                        new InternalTICFCRIRequest(
+                                "test-sub",
+                                List.of("Cl.Cm"),
+                                "test-journey-id",
+                                true,
+                                AccountState.EXISTING,
+                                ResetPasswordState.NONE,
+                                ResetMfaState.NONE,
+                                MFAMethodType.NONE,
+                                true),
+                        new ExternalTICFCRIRequest(
+                                "test-sub",
+                                List.of("Cl.Cm"),
+                                "test-journey-id",
+                                "Y",
+                                null,
+                                null,
+                                null,
+                                null,
+                                "Y")));
     }
 
     @ParameterizedTest
     @MethodSource("ticfParametersSource")
     void shouldCorrectlyBeConstructedFromInternalRequest(
             InternalTICFCRIRequest provided, ExternalTICFCRIRequest expected) {
-        assertEquals(expected, ExternalTICFCRIRequest.fromInternalRequest(provided));
+        assertEquals(expected, ExternalTICFCRIRequest.fromInternalRequest(provided, true));
+    }
+
+    @Test
+    void shouldNotSendPasskeyIfPasskeysNotSupported() {
+        var userSignedInWithPasskeyInternalTicfRequest =
+                new InternalTICFCRIRequest(
+                        "test-sub",
+                        List.of("Cl.Cm"),
+                        "test-journey-id",
+                        true,
+                        AccountState.EXISTING,
+                        ResetPasswordState.NONE,
+                        ResetMfaState.NONE,
+                        MFAMethodType.NONE,
+                        true);
+
+        var expectedExternalTicfCriRequest =
+                new ExternalTICFCRIRequest(
+                        "test-sub",
+                        List.of("Cl.Cm"),
+                        "test-journey-id",
+                        "Y",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null);
+
+        assertEquals(
+                ExternalTICFCRIRequest.fromInternalRequest(
+                        userSignedInWithPasskeyInternalTicfRequest, false),
+                expectedExternalTicfCriRequest);
     }
 }

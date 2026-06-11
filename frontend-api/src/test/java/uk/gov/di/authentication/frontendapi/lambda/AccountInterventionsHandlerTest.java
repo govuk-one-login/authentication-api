@@ -264,14 +264,16 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
                 Arguments.of(
                         false,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
 
                 // Testing initial registration combinations
                 Arguments.of(
@@ -280,14 +282,16 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
                 Arguments.of(
                         false,
                         AccountState.NEW,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":false,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":false,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
 
                 // Testing password reset combinations
                 Arguments.of(
@@ -296,14 +300,16 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.SUCCEEDED,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"SUCCEEDED\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"SUCCEEDED\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
                 Arguments.of(
                         false,
                         AccountState.EXISTING,
                         ResetPasswordState.ATTEMPTED,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"ATTEMPTED\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"ATTEMPTED\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
 
                 // Testing mfa reset combinations
                 Arguments.of(
@@ -312,21 +318,24 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.NONE,
                         ResetMfaState.SUCCEEDED,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"SUCCEEDED\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"SUCCEEDED\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
                 Arguments.of(
                         true,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.ATTEMPTED,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"ATTEMPTED\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"ATTEMPTED\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
                 Arguments.of(
                         false,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.ATTEMPTED,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"ATTEMPTED\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"ATTEMPTED\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
 
                 // Testing mfa method combinations
                 Arguments.of(
@@ -335,28 +344,50 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
                 Arguments.of(
                         true,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.EMAIL,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"EMAIL\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"EMAIL\",\"hasVerifiedWithPasskey\":false}"),
                 Arguments.of(
                         true,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.SMS,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"SMS\"}"),
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"SMS\",\"hasVerifiedWithPasskey\":false}"),
                 Arguments.of(
                         true,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.AUTH_APP,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"AUTH_APP\"}"));
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"AUTH_APP\",\"hasVerifiedWithPasskey\":false}"),
+
+                // Testing verified with passkey combinations
+                Arguments.of(
+                        true,
+                        AccountState.EXISTING,
+                        ResetPasswordState.NONE,
+                        ResetMfaState.NONE,
+                        MFAMethodType.AUTH_APP,
+                        true,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"AUTH_APP\",\"hasVerifiedWithPasskey\":true}"),
+                Arguments.of(
+                        true,
+                        AccountState.EXISTING,
+                        ResetPasswordState.NONE,
+                        ResetMfaState.NONE,
+                        MFAMethodType.AUTH_APP,
+                        false,
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"AUTH_APP\",\"hasVerifiedWithPasskey\":false}"));
     }
 
     @ParameterizedTest
@@ -367,6 +398,7 @@ class AccountInterventionsHandlerTest {
             ResetPasswordState resetPasswordState,
             ResetMfaState resetMfaState,
             MFAMethodType usedMfaMethodType,
+            boolean hasVerifiedWithPasskey,
             String expectedPayload)
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
@@ -380,7 +412,8 @@ class AccountInterventionsHandlerTest {
                         .withAccountState(accountState)
                         .withResetPasswordState(resetPasswordState)
                         .withResetMfaState(resetMfaState)
-                        .withVerifiedMfaMethodType(usedMfaMethodType);
+                        .withVerifiedMfaMethodType(usedMfaMethodType)
+                        .withHasVerifiedPasskey(hasVerifiedWithPasskey);
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSessionWithChanges));
 
@@ -429,7 +462,7 @@ class AccountInterventionsHandlerTest {
         verify(mockLambdaInvokerService, times(1))
                 .invokeAsyncWithPayload(
                         eq(
-                                "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                                "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"govukSigninJourneyId\":\"known-client-session-id\",\"authenticated\":true,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\",\"hasVerifiedWithPasskey\":false}"),
                         any());
     }
 
