@@ -21,9 +21,9 @@ public interface AuditableEvent {
     String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS = "account_actions";
     String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS = "account_actions_errors";
     String AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_FAILED = "account_actions_failed";
-    String AUDIT_EXTENSIONS_PASSKEY = "passkey";
-    String AUDIT_EVENT_RESTRICTED_PASSKEY = "passkey";
-    String AUDIT_EVENT_RESTRICTED_PASSKEY_CREDENTIAL_ID = "passkey_credential_id";
+    String AUDIT_EVENT_EXTENSIONS_PASSKEY = "passkey";
+    String AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY = "passkey";
+    String AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY_CREDENTIAL_ID = "passkey_credential_id";
 
     AuditableEvent parseFromName(String name);
 }

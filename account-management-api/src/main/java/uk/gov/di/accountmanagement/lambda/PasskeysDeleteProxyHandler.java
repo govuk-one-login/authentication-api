@@ -34,8 +34,8 @@ import java.util.Map;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_RESTRICTED_PASSKEY;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_RESTRICTED_PASSKEY_CREDENTIAL_ID;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY_CREDENTIAL_ID;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -252,8 +252,10 @@ public class PasskeysDeleteProxyHandler
     private void emitFailedAuditEvent(AuditContext auditContext, PasskeysDeleteRequest request) {
         var restrictedPasskeyPair =
                 pair(
-                        AUDIT_EVENT_RESTRICTED_PASSKEY,
-                        Map.of(AUDIT_EVENT_RESTRICTED_PASSKEY_CREDENTIAL_ID, request.passkeyId),
+                        AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY,
+                        Map.of(
+                                AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY_CREDENTIAL_ID,
+                                request.passkeyId),
                         true);
 
         auditService.submitAuditEvent(
