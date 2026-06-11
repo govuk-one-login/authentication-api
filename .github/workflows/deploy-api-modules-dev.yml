@@ -101,6 +101,7 @@ jobs:
           - frontend-api
           - ipv-api
           - oidc-api
+          - test-services-api
           - utils
     permissions:
       id-token: write
@@ -138,6 +139,8 @@ jobs:
         include:
           - module_name: account-management-api
             terraform_directory_name: account-management
+          - module_name: test-services-api
+            terraform_directory_name: test-services
           - module_name: utils
             terraform_directory_name: utils
     permissions:

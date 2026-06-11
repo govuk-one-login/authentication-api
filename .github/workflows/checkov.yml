@@ -27,6 +27,7 @@ jobs:
           - account-management
           - oidc
           - shared
+          - test-services
           - utils
     permissions:
       contents: read # for actions/checkout to fetch code
