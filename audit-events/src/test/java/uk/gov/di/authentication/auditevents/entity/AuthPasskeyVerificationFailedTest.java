@@ -14,10 +14,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 
-class AuthPasskeyVerificationSuccessfulTest {
+class AuthPasskeyVerificationFailedTest {
 
     @Test
-    void shouldSerialiseAnAuthPasskeyVerificationSuccessfulAuditEvent() {
+    void shouldSerialiseAnAuthPasskeyVerificationFailedAuditEvent() {
         var auditContext =
                 AuditContext.emptyAuditContext()
                         .withClientId("client-id")
@@ -36,20 +36,24 @@ class AuthPasskeyVerificationSuccessfulTest {
                 List.of(
                         new PasskeyAllowCredentials("credential-1", null),
                         new PasskeyAllowCredentials("credential-2", List.of("ble")));
-        var passkey =
-                new AuthPasskeyVerificationSuccessful.Passkey(
+
+        var passkeyAuthenticationRequest = new PasskeyAuthenticationRequest("required");
+        var passkeyVerificationFailed =
+                new AuthPasskeyVerificationFailed.PasskeyVerificationFailed(
+                        passkeyAuthenticationRequest,
                         0,
                         true,
                         "multi-device",
-                        true,
-                        new PasskeyAuthenticationRequest("required"));
+                        false,
+                        "UserVerificationError");
+
         var event =
-                AuthPasskeyVerificationSuccessful.create(
+                AuthPasskeyVerificationFailed.create(
                         auditContext,
                         JourneyType.SIGN_IN,
                         passkeyAllowCredentials,
-                        passkey,
                         "credential-1",
+                        passkeyVerificationFailed,
                         fixedClock);
 
         var actualEvent = event.serialize();
@@ -57,7 +61,7 @@ class AuthPasskeyVerificationSuccessfulTest {
         var expectedEvent =
                 """
                 {
-                  "event_name": "AUTH_PASSKEY_VERIFICATION_SUCCESSFUL",
+                  "event_name": "AUTH_PASSKEY_VERIFICATION_FAILED",
                   "timestamp": 1781097184,
                   "event_timestamp_ms": 1781097184730,
                   "client_id": "client-id",
@@ -85,20 +89,21 @@ class AuthPasskeyVerificationSuccessfulTest {
                             "ble"
                           ]
                         }
-                      ]
-                    },
-                    "passkey_credential_id": "credential-1"
+                      ],
+                      "passkey_credential_id": "credential-1"
+                    }
                   },
                   "extensions": {
                     "journey-type": "SIGN_IN",
                     "passkey": {
+                      "passkey_authentication_request": {
+                        "passkey_request_user_verification": "required"
+                      },
                       "passkey_counter": 0,
                       "passkey_credential_backed_up": true,
                       "passkey_credential_device_type": "multi-device",
-                      "passkey_user_verified": true,
-                      "passkey_authentication_request": {
-                        "passkey_request_user_verification": "required"
-                      }
+                      "passkey_user_verified": false,
+                      "passkey_verification_failure_reason": "UserVerificationError"
                     }
                   }
                 }
