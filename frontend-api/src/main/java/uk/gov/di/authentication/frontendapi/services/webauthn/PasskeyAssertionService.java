@@ -9,6 +9,7 @@ import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.UserVerificationRequirement;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,7 +32,10 @@ public class PasskeyAssertionService {
     public AssertionRequest startAssertion(String publicSubjectId) {
         var userHandle = new ByteArray(publicSubjectId.getBytes(StandardCharsets.UTF_8));
         return relyingParty.startAssertion(
-                StartAssertionOptions.builder().userHandle(Optional.of(userHandle)).build());
+                StartAssertionOptions.builder()
+                        .userHandle(Optional.of(userHandle))
+                        .userVerification(UserVerificationRequirement.REQUIRED)
+                        .build());
     }
 
     public Result<FinishPasskeyAssertionFailureReason, AssertionResult> finishAssertion(
