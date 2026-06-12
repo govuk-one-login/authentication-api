@@ -1,8 +1,8 @@
 package uk.gov.di.orchestration.shared.helpers;
 
+import com.nimbusds.jose.util.Base64URL;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jose4j.base64url.Base64Url;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 
 import java.net.URI;
@@ -66,14 +66,14 @@ public class ClientSubjectHelper {
             String subjectID, String sectorHost, byte[] salt) {
         var md = getMessageDigest(sectorHost, subjectID);
         byte[] bytes = md.digest(salt);
-        var sb = Base64Url.encode(bytes);
+        var sb = Base64URL.encode(bytes);
         return PAIRWISE_PREFIX + sb;
     }
 
     public static String calculateWalletSubjectIdentifier(String sectorID, String commonSubjectID) {
         var md = getMessageDigest(sectorID, commonSubjectID);
         byte[] bytes = md.digest();
-        var sb = Base64Url.encode(bytes);
+        var sb = Base64URL.encode(bytes);
         return WALLET_PAIRWISE_PREFIX + sb;
     }
 
