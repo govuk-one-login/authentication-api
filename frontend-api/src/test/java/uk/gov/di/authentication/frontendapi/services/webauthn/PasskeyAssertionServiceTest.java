@@ -4,7 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.RelyingParty;
+import com.yubico.webauthn.StartAssertionOptions;
+import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.UserVerificationRequirement;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -12,11 +15,15 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 
 public class PasskeyAssertionServiceTest {
     private final RelyingParty relyingParty = mock(RelyingParty.class);
@@ -38,12 +45,23 @@ public class PasskeyAssertionServiceTest {
                 var mockAssertionRequest = mock(AssertionRequest.class);
                 when(relyingParty.startAssertion(any())).thenReturn(mockAssertionRequest);
 
+                var expectedStartAssertionOptions =
+                        StartAssertionOptions.builder()
+                                .userHandle(
+                                        Optional.of(
+                                                new ByteArray(
+                                                        PUBLIC_SUBJECT_ID.getBytes(
+                                                                StandardCharsets.UTF_8))))
+                                .userVerification(UserVerificationRequirement.REQUIRED)
+                                .build();
+
                 // When
                 AssertionRequest actualAssertionRequest =
-                        passkeyAssertionService.startAssertion("");
+                        passkeyAssertionService.startAssertion(PUBLIC_SUBJECT_ID);
 
                 // Then
                 assertEquals(mockAssertionRequest, actualAssertionRequest);
+                verify(relyingParty).startAssertion(expectedStartAssertionOptions);
             }
         }
     }

@@ -170,7 +170,7 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                               "journey-type": "SIGN_IN",
                               "passkey": {
                                 "passkey_authentication_request": {
-                                  "passkey_request_user_verification": ""
+                                  "passkey_request_user_verification": "required"
                                 }
                               }
                             }
