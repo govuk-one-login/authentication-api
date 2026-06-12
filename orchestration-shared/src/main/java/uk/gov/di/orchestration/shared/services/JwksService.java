@@ -8,20 +8,20 @@ import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.openssl.PEMException;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
-import uk.gov.di.orchestration.shared.helpers.CryptoProviderHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
 import java.lang.reflect.Type;
 import java.net.URL;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -125,9 +125,10 @@ public class JwksService {
         var getPublicKeyRequest = GetPublicKeyRequest.builder().keyId(keyId).build();
         var publicKeyResponse = kmsConnectionService.getPublicKey(getPublicKeyRequest);
 
-        PublicKey publicKey = createPublicKey(publicKeyResponse);
+        var publicKey = createPublicKey(publicKeyResponse);
 
         if (publicKeyResponse.signingAlgorithms().contains(ECDSA_SHA_256)) {
+
             return new ECKey.Builder(P_256, (ECPublicKey) publicKey)
                     .keyID(hashSha256String(publicKeyResponse.keyId()))
                     .keyUse(KeyUse.SIGNATURE)
@@ -143,15 +144,19 @@ public class JwksService {
     }
 
     private PublicKey createPublicKey(GetPublicKeyResponse publicKeyResponse) {
-        SubjectPublicKeyInfo subjectKeyInfo =
-                SubjectPublicKeyInfo.getInstance(publicKeyResponse.publicKey().asByteArray());
+        var keyFactoryType =
+                publicKeyResponse.signingAlgorithms().contains(ECDSA_SHA_256) ? "EC" : "RSA";
 
         try {
-            return new JcaPEMKeyConverter()
-                    .setProvider(CryptoProviderHelper.bouncyCastle())
-                    .getPublicKey(subjectKeyInfo);
-        } catch (PEMException e) {
-            LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+            X509EncodedKeySpec keySpec =
+                    new X509EncodedKeySpec(publicKeyResponse.publicKey().asByteArray());
+            KeyFactory keyFactory = KeyFactory.getInstance(keyFactoryType);
+            return keyFactory.generatePublic(keySpec);
+        } catch (NoSuchAlgorithmException e) {
+            LOG.error("NoSuchAlgorithmException when creating {} public key", keyFactoryType, e);
+            throw new RuntimeException();
+        } catch (InvalidKeySpecException e) {
+            LOG.error("InvalidKeySpecException when creating {} public key", keyFactoryType, e);
             throw new RuntimeException();
         }
     }
