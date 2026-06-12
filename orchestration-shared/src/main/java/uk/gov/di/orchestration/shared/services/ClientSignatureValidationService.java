@@ -13,7 +13,6 @@ import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONObject;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.SdkBytes;
@@ -42,6 +41,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.Set;
 
@@ -205,10 +205,10 @@ public class ClientSignatureValidationService {
     private InvokeResponse invokeFetchJwksFunction(String jwksUrl, String kid)
             throws JwksException {
         try {
-            JSONObject jsonObj = new JSONObject();
+            var jsonObj = new HashMap<>();
             jsonObj.put("url", jwksUrl);
             jsonObj.put("keyId", kid);
-            String json = jsonObj.toString();
+            String json = objectMapper.writeValueAsString(jsonObj);
             SdkBytes payload = SdkBytes.fromUtf8String(json);
 
             InvokeRequest request =
