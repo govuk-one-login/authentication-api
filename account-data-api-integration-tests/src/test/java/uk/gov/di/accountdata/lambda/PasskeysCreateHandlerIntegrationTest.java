@@ -63,7 +63,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
             var expectedSortKey = format("PASSKEY#%s", PRIMARY_PASSKEY_ID);
 
             // When
@@ -84,6 +85,7 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
             assertThat(savedPasskey.getCredentialId(), equalTo(PRIMARY_PASSKEY_ID));
             assertThat(savedPasskey.getSortKey(), equalTo(expectedSortKey));
+            assertThat(savedPasskey.getPasskeyAlgorithm(), equalTo(-7));
         }
     }
 
@@ -104,7 +106,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
 
             // When
             var response =
@@ -138,7 +141,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
 
             // When
             var response =
@@ -169,7 +173,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
 
             // When
             var response =
@@ -195,7 +200,8 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
             List<String> transports,
             boolean isBackUpEligible,
             boolean isBackedUp,
-            boolean isResidentKey)
+            boolean isResidentKey,
+            int algorithm)
             throws Json.JsonException {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("id", id);
@@ -207,6 +213,7 @@ class PasskeysCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         requestBody.put("isBackedUpEligible", String.valueOf(isBackUpEligible));
         requestBody.put("isBackedUp", String.valueOf(isBackedUp));
         requestBody.put("isResidentKey", String.valueOf(isResidentKey));
+        requestBody.put("algorithm", String.valueOf(algorithm));
 
         return objectMapper.writeValueAsString(requestBody);
     }
