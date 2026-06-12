@@ -65,7 +65,8 @@ class PasskeysServiceTest {
                                 PASSKEY_TRANSPORTS,
                                 false,
                                 false,
-                                false);
+                                false,
+                                -7);
 
                 // When
                 var result =
@@ -94,7 +95,8 @@ class PasskeysServiceTest {
                                 PASSKEY_TRANSPORTS,
                                 false,
                                 false,
-                                false);
+                                false,
+                                -7);
 
                 // When
                 var result =
@@ -122,7 +124,8 @@ class PasskeysServiceTest {
                                 PASSKEY_TRANSPORTS,
                                 false,
                                 false,
-                                false);
+                                false,
+                                -7);
 
                 // When
                 var result =
@@ -145,7 +148,8 @@ class PasskeysServiceTest {
                 List<String> transports,
                 boolean isBackUpEligible,
                 boolean isBackedUp,
-                boolean isResidentKey) {
+                boolean isResidentKey,
+                int algorithm) {
             return new PasskeysCreateRequest(
                     credential,
                     passkeyId,
@@ -155,7 +159,8 @@ class PasskeysServiceTest {
                     transports,
                     isBackUpEligible,
                     isBackedUp,
-                    isResidentKey);
+                    isResidentKey,
+                    algorithm);
         }
     }
 

@@ -64,7 +64,8 @@ class PasskeysCreateHandlerTest {
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
             when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.success(null));
             var request =
@@ -96,7 +97,35 @@ class PasskeysCreateHandlerTest {
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
+            var request =
+                    passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
+
+            // When
+            var result = handler.handleRequest(request, context);
+
+            // Then
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
+        }
+
+        @Test
+        void shouldReturn400WhenAlgorithmIsNotProvided() throws Json.JsonException {
+            // Given
+            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+            var passkeysCreateRequestBody =
+                    buildPasskeysCreateRequestBody(
+                            CREDENTIAL,
+                            PRIMARY_PASSKEY_ID,
+                            TEST_AAGUID,
+                            false,
+                            0,
+                            PASSKEY_TRANSPORTS,
+                            false,
+                            false,
+                            false,
+                            null);
             var request =
                     passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
@@ -122,7 +151,8 @@ class PasskeysCreateHandlerTest {
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
             var request =
                     passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
@@ -148,7 +178,8 @@ class PasskeysCreateHandlerTest {
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
             when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.failure(PasskeysCreateFailureReason.FAILED_TO_SAVE_PASSKEY));
             var request =
@@ -176,7 +207,8 @@ class PasskeysCreateHandlerTest {
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
             when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
                     .thenReturn(Result.failure(PasskeysCreateFailureReason.PASSKEY_EXISTS));
             var request =
@@ -204,7 +236,8 @@ class PasskeysCreateHandlerTest {
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
             var request =
                     passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
@@ -230,7 +263,8 @@ class PasskeysCreateHandlerTest {
                             PASSKEY_TRANSPORTS,
                             false,
                             false,
-                            false);
+                            false,
+                            -7);
             var request =
                     passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
 
@@ -260,7 +294,8 @@ class PasskeysCreateHandlerTest {
                         PASSKEY_TRANSPORTS,
                         false,
                         false,
-                        false);
+                        false,
+                        -7);
         var authorizerParams =
                 Map.<String, Object>of(
                         "principalId", "different-subject-id", "scope", "passkey-create");
@@ -289,7 +324,8 @@ class PasskeysCreateHandlerTest {
                         PASSKEY_TRANSPORTS,
                         false,
                         false,
-                        false);
+                        false,
+                        -7);
         var authorizerParams =
                 Map.<String, Object>of(
                         "principalId", PUBLIC_SUBJECT_ID, "scope", "passkey-retrieve");
@@ -313,7 +349,8 @@ class PasskeysCreateHandlerTest {
             List<String> transports,
             boolean isBackUpEligible,
             boolean isBackedUp,
-            boolean isResidentKey)
+            boolean isResidentKey,
+            Integer algorithm)
             throws Json.JsonException {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("id", id);
@@ -325,6 +362,7 @@ class PasskeysCreateHandlerTest {
         requestBody.put("isBackedUpEligible", String.valueOf(isBackUpEligible));
         requestBody.put("isBackedUp", String.valueOf(isBackedUp));
         requestBody.put("isResidentKey", String.valueOf(isResidentKey));
+        requestBody.put("algorithm", String.valueOf(algorithm));
 
         return objectMapper.writeValueAsString(requestBody);
     }

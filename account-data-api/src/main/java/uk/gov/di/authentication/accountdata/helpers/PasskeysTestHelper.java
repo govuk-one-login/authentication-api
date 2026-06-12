@@ -21,7 +21,8 @@ public class PasskeysTestHelper {
                 CommonTestVariables.PASSKEY_TRANSPORTS,
                 true,
                 false,
-                true);
+                true,
+                -7);
     }
 
     public static Passkey buildPasskeyForUser(
@@ -34,7 +35,8 @@ public class PasskeysTestHelper {
             List<String> transports,
             boolean backupEligible,
             boolean backedUp,
-            boolean isResidentKey) {
+            boolean isResidentKey,
+            int algorithm) {
         var created = LocalDateTime.now().toString();
         return new Passkey()
                 .withPublicSubjectId(publicSubjectId)
@@ -48,6 +50,7 @@ public class PasskeysTestHelper {
                 .withPasskeyTransports(transports)
                 .withPasskeyBackupEligible(backupEligible)
                 .withPasskeyBackedUp(backedUp)
-                .withPasskeyIsResidentKey(isResidentKey);
+                .withPasskeyIsResidentKey(isResidentKey)
+                .withPasskeyAlgorithm(algorithm);
     }
 }
