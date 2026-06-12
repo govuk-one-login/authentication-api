@@ -56,7 +56,8 @@ class DynamoPasskeyServiceIntegrationTest {
                             PASSKEY_TRANSPORTS,
                             true,
                             false,
-                            true);
+                            true,
+                            -7);
 
             var expectedSortKey = "PASSKEY#" + PRIMARY_PASSKEY_ID;
 
@@ -86,6 +87,7 @@ class DynamoPasskeyServiceIntegrationTest {
             assertThat(savedPasskey.getPasskeyBackupEligible(), equalTo(true));
             assertThat(savedPasskey.getPasskeyBackedUp(), equalTo(false));
             assertThat(savedPasskey.getLastUsed(), equalTo(null));
+            assertThat(savedPasskey.getPasskeyAlgorithm(), equalTo(-7));
         }
 
         @Test
@@ -124,7 +126,8 @@ class DynamoPasskeyServiceIntegrationTest {
                             PASSKEY_TRANSPORTS,
                             true,
                             false,
-                            true));
+                            true,
+                            -10));
             dynamoPasskeyService.savePasskeyIfUnique(
                     buildGenericPasskeyForUserWithSubjectId(
                             CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID,
@@ -145,6 +148,8 @@ class DynamoPasskeyServiceIntegrationTest {
                     equalTo(CommonTestVariables.SECONDARY_PASSKEY_ID));
             assertThat(primaryPasskey.getPasskeyIsAttested(), equalTo(true));
             assertThat(secondaryPasskey.getPasskeyIsAttested(), equalTo(false));
+            assertThat(primaryPasskey.getPasskeyAlgorithm(), equalTo(-7));
+            assertThat(secondaryPasskey.getPasskeyAlgorithm(), equalTo(-10));
         }
 
         @Test
