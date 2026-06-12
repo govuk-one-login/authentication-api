@@ -64,8 +64,27 @@ public class IPVTokenService {
     }
 
     public TokenResponse getToken(String authCode) {
-        var tokenRequest = constructTokenRequest(authCode);
-        return sendTokenRequest(tokenRequest);
+        int count = 0;
+        int maxTries = 2;
+        TokenResponse tokenResponse;
+        do {
+            if (count > 0) LOG.warn("Retrying IPV access token request");
+            count++;
+            // We must generate a new token request every time:
+            // private_key_jwt client auth JWTs are not reusable
+            var tokenRequest = constructTokenRequest(authCode);
+            tokenResponse = sendTokenRequest(tokenRequest);
+            if (!tokenResponse.indicatesSuccess()) {
+                HTTPResponse response = tokenResponse.toHTTPResponse();
+                LOG.warn(
+                        "Unsuccessful {} response from IPV token endpoint on attempt {}: {} ",
+                        response.getStatusCode(),
+                        count,
+                        response.getContent());
+            }
+        } while (!tokenResponse.indicatesSuccess() && count < maxTries);
+
+        return tokenResponse;
     }
 
     public TokenRequest constructTokenRequest(String authCode) {
@@ -98,23 +117,7 @@ public class IPVTokenService {
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
         try {
             LOG.info("Sending IPV token request");
-            int count = 0;
-            int maxTries = 2;
-            TokenResponse tokenResponse;
-            do {
-                if (count > 0) LOG.warn("Retrying IPV access token request");
-                count++;
-                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
-                if (!tokenResponse.indicatesSuccess()) {
-                    HTTPResponse response = tokenResponse.toHTTPResponse();
-                    LOG.warn(
-                            format(
-                                    "Unsuccessful %s response from IPV token endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
-                }
-            } while (!tokenResponse.indicatesSuccess() && count < maxTries);
-
-            return tokenResponse;
+            return TokenResponse.parse(tokenRequest.toHTTPRequest().send());
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
             throw new RuntimeException(e);

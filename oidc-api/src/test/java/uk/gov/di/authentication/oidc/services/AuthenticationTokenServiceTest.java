@@ -51,6 +51,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -84,7 +85,7 @@ class AuthenticationTokenServiceTest {
                 .thenReturn(GetPublicKeyResponse.builder().keyId(KEY_ID).build());
 
         authenticationTokenService =
-                new AuthenticationTokenService(configurationService, kmsService);
+                spy(new AuthenticationTokenService(configurationService, kmsService));
     }
 
     @Test
@@ -119,32 +120,40 @@ class AuthenticationTokenServiceTest {
     }
 
     @Test
-    void shouldRetryCallToTokenIfFirstCallFails() throws IOException {
+    void shouldRetryCallToTokenIfFirstCallFails() throws Exception {
+        signJWTWithKMS(KEY_ID);
         var tokenRequest = mock(TokenRequest.class);
+        when(authenticationTokenService.constructTokenRequest(AUTH_CODE.getValue()))
+                .thenReturn(tokenRequest);
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         when(tokenRequest.toHTTPRequest().send())
                 .thenReturn(new HTTPResponse(500))
                 .thenReturn(getSuccessfulTokenHttpResponse());
 
-        var tokenResponse = authenticationTokenService.sendTokenRequest(tokenRequest);
+        var tokenResponse = authenticationTokenService.getToken(AUTH_CODE.getValue());
 
         assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+        verify(authenticationTokenService, times(2)).constructTokenRequest(AUTH_CODE.getValue());
         verify(tokenRequest.toHTTPRequest(), times(2)).send();
     }
 
     @Test
-    void shouldReturnUnsuccessfulTokenResponseIf2CallsToTokenFail() throws IOException {
+    void shouldReturnUnsuccessfulTokenResponseIf2CallsToTokenFail() throws Exception {
+        signJWTWithKMS(KEY_ID);
         var tokenRequest = mock(TokenRequest.class);
+        when(authenticationTokenService.constructTokenRequest(AUTH_CODE.getValue()))
+                .thenReturn(tokenRequest);
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         when(tokenRequest.toHTTPRequest().send())
                 .thenReturn(new HTTPResponse(500))
                 .thenReturn(new HTTPResponse(500));
 
-        var tokenResponse = authenticationTokenService.sendTokenRequest(tokenRequest);
+        var tokenResponse = authenticationTokenService.getToken(AUTH_CODE.getValue());
 
         assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+        verify(authenticationTokenService, times(2)).constructTokenRequest(AUTH_CODE.getValue());
         verify(tokenRequest.toHTTPRequest(), times(2)).send();
     }
 

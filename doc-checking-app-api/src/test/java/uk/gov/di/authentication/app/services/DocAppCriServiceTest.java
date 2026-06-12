@@ -53,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,7 +78,7 @@ class DocAppCriServiceTest {
 
     @BeforeEach
     void setUp() throws MalformedURLException {
-        docAppCriService = new DocAppCriService(configService, kmsService, docAppCriApi);
+        docAppCriService = spy(new DocAppCriService(configService, kmsService, docAppCriApi));
         when(docAppCriApi.tokenURI()).thenReturn(TOKEN_URI);
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
@@ -91,8 +92,6 @@ class DocAppCriServiceTest {
         @Test
         void shouldConstructTokenRequest() throws JOSEException {
             signJWTWithKMS();
-            when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
-                    .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
             TokenRequest tokenRequest =
                     docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
             assertThat(tokenRequest.getEndpointURI().toString(), equalTo(TOKEN_URI.toString()));
@@ -117,8 +116,6 @@ class DocAppCriServiceTest {
             when(configService.getDocAppAudClaim()).thenReturn(newAudience);
 
             signJWTWithKMS();
-            when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
-                    .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
 
             TokenRequest tokenRequest =
                     docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
@@ -141,32 +138,40 @@ class DocAppCriServiceTest {
         }
 
         @Test
-        void shouldRetryCallToTokenIfFirstCallFails() throws IOException {
+        void shouldRetryCallToTokenIfFirstCallFails() throws Exception {
+            signJWTWithKMS();
             var tokenRequest = mock(TokenRequest.class);
+            when(docAppCriService.constructTokenRequest(AUTH_CODE.getValue()))
+                    .thenReturn(tokenRequest);
             when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
 
             when(tokenRequest.toHTTPRequest().send())
                     .thenReturn(new HTTPResponse(500))
                     .thenReturn(getSuccessfulTokenHttpResponse());
 
-            var tokenResponse = docAppCriService.sendTokenRequest(tokenRequest);
+            var tokenResponse = docAppCriService.getToken(AUTH_CODE.getValue());
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+            verify(docAppCriService, times(2)).constructTokenRequest(AUTH_CODE.getValue());
             verify(tokenRequest.toHTTPRequest(), times(2)).send();
         }
 
         @Test
-        void shouldReturnUnsuccessfulTokenResponseIf2CallsToTokenFail() throws IOException {
+        void shouldReturnUnsuccessfulTokenResponseIf2CallsToTokenFail() throws Exception {
+            signJWTWithKMS();
             var tokenRequest = mock(TokenRequest.class);
+            when(docAppCriService.constructTokenRequest(AUTH_CODE.getValue()))
+                    .thenReturn(tokenRequest);
             when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
 
             when(tokenRequest.toHTTPRequest().send())
                     .thenReturn(new HTTPResponse(500))
                     .thenReturn(new HTTPResponse(500));
 
-            var tokenResponse = docAppCriService.sendTokenRequest(tokenRequest);
+            var tokenResponse = docAppCriService.getToken(AUTH_CODE.getValue());
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+            verify(docAppCriService, times(2)).constructTokenRequest(AUTH_CODE.getValue());
             verify(tokenRequest.toHTTPRequest(), times(2)).send();
         }
 
@@ -205,6 +210,8 @@ class DocAppCriServiceTest {
                             .build();
 
             when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
+            when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
+                    .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
         }
 
         public HTTPResponse getSuccessfulTokenHttpResponse() {

@@ -64,6 +64,30 @@ public class DocAppCriService {
         this.docAppCriApi = docAppCriApi;
     }
 
+    public TokenResponse getToken(String authCode) {
+        int count = 0;
+        int maxTries = 2;
+        TokenResponse tokenResponse;
+        do {
+            if (count > 0) LOG.warn("Retrying DocApp access token request");
+            count++;
+            // We must generate a new token request every time:
+            // private_key_jwt client auth JWTs are not reusable
+            var tokenRequest = constructTokenRequest(authCode);
+            tokenResponse = sendTokenRequest(tokenRequest);
+            if (!tokenResponse.indicatesSuccess()) {
+                HTTPResponse response = tokenResponse.toHTTPResponse();
+                LOG.warn(
+                        "Unsuccessful {} response from DocApp token endpoint on attempt {}: {} ",
+                        response.getStatusCode(),
+                        count,
+                        response.getContent());
+            }
+        } while (!tokenResponse.indicatesSuccess() && count < maxTries);
+
+        return tokenResponse;
+    }
+
     public TokenRequest constructTokenRequest(String authCode) {
         LOG.info("Constructing token request");
         var codeGrant =
@@ -96,23 +120,8 @@ public class DocAppCriService {
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
         try {
-            LOG.info("Sending TokenRequest");
-            int count = 0;
-            int maxTries = 2;
-            TokenResponse tokenResponse;
-            do {
-                if (count > 0) LOG.warn("Retrying DocApp token request");
-                count++;
-                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
-                if (!tokenResponse.indicatesSuccess()) {
-                    HTTPResponse response = tokenResponse.toHTTPResponse();
-                    LOG.warn(
-                            format(
-                                    "Unsuccessful %s response from DocApp token endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
-                }
-            } while (!tokenResponse.indicatesSuccess() && count < maxTries);
-            return tokenResponse;
+            LOG.info("Sending DocApp token request");
+            return TokenResponse.parse(tokenRequest.toHTTPRequest().send());
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
             throw new RuntimeException(e);
