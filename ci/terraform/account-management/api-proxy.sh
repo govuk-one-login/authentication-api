@@ -7,22 +7,24 @@ PORT=${2:-8123}
 
 export AWS_PROFILE="${AWS_PROFILE?AWS_PROFILE environment variable must be set}"
 
+INSTANCE_NAME="${ENVIRONMENT}-am-api-proxy-host"
+
 echo "Fetching the instance ID from AWS..."
 INSTANCE_ID=$(aws ec2 describe-instances \
-  --filters "Name=tag:Name,Values=${ENVIRONMENT}-mm-api-developer-proxy" "Name=instance-state-name,Values=running" \
+  --filters "Name=tag:Name,Values=${INSTANCE_NAME}" "Name=instance-state-name,Values=running" \
   --query "Reservations[0].Instances[0].InstanceId" \
   --output text)
 
 if [ -z "${INSTANCE_ID}" ] || [ "${INSTANCE_ID}" == "None" ]; then
-  echo "No running instance found for ${ENVIRONMENT}-mm-api-developer-proxy"
+  echo "No running instance found for ${INSTANCE_NAME}"
   exit 1
 fi
 
-echo "Starting port forwarding from localhost:${PORT} to ${ENVIRONMENT} Method Management API proxy..."
+echo "Starting port forwarding from localhost:${PORT} to ${ENVIRONMENT} AM API proxy..."
 if ! aws ssm start-session \
   --target "${INSTANCE_ID}" \
-  --document-name "${ENVIRONMENT}-mm-api-developer-proxy-ssm-document" \
-  --parameters "{\"localPortNumber\":[\"${PORT}\"]}"; then
+  --document-name AWS-StartPortForwardingSession \
+  --parameters "{\"localPortNumber\":[\"${PORT}\"],\"portNumber\":[\"80\"]}"; then
 
   # shellcheck disable=SC2016
   echo 'If the session failed to start, try installing the AWS CLI Session manager plugin: `brew install session-manager-plugin`.'
