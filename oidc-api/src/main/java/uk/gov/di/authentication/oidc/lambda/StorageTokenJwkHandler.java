@@ -9,6 +9,8 @@ import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import org.crac.Core;
+import org.crac.Resource;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
@@ -24,7 +26,8 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class StorageTokenJwkHandler
-        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>,
+                Resource {
 
     private final JwksService jwksService;
     private static final Logger LOG = LogManager.getLogger(StorageTokenJwkHandler.class);
@@ -41,7 +44,22 @@ public class StorageTokenJwkHandler
 
     public StorageTokenJwkHandler() {
         this(ConfigurationService.getInstance());
+        Core.getGlobalContext().register(this);
     }
+
+    @Override
+    public void beforeCheckpoint(org.crac.Context<? extends Resource> context) throws Exception {
+        LOG.info("Executing before checkpoint");
+        this.storageTokenJwkRequestHandler();
+        // Empty key cache, so we can force the key to be re-fetched everytime
+        // the SnapStart image is restored. This allows us to fetch the key
+        // on every restore, but continue to cache it for the duration that
+        // the same lambda exists.
+        this.jwksService.emptyCache();
+    }
+
+    @Override
+    public void afterRestore(org.crac.Context<? extends Resource> context) throws Exception {}
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(

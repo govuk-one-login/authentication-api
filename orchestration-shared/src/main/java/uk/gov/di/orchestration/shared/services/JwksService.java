@@ -155,4 +155,8 @@ public class JwksService {
             throw new RuntimeException();
         }
     }
+
+    public void emptyCache() {
+        KEY_CACHE.clear();
+    }
 }
