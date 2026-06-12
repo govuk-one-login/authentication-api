@@ -34,7 +34,7 @@ import java.util.List;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSKEY_AUTHENTICATION_GENERATED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EXTENSIONS_PASSKEY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PASSKEY;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -145,7 +145,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                         .map(UserVerificationRequirement::getValue);
         var passkeyUnrestrictedPair =
                 pair(
-                        AUDIT_EXTENSIONS_PASSKEY,
+                        AUDIT_EVENT_EXTENSIONS_PASSKEY,
                         PasskeyAuthenticationAuditExtension.fromUserVerification(
                                 maybeUserVerification.orElse(AuditService.UNKNOWN)));
 
@@ -168,7 +168,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                         .orElse(List.of());
         var restrictedPasskeyPair =
                 pair(
-                        AUDIT_EXTENSIONS_PASSKEY,
+                        AUDIT_EVENT_EXTENSIONS_PASSKEY,
                         new PasskeyAuthenticationAuditRestricted(allowedCredentials),
                         true);
 

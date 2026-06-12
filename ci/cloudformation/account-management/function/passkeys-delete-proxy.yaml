@@ -30,6 +30,7 @@ Resources:
                   accountDataApiId,
                 ]
           EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -38,12 +39,20 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
       LoggingConfig:
         LogGroup: !Ref PasskeysDeleteProxyFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref UserProfileTableKmsPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
