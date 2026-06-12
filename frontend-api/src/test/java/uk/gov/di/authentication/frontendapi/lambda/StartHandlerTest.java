@@ -919,11 +919,8 @@ class StartHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-        assertFalse(authSession.getHasVerifiedPassword());
         assertFalse(authSession.getHasVerifiedWithPassword());
-        assertFalse(authSession.getHasVerifiedMfa());
         assertFalse(authSession.getHasVerifiedWithMfa());
-        assertFalse(authSession.getHasVerifiedPasskey());
         assertFalse(authSession.getHasVerifiedWithPasskey());
     }
 }

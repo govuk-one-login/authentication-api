@@ -1272,9 +1272,9 @@ class PermissionDecisionManagerTest {
                     .thenReturn(achievedCredentialTrustLevel);
             when(mockSession.getRequestedCredentialStrength())
                     .thenReturn(requiredCredentialTrustLevel);
-            when(mockSession.getHasVerifiedPasskey()).thenReturn(hasVerifiedPasskey);
-            when(mockSession.getHasVerifiedPassword()).thenReturn(hasVerifiedPassword);
-            when(mockSession.getHasVerifiedMfa()).thenReturn(hasVerifiedMfa);
+            when(mockSession.getHasVerifiedWithPasskey()).thenReturn(hasVerifiedPasskey);
+            when(mockSession.getHasVerifiedWithPassword()).thenReturn(hasVerifiedPassword);
+            when(mockSession.getHasVerifiedWithMfa()).thenReturn(hasVerifiedMfa);
 
             // Act
             var result = permissionDecisionManager.canIssueAuthCode(mockSession);

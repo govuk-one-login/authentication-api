@@ -413,7 +413,7 @@ class AccountInterventionsHandlerTest {
                         .withResetPasswordState(resetPasswordState)
                         .withResetMfaState(resetMfaState)
                         .withVerifiedMfaMethodType(usedMfaMethodType)
-                        .withHasVerifiedPasskey(hasVerifiedWithPasskey);
+                        .withHasVerifiedWithPasskey(hasVerifiedWithPasskey);
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSessionWithChanges));
 

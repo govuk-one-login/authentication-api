@@ -86,7 +86,6 @@ class UserActionsManagerTest {
             // Assert
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedPassword());
             assertTrue(capturedSession.getHasVerifiedWithPassword());
             assertTrue(result.isSuccess());
         }
@@ -105,7 +104,6 @@ class UserActionsManagerTest {
             // Assert
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedPassword());
             assertTrue(capturedSession.getHasVerifiedWithPassword());
             assertTrue(result.isSuccess());
         }
@@ -151,7 +149,6 @@ class UserActionsManagerTest {
             // Assert
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedPassword());
             assertTrue(capturedSession.getHasVerifiedWithPassword());
             assertTrue(result.isSuccess());
         }
@@ -427,7 +424,6 @@ class UserActionsManagerTest {
             // Assert
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedMfa());
             assertTrue(capturedSession.getHasVerifiedWithMfa());
             assertTrue(result.isSuccess());
         }
@@ -588,7 +584,6 @@ class UserActionsManagerTest {
             // Assert
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedMfa());
             assertTrue(capturedSession.getHasVerifiedWithMfa());
             assertTrue(result.isSuccess());
         }
@@ -608,7 +603,6 @@ class UserActionsManagerTest {
             // Assert
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
-            assertTrue(capturedSession.getHasVerifiedPasskey());
             assertTrue(capturedSession.getHasVerifiedWithPasskey());
             assertEquals(
                     CredentialTrustLevel.MEDIUM_LEVEL,
@@ -630,7 +624,6 @@ class UserActionsManagerTest {
             // Assert
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
-            assertFalse(capturedSession.getHasVerifiedPasskey());
             assertFalse(capturedSession.getHasVerifiedWithPasskey());
             assertTrue(result.isSuccess());
         }
