@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Conditions:
+  HasAcceptanceTests:
+    Fn::Or:
+      - Fn::Equals: [!Ref Environment, dev]
+      - Fn::Equals: [!Ref Environment, build]
+      - Fn::Equals: [!Ref Environment, staging]
+
+# /acceptance-tests/{env}/AM_CUCUMBER_FILTER_TAGS
+Mappings:
+  AcceptanceTestTags:
+    dev:
+      tags: >-
+        @AccountManagementAPI and not (@under-development or
+        @AcceptInternationalNumbers)
+    build:
+      tags: >-
+        @AccountManagementAPI and not (@under-development
+        or @AcceptInternationalNumbers)
+    staging:
+      tags: >-
+        @AccountManagementAPI and not (@under-development
+        or @AcceptInternationalNumbers or @new-mfa-reset-with-ipv)
+
+Resources:
+  AcceptanceTestAMCucumberFilterTags:
+    Type: AWS::SSM::Parameter
+    Condition: HasAcceptanceTests
+    Properties:
+      Name: !Sub /acceptance-tests/${Environment}/AM_CUCUMBER_FILTER_TAGS
+      Type: String
+      Value: !FindInMap
+        - AcceptanceTestTags
+        - !Ref Environment
+        - tags
+        - DefaultValue: "unused"
