@@ -20,7 +20,8 @@ public record PasskeysRetrieveResponse(
             @SerializedName("isBackedUp") @Expose @Required boolean isBackedUp,
             @SerializedName("isResidentKey") @Expose @Required boolean isResidentKey,
             @SerializedName("createdAt") @Expose @Required String createdAt,
-            @SerializedName("lastUsedAt") @Expose String lastUsedAt) {}
+            @SerializedName("lastUsedAt") @Expose String lastUsedAt,
+            @SerializedName("algorithm") @Expose @Required int algorithm) {}
 
     public static PasskeyResponse from(Passkey passkey) {
         return new PasskeyResponse(
@@ -34,6 +35,7 @@ public record PasskeysRetrieveResponse(
                 passkey.getPasskeyBackedUp(),
                 passkey.getPasskeyIsResidentKey(),
                 passkey.getCreated(),
-                passkey.getLastUsed());
+                passkey.getLastUsed(),
+                passkey.getPasskeyAlgorithm());
     }
 }

@@ -72,7 +72,8 @@ class PasskeysRetrieveProxyHandlerIntegrationTest extends ApiGatewayHandlerInteg
                       "isBackupEligible": true,
                       "isBackedUp": true,
                       "createdAt": "some-timestamp",
-                      "lastUsedAt": "another-timestamp"
+                      "lastUsedAt": "another-timestamp",
+                      "algorithm": -7
                     }
                   ]
                 }
