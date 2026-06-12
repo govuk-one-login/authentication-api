@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "HostedZoneID",
+    "ParameterValue": "Z00708333PQTWOVF0F769"
+  },
+  {
+    "ParameterKey": "DomainName",
+    "ParameterValue": "oidc-orch.build.account.gov.uk"
+  }
+]
