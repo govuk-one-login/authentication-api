@@ -41,20 +41,6 @@ Resources:
               - kms:GenerateDataKey
               - kms:Decrypt
             Resource: "*"
-          - Sid: AllowTxmaAccessToKmsAuditEncryptionKey
-            Effect: Allow
-            Principal:
-              AWS: !Sub
-                - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
-                - env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-            Action:
-              - kms:Decrypt
-            Resource: "*"
 
   PendingPhoneCheckQueueEncryptionKeyAlias:
     Type: AWS::KMS::Alias
@@ -172,23 +158,6 @@ Resources:
               - sqs:ChangeMessageVisibility
               - sqs:DeleteMessage
               - sqs:GetQueueAttributes
-            Resource: !GetAtt ExperianPhoneCheckQueue.Arn
-          - Sid: AllowTXMAAcctCrossAccountAccess
-            Effect: Allow
-            Principal:
-              AWS: !Sub
-                - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
-                - env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-            Action:
-              - sqs:ChangeMessageVisibility
-              - sqs:DeleteMessage
-              - sqs:GetQueueAttributes
-              - sqs:ReceiveMessage
             Resource: !GetAtt ExperianPhoneCheckQueue.Arn
 
   ExperianPhoneCheckDlQueuePolicy:
