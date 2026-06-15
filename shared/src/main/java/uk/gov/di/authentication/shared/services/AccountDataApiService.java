@@ -16,6 +16,7 @@ import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException.httpResponseCodeException;
 import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException.interruptedException;
 import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException.ioException;
 import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException.timeoutException;
@@ -41,6 +42,10 @@ public class AccountDataApiService {
             throws Json.JsonException, UnsuccessfulAccountDataApiResponseException {
         try {
             var response = retrievePasskeysAsJson(publicSubjectId, token);
+            if (response.statusCode() != 200) {
+                LOG.error("Failed to get successful response from retrieve passkeys");
+                throw httpResponseCodeException(response.statusCode(), response.body());
+            }
             return serializationService.readValue(
                     response.body(), PasskeysRetrieveResponse.class, true);
         } catch (Json.JsonException e) {

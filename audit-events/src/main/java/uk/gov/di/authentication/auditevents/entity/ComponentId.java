@@ -1,7 +1,8 @@
 package uk.gov.di.authentication.auditevents.entity;
 
 public enum ComponentId {
-    AUTH("AUTH");
+    AUTH("AUTH"),
+    HOME("HOME");
 
     private final String value;
 

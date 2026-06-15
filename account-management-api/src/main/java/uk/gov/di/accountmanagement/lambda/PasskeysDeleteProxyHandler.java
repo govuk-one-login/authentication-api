@@ -11,23 +11,37 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.PasskeysDeleteProxyFailureReason;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyDeleteSuccessful;
+import uk.gov.di.authentication.auditevents.entity.ComponentId;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
+import java.time.Clock;
+import java.util.Map;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY_CREDENTIAL_ID;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class PasskeysDeleteProxyHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -38,6 +52,8 @@ public class PasskeysDeleteProxyHandler
     private final SerializationService serializationService = SerializationService.getInstance();
     private final AwsSqsClient sqsClient;
     private final DynamoService dynamoService;
+    private final AuditService auditService;
+    private final StructuredAuditService structuredAuditService;
 
     public PasskeysDeleteProxyHandler() {
         this(ConfigurationService.getInstance());
@@ -52,17 +68,23 @@ public class PasskeysDeleteProxyHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.dynamoService = new DynamoService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     public PasskeysDeleteProxyHandler(
             ConfigurationService configurationService,
             AccountDataApiService accountDataApiService,
             AwsSqsClient sqsClient,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            AuditService auditService,
+            StructuredAuditService structuredAuditService) {
         this.configurationService = configurationService;
         this.accountDataApiService = accountDataApiService;
         this.sqsClient = sqsClient;
         this.dynamoService = dynamoService;
+        this.auditService = auditService;
+        this.structuredAuditService = structuredAuditService;
     }
 
     @Override
@@ -80,20 +102,35 @@ public class PasskeysDeleteProxyHandler
 
         PasskeysDeleteRequest request = extractPasskeyDeleteRequest(input);
 
-        var userEmailResult = getUserEmailFromPublicSubjectId(request.publicSubjectId);
-        if (userEmailResult.isFailure()) {
+        var userProfileResult = getUserProfile(request.publicSubjectId);
+        if (userProfileResult.isFailure()) {
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
-        var userEmail = userEmailResult.getSuccess();
+        var userProfile = userProfileResult.getSuccess();
+        var userEmail = userProfile.getEmail();
+
+        var auditContextResult =
+                accountManagementAuditContext(
+                        configurationService, dynamoService, input, userProfile);
+        if (auditContextResult.isFailure()) {
+            LOG.error(
+                    "Error when building audit context with error code {}. No events raised",
+                    auditContextResult.getFailure());
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
+        }
+        var auditContext = auditContextResult.getSuccess();
 
         var currentPasskeyCountResult = getPasskeyCount(request);
         if (currentPasskeyCountResult.isFailure()) {
+            emitFailedAuditEvent(auditContext, request);
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
         var currentPasskeyCount = currentPasskeyCountResult.getSuccess();
 
         var deletePasskeyResponseResult = deletePasskey(request);
         if (deletePasskeyResponseResult.isFailure()) {
+            emitFailedAuditEvent(auditContext, request);
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
         HttpResponse<String> deletePasskeyResponse = deletePasskeyResponseResult.getSuccess();
@@ -107,7 +144,9 @@ public class PasskeysDeleteProxyHandler
                     "Passkey Deleted Email notification not sent because delete passkey response was {} for Public Subject ID {}",
                     deletePasskeyResponse.statusCode(),
                     request.publicSubjectId);
+            emitFailedAuditEvent(auditContext, request);
         } else {
+            emitSuccessAuditEvent(auditContext, request, currentPasskeyCount);
             sendEmailNotification(request, userEmail, currentPasskeyCount);
         }
 
@@ -138,7 +177,7 @@ public class PasskeysDeleteProxyHandler
         return new PasskeysDeleteRequest(publicSubjectId, token, passkeyIdentifier, userLanguage);
     }
 
-    private Result<PasskeysDeleteProxyFailureReason, String> getUserEmailFromPublicSubjectId(
+    private Result<PasskeysDeleteProxyFailureReason, UserProfile> getUserProfile(
             String publicSubjectId) {
         var userProfile = dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
 
@@ -147,7 +186,7 @@ public class PasskeysDeleteProxyHandler
             return Result.failure(PasskeysDeleteProxyFailureReason.FAILED_TO_FIND_USER_PROFILE);
         }
 
-        return Result.success(userProfile.get().getEmail());
+        return Result.success(userProfile.get());
     }
 
     private Result<PasskeysDeleteProxyFailureReason, Integer> getPasskeyCount(
@@ -196,6 +235,35 @@ public class PasskeysDeleteProxyHandler
                 "Notify request sent with notification type '{}' and publicSubjectId '{}'",
                 notificationType,
                 request.publicSubjectId);
+    }
+
+    private void emitSuccessAuditEvent(
+            AuditContext auditContext, PasskeysDeleteRequest request, int currentPasskeyCount) {
+        var newPasskeyCount = currentPasskeyCount - 1;
+        var passkeyId = request.passkeyId;
+
+        var event =
+                AuthPasskeyDeleteSuccessful.create(
+                        auditContext, newPasskeyCount, passkeyId, Clock.systemUTC());
+
+        structuredAuditService.submitAuditEvent(event);
+    }
+
+    private void emitFailedAuditEvent(AuditContext auditContext, PasskeysDeleteRequest request) {
+        var restrictedPasskeyPair =
+                pair(
+                        AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY,
+                        Map.of(
+                                AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY_CREDENTIAL_ID,
+                                request.passkeyId),
+                        true);
+
+        auditService.submitAuditEvent(
+                AUTH_PASSKEY_DELETE_FAILED,
+                auditContext,
+                ComponentId.HOME.getValue(),
+                ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR,
+                restrictedPasskeyPair);
     }
 
     private record PasskeysDeleteRequest(
