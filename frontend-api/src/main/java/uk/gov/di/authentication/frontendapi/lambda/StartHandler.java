@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.mfaRequired;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
@@ -299,7 +300,8 @@ public class StartHandler
                             reauthenticate,
                             isBlockedForReauth,
                             isUserAuthenticatedWithValidProfile,
-                            upliftRequired);
+                            upliftRequired,
+                            mfaRequired(requestedCredentialTrustLevel));
 
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
