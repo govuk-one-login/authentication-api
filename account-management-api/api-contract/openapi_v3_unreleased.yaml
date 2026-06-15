@@ -10,7 +10,6 @@ paths:
     post:
       security:
         - authorise-access-token: []
-        - {}
       x-amazon-apigateway-integration:
         type: "aws_proxy"
         httpMethod: "POST"
