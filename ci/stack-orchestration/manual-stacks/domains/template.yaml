@@ -44,6 +44,12 @@ Parameters:
     AllowedValues:
       - "Yes"
       - "No"
+  CloudfrontTxtRecordValue:
+    # See: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/alternate-domain-names-move-create-target.html
+    Description: >
+      (Optional) A value to provide to create a TXT record of the format "_oidc.account.gov.uk TXT 'CloudfrontTxtRecordValue' "
+    Type: String
+    Default: "none"
 
 Conditions:
   DeployDevSubDomains:
@@ -52,6 +58,8 @@ Conditions:
       !Equals [!Ref DeploySubEnvDomains, "Yes"],
     ]
   DeployCertificate: !Equals [!Ref DeployCertificate, "Yes"]
+  CreateCloudFrontTxtRecord:
+    !Not [!Equals [!Ref CloudfrontTxtRecordValue, "none"]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -168,6 +176,16 @@ Resources:
       Name: !Sub "/deploy/hosted-zone/oidc${EndpointSuffix}/certificate-Arn"
       Type: String
       Value: !Ref OidcHostedZoneRootCertificate
+
+  OidcDomainValidationTxtRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Sub "_oidc.${DomainSuffix}" # See https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/alternate-domain-names-move-create-target.html
+      Type: TXT
+      HostedZoneId: !Ref OidcHostedZone
+      ResourceRecords:
+        - !Sub '"${CloudfrontTxtRecordValue}"' # Needs quotes as it's YAML and we need the record to be "d111111abcdef8.cloudfront.net"
+      TTL: 900
 
   Orchdev1HostedZone:
     Condition: DeployDevSubDomains
