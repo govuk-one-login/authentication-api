@@ -25,7 +25,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up SAM cli
         uses: aws-actions/setup-sam@89ddb14d60e682855e3fea4be85b3c56485de310 # v2
@@ -34,7 +34,7 @@ jobs:
           version: 1.159.1
 
       - name: Set up AWS creds
-        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ secrets.ORCH_GH_ACTIONS_ROLE_ARN }}
           aws-region: eu-west-2
@@ -52,7 +52,7 @@ jobs:
           sam build --parallel
 
       - name: Deploy SAM app
-        uses: govuk-one-login/devplatform-upload-action@5879c30205266ad61e8299a4fcea76364530c9c1 # v3.8
+        uses: govuk-one-login/devplatform-upload-action@64e46134b4108ebfa1cf2a64fee00782f8e2e8cf # v3.8
         with:
           artifact-bucket-name: ${{ secrets.ORCH_ARTIFACT_BUCKET_NAME }}
           signing-profile-name: ${{ secrets.ORCH_SIGNING_PROFILE_NAME }}
