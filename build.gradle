@@ -86,6 +86,10 @@ subprojects {
                     because 'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
                 }
 
+                classpath('io.netty:netty-resolver-dns:[4.2.15.Final,5.0)') {
+                    because 'CVE-2026-45674 is fixed in io.netty:netty-resolver-dns:4.2.15.Final and higher'
+                }
+
                 // Apache Commons constraints
                 classpath('commons-beanutils:commons-beanutils:[1.11.0,)') {
                     because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
@@ -169,6 +173,10 @@ subprojects {
 
                     add(conf.name, 'io.netty:netty-handler-proxy:[4.1.133.Final,4.2.0)') {
                         because 'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
+                    }
+
+                    add(conf.name, 'io.netty:netty-resolver-dns:[4.2.15.Final,5.0)') {
+                        because 'CVE-2026-45674 is fixed in io.netty:netty-resolver-dns:4.2.15.Final and higher'
                     }
 
                     // Jetty constraints
