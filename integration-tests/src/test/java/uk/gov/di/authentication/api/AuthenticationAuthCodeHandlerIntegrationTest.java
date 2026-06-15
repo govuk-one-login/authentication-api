@@ -153,7 +153,6 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         authSessionExtension.addAchievedCredentialTrustToSession(
                 sessionId, CredentialTrustLevel.LOW_LEVEL);
         var session = authSessionExtension.getSession(sessionId).orElseThrow();
-        session.setHasVerifiedPassword(true);
         session.setHasVerifiedWithPassword(true);
         authSessionExtension.updateSession(session);
         return sessionId;

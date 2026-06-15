@@ -1262,9 +1262,9 @@ class PermissionDecisionManagerTest {
         void shouldReturnCorrectAssessmentForDifferentSessions(
                 CredentialTrustLevel achievedCredentialTrustLevel,
                 CredentialTrustLevel requiredCredentialTrustLevel,
-                boolean hasVerifiedPasskey,
-                boolean hasVerifiedPassword,
-                boolean hasVerifiedMfa,
+                boolean hasVerifiedWithPasskey,
+                boolean hasVerifiedWithPassword,
+                boolean hasVerifiedWithMfa,
                 boolean shouldIssueAuthCode) {
             // Arrange
             var mockSession = mock(AuthSessionItem.class);
@@ -1272,9 +1272,9 @@ class PermissionDecisionManagerTest {
                     .thenReturn(achievedCredentialTrustLevel);
             when(mockSession.getRequestedCredentialStrength())
                     .thenReturn(requiredCredentialTrustLevel);
-            when(mockSession.getHasVerifiedWithPasskey()).thenReturn(hasVerifiedPasskey);
-            when(mockSession.getHasVerifiedWithPassword()).thenReturn(hasVerifiedPassword);
-            when(mockSession.getHasVerifiedWithMfa()).thenReturn(hasVerifiedMfa);
+            when(mockSession.getHasVerifiedWithPasskey()).thenReturn(hasVerifiedWithPasskey);
+            when(mockSession.getHasVerifiedWithPassword()).thenReturn(hasVerifiedWithPassword);
+            when(mockSession.getHasVerifiedWithMfa()).thenReturn(hasVerifiedWithMfa);
 
             // Act
             var result = permissionDecisionManager.canIssueAuthCode(mockSession);

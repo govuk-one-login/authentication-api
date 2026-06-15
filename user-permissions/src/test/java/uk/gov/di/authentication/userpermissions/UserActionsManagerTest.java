@@ -76,7 +76,7 @@ class UserActionsManagerTest {
     @Nested
     class CreatedPasswordOperations {
         @Test
-        void passwordCreatedShouldSetHasVerifiedPasswordToTrue() {
+        void passwordCreatedShouldSetHasVerifiedWithPasswordToTrue() {
             // Arrange
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
@@ -94,7 +94,7 @@ class UserActionsManagerTest {
     @Nested
     class CorrectPasswordReceivedOperations {
         @Test
-        void correctPasswordReceivedShouldSetHasVerifiedPasswordToTrue() {
+        void correctPasswordReceivedShouldSetHasVerifiedWithPasswordToTrue() {
             // Arrange
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
@@ -139,7 +139,7 @@ class UserActionsManagerTest {
         }
 
         @Test
-        void passwordResetShouldSetHasVerifiedPasswordToTrue() {
+        void passwordResetShouldSetHasVerifiedWithPasswordToTrue() {
             // Arrange
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
@@ -414,7 +414,7 @@ class UserActionsManagerTest {
     @Nested
     class CorrectSmsOtpReceived {
         @Test
-        void correctSmsOtpReceivedShouldSetHasVerifiedMfaToTrue() {
+        void correctSmsOtpReceivedShouldSetHasVerifiedWithMfaToTrue() {
             // Arrange
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
@@ -574,7 +574,7 @@ class UserActionsManagerTest {
     @Nested
     class CorrectAuthAppOtpReceived {
         @Test
-        void correctAuthAppOtpReceivedShouldSetHasVerifiedMfaToTrue() {
+        void correctAuthAppOtpReceivedShouldSetHasVerifiedWithMfaToTrue() {
             // Arrange
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
@@ -593,7 +593,7 @@ class UserActionsManagerTest {
     class CorrectPasskeyReceived {
         @Test
         void
-                correctPasskeyReceivedShouldSetHasVerifiedPasskeyToTrueAndCredentialStrengthToMedium() {
+                correctPasskeyReceivedShouldSetHasVerifiedWithPasskeyToTrueAndCredentialStrengthToMedium() {
             // Arrange
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 
@@ -614,7 +614,7 @@ class UserActionsManagerTest {
     @Nested
     class IncorrectPasskeyReceived {
         @Test
-        void incorrectPasskeyReceivedShouldSetHasVerifiedPasskeyToFalse() {
+        void incorrectPasskeyReceivedShouldSetHasVerifiedWithPasskeyToFalse() {
             // Arrange
             ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
 

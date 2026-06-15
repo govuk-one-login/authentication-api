@@ -901,11 +901,8 @@ class StartHandlerTest {
                         .withSessionId(SESSION_ID)
                         .withClientId(CLIENT_ID)
                         .withInternalCommonSubjectId(TEST_SUBJECT_ID)
-                        .withHasVerifiedPassword(true)
                         .withHasVerifiedWithPassword(true)
-                        .withHasVerifiedMfa(true)
                         .withHasVerifiedWithMfa(true)
-                        .withHasVerifiedPasskey(true)
                         .withHasVerifiedWithPasskey(true);
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
                 .thenReturn(authSession);

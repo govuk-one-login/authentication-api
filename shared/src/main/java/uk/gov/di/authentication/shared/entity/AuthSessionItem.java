@@ -44,9 +44,6 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_SUBJECT_TYPE = "SubjectType";
     public static final String ATTRIBUTE_RP_SECTOR_IDENTIFIER_HOST = "RpSectorIdentifierHost";
     public static final String ATTRIBUTE_PASSKEY_ASSERTION_REQUEST = "PasskeyAssertionRequest";
-    public static final String ATTRIBUTE_HAS_VERIFIED_PASSWORD = "HasVerifiedPassword";
-    public static final String ATTRIBUTE_HAS_VERIFIED_MFA = "HasVerifiedMfa";
-    public static final String ATTRIBUTE_HAS_VERIFIED_PASSKEY = "HasVerifiedPasskey";
     public static final String ATTRIBUTE_HAS_VERIFIED_WITH_PASSWORD = "HasVerifiedWithPassword";
     public static final String ATTRIBUTE_HAS_VERIFIED_WITH_MFA = "HasVerifiedWithMfa";
     public static final String ATTRIBUTE_HAS_VERIFIED_WITH_PASSKEY = "HasVerifiedWithPasskey";
@@ -94,9 +91,6 @@ public class AuthSessionItem {
     private String subjectType;
     private String rpSectorIdentifierHost;
     private String passkeyAssertionRequest;
-    private boolean hasVerifiedPassword;
-    private boolean hasVerifiedMfa;
-    private boolean hasVerifiedPasskey;
     private boolean hasVerifiedWithPassword;
     private boolean hasVerifiedWithMfa;
     private boolean hasVerifiedWithPasskey;
@@ -506,20 +500,6 @@ public class AuthSessionItem {
         return this;
     }
 
-    @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_PASSWORD)
-    public boolean getHasVerifiedPassword() {
-        return hasVerifiedPassword;
-    }
-
-    public void setHasVerifiedPassword(boolean hasVerifiedPassword) {
-        this.hasVerifiedPassword = hasVerifiedPassword;
-    }
-
-    public AuthSessionItem withHasVerifiedPassword(boolean hasVerifiedPassword) {
-        this.hasVerifiedPassword = hasVerifiedPassword;
-        return this;
-    }
-
     @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_WITH_PASSWORD)
     public boolean getHasVerifiedWithPassword() {
         return hasVerifiedWithPassword;
@@ -534,20 +514,6 @@ public class AuthSessionItem {
         return this;
     }
 
-    @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_MFA)
-    public boolean getHasVerifiedMfa() {
-        return hasVerifiedMfa;
-    }
-
-    public void setHasVerifiedMfa(boolean hasVerifiedMfa) {
-        this.hasVerifiedMfa = hasVerifiedMfa;
-    }
-
-    public AuthSessionItem withHasVerifiedMfa(boolean hasVerifiedMfa) {
-        this.hasVerifiedMfa = hasVerifiedMfa;
-        return this;
-    }
-
     @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_WITH_MFA)
     public boolean getHasVerifiedWithMfa() {
         return hasVerifiedWithMfa;
@@ -559,20 +525,6 @@ public class AuthSessionItem {
 
     public AuthSessionItem withHasVerifiedWithMfa(boolean hasVerifiedWithMfa) {
         this.hasVerifiedWithMfa = hasVerifiedWithMfa;
-        return this;
-    }
-
-    @DynamoDbAttribute(ATTRIBUTE_HAS_VERIFIED_PASSKEY)
-    public boolean getHasVerifiedPasskey() {
-        return hasVerifiedPasskey;
-    }
-
-    public void setHasVerifiedPasskey(boolean hasVerifiedPasskey) {
-        this.hasVerifiedPasskey = hasVerifiedPasskey;
-    }
-
-    public AuthSessionItem withHasVerifiedPasskey(boolean hasVerifiedPasskey) {
-        this.hasVerifiedPasskey = hasVerifiedPasskey;
         return this;
     }
 
@@ -625,12 +577,6 @@ public class AuthSessionItem {
                 + internalCommonSubjectId
                 + "', upliftRequired = '"
                 + upliftRequired
-                + "', hasVerifiedPassword = '"
-                + hasVerifiedPassword
-                + "', hasVerifiedMfa = '"
-                + hasVerifiedMfa
-                + "', hasVerifiedPasskey = '"
-                + hasVerifiedPasskey
                 + "', hasVerifiedWithPassword = '"
                 + hasVerifiedWithPassword
                 + "', hasVerifiedWithMfa = '"
