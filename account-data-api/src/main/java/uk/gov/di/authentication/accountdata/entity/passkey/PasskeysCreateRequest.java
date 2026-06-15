@@ -8,11 +8,12 @@ import java.util.List;
 
 public record PasskeysCreateRequest(
         @SerializedName("id") @Expose @Required String passkeyId,
-        @SerializedName("credential") @Expose @Required String credential,
-        @SerializedName("aaguid") @Expose @Required String aaguid,
-        @SerializedName("isAttested") @Expose @Required boolean isAttested,
-        @SerializedName("signCount") @Expose @Required int signCount,
-        @SerializedName("transports") @Expose @Required List<String> transports,
-        @SerializedName("isBackUpEligible") @Expose @Required boolean isBackUpEligible,
-        @SerializedName("isBackedUp") @Expose @Required boolean isBackedUp,
-        @SerializedName("isResidentKey") @Expose @Required boolean isResidentKey) {}
+        @Expose @Required String credential,
+        @Expose @Required String aaguid,
+        @Expose @Required boolean isAttested,
+        @Expose @Required int signCount,
+        @Expose @Required List<String> transports,
+        @Expose @Required boolean isBackUpEligible,
+        @Expose @Required boolean isBackedUp,
+        @Expose @Required boolean isResidentKey,
+        @Expose @Required int algorithm) {}

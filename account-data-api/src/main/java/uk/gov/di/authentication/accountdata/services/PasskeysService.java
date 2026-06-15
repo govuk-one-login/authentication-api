@@ -50,7 +50,8 @@ public class PasskeysService {
                         .withPasskeyTransports(passkeysCreateRequest.transports())
                         .withPasskeyBackupEligible(passkeysCreateRequest.isBackUpEligible())
                         .withPasskeyBackedUp(passkeysCreateRequest.isBackedUp())
-                        .withPasskeyIsResidentKey(passkeysCreateRequest.isResidentKey());
+                        .withPasskeyIsResidentKey(passkeysCreateRequest.isResidentKey())
+                        .withPasskeyAlgorithm(passkeysCreateRequest.algorithm());
 
         var result = dynamoPasskeyService.savePasskeyIfUnique(passkey);
 
