@@ -107,14 +107,18 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartInfo() {
         return Stream.of(
-                Arguments.of("some-cookie-consent", null, false),
-                Arguments.of(null, "ga-tracking-id", true));
+                Arguments.of("some-cookie-consent", null, false, false),
+                Arguments.of(null, "ga-tracking-id", true, false),
+                Arguments.of("some-cookie-consent", "ga-tracking-id", false, true));
     }
 
     @ParameterizedTest
     @MethodSource("userStartInfo")
     void shouldCreateUserStartInfo(
-            String cookieConsent, String gaTrackingId, boolean isAuthenticated) {
+            String cookieConsent,
+            String gaTrackingId,
+            boolean isAuthenticated,
+            boolean isMfaRequired) {
         var userContext =
                 buildUserContext(
                         Optional.of(
@@ -131,7 +135,8 @@ class StartServiceTest {
                         false,
                         false,
                         isAuthenticated,
-                        false);
+                        false,
+                        isMfaRequired);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -139,6 +144,7 @@ class StartServiceTest {
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(gaTrackingId));
         assertThat(userStartInfo.isAuthenticated(), equalTo(isAuthenticated));
         assertThat(userStartInfo.isBlockedForReauth(), equalTo(false));
+        assertThat(userStartInfo.isMfaRequired(), equalTo(isMfaRequired));
     }
 
     @ParameterizedTest
@@ -156,6 +162,7 @@ class StartServiceTest {
                         true,
                         false,
                         isBlockedForReauth,
+                        false,
                         false,
                         false);
 
@@ -275,6 +282,7 @@ class StartServiceTest {
                         true,
                         false,
                         true,
+                        false,
                         false);
 
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
@@ -303,7 +311,8 @@ class StartServiceTest {
                         false,
                         false,
                         false,
-                        upliftRequired);
+                        upliftRequired,
+                        false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
     }
@@ -368,7 +377,15 @@ class StartServiceTest {
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "true", "tracking-id", true, false, false, false, false);
+                        userContext,
+                        "true",
+                        "tracking-id",
+                        true,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false);
 
         assertThat(userStartInfo.mfaMethodType(), equalTo(expectedMfaMethodType));
     }
@@ -385,7 +402,15 @@ class StartServiceTest {
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "true", "tracking-id", true, false, false, false, false);
+                        userContext,
+                        "true",
+                        "tracking-id",
+                        true,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false);
 
         assertThat(userStartInfo.mfaMethodType(), equalTo(MFAMethodType.NONE));
     }

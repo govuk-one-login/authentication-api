@@ -80,11 +80,17 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static Stream<Arguments> successfulRequests() {
         return Stream.of(
-                Arguments.of(Optional.empty(), MEDIUM_LEVEL, false, false),
-                Arguments.of(Optional.empty(), MEDIUM_LEVEL, false, true),
-                Arguments.of(Optional.of(LevelOfConfidence.NONE), MEDIUM_LEVEL, false, false),
+                Arguments.of(Optional.empty(), MEDIUM_LEVEL, false, false, true),
+                Arguments.of(Optional.empty(), MEDIUM_LEVEL, false, true, true),
+                Arguments.of(Optional.of(LevelOfConfidence.NONE), MEDIUM_LEVEL, false, false, true),
                 Arguments.of(
-                        Optional.of(LevelOfConfidence.MEDIUM_LEVEL), MEDIUM_LEVEL, true, false));
+                        Optional.of(LevelOfConfidence.MEDIUM_LEVEL),
+                        MEDIUM_LEVEL,
+                        true,
+                        false,
+                        true),
+                Arguments.of(
+                        Optional.of(LevelOfConfidence.LOW_LEVEL), LOW_LEVEL, true, false, false));
     }
 
     @ParameterizedTest
@@ -93,7 +99,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<LevelOfConfidence> requestedLevelOfConfidenceOpt,
             CredentialTrustLevel requestedCredentialTrustLevel,
             boolean identityRequired,
-            boolean isAuthenticated)
+            boolean isAuthenticated,
+            boolean isMfaRequired)
             throws Json.JsonException {
         String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
@@ -131,9 +138,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "cookieConsent":null,
                 "gaCrossDomainTrackingId":null,
                 "mfaMethodType":null,
-                "isBlockedForReauth":false}
+                "isBlockedForReauth":false,
+                "mfaRequired":%b}
                 """,
-                        identityRequired, isAuthenticated);
+                        identityRequired, isAuthenticated, isMfaRequired);
 
         var client =
                 format(

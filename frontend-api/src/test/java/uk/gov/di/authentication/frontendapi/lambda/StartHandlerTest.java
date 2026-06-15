@@ -182,7 +182,7 @@ class StartHandlerTest {
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
             throws Json.JsonException {
         var isAuthenticated = false;
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
@@ -223,7 +223,7 @@ class StartHandlerTest {
             throws Json.JsonException {
         var isAuthenticated = false;
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
 
         // This should not be called. Setup here is to ensure that the feature flag is determining
         // this test's behaviour
@@ -243,7 +243,7 @@ class StartHandlerTest {
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
         var isAuthenticated = false;
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
@@ -278,7 +278,7 @@ class StartHandlerTest {
     @Test
     void shouldConsiderUserNotAuthenticatedWhenUserProfileNotPresent() throws Json.JsonException {
         withNoUserProfilePresent();
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
@@ -297,13 +297,14 @@ class StartHandlerTest {
                         anyBoolean(),
                         anyBoolean(),
                         eq(false),
+                        anyBoolean(),
                         anyBoolean());
     }
 
     @Test
     void considersUserAuthenticatedWhenUserProfilePresent() throws Json.JsonException {
         withUserProfilePresent();
-        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
@@ -322,6 +323,7 @@ class StartHandlerTest {
                         anyBoolean(),
                         anyBoolean(),
                         eq(true),
+                        anyBoolean(),
                         anyBoolean());
     }
 
@@ -332,7 +334,7 @@ class StartHandlerTest {
         var isAuthenticated = true;
         useValidSession();
         var userStartInfo =
-                new UserStartInfo(false, false, isAuthenticated, null, null, null, false);
+                new UserStartInfo(false, false, isAuthenticated, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
 
         var event =
@@ -388,7 +390,7 @@ class StartHandlerTest {
             int expectedOtpAttemptCount,
             String expectedFailureReason)
             throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true);
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
@@ -469,7 +471,7 @@ class StartHandlerTest {
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
         return new UserStartInfo(
-                false, false, true, cookieConsent, gaCrossDomainTrackingId, null, false);
+                false, false, true, cookieConsent, gaCrossDomainTrackingId, null, false, false);
     }
 
     private void usingStartServiceThatReturns(
@@ -482,6 +484,7 @@ class StartHandlerTest {
                         eq(userContext),
                         any(),
                         any(),
+                        anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
@@ -611,7 +614,7 @@ class StartHandlerTest {
 
     @Test
     void shouldHandleReauthWithBlockedCountTypesButNoSubjectId() throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, true);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, true, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
 
@@ -695,7 +698,7 @@ class StartHandlerTest {
 
     @Test
     void shouldHandleEmptyPreviousSigninJourneyIdInReauth() throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
@@ -720,7 +723,7 @@ class StartHandlerTest {
 
     @Test
     void shouldHandleEmptyRpPairwiseIdInReauth() throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
@@ -748,7 +751,7 @@ class StartHandlerTest {
     @Test
     void shouldHandleNullPreviousSigninJourneyIdAndRpPairwiseIdInReauth()
             throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
@@ -767,7 +770,7 @@ class StartHandlerTest {
 
     @Test
     void shouldHandleReauthWithNullReauthenticateHeader() throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
@@ -790,7 +793,7 @@ class StartHandlerTest {
 
     @Test
     void shouldHandleNullFailureReasonInCloudwatchMetrics() throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true);
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
@@ -826,7 +829,7 @@ class StartHandlerTest {
 
     @Test
     void shouldHandleReauthWhenAttemptsServiceDisabled() throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled())
                 .thenReturn(false); // Disabled
@@ -909,7 +912,7 @@ class StartHandlerTest {
                         .withHasVerifiedWithPasskey(true);
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
                 .thenReturn(authSession);
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
@@ -922,5 +925,70 @@ class StartHandlerTest {
         assertFalse(authSession.getHasVerifiedWithPassword());
         assertFalse(authSession.getHasVerifiedWithMfa());
         assertFalse(authSession.getHasVerifiedWithPasskey());
+    }
+
+    private static Stream<Arguments> credentialTrustLevelToMfaRequired() {
+        return Stream.of(
+                Arguments.of(CredentialTrustLevel.LOW_LEVEL, false),
+                Arguments.of(CredentialTrustLevel.MEDIUM_LEVEL, true));
+    }
+
+    @ParameterizedTest
+    @MethodSource("credentialTrustLevelToMfaRequired")
+    void shouldReturnCorrectIsMfaRequiredForCredentialTrustLevel(
+            CredentialTrustLevel credentialTrustLevel, boolean expectedMfaRequired)
+            throws Json.JsonException {
+        // Arrange
+        useValidSession();
+        var userStartInfo =
+                new UserStartInfo(
+                        false, false, false, null, null, null, false, expectedMfaRequired);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+
+        var body =
+                objectMapper.writeValueAsString(
+                        new StartRequest(
+                                null,
+                                null,
+                                null,
+                                false,
+                                COOKIE_CONSENT,
+                                null,
+                                credentialTrustLevel.getValue(),
+                                LevelOfConfidence.NONE.getValue(),
+                                STATE.toString(),
+                                TEST_CLIENT_ID,
+                                REDIRECT_URL.toString(),
+                                SCOPE.toString(),
+                                CLIENT_NAME,
+                                ServiceType.MANDATORY.toString(),
+                                false,
+                                false,
+                                false,
+                                TEST_SUBJECT_TYPE,
+                                false,
+                                TEST_RP_SUBJECT_ID_HOST));
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+
+        var response = objectMapper.readValue(result.getBody(), StartResponse.class);
+        assertThat(response.user().isMfaRequired(), equalTo(expectedMfaRequired));
+
+        verify(startService)
+                .buildUserStartInfo(
+                        any(),
+                        any(),
+                        any(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        eq(expectedMfaRequired));
     }
 }

@@ -12,4 +12,5 @@ public record UserStartInfo(
         @SerializedName("cookieConsent") @Expose String cookieConsent,
         @SerializedName("gaCrossDomainTrackingId") @Expose String gaCrossDomainTrackingId,
         @SerializedName("mfaMethodType") @Expose MFAMethodType mfaMethodType,
-        @SerializedName("isBlockedForReauth") @Expose boolean isBlockedForReauth) {}
+        @SerializedName("isBlockedForReauth") @Expose boolean isBlockedForReauth,
+        @SerializedName("mfaRequired") @Expose boolean isMfaRequired) {}
