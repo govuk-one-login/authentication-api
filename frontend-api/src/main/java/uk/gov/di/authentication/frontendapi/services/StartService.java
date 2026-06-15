@@ -86,18 +86,20 @@ public class StartService {
             boolean reauthenticate,
             boolean isBlockedForReauth,
             boolean isAuthenticated,
-            boolean upliftRequired) {
+            boolean upliftRequired,
+            boolean isMfaRequired) {
 
         var userIsAuthenticated = isAuthenticated && !reauthenticate;
 
         LOG.info(
-                "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. IsBlockedForReauth: {}",
+                "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. IsBlockedForReauth: {}. IsMfaRequired: {}.",
                 userIsAuthenticated,
                 upliftRequired,
                 identityRequired,
                 cookieConsent,
                 gaTrackingId,
-                isBlockedForReauth);
+                isBlockedForReauth,
+                isMfaRequired);
 
         return new UserStartInfo(
                 upliftRequired,
@@ -106,7 +108,8 @@ public class StartService {
                 cookieConsent,
                 gaTrackingId,
                 getMfaMethodType(userContext),
-                isBlockedForReauth);
+                isBlockedForReauth,
+                isMfaRequired);
     }
 
     private boolean authApp(UserContext userContext) {
