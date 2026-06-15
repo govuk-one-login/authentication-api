@@ -70,12 +70,12 @@ subprojects {
                     because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
                 }
 
-                classpath('io.netty:netty-handler:[4.1.118.Final,)') {
-                    because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
+                classpath('io.netty:netty-handler:[4.2.15.Final,)') {
+                    because 'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
                 }
 
-                classpath('io.netty:netty-codec-http2:[4.1.133.Final,4.2.0)') {
-                    because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http2:4.1.133.Final and higher'
+                classpath('io.netty:netty-codec-http2:[4.1.135.Final,4.2.0)') {
+                    because 'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
                 }
 
                 classpath('io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
@@ -84,6 +84,10 @@ subprojects {
 
                 classpath('io.netty:netty-handler-proxy:[4.1.133.Final,4.2.0)') {
                     because 'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
+                }
+
+                classpath('io.netty:netty-resolver-dns:[4.2.15.Final,5.0)') {
+                    because 'CVE-2026-45674 is fixed in io.netty:netty-resolver-dns:4.2.15.Final and higher'
                 }
 
                 // Apache Commons constraints
@@ -151,12 +155,12 @@ subprojects {
                         because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
                     }
 
-                    add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
-                        because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
+                    add(conf.name, 'io.netty:netty-handler:[4.2.15.Final,)') {
+                        because 'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
                     }
 
-                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.133.Final,4.2.0)') {
-                        because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http2:4.1.133.Final and higher'
+                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.135.Final,4.2.0)') {
+                        because 'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
                     }
 
                     add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
@@ -169,6 +173,10 @@ subprojects {
 
                     add(conf.name, 'io.netty:netty-handler-proxy:[4.1.133.Final,4.2.0)') {
                         because 'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
+                    }
+
+                    add(conf.name, 'io.netty:netty-resolver-dns:[4.2.15.Final,5.0)') {
+                        because 'CVE-2026-45674 is fixed in io.netty:netty-resolver-dns:4.2.15.Final and higher'
                     }
 
                     // Jetty constraints
