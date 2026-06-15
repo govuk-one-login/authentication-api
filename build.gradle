@@ -74,8 +74,8 @@ subprojects {
                     because 'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
                 }
 
-                classpath('io.netty:netty-codec-http2:[4.1.133.Final,4.2.0)') {
-                    because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http2:4.1.133.Final and higher'
+                classpath('io.netty:netty-codec-http2:[4.1.135.Final,4.2.0)') {
+                    because 'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
                 }
 
                 classpath('io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
@@ -159,8 +159,8 @@ subprojects {
                         because 'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
                     }
 
-                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.133.Final,4.2.0)') {
-                        because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http2:4.1.133.Final and higher'
+                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.135.Final,4.2.0)') {
+                        because 'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
                     }
 
                     add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
