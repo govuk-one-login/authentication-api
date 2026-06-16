@@ -39,7 +39,28 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private String notifyCallbackBearerToken;
     protected SystemService systemService;
 
-    public ConfigurationService() {}
+    public ConfigurationService() {
+        ssmClient =
+                getLocalstackEndpointUri()
+                        .map(
+                                l -> {
+                                    LOG.info("Localstack endpoint URI is present: " + l);
+                                    return SsmClient.builder()
+                                            .region(Region.of(Region.EU_WEST_2.toString()))
+                                            .endpointOverride(URI.create(l))
+                                            .credentialsProvider(
+                                                    StaticCredentialsProvider.create(
+                                                            AwsBasicCredentials.create(
+                                                                    "FAKEACCESSKEY",
+                                                                    "FAKESECRETKEY")))
+                                            .build();
+                                })
+                        .orElseGet(
+                                () ->
+                                        SsmClient.builder()
+                                                .region(Region.of(getAwsRegion()))
+                                                .build());
+    }
 
     protected ConfigurationService(SsmClient ssmClient) {
         this.ssmClient = ssmClient;
@@ -227,7 +248,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         try {
             var request =
                     GetParameterRequest.builder().withDecryption(true).name(paramName).build();
-            return getSsmClient().getParameter(request).parameter().value();
+            return ssmClient.getParameter(request).parameter().value();
         } catch (ParameterNotFoundException e) {
             String message = String.format("No parameter exists with name: %s", paramName);
             LOG.error(message);
@@ -301,7 +322,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                             .name(format("{0}-notify-callback-bearer-token", getEnvironment()))
                             .build();
 
-            notifyCallbackBearerToken = getSsmClient().getParameter(request).parameter().value();
+            notifyCallbackBearerToken = ssmClient.getParameter(request).parameter().value();
         }
 
         return notifyCallbackBearerToken;
@@ -413,36 +434,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                             .withDecryption(true)
                             .name(format("{0}-ipv-capacity", getEnvironment()))
                             .build();
-            return Optional.of(getSsmClient().getParameter(request).parameter().value());
+            return Optional.of(ssmClient.getParameter(request).parameter().value());
         } catch (ParameterNotFoundException e) {
             return Optional.empty();
         }
-    }
-
-    private SsmClient getSsmClient() {
-        if (ssmClient == null) {
-            ssmClient =
-                    getLocalstackEndpointUri()
-                            .map(
-                                    l -> {
-                                        LOG.info("Localstack endpoint URI is present: " + l);
-                                        return SsmClient.builder()
-                                                .region(Region.of(getAwsRegion()))
-                                                .endpointOverride(URI.create(l))
-                                                .credentialsProvider(
-                                                        StaticCredentialsProvider.create(
-                                                                AwsBasicCredentials.create(
-                                                                        "FAKEACCESSKEY",
-                                                                        "FAKESECRETKEY")))
-                                                .build();
-                                    })
-                            .orElseGet(
-                                    () ->
-                                            SsmClient.builder()
-                                                    .region(Region.of(getAwsRegion()))
-                                                    .build());
-        }
-        return ssmClient;
     }
 
     public String getBackChannelLogoutQueueURI() {

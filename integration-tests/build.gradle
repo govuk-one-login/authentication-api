@@ -20,7 +20,8 @@ dependencies {
             libs.bundles.awsDynamoDb,
             libs.bundles.lettuce,
             libs.bundles.awsLambda,
-            libs.pactProvider
+            libs.pactProvider,
+            libs.awsSsm
 
     implementation project(":shared"), noXray
     implementation project(":orchestration-shared"), noXray
