@@ -17,7 +17,6 @@ dependencies {
             libs.awsSsm,
             libs.bundles.awsDynamoDb,
             libs.bundles.awsLambda,
-            libs.bundles.lettuce,
             libs.libphonenumber
 
     implementation project(':audit-events')
