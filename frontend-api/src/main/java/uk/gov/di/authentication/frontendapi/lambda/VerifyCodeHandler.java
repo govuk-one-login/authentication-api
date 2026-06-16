@@ -533,7 +533,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     journeyType,
                     countryCode);
 
-            LOG.info("Setting hasVerifiedMfa to true");
+            LOG.info("Setting hasVerifiedWithMfa to true");
             var permissionContext =
                     PermissionContext.builder().withAuthSessionItem(authSession).build();
             userActionsManager.correctSmsOtpReceived(journeyType, permissionContext);

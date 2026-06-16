@@ -343,7 +343,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
         }
 
-        LOG.info("Setting hasVerifiedPassword to true");
+        LOG.info("Setting hasVerifiedWithPassword to true");
         userActionsManager.correctPasswordReceived(journeyType, permissionContext);
 
         authSessionService.updateSession(
