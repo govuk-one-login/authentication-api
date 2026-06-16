@@ -71,5 +71,9 @@
   "trace-id": {
     "$resolver": "mdc",
     "key": "dt.trace_id"
+  },
+  "client-id": {
+    "$resolver": "mdc",
+    "key": "clientId"
   }
 }
