@@ -49,9 +49,7 @@ public class BaseDynamoService<T> {
         client = createDynamoClient(configurationService);
         enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         dynamoTable = enhancedClient.table(tableName, TableSchema.fromBean(objectClass));
-        if (!isTableInOrchAccount || IS_LOCAL_ENV) {
-            warmUp();
-        }
+        warmUp();
     }
 
     public BaseDynamoService(DynamoDbTable<T> dynamoTable, DynamoDbClient client) {
