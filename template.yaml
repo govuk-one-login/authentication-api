@@ -6646,6 +6646,7 @@ Resources:
             Effect: Allow
             Action:
               - sqs:SendMessage
+              - sqs:GetQueueAttributes
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
 
