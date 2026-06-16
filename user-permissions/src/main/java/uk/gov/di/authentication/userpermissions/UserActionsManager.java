@@ -214,7 +214,11 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> correctPasswordReceived(
             JourneyType journeyType, PermissionContext permissionContext) {
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedWithPassword(true);
+        var updatedSession =
+                permissionContext
+                        .authSessionItem()
+                        .withHasVerifiedWithPassword(true)
+                        .withAchievedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
         getAuthSessionService().updateSession(updatedSession);
         return Result.success(null);
     }
