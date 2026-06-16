@@ -156,6 +156,9 @@ class UserActionsManagerTest {
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
             assertTrue(capturedSession.getHasVerifiedWithPassword());
+            assertEquals(
+                    CredentialTrustLevel.MEDIUM_LEVEL,
+                    capturedSession.getAchievedCredentialStrength());
             assertTrue(result.isSuccess());
         }
     }

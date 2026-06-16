@@ -232,7 +232,11 @@ public class UserActionsManager implements UserActions {
         getCodeStorageService()
                 .deleteBlockForEmail(permissionContext.emailAddress(), codeBlockedKeyPrefix);
 
-        var updatedSession = permissionContext.authSessionItem().withHasVerifiedWithPassword(true);
+        var updatedSession =
+                permissionContext
+                        .authSessionItem()
+                        .withHasVerifiedWithPassword(true)
+                        .withAchievedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
         getAuthSessionService().updateSession(updatedSession);
 
         return Result.success(null);
