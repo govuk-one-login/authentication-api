@@ -269,6 +269,11 @@ variable "client_registry_api_enabled" {
   type    = bool
 }
 
+variable "client_registry_api_key_version" {
+  type    = string
+  default = "2"
+}
+
 variable "evcs_audience" {
   type    = string
   default = "undefined"

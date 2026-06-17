@@ -3,9 +3,20 @@ resource "aws_api_gateway_rest_api" "di_authentication_api" {
   api_key_source = "HEADER"
 }
 
+resource "random_password" "client_registry_api_key" {
+  count   = var.client_registry_api_enabled ? 1 : 0
+  length  = 40
+  special = false
+
+  keepers = {
+    version = var.client_registry_api_key_version
+  }
+}
+
 resource "aws_api_gateway_api_key" "client_registry_api_key" {
   count = var.client_registry_api_enabled ? 1 : 0
   name  = "${var.environment}-client-registry-api-key"
+  value = random_password.client_registry_api_key[0].result
 }
 
 resource "aws_api_gateway_usage_plan_key" "client_registry_usage_plan_key" {
