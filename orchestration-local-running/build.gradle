@@ -9,10 +9,11 @@ version = "unspecified"
 dependencies {
     implementation libs.javalin,
             libs.bundles.awsDynamoDb,
-            libs.awsKms,
             libs.bundles.awsLambda,
+            libs.awsKms,
             libs.awsSqs,
             libs.awsSsm,
+            libs.gson,
             project(":orchestration-shared"),
             project(":oidc-api"),
             project(":ipv-api"),

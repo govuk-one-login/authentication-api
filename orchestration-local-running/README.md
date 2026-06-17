@@ -60,3 +60,10 @@ or point them to other local/remote instances.
 
 In some cases you may need to update the configuration in the corresponding `*.env` files,
 but care should be taken not to commit any secrets or real configuration values.
+
+### Client configuration
+
+Additional client configurations can be found in `src/main/resources/clients`,
+including a client for the local RP stub and some for use with the OIDC conformance suite.
+
+New clients must also be listed in `local-clients.txt` otherwise they will not be picked up.
