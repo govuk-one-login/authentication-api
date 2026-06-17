@@ -1,5 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -27,6 +29,7 @@ import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createD
 
 public class BaseDynamoService<T> {
     private static final boolean IS_LOCAL_ENV = "local".equals(System.getenv("ENVIRONMENT"));
+    private static final Logger LOG = LogManager.getLogger(BaseDynamoService.class);
 
     private final DynamoDbTable<T> dynamoTable;
     private final DynamoDbClient client;
@@ -120,11 +123,9 @@ public class BaseDynamoService<T> {
     private void warmUp() {
         try {
             dynamoTable.describeTable();
-        } catch (ResourceNotFoundException e) {
-            if (IS_LOCAL_ENV) {
+        } catch (Exception ignored) {
+            if (ignored instanceof ResourceNotFoundException && IS_LOCAL_ENV) {
                 dynamoTable.createTable();
-            } else {
-                throw e;
             }
         }
     }
