@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.local.initialisers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 
 import java.io.BufferedReader;
@@ -36,7 +37,7 @@ public class ClientConfigReader {
                                 classLoader.getResourceAsStream("clients/" + path),
                                 StandardCharsets.UTF_8))) {
             return GSON.fromJson(reader, ClientRegistry.class);
-        } catch (IOException e) {
+        } catch (IOException | JsonParseException e) {
             throw new IllegalArgumentException("Found invalid client config in " + path, e);
         }
     }

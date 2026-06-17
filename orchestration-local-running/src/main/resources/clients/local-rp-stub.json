@@ -14,7 +14,9 @@
   "identityVerificationSupported": true,
   "jwksUrl": "http://host.docker.internal:4000/local-rp-stub/.well-known/jwks.json",
   "redirectUrls": ["http://localhost:4000/oidc/authorization-code/callback"],
-  "postLogoutRedirectUrls": ["http://localhost:4000/oidc/authorization-code/callback"],
+  "postLogoutRedirectUrls": [
+    "http://localhost:4000/oidc/authorization-code/callback"
+  ],
   "publicKeySource": "JWKS",
   "scopes": ["openid", "email", "phone", "wallet-subject-id", "am"],
   "serviceType": "MANDATORY",
