@@ -105,7 +105,7 @@ Resources:
   DevProxyInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: ami-0ab33fafe62fa3f9a
+      ImageId: ami-0ab33fafe62fa3f9a # Amazon Linux 2023 ARM64
       InstanceType: t4g.nano
       SubnetId:
         Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
@@ -260,7 +260,7 @@ Resources:
   Authdev3ProxyInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: ami-0ab33fafe62fa3f9a
+      ImageId: ami-0ab33fafe62fa3f9a # Amazon Linux 2023 ARM64
       InstanceType: t4g.nano
       SubnetId:
         Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
