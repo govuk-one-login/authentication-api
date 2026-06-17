@@ -86,6 +86,10 @@ subprojects {
                     because 'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
                 }
 
+                classpath('io.netty:netty-transport-native-kqueue:[4.1.135.Final,4.2.0)') {
+                    because 'CVE-2026-45536 is fixed in io.netty:netty-transport-native-kqueue:4.1.135.Final and higher'
+                }
+
                 classpath('io.netty:netty-resolver-dns:[4.2.15.Final,5.0)') {
                     because 'CVE-2026-45674 is fixed in io.netty:netty-resolver-dns:4.2.15.Final and higher'
                 }
@@ -173,6 +177,10 @@ subprojects {
 
                     add(conf.name, 'io.netty:netty-handler-proxy:[4.1.133.Final,4.2.0)') {
                         because 'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
+                    }
+
+                    add(conf.name, 'io.netty:netty-transport-native-kqueue:[4.1.135.Final,4.2.0)') {
+                        because 'CVE-2026-45536 is fixed in io.netty:netty-transport-native-kqueue:4.1.135.Final and higher'
                     }
 
                     add(conf.name, 'io.netty:netty-resolver-dns:[4.2.15.Final,5.0)') {
