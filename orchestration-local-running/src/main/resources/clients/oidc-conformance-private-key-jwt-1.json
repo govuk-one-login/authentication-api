@@ -12,6 +12,7 @@
   "clientLoCs": ["P0", "P1", "P2", "P3"],
   "clientType": "web",
   "identityVerificationSupported": true,
+  "maxAgeEnabled": true,
   "permitMissingNonce": true,
   "publicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArGKsgQdXQ4LRqwOZ40Qei7JI727u2/lRaA5dyYt7qoC8olQgOmxTrfYtjQh+djUmVTA0jjgqTdqHwX+P484XKTMEwO5KPfJA7pIBwHjfiWbHaLyDywMTiSoTqppPvM1RROOQh/qCN5EclfkxihrpVMdzBYRn7Fbkf1+ywsN+qggHcszMcVV5PE/owjpEN+n26IgajWYaJQQNjtA6DCvUCKPjObTAvs1BrrhlONAMw+XkXASFA/C2G6XMEsuXqclTCP/s9A6vFD+I+y8xsznp9f24m8f5G89ghxO4XvsnUSqbE85o+wWL1yNKmADJcj3+dVpIG2qp0dyd12xDo+NXfwIDAQAB",
   "publicKeySource": "STATIC",
