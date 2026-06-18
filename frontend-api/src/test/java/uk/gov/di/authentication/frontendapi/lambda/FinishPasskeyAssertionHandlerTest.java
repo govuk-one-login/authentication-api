@@ -5,10 +5,20 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
+import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.PublicKeyCredentialRequestOptions;
+import com.yubico.webauthn.data.UserVerificationRequirement;
+import com.yubico.webauthn.data.exception.Base64UrlException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
+import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
@@ -22,11 +32,14 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +64,8 @@ class FinishPasskeyAssertionHandlerTest {
     private FinishPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
+    private static final String CREDENTIAL_ID = "Q6pkKSucKCqDzOuFky3pQAA";
+
     @BeforeEach
     void setup() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
@@ -70,12 +85,22 @@ class FinishPasskeyAssertionHandlerTest {
 
     @Nested
     class Success {
+
+        @BeforeEach
+        void setupMockData() throws IOException, Base64UrlException {
+            AssertionRequest assertionRequest = setupAssertionRequest();
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                    publicKeyCredential = setupPublicKeyCredential(CREDENTIAL_ID);
+            when(passkeyJsonParser.parseAssertionRequest(any())).thenReturn(assertionRequest);
+            when(passkeyJsonParser.parsePublicKeyCredential(any())).thenReturn(publicKeyCredential);
+        }
+
         @Test
         void shouldReturn200WhenPasskeyAssertionSuccessful() {
             // Given
-            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            var assertionResult = setupAnyAssertionResult();
             when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenReturn(Result.success(mockAssertionResult));
+                    .thenReturn(Result.success(assertionResult));
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
@@ -87,9 +112,9 @@ class FinishPasskeyAssertionHandlerTest {
         @Test
         void shouldReportCorrectPasskeyReceivedWhenAssertionSuccessful() {
             // Given
-            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            var assertionResult = setupAnyAssertionResult();
             when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenReturn(Result.success(mockAssertionResult));
+                    .thenReturn(Result.success(assertionResult));
 
             // When
             handler.handleRequest(finishPasskeyAssertionRequest(), context);
@@ -97,6 +122,50 @@ class FinishPasskeyAssertionHandlerTest {
             // Then
             verify(userActionsManager, times(1)).correctPasskeyReceived(any(), any());
             verify(userActionsManager, times(0)).incorrectPasskeyReceived(any(), any());
+        }
+
+        @Test
+        void shouldEmitVerificationSuccessAuditEventWhenAssertionSuccessful() {
+            // Given
+            var signCount = 10;
+            var isBackedUp = false;
+            var isBackupEligible = true;
+            var userVerification = UserVerificationRequirement.REQUIRED;
+            var assertionResult =
+                    setupMockAssertionResult(
+                            signCount, isBackupEligible, isBackedUp, userVerification);
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(Result.success(assertionResult));
+
+            // When
+            handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            var argCaptor = ArgumentCaptor.forClass(StructuredAuditEvent.class);
+
+            verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+            var capturedAuditEvent = argCaptor.getValue();
+
+            assertEquals("AUTH_PASSKEY_VERIFICATION_SUCCESSFUL", capturedAuditEvent.eventName());
+
+            var authPasskeyVerificationSuccessful =
+                    (AuthPasskeyVerificationSuccessful) capturedAuditEvent;
+
+            var expectedPasskeyDetail =
+                    PasskeyDetail.verificationSuccessful(
+                            userVerification.getValue(), signCount, isBackedUp, "multi-device");
+            assertEquals(
+                    expectedPasskeyDetail,
+                    authPasskeyVerificationSuccessful.extensions().passkey());
+
+            assertEquals(
+                    CREDENTIAL_ID,
+                    authPasskeyVerificationSuccessful.restricted().passkeyCredentialId());
+            var restrictedPasskeySection =
+                    new AuthPasskeyVerificationSuccessful.RestrictedPasskeySection(List.of());
+            assertEquals(
+                    restrictedPasskeySection,
+                    authPasskeyVerificationSuccessful.restricted().passkey());
         }
     }
 
@@ -113,6 +182,7 @@ class FinishPasskeyAssertionHandlerTest {
             // Then
             assertThat(response, hasStatus(400));
             assertThat(response, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            verify(structuredAuditService, never()).submitAuditEvent(any());
         }
     }
 
@@ -137,6 +207,7 @@ class FinishPasskeyAssertionHandlerTest {
             // Then
             assertThat(response, hasStatus(500));
             assertThat(response, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+            verify(structuredAuditService, never()).submitAuditEvent(any());
         }
 
         @Test
@@ -173,6 +244,7 @@ class FinishPasskeyAssertionHandlerTest {
             // Then
             assertThat(response, hasStatus(400));
             assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC));
+            verify(structuredAuditService, never()).submitAuditEvent(any());
         }
 
         @Test
@@ -199,9 +271,49 @@ class FinishPasskeyAssertionHandlerTest {
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 
+    private static AssertionResult setupAnyAssertionResult() {
+        return setupMockAssertionResult(1, true, true, UserVerificationRequirement.REQUIRED);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static AssertionResult setupMockAssertionResult(
+            long signCount,
+            boolean isBackupEligible,
+            boolean isBackedUp,
+            UserVerificationRequirement userVerificationRequirement) {
+        var mock = mock(AssertionResult.class);
+        when(mock.getSignatureCount()).thenReturn(signCount);
+        when(mock.isBackupEligible()).thenReturn(isBackupEligible);
+        when(mock.isBackedUp()).thenReturn(isBackedUp);
+        return mock;
+    }
+
+    private static AssertionRequest setupAssertionRequest() {
+        var assertionRequest = mock(AssertionRequest.class);
+        var publicKeyCredentialRequestOptions = mock(PublicKeyCredentialRequestOptions.class);
+        when(publicKeyCredentialRequestOptions.getAllowCredentials()).thenReturn(Optional.empty());
+        when(publicKeyCredentialRequestOptions.getUserVerification())
+                .thenReturn(Optional.of(UserVerificationRequirement.REQUIRED));
+        when(assertionRequest.getPublicKeyCredentialRequestOptions())
+                .thenReturn(publicKeyCredentialRequestOptions);
+
+        return assertionRequest;
+    }
+
+    private static PublicKeyCredential<
+                    AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+            setupPublicKeyCredential(String credentialId) throws Base64UrlException {
+        var credential = mock(PublicKeyCredential.class);
+        when(credential.getId()).thenReturn(ByteArray.fromBase64Url(CREDENTIAL_ID));
+        return credential;
+    }
+
     private APIGatewayProxyRequestEvent finishPasskeyAssertionRequest() {
-        return finishPasskeyAssertionRequest("""
-            {"pkc": ""}
-            """);
+        return finishPasskeyAssertionRequest(
+                String.format(
+                        """
+            {"pkc": "{\\"id\\": \\"%s\\"}"}
+            """,
+                        CREDENTIAL_ID));
     }
 }

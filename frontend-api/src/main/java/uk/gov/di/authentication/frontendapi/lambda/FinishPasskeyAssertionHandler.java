@@ -10,8 +10,13 @@ import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.UserVerificationRequirement;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest;
@@ -20,8 +25,12 @@ import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionSe
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -29,6 +38,10 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.time.Clock;
+import java.util.List;
+
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -105,8 +118,18 @@ public class FinishPasskeyAssertionHandler
         }
         var passkeyAssertion = passkeyAssertionResult.getSuccess();
 
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        userContext.getAuthSession().getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
         updatePasskeyRecord(passkeyAssertion);
         reportCorrectPasskeyReceived(userContext);
+        emitAuthPasskeyVerificationSuccessEvent(auditContext, requestContext, passkeyAssertion);
         return generateApiGatewayProxyResponse(200, "");
     }
 
@@ -162,6 +185,39 @@ public class FinishPasskeyAssertionHandler
         userActionsManager.correctPasskeyReceived(null, permissionContext);
 
         return null;
+    }
+
+    @SuppressWarnings("deprecation")
+    private void emitAuthPasskeyVerificationSuccessEvent(
+            AuditContext auditContext,
+            FinishAssertionRequestContext requestContext,
+            AssertionResult assertionResult) {
+        var passkeyAllowedCredentials = List.<PasskeyAllowCredentials>of();
+        var userVerification =
+                requestContext
+                        .assertionRequest
+                        .getPublicKeyCredentialRequestOptions()
+                        .getUserVerification()
+                        .map(UserVerificationRequirement::getValue)
+                        .orElse(AuditService.UNKNOWN);
+        var passkeyCredentialDeviceType =
+                assertionResult.isBackupEligible() ? "multi-device" : "single-device";
+        var passkeyDetail =
+                PasskeyDetail.verificationSuccessful(
+                        userVerification,
+                        assertionResult.getSignatureCount(),
+                        assertionResult.isBackedUp(),
+                        passkeyCredentialDeviceType);
+        var credentialId = requestContext.publicKeyCredential.getId().getBase64Url();
+        var event =
+                AuthPasskeyVerificationSuccessful.create(
+                        auditContext,
+                        JourneyType.SIGN_IN,
+                        passkeyAllowedCredentials,
+                        passkeyDetail,
+                        credentialId,
+                        Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(event);
     }
 
     private Void reportIncorrectPasskeyReceived(UserContext userContext) {
