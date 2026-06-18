@@ -7,6 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
+import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
+import com.yubico.webauthn.data.PublicKeyCredential;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
@@ -64,9 +67,7 @@ public class FinishPasskeyAssertionHandler
     public FinishPasskeyAssertionHandler(ConfigurationService configurationService) {
         super(FinishPasskeyAssertionRequest.class, configurationService);
         this.passkeyAssertionService =
-                new PasskeyAssertionService(
-                        RelyingPartyProvider.provide(configurationService),
-                        new DefaultPasskeyJsonParser());
+                new PasskeyAssertionService(RelyingPartyProvider.provide(configurationService));
         this.userActionsManager = new UserActionsManager(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
         this.passkeyJsonParser = new DefaultPasskeyJsonParser();
@@ -87,21 +88,19 @@ public class FinishPasskeyAssertionHandler
 
         LOG.info("FinishPasskeyAssertionHandler called");
 
-        var assertionRequestResult = parseAssertionRequest(userContext);
-        if (assertionRequestResult.isFailure()) {
-            return assertionRequestResult.getFailure();
+        var requestContextResult = parseAssertionRequest(userContext, request.pkc());
+        if (requestContextResult.isFailure()) {
+            return requestContextResult.getFailure();
         }
-        var assertionRequest = assertionRequestResult.getSuccess();
+        var requestContext = requestContextResult.getSuccess();
 
-        return verifyPasskeyAssertion(assertionRequest, request)
+        return verifyPasskeyAssertion(requestContext)
                 .flatMap(this::updatePasskeyRecord)
                 .map(success -> reportCorrectPasskeyReceived(userContext))
                 .fold(
                         failure -> {
                             reportIncorrectPasskeyReceived(userContext);
                             return switch (failure) {
-                                case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
                                 case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
                                         401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
                             };
@@ -109,23 +108,43 @@ public class FinishPasskeyAssertionHandler
                         success -> generateApiGatewayProxyResponse(200, ""));
     }
 
-    private Result<APIGatewayProxyResponseEvent, AssertionRequest> parseAssertionRequest(
-            UserContext userContext) {
+    private record FinishAssertionRequestContext(
+            AssertionRequest assertionRequest,
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                    publicKeyCredential) {}
+
+    private Result<APIGatewayProxyResponseEvent, FinishAssertionRequestContext>
+            parseAssertionRequest(UserContext userContext, String publicKeyCredentialJson) {
+        AssertionRequest assertionRequest;
         try {
-            return Result.success(
+            assertionRequest =
                     passkeyJsonParser.parseAssertionRequest(
-                            userContext.getAuthSession().getPasskeyAssertionRequest()));
+                            userContext.getAuthSession().getPasskeyAssertionRequest());
         } catch (JsonProcessingException e) {
             LOG.error("Error processing assertion {}", e.getMessage());
             return Result.failure(
                     generateApiGatewayProxyErrorResponse(
                             500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
         }
+
+        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                credential;
+        try {
+            credential = passkeyJsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
+        } catch (Exception e) {
+            LOG.warn("Error parsing public key credentials json {}", e);
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC));
+        }
+
+        return Result.success(new FinishAssertionRequestContext(assertionRequest, credential));
     }
 
     private Result<FinishPasskeyAssertionFailureReason, AssertionResult> verifyPasskeyAssertion(
-            AssertionRequest assertionRequest, FinishPasskeyAssertionRequest request) {
-        return passkeyAssertionService.finishAssertion(assertionRequest, request.pkc());
+            FinishAssertionRequestContext requestContext) {
+        return passkeyAssertionService.finishAssertion(
+                requestContext.assertionRequest, requestContext.publicKeyCredential);
     }
 
     private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(

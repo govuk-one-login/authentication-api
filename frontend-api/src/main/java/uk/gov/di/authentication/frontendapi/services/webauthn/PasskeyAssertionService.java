@@ -21,12 +21,10 @@ import java.util.Optional;
 
 public class PasskeyAssertionService {
     private final RelyingParty relyingParty;
-    private final PasskeyJsonParser jsonParser;
     private static final Logger LOG = LogManager.getLogger(PasskeyAssertionService.class);
 
-    public PasskeyAssertionService(RelyingParty relyingParty, PasskeyJsonParser jsonParser) {
+    public PasskeyAssertionService(RelyingParty relyingParty) {
         this.relyingParty = relyingParty;
-        this.jsonParser = jsonParser;
     }
 
     public AssertionRequest startAssertion(String publicSubjectId) {
@@ -39,15 +37,9 @@ public class PasskeyAssertionService {
     }
 
     public Result<FinishPasskeyAssertionFailureReason, AssertionResult> finishAssertion(
-            AssertionRequest assertionRequest, String publicKeyCredentialJson) {
-        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
-                credential;
-        try {
-            credential = jsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
-        } catch (Exception e) {
-            return Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR);
-        }
-
+            AssertionRequest assertionRequest,
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                    credential) {
         AssertionResult assertionResult;
         try {
             assertionResult =

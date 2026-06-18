@@ -14,7 +14,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.StartPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditExtension;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditRestricted;
-import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -68,9 +67,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
     public StartPasskeyAssertionHandler(ConfigurationService configurationService) {
         super(StartPasskeyAssertionRequest.class, configurationService);
         this.passkeyAssertionService =
-                new PasskeyAssertionService(
-                        RelyingPartyProvider.provide(configurationService),
-                        new DefaultPasskeyJsonParser());
+                new PasskeyAssertionService(RelyingPartyProvider.provide(configurationService));
         this.auditService = new AuditService(configurationService);
     }
 

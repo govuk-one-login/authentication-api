@@ -3,7 +3,9 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
+import com.yubico.webauthn.data.PublicKeyCredential;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -116,13 +119,15 @@ class FinishPasskeyAssertionHandlerTest {
     @Nested
     class Error {
         @Test
-        void shouldReturn500WhenAssertionRequestDeserializationFails()
-                throws JsonProcessingException {
+        void shouldReturn500WhenAssertionRequestDeserializationFails() throws IOException {
             // Given
             when(passkeyJsonParser.parseAssertionRequest(any()))
                     .thenThrow(JsonProcessingException.class);
-            // This should not be called, but set it up anyway to ensure the test is passing for the
+            // These should not be called, but set it up anyway to ensure the test is passing for
+            // the
             // right reasons
+            when(passkeyJsonParser.parsePublicKeyCredential(any()))
+                    .thenReturn(mock(PublicKeyCredential.class));
             when(passkeyAssertionService.finishAssertion(any(), any()))
                     .thenReturn(Result.success(mock(AssertionResult.class)));
 
@@ -151,11 +156,16 @@ class FinishPasskeyAssertionHandlerTest {
         }
 
         @Test
-        void shouldReturn400WhenPKCDeserializationFails() {
+        void shouldReturn400WhenPKCDeserializationFails() throws IOException {
             // Given
+            when(passkeyJsonParser.parseAssertionRequest(any()))
+                    .thenReturn(mock(AssertionRequest.class));
+            when(passkeyJsonParser.parsePublicKeyCredential(any()))
+                    .thenThrow(JsonProcessingException.class);
+            // This should not be called, but set it up anyway to ensure the test is passing for the
+            // right reasons
             when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenReturn(
-                            Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR));
+                    .thenReturn(Result.success(mock(AssertionResult.class)));
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
