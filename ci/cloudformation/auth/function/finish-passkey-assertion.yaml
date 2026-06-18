@@ -75,6 +75,7 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               frontendBaseUrl,
             ]
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
         LogGroup: !Ref FinishPasskeyAssertionFunctionLogGroup
       Policies:
@@ -82,6 +83,7 @@ Resources:
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
         - !Ref AuthToAccountDataSigningKeyPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

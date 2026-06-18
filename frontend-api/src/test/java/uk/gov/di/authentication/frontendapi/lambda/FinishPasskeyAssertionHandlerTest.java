@@ -6,6 +6,7 @@ import com.yubico.webauthn.AssertionResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -39,6 +40,8 @@ class FinishPasskeyAssertionHandlerTest {
     private final PasskeyAssertionService passkeyAssertionService =
             mock(PasskeyAssertionService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
     private FinishPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
@@ -54,7 +57,8 @@ class FinishPasskeyAssertionHandlerTest {
                         authenticationService,
                         authSessionService,
                         passkeyAssertionService,
-                        userActionsManager);
+                        userActionsManager,
+                        structuredAuditService);
     }
 
     @Nested

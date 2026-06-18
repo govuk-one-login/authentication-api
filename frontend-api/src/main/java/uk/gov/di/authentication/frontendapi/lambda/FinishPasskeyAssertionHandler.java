@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.yubico.webauthn.AssertionResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
@@ -31,6 +32,7 @@ public class FinishPasskeyAssertionHandler
     private static final Logger LOG = LogManager.getLogger(FinishPasskeyAssertionHandler.class);
     private final PasskeyAssertionService passkeyAssertionService;
     private final UserActionsManager userActionsManager;
+    private final StructuredAuditService structuredAuditService;
 
     public FinishPasskeyAssertionHandler() {
         this(ConfigurationService.getInstance());
@@ -41,7 +43,8 @@ public class FinishPasskeyAssertionHandler
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
             PasskeyAssertionService passkeyAssertionService,
-            UserActionsManager userActionsManager) {
+            UserActionsManager userActionsManager,
+            StructuredAuditService structuredAuditService) {
         super(
                 FinishPasskeyAssertionRequest.class,
                 configurationService,
@@ -49,6 +52,7 @@ public class FinishPasskeyAssertionHandler
                 authSessionService);
         this.passkeyAssertionService = passkeyAssertionService;
         this.userActionsManager = userActionsManager;
+        this.structuredAuditService = structuredAuditService;
     }
 
     public FinishPasskeyAssertionHandler(ConfigurationService configurationService) {
@@ -58,6 +62,7 @@ public class FinishPasskeyAssertionHandler
                         RelyingPartyProvider.provide(configurationService),
                         new DefaultPasskeyJsonParser());
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     @Override
