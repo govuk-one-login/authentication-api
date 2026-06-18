@@ -4,6 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailure
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
+import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -33,6 +36,7 @@ public class FinishPasskeyAssertionHandler
     private final PasskeyAssertionService passkeyAssertionService;
     private final UserActionsManager userActionsManager;
     private final StructuredAuditService structuredAuditService;
+    private final PasskeyJsonParser passkeyJsonParser;
 
     public FinishPasskeyAssertionHandler() {
         this(ConfigurationService.getInstance());
@@ -44,7 +48,8 @@ public class FinishPasskeyAssertionHandler
             AuthSessionService authSessionService,
             PasskeyAssertionService passkeyAssertionService,
             UserActionsManager userActionsManager,
-            StructuredAuditService structuredAuditService) {
+            StructuredAuditService structuredAuditService,
+            PasskeyJsonParser passkeyJsonParser) {
         super(
                 FinishPasskeyAssertionRequest.class,
                 configurationService,
@@ -53,6 +58,7 @@ public class FinishPasskeyAssertionHandler
         this.passkeyAssertionService = passkeyAssertionService;
         this.userActionsManager = userActionsManager;
         this.structuredAuditService = structuredAuditService;
+        this.passkeyJsonParser = passkeyJsonParser;
     }
 
     public FinishPasskeyAssertionHandler(ConfigurationService configurationService) {
@@ -63,6 +69,7 @@ public class FinishPasskeyAssertionHandler
                         new DefaultPasskeyJsonParser());
         this.userActionsManager = new UserActionsManager(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
+        this.passkeyJsonParser = new DefaultPasskeyJsonParser();
     }
 
     @Override
@@ -80,15 +87,19 @@ public class FinishPasskeyAssertionHandler
 
         LOG.info("FinishPasskeyAssertionHandler called");
 
-        return verifyPasskeyAssertion(userContext, request)
+        var assertionRequestResult = parseAssertionRequest(userContext);
+        if (assertionRequestResult.isFailure()) {
+            return assertionRequestResult.getFailure();
+        }
+        var assertionRequest = assertionRequestResult.getSuccess();
+
+        return verifyPasskeyAssertion(assertionRequest, request)
                 .flatMap(this::updatePasskeyRecord)
                 .map(success -> reportCorrectPasskeyReceived(userContext))
                 .fold(
                         failure -> {
                             reportIncorrectPasskeyReceived(userContext);
                             return switch (failure) {
-                                case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
-                                        500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
                                 case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
                                 case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
@@ -98,10 +109,23 @@ public class FinishPasskeyAssertionHandler
                         success -> generateApiGatewayProxyResponse(200, ""));
     }
 
+    private Result<APIGatewayProxyResponseEvent, AssertionRequest> parseAssertionRequest(
+            UserContext userContext) {
+        try {
+            return Result.success(
+                    passkeyJsonParser.parseAssertionRequest(
+                            userContext.getAuthSession().getPasskeyAssertionRequest()));
+        } catch (JsonProcessingException e) {
+            LOG.error("Error processing assertion {}", e.getMessage());
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+        }
+    }
+
     private Result<FinishPasskeyAssertionFailureReason, AssertionResult> verifyPasskeyAssertion(
-            UserContext userContext, FinishPasskeyAssertionRequest request) {
-        return passkeyAssertionService.finishAssertion(
-                userContext.getAuthSession().getPasskeyAssertionRequest(), request.pkc());
+            AssertionRequest assertionRequest, FinishPasskeyAssertionRequest request) {
+        return passkeyAssertionService.finishAssertion(assertionRequest, request.pkc());
     }
 
     private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(

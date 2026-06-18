@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.frontendapi.services.webauthn;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.RelyingParty;
@@ -85,7 +84,9 @@ public class PasskeyAssertionServiceTest {
 
                 // When
                 AssertionResult actualAssertionResult =
-                        passkeyAssertionService.finishAssertion("", "").getSuccess();
+                        passkeyAssertionService
+                                .finishAssertion(mock(AssertionRequest.class), "")
+                                .getSuccess();
 
                 // Then
                 assertEquals(actualAssertionResult, mockAssertionResult);
@@ -94,22 +95,6 @@ public class PasskeyAssertionServiceTest {
 
         @Nested
         class Error {
-            @Test
-            void shouldFailWithParsingAssertionRequestErrorWhenAssertionRequestJsonParsingFails()
-                    throws JsonProcessingException {
-                // Given
-                when(jsonParser.parseAssertionRequest(any()))
-                        .thenThrow(JsonProcessingException.class);
-
-                // When
-                FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService.finishAssertion("", "").getFailure();
-
-                // Then
-                assertEquals(
-                        FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR,
-                        actualFailureReason);
-            }
 
             @Test
             void shouldFailWithParsingPkcErrorWhenPKCJsonParsingFails() throws IOException {
@@ -120,7 +105,9 @@ public class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService.finishAssertion("", "").getFailure();
+                        passkeyAssertionService
+                                .finishAssertion(mock(AssertionRequest.class), "")
+                                .getFailure();
 
                 // Then
                 assertEquals(
@@ -140,7 +127,9 @@ public class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService.finishAssertion("", "").getFailure();
+                        passkeyAssertionService
+                                .finishAssertion(mock(AssertionRequest.class), "")
+                                .getFailure();
 
                 // Then
                 assertEquals(
@@ -163,7 +152,9 @@ public class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService.finishAssertion("", "").getFailure();
+                        passkeyAssertionService
+                                .finishAssertion(mock(AssertionRequest.class), "")
+                                .getFailure();
 
                 // Then
                 assertEquals(

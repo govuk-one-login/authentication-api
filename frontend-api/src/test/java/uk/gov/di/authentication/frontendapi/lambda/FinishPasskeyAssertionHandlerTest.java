@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
+import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyJsonParser;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -42,6 +44,7 @@ class FinishPasskeyAssertionHandlerTest {
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private final StructuredAuditService structuredAuditService =
             mock(StructuredAuditService.class);
+    private final PasskeyJsonParser passkeyJsonParser = mock(PasskeyJsonParser.class);
     private FinishPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
@@ -58,7 +61,8 @@ class FinishPasskeyAssertionHandlerTest {
                         authSessionService,
                         passkeyAssertionService,
                         userActionsManager,
-                        structuredAuditService);
+                        structuredAuditService,
+                        passkeyJsonParser);
     }
 
     @Nested
@@ -112,6 +116,25 @@ class FinishPasskeyAssertionHandlerTest {
     @Nested
     class Error {
         @Test
+        void shouldReturn500WhenAssertionRequestDeserializationFails()
+                throws JsonProcessingException {
+            // Given
+            when(passkeyJsonParser.parseAssertionRequest(any()))
+                    .thenThrow(JsonProcessingException.class);
+            // This should not be called, but set it up anyway to ensure the test is passing for the
+            // right reasons
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(Result.success(mock(AssertionResult.class)));
+
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(500));
+            assertThat(response, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+        }
+
+        @Test
         void shouldReportIncorrectPasskeyReceivedWhenAssertionUnsuccessful() {
             // Given
             when(passkeyAssertionService.finishAssertion(any(), any()))
@@ -125,23 +148,6 @@ class FinishPasskeyAssertionHandlerTest {
             // Then
             verify(userActionsManager, times(1)).incorrectPasskeyReceived(any(), any());
             verify(userActionsManager, times(0)).correctPasskeyReceived(any(), any());
-        }
-
-        @Test
-        void shouldReturn500WhenAssertionRequestDeserializationFails() {
-            // Given
-            when(passkeyAssertionService.finishAssertion(any(), any()))
-                    .thenReturn(
-                            Result.failure(
-                                    FinishPasskeyAssertionFailureReason
-                                            .PARSING_ASSERTION_REQUEST_ERROR));
-
-            // When
-            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
-
-            // Then
-            assertThat(response, hasStatus(500));
-            assertThat(response, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
         }
 
         @Test

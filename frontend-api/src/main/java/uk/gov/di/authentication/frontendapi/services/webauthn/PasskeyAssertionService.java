@@ -39,16 +39,7 @@ public class PasskeyAssertionService {
     }
 
     public Result<FinishPasskeyAssertionFailureReason, AssertionResult> finishAssertion(
-            String assertionRequestJson, String publicKeyCredentialJson) {
-
-        AssertionRequest assertionRequest;
-        try {
-            assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
-        } catch (Exception e) {
-            return Result.failure(
-                    FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
-        }
-
+            AssertionRequest assertionRequest, String publicKeyCredentialJson) {
         PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                 credential;
         try {
