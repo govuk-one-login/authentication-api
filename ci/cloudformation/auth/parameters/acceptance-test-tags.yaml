@@ -12,7 +12,7 @@ Mappings:
   AcceptanceTestTags:
     dev:
       tags: >-
-        @UI and not (@AccountInterventions or @Reauth or @old-mfa-without-ipv or
+        @UI and not (@Reauth or @old-mfa-without-ipv or
         @AccountRecovery or @InternationalSmsSendingDisabled or @PasskeyUsageEnabled)
         and not (@InternationalNumbersIndefiniteLockout and @under-development)
     build:
