@@ -111,27 +111,6 @@ class PasskeyAssertionServiceTest {
                         FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR,
                         actualFailureReason);
             }
-
-            @Test
-            @SuppressWarnings("unchecked")
-            void shouldFailWithAssertionFailedErrorWhenAssertionIsNotSuccessful()
-                    throws AssertionFailedException {
-                // Given
-                AssertionResult mockAssertionResult = mock(AssertionResult.class);
-                when(mockAssertionResult.isSuccess()).thenReturn(false);
-                when(relyingParty.finishAssertion(any())).thenReturn(mockAssertionResult);
-
-                // When
-                FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService
-                                .finishAssertion(mock(AssertionRequest.class), credential)
-                                .getFailure();
-
-                // Then
-                assertEquals(
-                        FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR,
-                        actualFailureReason);
-            }
         }
     }
 }

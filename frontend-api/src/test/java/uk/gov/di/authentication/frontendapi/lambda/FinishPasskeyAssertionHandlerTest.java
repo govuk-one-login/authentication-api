@@ -88,11 +88,7 @@ class FinishPasskeyAssertionHandlerTest {
 
         @BeforeEach
         void setupMockData() throws IOException, Base64UrlException {
-            AssertionRequest assertionRequest = setupAssertionRequest();
-            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
-                    publicKeyCredential = setupPublicKeyCredential(CREDENTIAL_ID);
-            when(passkeyJsonParser.parseAssertionRequest(any())).thenReturn(assertionRequest);
-            when(passkeyJsonParser.parsePublicKeyCredential(any())).thenReturn(publicKeyCredential);
+            setupSuccessfulRequestParsing();
         }
 
         @Test
@@ -131,9 +127,7 @@ class FinishPasskeyAssertionHandlerTest {
             var isBackedUp = false;
             var isBackupEligible = true;
             var userVerification = UserVerificationRequirement.REQUIRED;
-            var assertionResult =
-                    setupMockAssertionResult(
-                            signCount, isBackupEligible, isBackedUp, userVerification);
+            var assertionResult = setupMockAssertionResult(signCount, isBackupEligible, isBackedUp);
             when(passkeyAssertionService.finishAssertion(any(), any()))
                     .thenReturn(Result.success(assertionResult));
 
@@ -211,6 +205,41 @@ class FinishPasskeyAssertionHandlerTest {
         }
 
         @Test
+        void shouldReturn401WhenAssertionReturnsAssertionResultFailure()
+                throws Base64UrlException, IOException {
+            // Given
+            setupSuccessfulRequestParsing();
+            var assertionResult = mock(AssertionResult.class);
+            when(assertionResult.isSuccess()).thenReturn(false);
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(Result.success(assertionResult));
+
+            // When
+            var result = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertEquals(401, result.getStatusCode());
+        }
+
+        @Test
+        void shouldReportIncorrectPasskeyReceivedWhenAssertionReturnsAssertionResultFailure()
+                throws Base64UrlException, IOException {
+            // Given
+            setupSuccessfulRequestParsing();
+            var assertionResult = mock(AssertionResult.class);
+            when(assertionResult.isSuccess()).thenReturn(false);
+            when(passkeyAssertionService.finishAssertion(any(), any()))
+                    .thenReturn(Result.success(assertionResult));
+
+            // When
+            handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            verify(userActionsManager, times(1)).incorrectPasskeyReceived(any(), any());
+            verify(userActionsManager, times(0)).correctPasskeyReceived(any(), any());
+        }
+
+        @Test
         void shouldReportIncorrectPasskeyReceivedWhenAssertionUnsuccessful() {
             // Given
             when(passkeyAssertionService.finishAssertion(any(), any()))
@@ -272,19 +301,17 @@ class FinishPasskeyAssertionHandlerTest {
     }
 
     private static AssertionResult setupAnyAssertionResult() {
-        return setupMockAssertionResult(1, true, true, UserVerificationRequirement.REQUIRED);
+        return setupMockAssertionResult(1, true, true);
     }
 
     @SuppressWarnings("deprecation")
     private static AssertionResult setupMockAssertionResult(
-            long signCount,
-            boolean isBackupEligible,
-            boolean isBackedUp,
-            UserVerificationRequirement userVerificationRequirement) {
+            long signCount, boolean isBackupEligible, boolean isBackedUp) {
         var mock = mock(AssertionResult.class);
         when(mock.getSignatureCount()).thenReturn(signCount);
         when(mock.isBackupEligible()).thenReturn(isBackupEligible);
         when(mock.isBackedUp()).thenReturn(isBackedUp);
+        when(mock.isSuccess()).thenReturn(true);
         return mock;
     }
 
@@ -306,6 +333,14 @@ class FinishPasskeyAssertionHandlerTest {
         var credential = mock(PublicKeyCredential.class);
         when(credential.getId()).thenReturn(ByteArray.fromBase64Url(CREDENTIAL_ID));
         return credential;
+    }
+
+    private void setupSuccessfulRequestParsing() throws IOException, Base64UrlException {
+        AssertionRequest assertionRequest = setupAssertionRequest();
+        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                publicKeyCredential = setupPublicKeyCredential(CREDENTIAL_ID);
+        when(passkeyJsonParser.parseAssertionRequest(any())).thenReturn(assertionRequest);
+        when(passkeyJsonParser.parsePublicKeyCredential(any())).thenReturn(publicKeyCredential);
     }
 
     private APIGatewayProxyRequestEvent finishPasskeyAssertionRequest() {

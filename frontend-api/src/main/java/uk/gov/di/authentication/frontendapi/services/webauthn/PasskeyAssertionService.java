@@ -40,24 +40,16 @@ public class PasskeyAssertionService {
             AssertionRequest assertionRequest,
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                     credential) {
-        AssertionResult assertionResult;
         try {
-            assertionResult =
+            return Result.success(
                     relyingParty.finishAssertion(
                             FinishAssertionOptions.builder()
                                     .request(assertionRequest)
                                     .response(credential)
-                                    .build());
+                                    .build()));
         } catch (AssertionFailedException e) {
             LOG.error("Passkey assertion unexpectedly failed with error: {}", e.getMessage());
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
-
-        if (!assertionResult.isSuccess()) {
-            LOG.warn("Passkey assertion unsuccessful");
-            return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
-        }
-
-        return Result.success(assertionResult);
     }
 }

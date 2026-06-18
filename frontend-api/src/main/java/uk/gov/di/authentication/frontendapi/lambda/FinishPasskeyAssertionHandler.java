@@ -107,12 +107,14 @@ public class FinishPasskeyAssertionHandler
 
         var passkeyAssertionResult = verifyPasskeyAssertion(requestContext);
 
-        if (passkeyAssertionResult.isFailure()) {
+        if (passkeyAssertionResult.isFailure()
+                || !passkeyAssertionResult.getSuccess().isSuccess()) {
+            if (passkeyAssertionResult.isSuccess()) {
+                LOG.info("passkey assertion finished but was failure");
+            }
             reportIncorrectPasskeyReceived(userContext);
-            return switch (passkeyAssertionResult.getFailure()) {
-                case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
-                        401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
-            };
+            return generateApiGatewayProxyErrorResponse(
+                    401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
         }
         var passkeyAssertion = passkeyAssertionResult.getSuccess();
 
