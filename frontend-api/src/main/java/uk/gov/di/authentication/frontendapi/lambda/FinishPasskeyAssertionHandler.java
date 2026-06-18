@@ -94,18 +94,20 @@ public class FinishPasskeyAssertionHandler
         }
         var requestContext = requestContextResult.getSuccess();
 
-        return verifyPasskeyAssertion(requestContext)
-                .flatMap(this::updatePasskeyRecord)
-                .map(success -> reportCorrectPasskeyReceived(userContext))
-                .fold(
-                        failure -> {
-                            reportIncorrectPasskeyReceived(userContext);
-                            return switch (failure) {
-                                case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
-                                        401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
-                            };
-                        },
-                        success -> generateApiGatewayProxyResponse(200, ""));
+        var passkeyAssertionResult = verifyPasskeyAssertion(requestContext);
+
+        if (passkeyAssertionResult.isFailure()) {
+            reportIncorrectPasskeyReceived(userContext);
+            return switch (passkeyAssertionResult.getFailure()) {
+                case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
+                        401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
+            };
+        }
+        var passkeyAssertion = passkeyAssertionResult.getSuccess();
+
+        updatePasskeyRecord(passkeyAssertion);
+        reportCorrectPasskeyReceived(userContext);
+        return generateApiGatewayProxyResponse(200, "");
     }
 
     private record FinishAssertionRequestContext(
@@ -132,7 +134,7 @@ public class FinishPasskeyAssertionHandler
         try {
             credential = passkeyJsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
         } catch (Exception e) {
-            LOG.warn("Error parsing public key credentials json {}", e);
+            LOG.warn("Error parsing public key credentials json {}", e.getMessage());
             return Result.failure(
                     generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC));
@@ -147,10 +149,9 @@ public class FinishPasskeyAssertionHandler
                 requestContext.assertionRequest, requestContext.publicKeyCredential);
     }
 
-    private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(
-            AssertionResult assertionResult) {
+    private Void updatePasskeyRecord(AssertionResult assertionResult) {
         // TODO - AUT-4938 - Update database with latest passkey values
-        return Result.success(null);
+        return null;
     }
 
     private Void reportCorrectPasskeyReceived(UserContext userContext) {
