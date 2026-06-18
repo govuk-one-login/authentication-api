@@ -27,8 +27,6 @@ import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvid
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -41,7 +39,7 @@ import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 import java.time.Clock;
 import java.util.List;
 
-import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
+import static uk.gov.di.audit.AuditContext.auditContextFrom;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -118,14 +116,7 @@ public class FinishPasskeyAssertionHandler
         }
         var passkeyAssertion = passkeyAssertionResult.getSuccess();
 
-        var auditContext =
-                auditContextFromUserContext(
-                        userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
-                        userContext.getAuthSession().getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+        var auditContext = auditContextFrom(userContext, input, AuditService.UNKNOWN);
 
         updatePasskeyRecord(passkeyAssertion);
         reportCorrectPasskeyReceived(userContext);

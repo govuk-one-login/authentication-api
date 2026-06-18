@@ -1,5 +1,8 @@
 package uk.gov.di.audit;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -30,6 +33,20 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
+                userContext.getTxmaAuditEncoded());
+    }
+
+    public static AuditContext auditContextFrom(
+            UserContext userContext, APIGatewayProxyRequestEvent input, String phoneNumber) {
+        return new AuditContext(
+                userContext.getAuthSession().getClientId(),
+                userContext.getClientSessionId(),
+                userContext.getAuthSession().getSessionId(),
+                userContext.getAuthSession().getInternalCommonSubjectId(),
+                userContext.getAuthSession().getEmailAddress(),
+                IpAddressHelper.extractIpAddress(input),
+                phoneNumber,
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                 userContext.getTxmaAuditEncoded());
     }
 
