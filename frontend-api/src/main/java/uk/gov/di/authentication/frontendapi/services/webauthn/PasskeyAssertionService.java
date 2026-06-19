@@ -21,13 +21,13 @@ import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.services.AuditService;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.passkeyAllowedCredentialsFrom;
+import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.userVerificationStringFrom;
 
 public class PasskeyAssertionService {
     private final RelyingParty relyingParty;
@@ -107,18 +107,11 @@ public class PasskeyAssertionService {
             AssertionResult assertionResult,
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                     publicKeyCredential) {
-        var passkeyAllowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
-        var userVerification =
-                assertionRequest
-                        .getPublicKeyCredentialRequestOptions()
-                        .getUserVerification()
-                        .map(UserVerificationRequirement::getValue)
-                        .orElse(AuditService.UNKNOWN);
         var passkeyCredentialDeviceType =
                 assertionResult.isBackupEligible() ? "multi-device" : "single-device";
         var passkeyDetail =
                 PasskeyDetail.verificationFailed(
-                        userVerification,
+                        userVerificationStringFrom(assertionRequest),
                         assertionResult.getSignatureCount(),
                         assertionResult.isBackedUp(),
                         passkeyCredentialDeviceType,
@@ -127,7 +120,7 @@ public class PasskeyAssertionService {
                 AuthPasskeyVerificationFailed.create(
                         auditContext,
                         JourneyType.SIGN_IN,
-                        passkeyAllowedCredentials,
+                        passkeyAllowedCredentialsFrom(assertionRequest),
                         publicKeyCredential.getId().getBase64Url(),
                         passkeyDetail,
                         Clock.systemUTC());
@@ -141,26 +134,19 @@ public class PasskeyAssertionService {
             AssertionResult assertionResult,
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                     publicKeyCredential) {
-        var passkeyAllowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
-        var userVerification =
-                assertionRequest
-                        .getPublicKeyCredentialRequestOptions()
-                        .getUserVerification()
-                        .map(UserVerificationRequirement::getValue)
-                        .orElse(AuditService.UNKNOWN);
         var passkeyCredentialDeviceType =
                 assertionResult.isBackupEligible() ? "multi-device" : "single-device";
         var passkeyDetail =
                 PasskeyDetail.verificationSuccessful(
-                        userVerification,
-                        (int) assertionResult.getSignatureCount(), // TODO change to long
+                        userVerificationStringFrom(assertionRequest),
+                        assertionResult.getSignatureCount(),
                         assertionResult.isBackedUp(),
                         passkeyCredentialDeviceType);
         var event =
                 AuthPasskeyVerificationSuccessful.create(
                         auditContext,
                         JourneyType.SIGN_IN,
-                        passkeyAllowedCredentials,
+                        passkeyAllowedCredentialsFrom(assertionRequest),
                         passkeyDetail,
                         publicKeyCredential.getId().getBase64Url(),
                         Clock.systemUTC());
