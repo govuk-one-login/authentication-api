@@ -105,13 +105,17 @@ Resources:
   DevProxyInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: ami-09eaa54de6f278f78
+      ImageId: ami-0ab33fafe62fa3f9a # Amazon Linux 2023 ARM64
       InstanceType: t4g.nano
       SubnetId:
         Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
       SecurityGroupIds:
         - !Ref DevProxySecurityGroup
       IamInstanceProfile: !Ref DevProxyInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            Encrypted: true
       Monitoring: true
       MetadataOptions:
         HttpTokens: required
@@ -256,13 +260,17 @@ Resources:
   Authdev3ProxyInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: ami-09eaa54de6f278f78
+      ImageId: ami-0ab33fafe62fa3f9a # Amazon Linux 2023 ARM64
       InstanceType: t4g.nano
       SubnetId:
         Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
       SecurityGroupIds:
         - !Ref Authdev3ProxySecurityGroup
       IamInstanceProfile: !Ref Authdev3ProxyInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            Encrypted: true
       Monitoring: true
       MetadataOptions:
         HttpTokens: required
