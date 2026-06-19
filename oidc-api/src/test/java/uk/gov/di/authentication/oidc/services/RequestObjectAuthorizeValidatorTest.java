@@ -23,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.validators.BaseAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
@@ -33,9 +34,7 @@ import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
-import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
-import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -111,8 +110,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateWithDefaultClaimSet()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldSuccessfullyValidateWithDefaultClaimSet() throws Exception {
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
@@ -130,7 +128,7 @@ class RequestObjectAuthorizeValidatorTest {
 
         @Test
         void shouldSuccessfullyValidateWhenVtrIsPresentAndVtrIsPermittedForClient()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+                throws Exception {
             when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("vtr", List.of("P2.Cl.Cm")).build();
@@ -142,8 +140,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenVtrIsPresentAndVtrIsNotPermittedForClient()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenVtrIsPresentAndVtrIsNotPermittedForClient() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.P3")).build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -161,8 +158,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void validatorReturnsErrorWhenCannotParseVtr()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void validatorReturnsErrorWhenCannotParseVtr() throws Exception {
             var invalidVtr = false;
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("vtr", invalidVtr).build();
 
@@ -182,7 +178,7 @@ class RequestObjectAuthorizeValidatorTest {
 
         @Test
         void validatorReturnsErrorWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+                throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.P2")).build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -215,7 +211,7 @@ class RequestObjectAuthorizeValidatorTest {
 
         @Test
         void validatorErrorsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod()
-                throws ClientSignatureValidationException, JwksException, JOSEException {
+                throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.P2")).build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -252,8 +248,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Nested
     class MaxAgeClaim {
         @Test
-        void shouldSuccessfullyValidateWhenMaxAgeIsNumerical()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldSuccessfullyValidateWhenMaxAgeIsNumerical() throws Exception {
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", 1800).build();
             var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
@@ -263,8 +258,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenMaxAgeIsString()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenMaxAgeIsString() throws Exception {
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", "-5").build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
             var requestObjectError = validator.validate(authRequest);
@@ -277,8 +271,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenMaxAgeIsInvalidString()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenMaxAgeIsInvalidString() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("max_age", "NotANumber").build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -292,8 +285,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenMaxAgeIsNegativeInteger()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenMaxAgeIsNegativeInteger() throws Exception {
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", -5).build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
             var requestObjectError = validator.validate(authRequest);
@@ -316,7 +308,7 @@ class RequestObjectAuthorizeValidatorTest {
                             .build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
             assertThrows(
-                    ClientRedirectUriValidationException.class,
+                    InvalidAuthorizeRequestException.class,
                     () -> validator.validate(authRequest),
                     "Expected to throw exception");
         }
@@ -335,7 +327,7 @@ class RequestObjectAuthorizeValidatorTest {
                             .build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
             assertThrows(
-                    ClientRedirectUriValidationException.class,
+                    InvalidAuthorizeRequestException.class,
                     () -> validator.validate(authRequest),
                     "Expected to throw exception");
         }
@@ -356,8 +348,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenClientTypeIsNotAppOrWeb()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenClientTypeIsNotAppOrWeb() throws Exception {
             var clientRegistry =
                     generateClientRegistry(
                             "not-app-or-web",
@@ -380,8 +371,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenClientIDIsInvalid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenClientIDIsInvalid() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("client_id", "invalid-client-id").build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -399,8 +389,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Nested
     class ResponseTypeClaim {
         @Test
-        void shouldReturnErrorWhenResponseTypeIsInvalidInJWTClaimSet()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenResponseTypeIsInvalidInJWTClaimSet() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder()
                             .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
@@ -417,8 +406,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenResponseTypeIsInvalidInQueryParams()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenResponseTypeIsInvalidInQueryParams() throws Exception {
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
             var authRequest =
                     new AuthenticationRequest.Builder(
@@ -445,8 +433,7 @@ class RequestObjectAuthorizeValidatorTest {
     class ScopeClaim {
 
         @Test
-        void shouldReturnErrorWhenScopeIsUnsupported()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenScopeIsUnsupported() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("scope", "openid profile").build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -459,8 +446,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope() throws Exception {
             var clientRegistry =
                     generateClientRegistry(
                             ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
@@ -479,8 +465,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenAuthRequestContainsInvalidScope()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenAuthRequestContainsInvalidScope() throws Exception {
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
             var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
@@ -497,8 +482,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenUnregisteredScope()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenUnregisteredScope() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("scope", "openid email").build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -518,7 +502,8 @@ class RequestObjectAuthorizeValidatorTest {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("response_mode", "code").build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-            assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
+            assertThrows(
+                    InvalidAuthorizeRequestException.class, () -> validator.validate(authRequest));
         }
 
         @Test
@@ -537,13 +522,14 @@ class RequestObjectAuthorizeValidatorTest {
                             .issuer(CLIENT_ID.getValue())
                             .build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-            assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
+            assertThrows(
+                    InvalidAuthorizeRequestException.class, () -> validator.validate(authRequest));
         }
 
         @ParameterizedTest
         @ValueSource(strings = {"query", "fragment"})
         void shouldValidateSuccessfullyWhenResponseModeIsValid(String responseMode)
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+                throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("response_mode", responseMode).build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -557,7 +543,7 @@ class RequestObjectAuthorizeValidatorTest {
     class Pkce {
         @Test
         void shouldNotReturnErrorWhenPkceIsNotEnforcedAndCodeChallengeAndMethodAreMissing()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+                throws Exception {
 
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -568,8 +554,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing() throws Exception {
             var clientRegistry =
                     generateClientRegistry(
                             ClientType.APP.getValue(),
@@ -596,8 +581,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder()
                             .claim("code_challenge", PKCE_CODE_CHALLENGE)
@@ -619,8 +603,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid() throws Exception {
             var invalidCodeChallengeMethod = CodeChallengeMethod.PLAIN.getValue();
 
             var jwtClaimsSet =
@@ -646,8 +629,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldValidateSuccessfullyWhenPkceCodeChallengeAndMethodAreValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldValidateSuccessfullyWhenPkceCodeChallengeAndMethodAreValid() throws Exception {
             var codeChallengeMethod = CodeChallengeMethod.S256.getValue();
 
             var jwtClaimsSet =
@@ -666,8 +648,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Nested
     class LoginHintClaim {
         @Test
-        void shouldValidateSuccessfullyWhenLoginHintIsValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldValidateSuccessfullyWhenLoginHintIsValid() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("login_hint", VALID_LOGIN_HINT).build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -678,8 +659,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenLoginHintIsInvalid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenLoginHintIsInvalid() throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("login_hint", INVALID_LOGIN_HINT).build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -702,8 +682,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Nested
     class ClaimsJson {
         @Test
-        void shouldReturnErrorWhenUnknownClaimsInJsonString()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenUnknownClaimsInJsonString() throws Exception {
             var claimSet =
                     new OIDCClaimsRequest()
                             .withUserInfoClaimsRequest(
@@ -728,8 +707,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenClaimsNotSupportedByClientInJsonString()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenClaimsNotSupportedByClientInJsonString() throws Exception {
             var claimSet =
                     new OIDCClaimsRequest()
                             .withUserInfoClaimsRequest(
@@ -754,8 +732,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenUnknownClaimsInJsonObject()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenUnknownClaimsInJsonObject() throws Exception {
             var claimSet =
                     new OIDCClaimsRequest()
                             .withUserInfoClaimsRequest(
@@ -780,8 +757,7 @@ class RequestObjectAuthorizeValidatorTest {
         }
 
         @Test
-        void shouldReturnErrorWhenClaimsNotSupportedByClientInJsonObject()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenClaimsNotSupportedByClientInJsonObject() throws Exception {
             var claimSet =
                     new OIDCClaimsRequest()
                             .withUserInfoClaimsRequest(
@@ -817,8 +793,7 @@ class RequestObjectAuthorizeValidatorTest {
 
         @ParameterizedTest
         @MethodSource("invalidChannelAttributes")
-        void shouldReturnErrorWhenChannelIsInvalid(String invalidChannel)
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenChannelIsInvalid(String invalidChannel) throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("channel", invalidChannel).build();
             var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -841,8 +816,7 @@ class RequestObjectAuthorizeValidatorTest {
 
         @ParameterizedTest
         @MethodSource("validChannelAttributes")
-        void shouldSuccessfullyValidateWhenChannelIsValid(String validChannel)
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldSuccessfullyValidateWhenChannelIsValid(String validChannel) throws Exception {
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder().claim("channel", validChannel).build();
             var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -853,8 +827,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenAudienceIsInvalid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenAudienceIsInvalid() throws Exception {
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().audience("invalid-audience").build();
 
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -867,8 +840,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenIssuerIsInvalid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenIssuerIsInvalid() throws Exception {
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().issuer("invalid-client").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
@@ -881,8 +853,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenRequestClaimIsPresentInJwt()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenRequestClaimIsPresentInJwt() throws Exception {
         var jwtClaimsSet =
                 getDefaultJWTClaimsSetBuilder()
                         .claim("request", "some-random-request-value")
@@ -898,8 +869,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenRequestUriClaimIsPresentInJwt()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenRequestUriClaimIsPresentInJwt() throws Exception {
         var jwtClaimsSet =
                 getDefaultJWTClaimsSetBuilder()
                         .claim("request_uri", URI.create("https://localhost/request_uri"))
@@ -929,8 +899,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenStateIsMissing()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenStateIsMissing() throws Exception {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -955,8 +924,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateWhenNonceNotExpectedAndMissing()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldSuccessfullyValidateWhenNonceNotExpectedAndMissing() throws Exception {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         var clientRegistry =
                 generateClientRegistry(
@@ -998,8 +966,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenNonceIsExpectedAndMissing()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenNonceIsExpectedAndMissing() throws Exception {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -1024,8 +991,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenUILocalesIsInvalid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenUILocalesIsInvalid() throws Exception {
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("ui_locales", "123456").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);

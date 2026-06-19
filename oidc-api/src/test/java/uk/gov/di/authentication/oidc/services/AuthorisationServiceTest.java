@@ -6,7 +6,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
-import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -94,7 +94,7 @@ class AuthorisationServiceTest {
     void
             classifyParseExceptionShouldReturnInvalidAuthenticationRequestExceptionWhenRedirectUrlIsCorrect() {
         assertThrows(
-                InvalidAuthenticationRequestException.class,
+                InvalidAuthorizeRequestException.class,
                 () ->
                         authorisationService.classifyParseException(
                                 new ParseException(

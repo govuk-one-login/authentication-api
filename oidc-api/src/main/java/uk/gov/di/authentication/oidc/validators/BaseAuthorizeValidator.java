@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -17,7 +18,6 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
-import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -45,7 +45,9 @@ public abstract class BaseAuthorizeValidator {
     }
 
     public abstract Optional<AuthRequestError> validate(AuthenticationRequest authRequest)
-            throws ClientSignatureValidationException, JwksException;
+            throws ClientSignatureValidationException,
+                    InvalidAuthorizeRequestException,
+                    JwksException;
 
     ClientRegistry getClientFromDynamo(String clientId) {
         var client = dynamoClientService.getClient(clientId).orElse(null);
@@ -222,14 +224,16 @@ public abstract class BaseAuthorizeValidator {
         return Optional.empty();
     }
 
-    protected void validateResponseMode(String responseMode) throws InvalidResponseModeException {
+    protected void validateResponseMode(String responseMode)
+            throws InvalidAuthorizeRequestException {
         if (!responseMode.equals(ResponseMode.QUERY.getValue())
                 && !responseMode.equals(ResponseMode.FRAGMENT.getValue())) {
             var errorMessage =
                     String.format("Invalid response mode included in request: %s", responseMode);
 
             logErrorInProdElseWarn(errorMessage);
-            throw new InvalidResponseModeException(errorMessage);
+            throw new InvalidAuthorizeRequestException(
+                    OAuth2Error.INVALID_REQUEST.setDescription(errorMessage));
         }
     }
 

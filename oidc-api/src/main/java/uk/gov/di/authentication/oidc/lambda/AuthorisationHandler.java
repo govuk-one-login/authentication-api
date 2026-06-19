@@ -29,7 +29,7 @@ import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.SlidingWindowAlgorithm;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
-import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
@@ -51,9 +51,7 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
-import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
@@ -330,7 +328,7 @@ public class AuthorisationHandler
                 LOG.info("Validating request object");
                 authRequestError = requestObjectAuthorizeValidator.validate(authRequest);
             }
-        } catch (ClientRedirectUriValidationException | InvalidResponseModeException e) {
+        } catch (InvalidAuthorizeRequestException e) {
             return generateBadRequestResponse(user, e.getMessage(), client.getClientID());
         } catch (ClientSignatureValidationException e) {
             return generateApiGatewayProxyResponse(
@@ -937,7 +935,7 @@ public class AuthorisationHandler
                     error.getClientID() != null ? error.getClientID().getValue() : null);
         } catch (IncorrectRedirectUriException | ClientNotFoundException e) {
             return generateBadRequestResponse(user, e.getMessage(), error.getClientID().getValue());
-        } catch (InvalidAuthenticationRequestException e) {
+        } catch (InvalidAuthorizeRequestException e) {
             return generateErrorResponse(
                     error.getRedirectionURI(),
                     error.getState(),
