@@ -6,6 +6,7 @@ import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformati
 import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithoutPhone;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.RestrictedPasskeySection;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -48,9 +49,6 @@ public record AuthPasskeyVerificationSuccessful(
                 restricted,
                 extensions);
     }
-
-    public record RestrictedPasskeySection(
-            List<PasskeyAllowCredentials> passkeyAllowedCredentials, String passkeyCredentialId) {}
 
     public record Restricted(
             EncodedDeviceInformation deviceInformation, RestrictedPasskeySection passkey) {}

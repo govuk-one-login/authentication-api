@@ -26,6 +26,7 @@ import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSucces
 import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.RestrictedPasskeySection;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 
@@ -173,14 +174,10 @@ class PasskeyAssertionServiceTest {
                         expectedPasskeyDetail,
                         authPasskeyVerificationSuccessful.extensions().passkey());
 
-                assertEquals(
-                        CREDENTIAL_ID,
-                        authPasskeyVerificationSuccessful.restricted().passkeyCredentialId());
                 var restrictedPasskeySection =
-                        new AuthPasskeyVerificationSuccessful.RestrictedPasskeySection(
-                                List.of(
-                                        new PasskeyAllowCredentials(
-                                                CREDENTIAL_ID, List.of("BLE"))));
+                        new RestrictedPasskeySection(
+                                List.of(new PasskeyAllowCredentials(CREDENTIAL_ID, List.of("BLE"))),
+                                CREDENTIAL_ID);
                 assertEquals(
                         restrictedPasskeySection,
                         authPasskeyVerificationSuccessful.restricted().passkey());
@@ -336,7 +333,7 @@ class PasskeyAssertionServiceTest {
                         authPasskeyVerificationFailed.extensions().passkey());
 
                 var restrictedPasskeySection =
-                        new AuthPasskeyVerificationFailed.RestrictedPasskeySection(
+                        new RestrictedPasskeySection(
                                 List.of(new PasskeyAllowCredentials(CREDENTIAL_ID, List.of("BLE"))),
                                 CREDENTIAL_ID);
                 assertEquals(
