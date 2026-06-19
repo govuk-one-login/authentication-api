@@ -6,9 +6,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.AuthenticatorTransport;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import com.yubico.webauthn.data.PublicKeyCredentialRequestOptions;
 import com.yubico.webauthn.data.UserVerificationRequirement;
 import com.yubico.webauthn.data.exception.Base64UrlException;
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
 import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
@@ -34,6 +37,7 @@ import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -155,10 +159,11 @@ class FinishPasskeyAssertionHandlerTest {
             assertEquals(
                     CREDENTIAL_ID,
                     authPasskeyVerificationSuccessful.restricted().passkeyCredentialId());
-            var restrictedPasskeySection =
-                    new AuthPasskeyVerificationSuccessful.RestrictedPasskeySection(List.of());
+            var expectedRestrictedPasskeySection =
+                    new AuthPasskeyVerificationSuccessful.RestrictedPasskeySection(
+                            List.of(new PasskeyAllowCredentials(CREDENTIAL_ID, List.of("usb"))));
             assertEquals(
-                    restrictedPasskeySection,
+                    expectedRestrictedPasskeySection,
                     authPasskeyVerificationSuccessful.restricted().passkey());
         }
     }
@@ -315,12 +320,19 @@ class FinishPasskeyAssertionHandlerTest {
         return mock;
     }
 
-    private static AssertionRequest setupAssertionRequest() {
+    private static AssertionRequest setupAssertionRequest() throws Base64UrlException {
         var assertionRequest = mock(AssertionRequest.class);
         var publicKeyCredentialRequestOptions = mock(PublicKeyCredentialRequestOptions.class);
-        when(publicKeyCredentialRequestOptions.getAllowCredentials()).thenReturn(Optional.empty());
+        var credentialId = ByteArray.fromBase64Url(CREDENTIAL_ID);
+        var descriptor =
+                PublicKeyCredentialDescriptor.builder()
+                        .id(credentialId)
+                        .transports(Set.of(AuthenticatorTransport.USB))
+                        .build();
         when(publicKeyCredentialRequestOptions.getUserVerification())
                 .thenReturn(Optional.of(UserVerificationRequirement.REQUIRED));
+        when(publicKeyCredentialRequestOptions.getAllowCredentials())
+                .thenReturn(Optional.of(List.of(descriptor)));
         when(assertionRequest.getPublicKeyCredentialRequestOptions())
                 .thenReturn(publicKeyCredentialRequestOptions);
 

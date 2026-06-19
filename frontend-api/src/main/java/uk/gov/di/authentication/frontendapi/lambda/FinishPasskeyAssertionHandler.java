@@ -15,7 +15,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
-import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
@@ -37,9 +36,9 @@ import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.time.Clock;
-import java.util.List;
 
 import static uk.gov.di.audit.AuditContext.auditContextFrom;
+import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.passkeyAllowedCredentialsFrom;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -185,7 +184,8 @@ public class FinishPasskeyAssertionHandler
             AuditContext auditContext,
             FinishAssertionRequestContext requestContext,
             AssertionResult assertionResult) {
-        var passkeyAllowedCredentials = List.<PasskeyAllowCredentials>of();
+        var passkeyAllowedCredentials =
+                passkeyAllowedCredentialsFrom(requestContext.assertionRequest);
         var userVerification =
                 requestContext
                         .assertionRequest
