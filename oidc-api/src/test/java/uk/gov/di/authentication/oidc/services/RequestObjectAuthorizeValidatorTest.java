@@ -2,6 +2,7 @@ package uk.gov.di.authentication.oidc.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -1000,6 +1001,22 @@ class RequestObjectAuthorizeValidatorTest {
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
         assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldThrowErrorWhenPassedPlainJWT() {
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                URI.create(REDIRECT_URI))
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .requestObject(new PlainJWT(getDefaultJWTClaimsSetBuilder().build()))
+                        .build();
+
+        assertThrows(InvalidAuthorizeRequestException.class, () -> validator.validate(authRequest));
     }
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
