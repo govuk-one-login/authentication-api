@@ -60,6 +60,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                                         SsmClient.builder()
                                                 .region(Region.of(getAwsRegion()))
                                                 .build());
+
+        warmUp();
     }
 
     protected ConfigurationService(SsmClient ssmClient) {
@@ -459,5 +461,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
+    }
+
+    private void warmUp() {
+        try {
+            getIPVCapacity();
+        } catch (Exception ignored) {
+        }
     }
 }
