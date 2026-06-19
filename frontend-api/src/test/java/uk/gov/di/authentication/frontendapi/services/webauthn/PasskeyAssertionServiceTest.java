@@ -12,6 +12,7 @@ import com.yubico.webauthn.exception.AssertionFailedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 
 import java.io.IOException;
@@ -32,7 +33,9 @@ public class PasskeyAssertionServiceTest {
 
     @BeforeEach
     void setup() {
-        passkeyAssertionService = new PasskeyAssertionService(relyingParty, jsonParser);
+        passkeyAssertionService =
+                new PasskeyAssertionService(
+                        relyingParty, jsonParser, mock(StructuredAuditService.class));
     }
 
     @Nested

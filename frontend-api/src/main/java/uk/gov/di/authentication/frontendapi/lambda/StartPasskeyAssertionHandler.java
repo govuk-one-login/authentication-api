@@ -11,6 +11,7 @@ import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import com.yubico.webauthn.data.UserVerificationRequirement;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.StartPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditExtension;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthenticationAuditRestricted;
@@ -70,7 +71,8 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
         this.passkeyAssertionService =
                 new PasskeyAssertionService(
                         RelyingPartyProvider.provide(configurationService),
-                        new DefaultPasskeyJsonParser());
+                        new DefaultPasskeyJsonParser(),
+                        new StructuredAuditService(configurationService));
         this.auditService = new AuditService(configurationService);
     }
 

@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.yubico.webauthn.AssertionResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
@@ -56,7 +57,8 @@ public class FinishPasskeyAssertionHandler
         this.passkeyAssertionService =
                 new PasskeyAssertionService(
                         RelyingPartyProvider.provide(configurationService),
-                        new DefaultPasskeyJsonParser());
+                        new DefaultPasskeyJsonParser(),
+                        new StructuredAuditService(configurationService));
         this.userActionsManager = new UserActionsManager(configurationService);
     }
 
