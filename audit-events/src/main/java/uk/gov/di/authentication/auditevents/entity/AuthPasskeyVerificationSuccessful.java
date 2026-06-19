@@ -37,8 +37,7 @@ public record AuthPasskeyVerificationSuccessful(
         var restricted =
                 new Restricted(
                         EncodedDeviceInformation.from(auditContext),
-                        new RestrictedPasskeySection(passkeyAllowedCredentials),
-                        credentialId);
+                        new RestrictedPasskeySection(passkeyAllowedCredentials, credentialId));
         var extensions = new Extensions(journeyType.getValue(), passkey);
         return new AuthPasskeyVerificationSuccessful(
                 eventName,
@@ -59,12 +58,10 @@ public record AuthPasskeyVerificationSuccessful(
             PasskeyAuthenticationRequest passkeyAuthenticationRequest) {}
 
     public record RestrictedPasskeySection(
-            List<PasskeyAllowCredentials> passkeyAllowedCredentials) {}
+            List<PasskeyAllowCredentials> passkeyAllowedCredentials, String passkeyCredentialId) {}
 
     public record Restricted(
-            EncodedDeviceInformation deviceInformation,
-            RestrictedPasskeySection passkey,
-            String passkeyCredentialId) {}
+            EncodedDeviceInformation deviceInformation, RestrictedPasskeySection passkey) {}
 
     public record Extensions(
             @SerializedName("journey-type") String journeyType, PasskeyDetail passkey) {}

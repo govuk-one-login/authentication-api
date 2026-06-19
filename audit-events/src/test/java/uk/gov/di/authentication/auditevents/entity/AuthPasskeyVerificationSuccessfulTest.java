@@ -79,9 +79,9 @@ class AuthPasskeyVerificationSuccessfulTest {
                             "ble"
                           ]
                         }
-                      ]
-                    },
-                    "passkey_credential_id": "credential-1"
+                      ],
+                      "passkey_credential_id": "credential-1"
+                    }
                   },
                   "extensions": {
                     "journey-type": "SIGN_IN",
