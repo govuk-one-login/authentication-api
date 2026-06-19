@@ -54,7 +54,9 @@ public class PasskeyAssertionService {
     }
 
     public Result<FinishPasskeyAssertionFailureReason, AssertionResult> finishAssertion(
-            String assertionRequestJson, String publicKeyCredentialJson) {
+            String assertionRequestJson,
+            String publicKeyCredentialJson,
+            AuditContext auditContext) {
 
         AssertionRequest assertionRequest;
         try {
@@ -88,16 +90,12 @@ public class PasskeyAssertionService {
         if (!assertionResult.isSuccess()) {
             LOG.warn("Passkey assertion unsuccessful");
             emitAuthPasskeyVerificationFailedEvent(
-                    AuditContext.emptyAuditContext(),
-                    assertionRequest,
-                    assertionResult,
-                    credential);
+                    auditContext, assertionRequest, assertionResult, credential);
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
 
-        // TODO pass in audit context to this function
         emitAuthPasskeyVerificationSuccessEvent(
-                AuditContext.emptyAuditContext(), assertionRequest, assertionResult, credential);
+                auditContext, assertionRequest, assertionResult, credential);
 
         return Result.success(assertionResult);
     }

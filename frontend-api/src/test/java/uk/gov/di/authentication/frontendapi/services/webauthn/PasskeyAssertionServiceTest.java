@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationFailed;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
 import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
@@ -44,6 +45,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 
 class PasskeyAssertionServiceTest {
@@ -115,7 +117,9 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 AssertionResult actualAssertionResult =
-                        passkeyAssertionService.finishAssertion("", "").getSuccess();
+                        passkeyAssertionService
+                                .finishAssertion("", "", AuditContext.emptyAuditContext())
+                                .getSuccess();
 
                 // Then
                 assertEquals(actualAssertionResult, mockAssertionResult);
@@ -144,7 +148,9 @@ class PasskeyAssertionServiceTest {
                 when(relyingParty.finishAssertion(any())).thenReturn(assertionResult);
 
                 // When
-                passkeyAssertionService.finishAssertion("", "").getSuccess();
+                passkeyAssertionService
+                        .finishAssertion("", "", AuditContext.emptyAuditContext().withEmail(EMAIL))
+                        .getSuccess();
 
                 // Then
                 var argCaptor = ArgumentCaptor.forClass(StructuredAuditEvent.class);
@@ -157,6 +163,8 @@ class PasskeyAssertionServiceTest {
 
                 var authPasskeyVerificationSuccessful =
                         (AuthPasskeyVerificationSuccessful) capturedAuditEvent;
+
+                assertEquals(EMAIL, authPasskeyVerificationSuccessful.user().email());
 
                 var expectedPasskeyDetail =
                         PasskeyDetail.verificationSuccessful(
@@ -190,7 +198,9 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService.finishAssertion("", "").getFailure();
+                        passkeyAssertionService
+                                .finishAssertion("", "", AuditContext.emptyAuditContext())
+                                .getFailure();
 
                 // Then
                 assertEquals(
@@ -209,7 +219,9 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService.finishAssertion("", "").getFailure();
+                        passkeyAssertionService
+                                .finishAssertion("", "", AuditContext.emptyAuditContext())
+                                .getFailure();
 
                 // Then
                 assertEquals(
@@ -230,7 +242,9 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService.finishAssertion("", "").getFailure();
+                        passkeyAssertionService
+                                .finishAssertion("", "", AuditContext.emptyAuditContext())
+                                .getFailure();
 
                 // Then
                 assertEquals(
@@ -253,7 +267,9 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService.finishAssertion("", "").getFailure();
+                        passkeyAssertionService
+                                .finishAssertion("", "", AuditContext.emptyAuditContext())
+                                .getFailure();
 
                 // Then
                 assertEquals(
@@ -290,9 +306,10 @@ class PasskeyAssertionServiceTest {
                 when(relyingParty.finishAssertion(any())).thenReturn(assertionResult);
                 when(jsonParser.parseAssertionRequest(any())).thenReturn(assertionRequest);
                 when(jsonParser.parsePublicKeyCredential(any())).thenReturn(publicKeyCredential);
+                var auditContext = AuditContext.emptyAuditContext().withEmail(EMAIL);
 
                 // When
-                passkeyAssertionService.finishAssertion("", "").getFailure();
+                passkeyAssertionService.finishAssertion("", "", auditContext).getFailure();
 
                 // Then
                 var argCaptor = ArgumentCaptor.forClass(StructuredAuditEvent.class);
@@ -304,6 +321,8 @@ class PasskeyAssertionServiceTest {
 
                 var authPasskeyVerificationFailed =
                         (AuthPasskeyVerificationFailed) capturedAuditEvent;
+
+                assertEquals(EMAIL, authPasskeyVerificationFailed.user().email());
 
                 var expectedPasskeyDetail =
                         PasskeyDetail.verificationFailed(
