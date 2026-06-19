@@ -14,6 +14,7 @@ import com.yubico.webauthn.exception.AssertionFailedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationFailed;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
@@ -86,14 +87,53 @@ public class PasskeyAssertionService {
 
         if (!assertionResult.isSuccess()) {
             LOG.warn("Passkey assertion unsuccessful");
+            emitAuthPasskeyVerificationFailedEvent(
+                    AuditContext.emptyAuditContext(),
+                    assertionRequest,
+                    assertionResult,
+                    credential);
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
 
-        //TODO pass in audit context to this function
+        // TODO pass in audit context to this function
         emitAuthPasskeyVerificationSuccessEvent(
                 AuditContext.emptyAuditContext(), assertionRequest, assertionResult, credential);
 
         return Result.success(assertionResult);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void emitAuthPasskeyVerificationFailedEvent(
+            AuditContext auditContext,
+            AssertionRequest assertionRequest,
+            AssertionResult assertionResult,
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                    publicKeyCredential) {
+        var passkeyAllowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
+        var userVerification =
+                assertionRequest
+                        .getPublicKeyCredentialRequestOptions()
+                        .getUserVerification()
+                        .map(UserVerificationRequirement::getValue)
+                        .orElse(AuditService.UNKNOWN);
+        var passkeyCredentialDeviceType =
+                assertionResult.isBackupEligible() ? "multi-device" : "single-device";
+        var passkeyDetail =
+                PasskeyDetail.verificationFailed(
+                        userVerification,
+                        (int) assertionResult.getSignatureCount(), // TODO change to long
+                        assertionResult.isBackedUp(),
+                        passkeyCredentialDeviceType,
+                        "UserVerificationError");
+        var event =
+                AuthPasskeyVerificationFailed.create(
+                        auditContext,
+                        JourneyType.SIGN_IN,
+                        passkeyAllowedCredentials,
+                        publicKeyCredential.getId().getBase64Url(),
+                        passkeyDetail,
+                        Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(event);
     }
 
     @SuppressWarnings("deprecation")

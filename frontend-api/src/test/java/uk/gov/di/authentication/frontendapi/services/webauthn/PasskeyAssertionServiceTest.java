@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationFailed;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
 import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
@@ -37,6 +38,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -240,15 +242,14 @@ class PasskeyAssertionServiceTest {
             @Test
             @SuppressWarnings("unchecked")
             void shouldFailWithAssertionFailedErrorWhenAssertionIsNotSuccessful()
-                    throws IOException, AssertionFailedException {
+                    throws IOException, AssertionFailedException, Base64UrlException {
                 // Given
-                when(jsonParser.parseAssertionRequest(any()))
-                        .thenReturn(mock(AssertionRequest.class));
-                when(jsonParser.parsePublicKeyCredential(any()))
-                        .thenReturn(mock(PublicKeyCredential.class));
-                AssertionResult mockAssertionResult = mock(AssertionResult.class);
-                when(mockAssertionResult.isSuccess()).thenReturn(false);
-                when(relyingParty.finishAssertion(any())).thenReturn(mockAssertionResult);
+                var assertionRequest = setupAssertionRequest();
+                var publicKeyCredential = setupPublicKeyCredential(CREDENTIAL_ID);
+                var assertionResult = setupAnyFailureMockAssertionResult();
+                when(relyingParty.finishAssertion(any())).thenReturn(assertionResult);
+                when(jsonParser.parseAssertionRequest(any())).thenReturn(assertionRequest);
+                when(jsonParser.parsePublicKeyCredential(any())).thenReturn(publicKeyCredential);
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
@@ -258,13 +259,80 @@ class PasskeyAssertionServiceTest {
                 assertEquals(
                         FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR,
                         actualFailureReason);
-                verify(structuredAuditService, never()).submitAuditEvent(any());
+                verify(structuredAuditService)
+                        .submitAuditEvent(
+                                argThat(
+                                        event ->
+                                                event.eventName()
+                                                        .equals(
+                                                                "AUTH_PASSKEY_VERIFICATION_FAILED")));
+            }
+
+            @Test
+            @SuppressWarnings("unchecked")
+            void shouldEmitVerificationFailedAuditEventWhenAssertionIsNotSuccessful()
+                    throws IOException, AssertionFailedException, Base64UrlException {
+                // Given
+
+                var assertionIsSuccess = false;
+                var signCount = 10;
+                var isBackedUp = false;
+                var isBackupEligible = false;
+                var userVerification = UserVerificationRequirement.PREFERRED;
+                var allowedCredentialsMap = Map.of(CREDENTIAL_ID, "BLE");
+
+                var assertionRequest =
+                        setupAssertionRequest(allowedCredentialsMap, userVerification);
+                var publicKeyCredential = setupPublicKeyCredential(CREDENTIAL_ID);
+                var assertionResult =
+                        setupMockAssertionResult(
+                                signCount, isBackupEligible, isBackedUp, assertionIsSuccess);
+                when(relyingParty.finishAssertion(any())).thenReturn(assertionResult);
+                when(jsonParser.parseAssertionRequest(any())).thenReturn(assertionRequest);
+                when(jsonParser.parsePublicKeyCredential(any())).thenReturn(publicKeyCredential);
+
+                // When
+                passkeyAssertionService.finishAssertion("", "").getFailure();
+
+                // Then
+                var argCaptor = ArgumentCaptor.forClass(StructuredAuditEvent.class);
+
+                verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+                var capturedAuditEvent = argCaptor.getValue();
+
+                assertEquals("AUTH_PASSKEY_VERIFICATION_FAILED", capturedAuditEvent.eventName());
+
+                var authPasskeyVerificationFailed =
+                        (AuthPasskeyVerificationFailed) capturedAuditEvent;
+
+                var expectedPasskeyDetail =
+                        PasskeyDetail.verificationFailed(
+                                userVerification.getValue(),
+                                signCount,
+                                isBackedUp,
+                                "single-device",
+                                "UserVerificationError");
+                assertEquals(
+                        expectedPasskeyDetail,
+                        authPasskeyVerificationFailed.extensions().passkey());
+
+                var restrictedPasskeySection =
+                        new AuthPasskeyVerificationFailed.RestrictedPasskeySection(
+                                List.of(new PasskeyAllowCredentials(CREDENTIAL_ID, List.of("BLE"))),
+                                CREDENTIAL_ID);
+                assertEquals(
+                        restrictedPasskeySection,
+                        authPasskeyVerificationFailed.restricted().passkey());
             }
         }
     }
 
     private static AssertionResult setupAnySuccessfulMockAssertionResult() {
         return setupMockAssertionResult(10, false, false, true);
+    }
+
+    private static AssertionResult setupAnyFailureMockAssertionResult() {
+        return setupMockAssertionResult(10, false, false, false);
     }
 
     @SuppressWarnings("deprecation")
