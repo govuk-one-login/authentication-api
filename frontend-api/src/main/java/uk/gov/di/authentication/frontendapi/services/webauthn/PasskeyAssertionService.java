@@ -119,7 +119,7 @@ public class PasskeyAssertionService {
         var passkeyDetail =
                 PasskeyDetail.verificationFailed(
                         userVerification,
-                        (int) assertionResult.getSignatureCount(), // TODO change to long
+                        assertionResult.getSignatureCount(),
                         assertionResult.isBackedUp(),
                         passkeyCredentialDeviceType,
                         "UserVerificationError");
