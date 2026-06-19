@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
 import com.yubico.webauthn.AssertionRequest;
+import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.data.AuthenticatorTransport;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
@@ -8,15 +9,21 @@ import com.yubico.webauthn.data.PublicKeyCredentialRequestOptions;
 import com.yubico.webauthn.data.UserVerificationRequirement;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class PasskeyAuditExtensionsHelperTest {
 
@@ -158,6 +165,28 @@ class PasskeyAuditExtensionsHelperTest {
             var result = PasskeyAuditExtensionsHelper.userVerificationStringFrom(assertionRequest);
 
             assertEquals("", result);
+        }
+    }
+
+    @Nested
+    class PasskeyCredentialDeviceType {
+        private static Stream<Arguments> backupEligibleToExpectedDeviceType() {
+            return Stream.of(
+                    Arguments.of(false, "single-device"), Arguments.of(true, "multi-device"));
+        }
+
+        @MethodSource("backupEligibleToExpectedDeviceType")
+        @ParameterizedTest
+        @SuppressWarnings("deprecation")
+        void getsCredentialDeviceTypeDependentOnBackupEligible(
+                boolean isBackupEligible, String expectedCredentialDeviceType) {
+            var assertionResult = mock(AssertionResult.class);
+            when(assertionResult.isBackupEligible()).thenReturn(isBackupEligible);
+
+            var actualCredentialDeviceType =
+                    PasskeyAuditExtensionsHelper.passkeyCredentialDeviceTypeFrom(assertionResult);
+
+            assertEquals(expectedCredentialDeviceType, actualCredentialDeviceType);
         }
     }
 }

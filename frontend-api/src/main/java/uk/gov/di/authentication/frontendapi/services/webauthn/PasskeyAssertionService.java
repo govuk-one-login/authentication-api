@@ -27,6 +27,7 @@ import java.time.Clock;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.passkeyAllowedCredentialsFrom;
+import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.passkeyCredentialDeviceTypeFrom;
 import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.userVerificationStringFrom;
 
 public class PasskeyAssertionService {
@@ -107,14 +108,12 @@ public class PasskeyAssertionService {
             AssertionResult assertionResult,
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                     publicKeyCredential) {
-        var passkeyCredentialDeviceType =
-                assertionResult.isBackupEligible() ? "multi-device" : "single-device";
         var passkeyDetail =
                 PasskeyDetail.verificationFailed(
                         userVerificationStringFrom(assertionRequest),
                         assertionResult.getSignatureCount(),
                         assertionResult.isBackedUp(),
-                        passkeyCredentialDeviceType,
+                        passkeyCredentialDeviceTypeFrom(assertionResult),
                         "UserVerificationError");
         var event =
                 AuthPasskeyVerificationFailed.create(
@@ -134,14 +133,12 @@ public class PasskeyAssertionService {
             AssertionResult assertionResult,
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                     publicKeyCredential) {
-        var passkeyCredentialDeviceType =
-                assertionResult.isBackupEligible() ? "multi-device" : "single-device";
         var passkeyDetail =
                 PasskeyDetail.verificationSuccessful(
                         userVerificationStringFrom(assertionRequest),
                         assertionResult.getSignatureCount(),
                         assertionResult.isBackedUp(),
-                        passkeyCredentialDeviceType);
+                        passkeyCredentialDeviceTypeFrom(assertionResult));
         var event =
                 AuthPasskeyVerificationSuccessful.create(
                         auditContext,

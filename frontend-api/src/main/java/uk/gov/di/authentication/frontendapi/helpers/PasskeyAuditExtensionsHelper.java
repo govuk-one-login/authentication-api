@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
 import com.yubico.webauthn.AssertionRequest;
+import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.data.AuthenticatorTransport;
 import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import com.yubico.webauthn.data.UserVerificationRequirement;
@@ -13,6 +14,9 @@ public class PasskeyAuditExtensionsHelper {
     private PasskeyAuditExtensionsHelper() {
         /* This utility class should not be instantiated */
     }
+
+    private static final String MULTI_DEVICE = "multi-device";
+    private static final String SINGLE_DEVICE = "single-device";
 
     public static List<PasskeyAllowCredentials> passkeyAllowedCredentialsFrom(
             AssertionRequest assertionRequest) {
@@ -35,6 +39,11 @@ public class PasskeyAuditExtensionsHelper {
                 .getUserVerification()
                 .map(UserVerificationRequirement::getValue)
                 .orElse(AuditService.UNKNOWN);
+    }
+
+    @SuppressWarnings("deprecation")
+    public static String passkeyCredentialDeviceTypeFrom(AssertionResult assertionResult) {
+        return assertionResult.isBackupEligible() ? MULTI_DEVICE : SINGLE_DEVICE;
     }
 
     private static List<String> getNullableTransports(PublicKeyCredentialDescriptor credential) {
