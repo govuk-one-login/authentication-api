@@ -5,7 +5,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformation;
 import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithoutPhone;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
-import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAuthenticationRequest;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
@@ -49,13 +48,6 @@ public record AuthPasskeyVerificationSuccessful(
                 restricted,
                 extensions);
     }
-
-    public record Passkey(
-            int passkeyCounter,
-            boolean passkeyCredentialBackedUp,
-            String passkeyCredentialDeviceType,
-            boolean passkeyUserVerified,
-            PasskeyAuthenticationRequest passkeyAuthenticationRequest) {}
 
     public record RestrictedPasskeySection(
             List<PasskeyAllowCredentials> passkeyAllowedCredentials, String passkeyCredentialId) {}
