@@ -8240,7 +8240,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8285,7 +8285,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8374,7 +8374,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8417,7 +8417,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8460,7 +8460,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8503,7 +8503,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8547,7 +8547,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8591,7 +8591,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8635,7 +8635,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8679,7 +8679,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8809,7 +8809,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8854,7 +8854,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8898,7 +8898,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8941,7 +8941,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
@@ -8984,7 +8984,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
       ComparisonOperator: GreaterThanUpperThreshold
       EvaluationPeriods: 3
       ThresholdMetricId: ad1
