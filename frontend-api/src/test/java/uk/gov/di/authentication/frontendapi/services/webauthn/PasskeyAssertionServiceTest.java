@@ -65,7 +65,7 @@ class PasskeyAssertionServiceTest {
 
     @AfterEach
     void tearDown() {
-        reset(structuredAuditService);
+        reset(structuredAuditService, jsonParser, relyingParty);
     }
 
     @Nested

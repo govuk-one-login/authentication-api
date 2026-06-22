@@ -58,15 +58,6 @@ public class PasskeyAssertionService {
             String assertionRequestJson,
             String publicKeyCredentialJson,
             AuditContext auditContext) {
-
-        AssertionRequest assertionRequest;
-        try {
-            assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
-        } catch (Exception e) {
-            return Result.failure(
-                    FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
-        }
-
         PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                 credential;
         try {
@@ -74,6 +65,14 @@ public class PasskeyAssertionService {
         } catch (Exception e) {
             emitAuthPasskeyVerificationFailedEvent(auditContext);
             return Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR);
+        }
+
+        AssertionRequest assertionRequest;
+        try {
+            assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
+        } catch (Exception e) {
+            return Result.failure(
+                    FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
         }
 
         AssertionResult assertionResult;
