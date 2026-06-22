@@ -39,7 +39,7 @@ class AuthPasskeyVerificationFailedTest {
 
         var passkeyVerificationFailed =
                 PasskeyDetail.verificationFailed(
-                        "required", 0, true, "multi-device", "UserVerificationError");
+                        "required", 0, true, "multi-device", "Verification failed");
 
         var event =
                 AuthPasskeyVerificationFailed.create(
@@ -97,7 +97,7 @@ class AuthPasskeyVerificationFailedTest {
                               "passkey_credential_backed_up": true,
                               "passkey_credential_device_type": "multi-device",
                               "passkey_user_verified": false,
-                              "passkey_verification_failure_reason": "UserVerificationError"
+                              "passkey_verification_failure_reason": "Verification failed"
                             }
                           }
                         }
