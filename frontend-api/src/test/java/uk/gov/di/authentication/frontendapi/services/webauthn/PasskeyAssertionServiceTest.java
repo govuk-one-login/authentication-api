@@ -56,6 +56,7 @@ class PasskeyAssertionServiceTest {
     private static final String CREDENTIAL_ID = "Q6pkKSucKCqDzOuFky3pQAA";
     private static final StructuredAuditService structuredAuditService =
             mock(StructuredAuditService.class);
+    private static final String VERIFICATION_FAILED_EVENT_NAME = "AUTH_PASSKEY_VERIFICATION_FAILED";
 
     @BeforeEach
     void setup() {
@@ -188,8 +189,10 @@ class PasskeyAssertionServiceTest {
         class Error {
             @Test
             void shouldFailWithParsingAssertionRequestErrorWhenAssertionRequestJsonParsingFails()
-                    throws JsonProcessingException {
+                    throws IOException, Base64UrlException {
                 // Given
+                var pkc = setupPublicKeyCredential(CREDENTIAL_ID);
+                when(jsonParser.parsePublicKeyCredential(any())).thenReturn(pkc);
                 when(jsonParser.parseAssertionRequest(any()))
                         .thenThrow(JsonProcessingException.class);
 
@@ -204,7 +207,54 @@ class PasskeyAssertionServiceTest {
                         FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR,
                         actualFailureReason);
 
-                verify(structuredAuditService, never()).submitAuditEvent(any());
+                verify(structuredAuditService)
+                        .submitAuditEvent(
+                                argThat(
+                                        event ->
+                                                event.eventName()
+                                                        .equals(VERIFICATION_FAILED_EVENT_NAME)));
+            }
+
+            @Test
+            void shouldEmitAuditEventWhenAssertionRequestParsingFails()
+                    throws IOException, Base64UrlException {
+                // Given
+                var pkc = setupPublicKeyCredential(CREDENTIAL_ID);
+                when(jsonParser.parsePublicKeyCredential(any())).thenReturn(pkc);
+                when(jsonParser.parseAssertionRequest(any()))
+                        .thenThrow(JsonProcessingException.class);
+
+                // When
+                passkeyAssertionService
+                        .finishAssertion("", "", AuditContext.emptyAuditContext().withEmail(EMAIL))
+                        .getFailure();
+
+                // Then
+                var argCaptor = ArgumentCaptor.forClass(StructuredAuditEvent.class);
+
+                verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+                var capturedAuditEvent = argCaptor.getValue();
+
+                assertEquals(VERIFICATION_FAILED_EVENT_NAME, capturedAuditEvent.eventName());
+
+                var authPasskeyVerificationFailed =
+                        (AuthPasskeyVerificationFailed) capturedAuditEvent;
+
+                assertEquals(EMAIL, authPasskeyVerificationFailed.user().email());
+
+                var expectedPasskeyDetail =
+                        PasskeyDetail.verificationCouldNotProceed(
+                                "Assertion request stored in session failed to parse");
+                assertEquals(
+                        expectedPasskeyDetail,
+                        authPasskeyVerificationFailed.extensions().passkey());
+
+                var expectedRestrictedPasskeySection =
+                        new RestrictedPasskeySection(null, CREDENTIAL_ID);
+
+                assertEquals(
+                        expectedRestrictedPasskeySection,
+                        authPasskeyVerificationFailed.restricted().passkey());
             }
 
             @Test
@@ -228,8 +278,7 @@ class PasskeyAssertionServiceTest {
                                 argThat(
                                         event ->
                                                 event.eventName()
-                                                        .equals(
-                                                                "AUTH_PASSKEY_VERIFICATION_FAILED")));
+                                                        .equals(VERIFICATION_FAILED_EVENT_NAME)));
             }
 
             @Test
@@ -250,7 +299,7 @@ class PasskeyAssertionServiceTest {
                 verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
                 var capturedAuditEvent = argCaptor.getValue();
 
-                assertEquals("AUTH_PASSKEY_VERIFICATION_FAILED", capturedAuditEvent.eventName());
+                assertEquals(VERIFICATION_FAILED_EVENT_NAME, capturedAuditEvent.eventName());
 
                 var authPasskeyVerificationFailed =
                         (AuthPasskeyVerificationFailed) capturedAuditEvent;
@@ -322,8 +371,7 @@ class PasskeyAssertionServiceTest {
                                 argThat(
                                         event ->
                                                 event.eventName()
-                                                        .equals(
-                                                                "AUTH_PASSKEY_VERIFICATION_FAILED")));
+                                                        .equals(VERIFICATION_FAILED_EVENT_NAME)));
             }
 
             @Test
@@ -359,7 +407,7 @@ class PasskeyAssertionServiceTest {
                 verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
                 var capturedAuditEvent = argCaptor.getValue();
 
-                assertEquals("AUTH_PASSKEY_VERIFICATION_FAILED", capturedAuditEvent.eventName());
+                assertEquals(VERIFICATION_FAILED_EVENT_NAME, capturedAuditEvent.eventName());
 
                 var authPasskeyVerificationFailed =
                         (AuthPasskeyVerificationFailed) capturedAuditEvent;
