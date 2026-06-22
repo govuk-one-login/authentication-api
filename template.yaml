@@ -121,7 +121,8 @@ Conditions:
   UseCloudfront:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   DeployAlternateDomainRecord: !Equals [build, !Ref Environment]
-  DeployMigratedRecords: !Equals [dev, !Ref Environment]
+  DeployMigratedRecords:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   SwapLiveTrafficToCloudfront:
     !And [!Condition DeployMigratedRecords, !Equals [dev, !Ref Environment]]
   CreateApiGwCustomDomain:
