@@ -56,6 +56,8 @@ class PasskeyAssertionServiceTest {
     private static final StructuredAuditService structuredAuditService =
             mock(StructuredAuditService.class);
     private static final String VERIFICATION_FAILED_EVENT_NAME = "AUTH_PASSKEY_VERIFICATION_FAILED";
+    private static final AuditContext AUDIT_CONTEXT =
+            AuditContext.emptyAuditContext().withEmail(EMAIL);
 
     @BeforeEach
     void setup() {
@@ -118,9 +120,7 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 AssertionResult actualAssertionResult =
-                        passkeyAssertionService
-                                .finishAssertion("", "", AuditContext.emptyAuditContext())
-                                .getSuccess();
+                        passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getSuccess();
 
                 // Then
                 assertEquals(actualAssertionResult, mockAssertionResult);
@@ -149,9 +149,7 @@ class PasskeyAssertionServiceTest {
                 when(relyingParty.finishAssertion(any())).thenReturn(assertionResult);
 
                 // When
-                passkeyAssertionService
-                        .finishAssertion("", "", AuditContext.emptyAuditContext().withEmail(EMAIL))
-                        .getSuccess();
+                passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getSuccess();
 
                 // Then
                 var argCaptor = ArgumentCaptor.forClass(StructuredAuditEvent.class);
@@ -197,9 +195,7 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService
-                                .finishAssertion("", "", AuditContext.emptyAuditContext())
-                                .getFailure();
+                        passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getFailure();
 
                 // Then
                 assertEquals(
@@ -219,9 +215,7 @@ class PasskeyAssertionServiceTest {
                         .thenThrow(JsonProcessingException.class);
 
                 // When
-                passkeyAssertionService
-                        .finishAssertion("", "", AuditContext.emptyAuditContext().withEmail(EMAIL))
-                        .getFailure();
+                passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getFailure();
 
                 // Then
                 var expectedPasskeyDetail =
@@ -242,9 +236,7 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService
-                                .finishAssertion("", "", AuditContext.emptyAuditContext())
-                                .getFailure();
+                        passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getFailure();
 
                 // Then
                 assertEquals(
@@ -260,9 +252,7 @@ class PasskeyAssertionServiceTest {
                 when(jsonParser.parsePublicKeyCredential(any())).thenThrow(IOException.class);
 
                 // When
-                passkeyAssertionService
-                        .finishAssertion("", "", AuditContext.emptyAuditContext().withEmail(EMAIL))
-                        .getFailure();
+                passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getFailure();
 
                 // Then
                 var expectedPasskeyDetail =
@@ -286,9 +276,7 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService
-                                .finishAssertion("", "", AuditContext.emptyAuditContext())
-                                .getFailure();
+                        passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getFailure();
 
                 // Then
                 assertEquals(
@@ -312,9 +300,7 @@ class PasskeyAssertionServiceTest {
                 when(relyingParty.finishAssertion(any())).thenThrow(AssertionFailedException.class);
 
                 // When
-                passkeyAssertionService
-                        .finishAssertion("", "", AuditContext.emptyAuditContext().withEmail(EMAIL))
-                        .getFailure();
+                passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getFailure();
 
                 // Then
                 var expectedFailureReason =
@@ -350,9 +336,7 @@ class PasskeyAssertionServiceTest {
 
                 // When
                 FinishPasskeyAssertionFailureReason actualFailureReason =
-                        passkeyAssertionService
-                                .finishAssertion("", "", AuditContext.emptyAuditContext())
-                                .getFailure();
+                        passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getFailure();
 
                 // Then
                 assertEquals(
@@ -383,10 +367,9 @@ class PasskeyAssertionServiceTest {
                 when(relyingParty.finishAssertion(any())).thenReturn(assertionResult);
                 when(jsonParser.parseAssertionRequest(any())).thenReturn(assertionRequest);
                 when(jsonParser.parsePublicKeyCredential(any())).thenReturn(publicKeyCredential);
-                var auditContext = AuditContext.emptyAuditContext().withEmail(EMAIL);
 
                 // When
-                passkeyAssertionService.finishAssertion("", "", auditContext).getFailure();
+                passkeyAssertionService.finishAssertion("", "", AUDIT_CONTEXT).getFailure();
 
                 // Then
                 var expectedPasskeyDetail =
