@@ -233,7 +233,7 @@ public abstract class BaseAuthorizeValidator {
 
             logErrorInProdElseWarn(errorMessage);
             throw new InvalidAuthorizeRequestException(
-                    OAuth2Error.INVALID_REQUEST.setDescription(errorMessage));
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, errorMessage));
         }
     }
 

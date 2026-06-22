@@ -80,7 +80,8 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         } else {
             logErrorInProdElseWarn("Request object JWT was unsigned");
             throw new InvalidAuthorizeRequestException(
-                    OAuth2Error.INVALID_REQUEST_OBJECT.setDescription(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_OBJECT_CODE,
                             "Request object JWT must be signed"));
         }
 
@@ -111,7 +112,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                 "Invalid Redirect URI in request %s",
                                 jwtClaimsSet.getStringClaim("redirect_uri")));
                 throw new InvalidAuthorizeRequestException(
-                        OAuth2Error.INVALID_REQUEST.setDescription("Invalid redirect URI"));
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid redirect URI"));
             }
 
             var redirectURI = URI.create(jwtClaimsSet.getStringClaim("redirect_uri"));

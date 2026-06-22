@@ -49,7 +49,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                     String.format(
                             "Invalid Redirect URI in request %s", authRequest.getRedirectionURI()));
             throw new InvalidAuthorizeRequestException(
-                    OAuth2Error.INVALID_REQUEST.setDescription("Invalid redirect URI"));
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid redirect URI"));
         }
         var redirectURI = authRequest.getRedirectionURI();
 
