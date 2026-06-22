@@ -223,7 +223,52 @@ class PasskeyAssertionServiceTest {
                 // Then
                 assertEquals(
                         FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR, actualFailureReason);
-                verify(structuredAuditService, never()).submitAuditEvent(any());
+                verify(structuredAuditService)
+                        .submitAuditEvent(
+                                argThat(
+                                        event ->
+                                                event.eventName()
+                                                        .equals(
+                                                                "AUTH_PASSKEY_VERIFICATION_FAILED")));
+            }
+
+            @Test
+            void shouldEmitRelevantAuditEventWhenPKCParsingFails() throws IOException {
+                // Given
+                when(jsonParser.parseAssertionRequest(any()))
+                        .thenReturn(mock(AssertionRequest.class));
+                when(jsonParser.parsePublicKeyCredential(any())).thenThrow(IOException.class);
+
+                // When
+                passkeyAssertionService
+                        .finishAssertion("", "", AuditContext.emptyAuditContext().withEmail(EMAIL))
+                        .getFailure();
+
+                // Then
+                var argCaptor = ArgumentCaptor.forClass(StructuredAuditEvent.class);
+
+                verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+                var capturedAuditEvent = argCaptor.getValue();
+
+                assertEquals("AUTH_PASSKEY_VERIFICATION_FAILED", capturedAuditEvent.eventName());
+
+                var authPasskeyVerificationFailed =
+                        (AuthPasskeyVerificationFailed) capturedAuditEvent;
+
+                assertEquals(EMAIL, authPasskeyVerificationFailed.user().email());
+
+                var expectedPasskeyDetail =
+                        PasskeyDetail.verificationCouldNotProceed(
+                                "Public key credential in request failed to parse");
+                assertEquals(
+                        expectedPasskeyDetail,
+                        authPasskeyVerificationFailed.extensions().passkey());
+
+                var expectedRestrictedPasskeySection = new RestrictedPasskeySection(null, null);
+
+                assertEquals(
+                        expectedRestrictedPasskeySection,
+                        authPasskeyVerificationFailed.restricted().passkey());
             }
 
             @Test

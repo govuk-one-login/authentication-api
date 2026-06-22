@@ -72,6 +72,7 @@ public class PasskeyAssertionService {
         try {
             credential = jsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
         } catch (Exception e) {
+            emitAuthPasskeyVerificationFailedEvent(auditContext);
             return Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR);
         }
 
@@ -99,6 +100,21 @@ public class PasskeyAssertionService {
                 auditContext, assertionRequest, assertionResult, credential);
 
         return Result.success(assertionResult);
+    }
+
+    private void emitAuthPasskeyVerificationFailedEvent(AuditContext auditContext) {
+        var passkeyDetail =
+                PasskeyDetail.verificationCouldNotProceed(
+                        "Public key credential in request failed to parse");
+        var event =
+                AuthPasskeyVerificationFailed.create(
+                        auditContext,
+                        JourneyType.SIGN_IN,
+                        null,
+                        null,
+                        passkeyDetail,
+                        Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(event);
     }
 
     @SuppressWarnings("deprecation")
