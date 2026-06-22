@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.yubico.webauthn.AssertionResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest;
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
@@ -14,7 +16,10 @@ import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionSe
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -56,7 +61,8 @@ public class FinishPasskeyAssertionHandler
         this.passkeyAssertionService =
                 new PasskeyAssertionService(
                         RelyingPartyProvider.provide(configurationService),
-                        new DefaultPasskeyJsonParser());
+                        new DefaultPasskeyJsonParser(),
+                        new StructuredAuditService(configurationService));
         this.userActionsManager = new UserActionsManager(configurationService);
     }
 
@@ -75,7 +81,7 @@ public class FinishPasskeyAssertionHandler
 
         LOG.info("FinishPasskeyAssertionHandler called");
 
-        return verifyPasskeyAssertion(userContext, request)
+        return verifyPasskeyAssertion(userContext, request, input)
                 .flatMap(this::updatePasskeyRecord)
                 .map(success -> reportCorrectPasskeyReceived(userContext))
                 .fold(
@@ -94,9 +100,21 @@ public class FinishPasskeyAssertionHandler
     }
 
     private Result<FinishPasskeyAssertionFailureReason, AssertionResult> verifyPasskeyAssertion(
-            UserContext userContext, FinishPasskeyAssertionRequest request) {
+            UserContext userContext,
+            FinishPasskeyAssertionRequest request,
+            APIGatewayProxyRequestEvent input) {
+        var auditContext =
+                AuditContext.auditContextFromUserContext(
+                        userContext,
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        userContext.getAuthSession().getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         return passkeyAssertionService.finishAssertion(
-                userContext.getAuthSession().getPasskeyAssertionRequest(), request.pkc());
+                userContext.getAuthSession().getPasskeyAssertionRequest(),
+                request.pkc(),
+                auditContext);
     }
 
     private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(

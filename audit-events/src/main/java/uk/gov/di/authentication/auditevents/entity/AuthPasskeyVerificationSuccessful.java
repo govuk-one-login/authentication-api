@@ -5,8 +5,8 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformation;
 import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithoutPhone;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
-import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAuthenticationRequest;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.RestrictedPasskeySection;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -37,8 +37,7 @@ public record AuthPasskeyVerificationSuccessful(
         var restricted =
                 new Restricted(
                         EncodedDeviceInformation.from(auditContext),
-                        new RestrictedPasskeySection(passkeyAllowedCredentials),
-                        credentialId);
+                        new RestrictedPasskeySection(passkeyAllowedCredentials, credentialId));
         var extensions = new Extensions(journeyType.getValue(), passkey);
         return new AuthPasskeyVerificationSuccessful(
                 eventName,
@@ -51,20 +50,8 @@ public record AuthPasskeyVerificationSuccessful(
                 extensions);
     }
 
-    public record Passkey(
-            int passkeyCounter,
-            boolean passkeyCredentialBackedUp,
-            String passkeyCredentialDeviceType,
-            boolean passkeyUserVerified,
-            PasskeyAuthenticationRequest passkeyAuthenticationRequest) {}
-
-    public record RestrictedPasskeySection(
-            List<PasskeyAllowCredentials> passkeyAllowedCredentials) {}
-
     public record Restricted(
-            EncodedDeviceInformation deviceInformation,
-            RestrictedPasskeySection passkey,
-            String passkeyCredentialId) {}
+            EncodedDeviceInformation deviceInformation, RestrictedPasskeySection passkey) {}
 
     public record Extensions(
             @SerializedName("journey-type") String journeyType, PasskeyDetail passkey) {}

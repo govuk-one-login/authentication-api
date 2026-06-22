@@ -13,20 +13,36 @@ import com.yubico.webauthn.data.UserVerificationRequirement;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationFailed;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.Optional;
+
+import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.passkeyAllowedCredentialsFrom;
+import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.passkeyCredentialDeviceTypeFrom;
+import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.userVerificationStringFrom;
 
 public class PasskeyAssertionService {
     private final RelyingParty relyingParty;
     private final PasskeyJsonParser jsonParser;
     private static final Logger LOG = LogManager.getLogger(PasskeyAssertionService.class);
+    private final StructuredAuditService structuredAuditService;
 
-    public PasskeyAssertionService(RelyingParty relyingParty, PasskeyJsonParser jsonParser) {
+    public PasskeyAssertionService(
+            RelyingParty relyingParty,
+            PasskeyJsonParser jsonParser,
+            StructuredAuditService structuredAuditService) {
         this.relyingParty = relyingParty;
         this.jsonParser = jsonParser;
+        this.structuredAuditService = structuredAuditService;
     }
 
     public AssertionRequest startAssertion(String publicSubjectId) {
@@ -39,7 +55,9 @@ public class PasskeyAssertionService {
     }
 
     public Result<FinishPasskeyAssertionFailureReason, AssertionResult> finishAssertion(
-            String assertionRequestJson, String publicKeyCredentialJson) {
+            String assertionRequestJson,
+            String publicKeyCredentialJson,
+            AuditContext auditContext) {
 
         AssertionRequest assertionRequest;
         try {
@@ -72,9 +90,63 @@ public class PasskeyAssertionService {
 
         if (!assertionResult.isSuccess()) {
             LOG.warn("Passkey assertion unsuccessful");
+            emitAuthPasskeyVerificationFailedEvent(
+                    auditContext, assertionRequest, assertionResult, credential);
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
 
+        emitAuthPasskeyVerificationSuccessEvent(
+                auditContext, assertionRequest, assertionResult, credential);
+
         return Result.success(assertionResult);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void emitAuthPasskeyVerificationFailedEvent(
+            AuditContext auditContext,
+            AssertionRequest assertionRequest,
+            AssertionResult assertionResult,
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                    publicKeyCredential) {
+        var passkeyDetail =
+                PasskeyDetail.verificationFailed(
+                        userVerificationStringFrom(assertionRequest),
+                        assertionResult.getSignatureCount(),
+                        assertionResult.isBackedUp(),
+                        passkeyCredentialDeviceTypeFrom(assertionResult),
+                        "UnknownError");
+        var event =
+                AuthPasskeyVerificationFailed.create(
+                        auditContext,
+                        JourneyType.SIGN_IN,
+                        passkeyAllowedCredentialsFrom(assertionRequest),
+                        publicKeyCredential.getId().getBase64Url(),
+                        passkeyDetail,
+                        Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(event);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void emitAuthPasskeyVerificationSuccessEvent(
+            AuditContext auditContext,
+            AssertionRequest assertionRequest,
+            AssertionResult assertionResult,
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                    publicKeyCredential) {
+        var passkeyDetail =
+                PasskeyDetail.verificationSuccessful(
+                        userVerificationStringFrom(assertionRequest),
+                        assertionResult.getSignatureCount(),
+                        assertionResult.isBackedUp(),
+                        passkeyCredentialDeviceTypeFrom(assertionResult));
+        var event =
+                AuthPasskeyVerificationSuccessful.create(
+                        auditContext,
+                        JourneyType.SIGN_IN,
+                        passkeyAllowedCredentialsFrom(assertionRequest),
+                        passkeyDetail,
+                        publicKeyCredential.getId().getBase64Url(),
+                        Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(event);
     }
 }

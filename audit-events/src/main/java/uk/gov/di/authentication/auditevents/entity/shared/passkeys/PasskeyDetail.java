@@ -2,17 +2,17 @@ package uk.gov.di.authentication.auditevents.entity.shared.passkeys;
 
 public record PasskeyDetail(
         PasskeyAuthenticationRequest passkeyAuthenticationRequest,
-        int passkeyCounter,
+        long passkeyCounter,
         boolean passkeyCredentialBackedUp,
         String passkeyCredentialDeviceType,
         boolean passkeyUserVerified,
-        String passkeyVerificationFailureReason) {
+        String passkeyAuthenticationFailureReason) {
     public static PasskeyDetail verificationFailed(
             String userVerification,
-            int passkeyCounter,
+            long passkeyCounter,
             boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType,
-            String failureReason) {
+            String authenticationFailureReason) {
         var userVerified = false;
         return new PasskeyDetail(
                 new PasskeyAuthenticationRequest(userVerification),
@@ -20,12 +20,12 @@ public record PasskeyDetail(
                 passkeyCredentialBackedUp,
                 passkeyCredentialDeviceType,
                 userVerified,
-                failureReason);
+                authenticationFailureReason);
     }
 
     public static PasskeyDetail verificationSuccessful(
             String userVerification,
-            int passkeyCounter,
+            long passkeyCounter,
             boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType) {
         var userVerified = true;
@@ -39,7 +39,7 @@ public record PasskeyDetail(
     }
 
     public static PasskeyDetail authenticationSuccessful(
-            int passkeyCounter,
+            long passkeyCounter,
             boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType) {
         var userVerified = false;
