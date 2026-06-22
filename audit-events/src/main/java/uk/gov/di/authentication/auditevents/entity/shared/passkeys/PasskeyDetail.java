@@ -9,8 +9,8 @@ public record PasskeyDetail(
         String passkeyVerificationFailureReason) {
     public static PasskeyDetail verificationFailed(
             String userVerification,
-            long passkeyCounter,
-            boolean passkeyCredentialBackedUp,
+            Long passkeyCounter,
+            Boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType,
             String verificationFailureReason) {
         var userVerified = false;

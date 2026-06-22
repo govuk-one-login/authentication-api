@@ -39,7 +39,7 @@ class AuthPasskeyVerificationFailedTest {
 
         var passkeyVerificationFailed =
                 PasskeyDetail.verificationFailed(
-                        "required", 0, true, "multi-device", "Verification failed");
+                        "required", 0L, true, "multi-device", "Verification failed");
 
         var event =
                 AuthPasskeyVerificationFailed.create(
