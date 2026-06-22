@@ -2,8 +2,8 @@ package uk.gov.di.authentication.auditevents.entity.shared.passkeys;
 
 public record PasskeyDetail(
         PasskeyAuthenticationRequest passkeyAuthenticationRequest,
-        long passkeyCounter,
-        boolean passkeyCredentialBackedUp,
+        Long passkeyCounter,
+        Boolean passkeyCredentialBackedUp,
         String passkeyCredentialDeviceType,
         boolean passkeyUserVerified,
         String passkeyAuthenticationFailureReason) {
@@ -21,6 +21,11 @@ public record PasskeyDetail(
                 passkeyCredentialDeviceType,
                 userVerified,
                 authenticationFailureReason);
+    }
+
+    public static PasskeyDetail verificationCouldNotProceed(String authenticationFailureReason) {
+        var userVerified = false;
+        return new PasskeyDetail(null, null, null, null, userVerified, authenticationFailureReason);
     }
 
     public static PasskeyDetail verificationSuccessful(
