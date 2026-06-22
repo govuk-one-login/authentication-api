@@ -97,7 +97,7 @@ class AuthPasskeyVerificationFailedTest {
                               "passkey_credential_backed_up": true,
                               "passkey_credential_device_type": "multi-device",
                               "passkey_user_verified": false,
-                              "passkey_authentication_failure_reason": "UserVerificationError"
+                              "passkey_verification_failure_reason": "UserVerificationError"
                             }
                           }
                         }
@@ -143,7 +143,7 @@ class AuthPasskeyVerificationFailedTest {
                             "journey-type": "SIGN_IN",
                             "passkey": {
                               "passkey_user_verified": false,
-                              "passkey_authentication_failure_reason": "Stored assertion request failed to parse"
+                              "passkey_verification_failure_reason": "Stored assertion request failed to parse"
                             }
                           }
                         """;
