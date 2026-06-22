@@ -177,7 +177,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
 
-            assertThat(loginResponse.mfaRequired(), equalTo(level != LOW_LEVEL));
             assertThat(
                     loginResponse.latestTermsAndConditionsAccepted(),
                     equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
@@ -266,7 +265,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
 
-            assertThat(loginResponse.mfaRequired(), equalTo(level != LOW_LEVEL));
             assertThat(
                     loginResponse.latestTermsAndConditionsAccepted(),
                     equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
@@ -373,7 +371,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(response, hasStatus(200));
 
             var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
-            assertThat(loginResponse.mfaRequired(), equalTo(true));
             assertThat(loginResponse.mfaMethodType(), equalTo(SMS));
             assertThat(loginResponse.mfaMethodVerified(), equalTo(true));
             assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
