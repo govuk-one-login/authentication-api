@@ -114,7 +114,7 @@ public class PasskeyAssertionService {
                         assertionResult.getSignatureCount(),
                         assertionResult.isBackedUp(),
                         passkeyCredentialDeviceTypeFrom(assertionResult),
-                        "UserVerificationError");
+                        "UnknownError");
         var event =
                 AuthPasskeyVerificationFailed.create(
                         auditContext,

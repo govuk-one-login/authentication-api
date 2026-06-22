@@ -6,13 +6,13 @@ public record PasskeyDetail(
         boolean passkeyCredentialBackedUp,
         String passkeyCredentialDeviceType,
         boolean passkeyUserVerified,
-        String passkeyVerificationFailureReason) {
+        String passkeyAuthenticationFailureReason) {
     public static PasskeyDetail verificationFailed(
             String userVerification,
             long passkeyCounter,
             boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType,
-            String failureReason) {
+            String authenticationFailureReason) {
         var userVerified = false;
         return new PasskeyDetail(
                 new PasskeyAuthenticationRequest(userVerification),
@@ -20,7 +20,7 @@ public record PasskeyDetail(
                 passkeyCredentialBackedUp,
                 passkeyCredentialDeviceType,
                 userVerified,
-                failureReason);
+                authenticationFailureReason);
     }
 
     public static PasskeyDetail verificationSuccessful(

@@ -327,7 +327,7 @@ class PasskeyAssertionServiceTest {
                                 signCount,
                                 isBackedUp,
                                 "single-device",
-                                "UserVerificationError");
+                                "UnknownError");
                 assertEquals(
                         expectedPasskeyDetail,
                         authPasskeyVerificationFailed.extensions().passkey());
