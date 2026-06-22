@@ -197,11 +197,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSession.setInternalCommonSubjectId(internalCommonSubjectId);
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
-                userMfaDetail =
-                        getUserMFADetail(
-                                authSession.getRequestedCredentialStrength(),
-                                userCredentials,
-                                userProfile.get());
+                userMfaDetail = getUserMFADetail(userCredentials, userProfile.get());
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
 
                 needsForcedMFAResetAfterMFACheck =
