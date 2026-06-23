@@ -111,6 +111,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(checkUserExistsResponse.email(), equalTo(TEST_EMAIL_1));
             assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(mfaMethodType));
             assertTrue(checkUserExistsResponse.doesUserExist());
+            assertTrue(checkUserExistsResponse.shouldSuppressPasskeyRegistrationPrompt());
 
             if (MFAMethodType.SMS.equals(mfaMethodType)) {
                 assertThat(checkUserExistsResponse.phoneNumberLastThree(), equalTo("321"));

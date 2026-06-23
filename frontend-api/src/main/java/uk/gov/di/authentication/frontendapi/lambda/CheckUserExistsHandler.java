@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.frontendapi.helpers.PasskeyRegistrationPromptHelper;
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -180,6 +181,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var userMfaDetail = UserMfaDetail.noMfa();
             Optional<Boolean> hasActivePasskey = Optional.empty();
             var needsForcedMFAResetAfterMFACheck = false;
+            var shouldSuppressPasskeyRegistrationPrompt = false;
 
             AuthSessionItem authSession = userContext.getAuthSession();
 
@@ -206,6 +208,9 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 && requiresMfaResetForInternationalNumber(
                                         authSession, userCredentials, userProfile);
                 hasActivePasskey = hasActivePasskey(userProfile.getPublicSubjectID(), authSession);
+                shouldSuppressPasskeyRegistrationPrompt =
+                        PasskeyRegistrationPromptHelper.shouldSuppressPasskeyRegistrationPrompt(
+                                userProfile);
                 metadataPairs.add(
                         pair(
                                 AUDIT_EVENT_EXTENSIONS_HAS_ACTIVE_PASSKEY,
@@ -242,7 +247,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             lockoutInformation,
                             hasActivePasskey.orElse(null),
                             needsForcedMFAResetAfterMFACheck,
-                            false);
+                            shouldSuppressPasskeyRegistrationPrompt);
 
             authSessionService.updateSession(authSession);
 
