@@ -133,12 +133,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
-            var userExists = userProfile.isPresent();
+            var maybeUserProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
+            var userExists = maybeUserProfile.isPresent();
             var internalCommonSubjectId =
                     userExists
                             ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                            userProfile.get(),
+                                            maybeUserProfile.get(),
                                             configurationService.getInternalSectorUri(),
                                             authenticationService)
                                     .getValue()
@@ -184,10 +184,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuthSessionItem authSession = userContext.getAuthSession();
 
             if (userExists) {
+                var userProfile = maybeUserProfile.get();
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;
                 rpPairwiseId =
                         ClientSubjectHelper.getSubject(
-                                        userProfile.get(),
+                                        userProfile,
                                         userContext.getAuthSession(),
                                         authenticationService)
                                 .getValue();
@@ -197,15 +198,14 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSession.setInternalCommonSubjectId(internalCommonSubjectId);
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
-                userMfaDetail = getUserMFADetail(userCredentials, userProfile.get());
+                userMfaDetail = getUserMFADetail(userCredentials, userProfile);
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
 
                 needsForcedMFAResetAfterMFACheck =
                         configurationService.isForcedMFAResetAfterMFACheckEnabled()
                                 && requiresMfaResetForInternationalNumber(
-                                        authSession, userCredentials, userProfile.get());
-                hasActivePasskey =
-                        hasActivePasskey(userProfile.get().getPublicSubjectID(), authSession);
+                                        authSession, userCredentials, userProfile);
+                hasActivePasskey = hasActivePasskey(userProfile.getPublicSubjectID(), authSession);
                 metadataPairs.add(
                         pair(
                                 AUDIT_EVENT_EXTENSIONS_HAS_ACTIVE_PASSKEY,
