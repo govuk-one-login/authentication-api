@@ -199,7 +199,8 @@ class CheckUserExistsHandlerTest {
                     "phoneNumberLastThree":"%s",
                     "lockoutInformation":[],
                     "hasActivePasskey":null,
-                    "needsForcedMFAResetAfterMFACheck":false}
+                    "needsForcedMFAResetAfterMFACheck":false,
+                    "shouldSuppressPasskeyRegistrationPrompt":false}
                     """,
                             EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
             assertEquals(
@@ -256,7 +257,8 @@ class CheckUserExistsHandlerTest {
                     "phoneNumberLastThree": %s,
                     "lockoutInformation":[],
                     "hasActivePasskey":null,
-                    "needsForcedMFAResetAfterMFACheck":false}
+                    "needsForcedMFAResetAfterMFACheck":false,
+                    "shouldSuppressPasskeyRegistrationPrompt":false}
                     """,
                             EMAIL_ADDRESS,
                             expectedMfaMethodType,
@@ -376,6 +378,7 @@ class CheckUserExistsHandlerTest {
                                             lockoutExpiry.getEpochSecond(),
                                             JourneyType.PASSWORD_RESET_MFA)),
                             null,
+                            false,
                             false);
             assertThat(result, hasJsonBody(expectedResponse));
         }

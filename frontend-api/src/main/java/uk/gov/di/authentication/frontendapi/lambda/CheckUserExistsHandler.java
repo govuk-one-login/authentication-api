@@ -241,7 +241,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation,
                             hasActivePasskey.orElse(null),
-                            needsForcedMFAResetAfterMFACheck);
+                            needsForcedMFAResetAfterMFACheck,
+                            false);
 
             authSessionService.updateSession(authSession);
 
