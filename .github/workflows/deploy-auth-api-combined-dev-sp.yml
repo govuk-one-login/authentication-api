@@ -69,7 +69,7 @@ jobs:
           cache-read-only: false
 
       - name: Gradle build
-        run: ${{ inputs.api_name == 'account-data' && './gradlew --no-daemon --parallel :account-data-api:buildZip' || inputs.api_name == 'account-management' && './gradlew --no-daemon --parallel :account-management-api:buildZip' || inputs.api_name == 'auth-int-ext' && './gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip :delivery-receipts-api:buildZip' || inputs.api_name == 'stubs' && './gradlew --no-daemon --parallel :ticf-cri-stub:buildZip :interventions-api-stub:buildZip' || inputs.api_name == 'utils' && './gradlew --no-daemon --parallel :utils:buildZip :test-services-api:buildZip' }}
+        run: ${{ inputs.api_name == 'account-data' && './gradlew --no-daemon --parallel :account-data-api:buildZip' || inputs.api_name == 'account-management' && './gradlew --no-daemon --parallel :account-management-api:buildZip' || inputs.api_name == 'auth-int-ext' && './gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip :delivery-receipts-api:buildZip :sis-api:buildZip' || inputs.api_name == 'stubs' && './gradlew --no-daemon --parallel :ticf-cri-stub:buildZip :interventions-api-stub:buildZip' || inputs.api_name == 'utils' && './gradlew --no-daemon --parallel :utils:buildZip :test-services-api:buildZip' }}
 
       - name: Install Rain
         env:

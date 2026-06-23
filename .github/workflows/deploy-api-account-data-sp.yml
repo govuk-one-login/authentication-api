@@ -26,6 +26,7 @@ on:
       - "oidc-api/**"
       - "ticf-cri-stub/**"
       - "interventions-api-stub/**"
+      - "sis-api/**"
 
 env:
   AWS_REGION: eu-west-2

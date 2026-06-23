@@ -86,7 +86,7 @@ jobs:
       - name: Run Unit Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew client-registry-api:test doc-checking-app-api:test ipv-api:test oidc-api:test orchestration-shared:test jacocoTestReport
+        run: ./gradlew client-registry-api:test doc-checking-app-api:test ipv-api:test oidc-api:test orchestration-shared:test jacocoTestReport sis-api:test
 
   run-alerting-tests:
     if: ${{ inputs.run_unit_tests == true }}
@@ -139,7 +139,7 @@ jobs:
 
       - name: SAM build
         run: |
-          ./gradlew --no-daemon --parallel :oidc:buildZip :ipv-api:buildZip :doc-checking-app-api:buildZip :client-registry-api:buildZip
+          ./gradlew --no-daemon --parallel :oidc:buildZip :ipv-api:buildZip :doc-checking-app-api:buildZip :client-registry-api:buildZip :sis-api:buildZip
           sam build --parallel
 
       - name: Deploy SAM app
