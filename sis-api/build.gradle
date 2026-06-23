@@ -1,0 +1,53 @@
+plugins {
+    id "java"
+    id "jacoco"
+}
+
+group = "uk.gov.di.orchestration.sisapi"
+version = "unspecified"
+
+dependencies {
+    compileOnly libs.bundles.awsLambda
+
+    implementation libs.gson,
+            libs.bundles.nimbus
+
+    implementation project(":orchestration-shared")
+
+    runtimeOnly libs.bundles.loggingRuntime,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
+
+    testImplementation libs.bundles.test,
+            libs.bundles.apache,
+            libs.awsLambdaTests,
+            project(":orchestration-shared-test"),
+            libs.bundles.awsLambda
+
+    testRuntimeOnly libs.bundles.testRuntime
+}
+
+test {
+    useJUnitPlatform()
+    environment "TRACING_ENABLED", "false"
+}
+
+task buildZip(type: Zip) {
+    from compileJava
+    from processResources
+    into("lib") {
+        from configurations.runtimeClasspath
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+    dependsOn "test"
+}
