@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationFailed;
 import uk.gov.di.authentication.auditevents.entity.AuthPasskeyVerificationSuccessful;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyAllowCredentials;
 import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.PasskeyAuditExtensionsHelper.passkeyAllowedCredentialsFrom;
@@ -58,21 +60,25 @@ public class PasskeyAssertionService {
             String assertionRequestJson,
             String publicKeyCredentialJson,
             AuditContext auditContext) {
-
-        AssertionRequest assertionRequest;
-        try {
-            assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
-        } catch (Exception e) {
-            return Result.failure(
-                    FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
-        }
-
         PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                 credential;
         try {
             credential = jsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
         } catch (Exception e) {
+            var failureReason = "Public key credential in request failed to parse";
+            emitAuthPasskeyVerificationFailedEvent(auditContext, failureReason, Optional.empty());
             return Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR);
+        }
+
+        AssertionRequest assertionRequest;
+        try {
+            assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
+        } catch (Exception e) {
+            var failureReason = "Assertion request stored in session failed to parse";
+            emitAuthPasskeyVerificationFailedEvent(
+                    auditContext, failureReason, Optional.of(credential));
+            return Result.failure(
+                    FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
         }
 
         AssertionResult assertionResult;
@@ -85,6 +91,8 @@ public class PasskeyAssertionService {
                                     .build());
         } catch (AssertionFailedException e) {
             LOG.error("Passkey assertion unexpectedly failed with error: {}", e.getMessage());
+            emitAuthPasskeyVerificationFailedEventForAssertionError(
+                    auditContext, assertionRequest, credential, e);
             return Result.failure(FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR);
         }
 
@@ -101,6 +109,38 @@ public class PasskeyAssertionService {
         return Result.success(assertionResult);
     }
 
+    private void emitAuthPasskeyVerificationFailedEvent(
+            AuditContext auditContext,
+            String failureReason,
+            Optional<
+                            PublicKeyCredential<
+                                    AuthenticatorAssertionResponse,
+                                    ClientAssertionExtensionOutputs>>
+                    maybePublicKeyCredential) {
+        var passkeyDetail = PasskeyDetail.verificationCouldNotProceed(failureReason);
+        var credentialId = maybePublicKeyCredential.map(c -> c.getId().getBase64Url()).orElse(null);
+        emitVerificationFailedEvent(auditContext, null, credentialId, passkeyDetail);
+    }
+
+    private void emitAuthPasskeyVerificationFailedEventForAssertionError(
+            AuditContext auditContext,
+            AssertionRequest assertionRequest,
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
+                    publicKeyCredential,
+            AssertionFailedException error) {
+        var passkeyDetail =
+                PasskeyDetail.verificationFailed(
+                        userVerificationStringFrom(assertionRequest),
+                        null,
+                        null,
+                        null,
+                        String.format(
+                                "Passkey finish assertion threw error: %s", error.getClass()));
+        var alllowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
+        var credentialId = publicKeyCredential.getId().getBase64Url();
+        emitVerificationFailedEvent(auditContext, alllowedCredentials, credentialId, passkeyDetail);
+    }
+
     @SuppressWarnings("deprecation")
     private void emitAuthPasskeyVerificationFailedEvent(
             AuditContext auditContext,
@@ -114,16 +154,10 @@ public class PasskeyAssertionService {
                         assertionResult.getSignatureCount(),
                         assertionResult.isBackedUp(),
                         passkeyCredentialDeviceTypeFrom(assertionResult),
-                        "UnknownError");
-        var event =
-                AuthPasskeyVerificationFailed.create(
-                        auditContext,
-                        JourneyType.SIGN_IN,
-                        passkeyAllowedCredentialsFrom(assertionRequest),
-                        publicKeyCredential.getId().getBase64Url(),
-                        passkeyDetail,
-                        Clock.systemUTC());
-        structuredAuditService.submitAuditEvent(event);
+                        "Passkey assertion result was not successful");
+        var alllowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
+        var credentialId = publicKeyCredential.getId().getBase64Url();
+        emitVerificationFailedEvent(auditContext, alllowedCredentials, credentialId, passkeyDetail);
     }
 
     @SuppressWarnings("deprecation")
@@ -146,6 +180,22 @@ public class PasskeyAssertionService {
                         passkeyAllowedCredentialsFrom(assertionRequest),
                         passkeyDetail,
                         publicKeyCredential.getId().getBase64Url(),
+                        Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(event);
+    }
+
+    private void emitVerificationFailedEvent(
+            AuditContext auditContext,
+            List<PasskeyAllowCredentials> allowedCredentials,
+            String credentialId,
+            PasskeyDetail passkeyDetail) {
+        var event =
+                AuthPasskeyVerificationFailed.create(
+                        auditContext,
+                        JourneyType.SIGN_IN,
+                        allowedCredentials,
+                        credentialId,
+                        passkeyDetail,
                         Clock.systemUTC());
         structuredAuditService.submitAuditEvent(event);
     }
