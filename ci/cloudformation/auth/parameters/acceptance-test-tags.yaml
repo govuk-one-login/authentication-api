@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Conditions:
+  HasAcceptanceTests:
+    Fn::Or:
+      - Fn::Equals: [!Ref Environment, dev]
+      - Fn::Equals: [!Ref Environment, build]
+      - Fn::Equals: [!Ref Environment, staging]
+
+# /acceptance-tests/{env}/API_CUCUMBER_FILTER_TAGS
+Mappings:
+  AcceptanceTestTags:
+    dev:
+      tags: >-
+        @UI and not (@AccountInterventions or @Reauth or @old-mfa-without-ipv or
+        @AccountRecovery or @InternationalSmsSendingDisabled or @PasskeyUsageEnabled)
+        and not (@InternationalNumbersIndefiniteLockout and @under-development)
+    build:
+      tags: >-
+        @UI and not (@under-development or @AccountInterventions or @Reauth or
+        @old-mfa-without-ipv or @AcceptInternationalNumbers or @InternationalSmsSendingDisabled
+        or @PasskeysEnabled or @PasskeyUsageEnabled)
+    staging:
+      tags: >-
+        @UI and not (@under-development or @AccountInterventions or @Reauth or
+        @old-mfa-without-ipv or @new-mfa-reset-with-ipv or @AcceptInternationalNumbers
+        or @InternationalSmsSendingDisabled or @PasskeyUsageEnabled or @EnvironmentWithAMCStubDeployed)
+
+Resources:
+  AcceptanceTestAPICucumberFilterTags:
+    Type: AWS::SSM::Parameter
+    Condition: HasAcceptanceTests
+    Properties:
+      Name: !Sub /acceptance-tests/${Environment}/API_CUCUMBER_FILTER_TAGS
+      Type: String
+      Value: !FindInMap
+        - AcceptanceTestTags
+        - !Ref Environment
+        - tags
+        - DefaultValue: "unused"
