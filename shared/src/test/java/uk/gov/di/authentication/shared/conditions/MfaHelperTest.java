@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.mfaRequired;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
@@ -75,7 +76,8 @@ class MfaHelperTest {
             new CaptureLoggingExtension(NoDefaultMfaMethodLogHelper.class);
 
     @Nested
-    class GetUserMFADetail {
+    class MfaRequired {
+
         private static Stream<Arguments> trustLevelsToMfaRequired() {
             return Stream.of(
                     Arguments.of(CredentialTrustLevel.LOW_LEVEL, false),
@@ -84,13 +86,14 @@ class MfaHelperTest {
 
         @ParameterizedTest
         @MethodSource("trustLevelsToMfaRequired")
-        void isMfaRequiredShouldReflectLevelOfTrustRequested(
+        void shouldReturnCorrectMfaRequiredDependingOnCredentialTrustLevel(
                 CredentialTrustLevel trustLevel, boolean expectedMfaRequired) {
-            setupUserProfile(userProfile, PHONE_NUMBER, true, false);
-            var result = getUserMFADetail(trustLevel, userCredentials, userProfile);
-
-            assertEquals(expectedMfaRequired, result.isMfaRequired());
+            assertEquals(mfaRequired(trustLevel), expectedMfaRequired);
         }
+    }
+
+    @Nested
+    class GetUserMFADetail {
 
         @Test
         void shouldReturnAVerifiedSmsMethodWhenNoAuthAppExists() {
@@ -99,10 +102,8 @@ class MfaHelperTest {
 
             when(userCredentials.getMfaMethods()).thenReturn(List.of());
 
-            var result =
-                    getUserMFADetail(
-                            CredentialTrustLevel.MEDIUM_LEVEL, userCredentials, userProfile);
-            var expectedResult = new UserMfaDetail(true, isPhoneNumberVerified, SMS, PHONE_NUMBER);
+            var result = getUserMFADetail(userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(isPhoneNumberVerified, SMS, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
 
@@ -120,10 +121,8 @@ class MfaHelperTest {
             var authApp = authAppMfaMethod(true, isAuthAppEnabled);
             when(userCredentials.getMfaMethods()).thenReturn(List.of(authApp));
 
-            var result =
-                    getUserMFADetail(
-                            CredentialTrustLevel.MEDIUM_LEVEL, userCredentials, userProfile);
-            var expectedResult = new UserMfaDetail(true, isPhoneNumberVerified, SMS, PHONE_NUMBER);
+            var result = getUserMFADetail(userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(isPhoneNumberVerified, SMS, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
         }
@@ -135,10 +134,8 @@ class MfaHelperTest {
 
             when(userCredentials.getMfaMethods()).thenReturn(List.of());
 
-            var result =
-                    getUserMFADetail(
-                            CredentialTrustLevel.MEDIUM_LEVEL, userCredentials, userProfile);
-            var expectedResult = new UserMfaDetail(true, false, NONE, PHONE_NUMBER);
+            var result = getUserMFADetail(userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(false, NONE, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
 
@@ -159,11 +156,8 @@ class MfaHelperTest {
             when(userCredentials.getMfaMethods())
                     .thenReturn(List.of(authAppMfaMethod(isAuthAppVerified, true)));
 
-            var result =
-                    getUserMFADetail(
-                            CredentialTrustLevel.MEDIUM_LEVEL, userCredentials, userProfile);
-            var expectedResult =
-                    new UserMfaDetail(true, true, MFAMethodType.AUTH_APP, PHONE_NUMBER);
+            var result = getUserMFADetail(userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(true, MFAMethodType.AUTH_APP, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
 
@@ -182,10 +176,8 @@ class MfaHelperTest {
             when(userCredentials.getMfaMethods())
                     .thenReturn(List.of(authAppMfaMethod(false, true)));
 
-            var result =
-                    getUserMFADetail(
-                            CredentialTrustLevel.MEDIUM_LEVEL, userCredentials, userProfile);
-            var expectedResult = new UserMfaDetail(true, isPhoneNumberVerified, SMS, PHONE_NUMBER);
+            var result = getUserMFADetail(userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(isPhoneNumberVerified, SMS, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
         }
@@ -199,10 +191,8 @@ class MfaHelperTest {
             when(userCredentials.getMfaMethods())
                     .thenReturn(List.of(authAppMfaMethod(isAuthAppVerified, true)));
 
-            var result =
-                    getUserMFADetail(
-                            CredentialTrustLevel.MEDIUM_LEVEL, userCredentials, userProfile);
-            var expectedResult = new UserMfaDetail(true, false, AUTH_APP, PHONE_NUMBER);
+            var result = getUserMFADetail(userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(false, AUTH_APP, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
 
@@ -240,10 +230,8 @@ class MfaHelperTest {
             when(userCredentials.getMfaMethods())
                     .thenReturn(List.of(defaultSmsMethod, backupAuthAppMethod));
 
-            var result =
-                    getUserMFADetail(
-                            CredentialTrustLevel.MEDIUM_LEVEL, userCredentials, userProfile);
-            var expectedResult = new UserMfaDetail(true, true, SMS, phoneNumberOfMigratedMethod);
+            var result = getUserMFADetail(userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(true, SMS, phoneNumberOfMigratedMethod);
 
             assertEquals(expectedResult, result);
         }
@@ -264,10 +252,8 @@ class MfaHelperTest {
                             "auth-app-mfa-id");
             when(userCredentials.getMfaMethods()).thenReturn(List.of(backupAuthAppMethod));
 
-            var result =
-                    getUserMFADetail(
-                            CredentialTrustLevel.MEDIUM_LEVEL, userCredentials, userProfile);
-            var expectedResult = new UserMfaDetail(true, false, NONE, null);
+            var result = getUserMFADetail(userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(false, NONE, null);
 
             assertEquals(expectedResult, result);
 

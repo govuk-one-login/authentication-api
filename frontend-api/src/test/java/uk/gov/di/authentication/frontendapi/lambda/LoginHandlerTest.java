@@ -533,7 +533,6 @@ class LoginHandlerTest {
                         new LoginResponse(
                                 expectedRedactedPhoneNumber,
                                 true,
-                                true,
                                 SMS,
                                 true,
                                 List.of(
@@ -547,7 +546,6 @@ class LoginHandlerTest {
                         DEFAULT_AUTH_APP_MFA_METHOD,
                         new LoginResponse(
                                 null,
-                                true,
                                 true,
                                 AUTH_APP,
                                 true,
@@ -601,7 +599,6 @@ class LoginHandlerTest {
                         new LoginResponse(
                                 expectedRedactedPhoneNumber,
                                 true,
-                                true,
                                 SMS,
                                 true,
                                 List.of(
@@ -617,7 +614,6 @@ class LoginHandlerTest {
                         new LoginResponse(
                                 null,
                                 true,
-                                true,
                                 AUTH_APP,
                                 true,
                                 List.of(
@@ -631,7 +627,6 @@ class LoginHandlerTest {
                         List.of(DEFAULT_SMS_MFA_METHOD),
                         new LoginResponse(
                                 expectedRedactedPhoneNumber,
-                                true,
                                 true,
                                 SMS,
                                 true,
@@ -647,7 +642,6 @@ class LoginHandlerTest {
                         List.of(DEFAULT_AUTH_APP_MFA_METHOD),
                         new LoginResponse(
                                 null,
-                                true,
                                 true,
                                 AUTH_APP,
                                 true,

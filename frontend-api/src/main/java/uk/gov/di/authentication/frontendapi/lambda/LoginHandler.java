@@ -17,6 +17,7 @@ import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorMapper;
 import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
@@ -303,11 +304,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             JourneyType journeyType,
             PermissionContext permissionContext) {
 
-        var userMfaDetail =
-                getUserMFADetail(
-                        authSessionItem.getRequestedCredentialStrength(),
-                        userCredentials,
-                        userProfile);
+        var userMfaDetail = getUserMFADetail(userCredentials, userProfile);
+        var isMfaRequired = MfaHelper.mfaRequired(authSessionItem.getRequestedCredentialStrength());
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
 
@@ -327,7 +325,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         auditService.submitAuditEvent(
                 AUTH_LOG_IN_SUCCESS, auditContext, pairs.toArray(AuditService.MetadataPair[]::new));
         var clientId = userContext.getAuthSession().getClientId();
-        if (!userMfaDetail.isMfaRequired()) {
+        if (!isMfaRequired) {
             cloudwatchMetricsService.incrementAuthenticationSuccessWithoutMfa(
                     AuthSessionItem.AccountState.EXISTING,
                     clientId,
@@ -381,7 +379,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var defaultMfaMethodMaybe =
                 MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
 
-        if (userMfaDetail.isMfaRequired()) {
+        if (isMfaRequired) {
             if (defaultMfaMethodMaybe.isPresent()) {
                 var permissionContextBuilder = PermissionContext.builder().from(permissionContext);
                 permissionContextBuilder.withE164FormattedPhoneNumber(

@@ -25,12 +25,10 @@ class FrontendApiPhoneNumberHelperTest {
     private static Stream<Arguments> userMfaDetail() {
         return Stream.of(
                 Arguments.of(UserMfaDetail.noMfa(), null),
-                Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, ""), null),
-                Arguments.of(
-                        new UserMfaDetail(false, false, MFAMethodType.AUTH_APP, "123456789"), null),
-                Arguments.of(
-                        new UserMfaDetail(false, false, MFAMethodType.SMS, "123456789"), "789"),
-                Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, "12"), null));
+                Arguments.of(new UserMfaDetail(false, MFAMethodType.SMS, ""), null),
+                Arguments.of(new UserMfaDetail(false, MFAMethodType.AUTH_APP, "123456789"), null),
+                Arguments.of(new UserMfaDetail(false, MFAMethodType.SMS, "123456789"), "789"),
+                Arguments.of(new UserMfaDetail(false, MFAMethodType.SMS, "12"), null));
     }
 
     @ParameterizedTest

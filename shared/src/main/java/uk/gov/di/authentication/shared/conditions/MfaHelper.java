@@ -41,45 +41,37 @@ public class MfaHelper {
     }
 
     public static UserMfaDetail getUserMFADetail(
-            CredentialTrustLevel credentialTrustLevel,
-            UserCredentials userCredentials,
-            UserProfile userProfile) {
-        var isMfaRequired = mfaRequired(credentialTrustLevel);
+            UserCredentials userCredentials, UserProfile userProfile) {
         if (userProfile.isMfaMethodsMigrated()) {
-            return getMfaDetailForMigratedUser(userCredentials, isMfaRequired);
+            return getMfaDetailForMigratedUser(userCredentials);
         } else {
             return getMfaDetailForNonMigratedUser(
                     userCredentials,
                     userProfile.getPhoneNumber(),
-                    userProfile.isPhoneNumberVerified(),
-                    isMfaRequired);
+                    userProfile.isPhoneNumberVerified());
         }
     }
 
     private static UserMfaDetail getMfaDetailForNonMigratedUser(
-            UserCredentials userCredentials,
-            String phoneNumber,
-            boolean isPhoneVerified,
-            boolean isMfaRequired) {
+            UserCredentials userCredentials, String phoneNumber, boolean isPhoneVerified) {
         var enabledMethod = getPrimaryMFAMethod(userCredentials);
 
         if (enabledMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
             LOG.info("User has verified method from user credentials");
             var mfaMethodType = MFAMethodType.valueOf(enabledMethod.get().getMfaMethodType());
-            return new UserMfaDetail(isMfaRequired, true, mfaMethodType, phoneNumber);
+            return new UserMfaDetail(true, mfaMethodType, phoneNumber);
         } else if (!isPhoneVerified && enabledMethod.isPresent()) {
             LOG.info("Unverified auth app mfa method present and no verified phone number");
             var mfaMethodType = MFAMethodType.valueOf(enabledMethod.get().getMfaMethodType());
-            return new UserMfaDetail(isMfaRequired, false, mfaMethodType, phoneNumber);
+            return new UserMfaDetail(false, mfaMethodType, phoneNumber);
         } else {
             var mfaMethodType = isPhoneVerified ? MFAMethodType.SMS : MFAMethodType.NONE;
             LOG.info("User has mfa method {}", mfaMethodType);
-            return new UserMfaDetail(isMfaRequired, isPhoneVerified, mfaMethodType, phoneNumber);
+            return new UserMfaDetail(isPhoneVerified, mfaMethodType, phoneNumber);
         }
     }
 
-    private static UserMfaDetail getMfaDetailForMigratedUser(
-            UserCredentials userCredentials, boolean isMfaRequired) {
+    private static UserMfaDetail getMfaDetailForMigratedUser(UserCredentials userCredentials) {
         var maybeDefaultMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
         if (maybeDefaultMethod.isPresent()) {
             var defaultMethod = maybeDefaultMethod.get();
@@ -90,14 +82,13 @@ public class MfaHelper {
                 phoneNumberForMigratedMethod = null;
             }
             return new UserMfaDetail(
-                    isMfaRequired,
                     defaultMethod.isMethodVerified(),
                     MFAMethodType.valueOf(defaultMethod.getMfaMethodType()),
                     phoneNumberForMigratedMethod);
         } else {
             logNoDefaultMfaMethodDebug(userCredentials.getMfaMethods(), true);
 
-            return new UserMfaDetail(isMfaRequired, false, MFAMethodType.NONE, null);
+            return new UserMfaDetail(false, MFAMethodType.NONE, null);
         }
     }
 

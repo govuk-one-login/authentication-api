@@ -11,7 +11,6 @@ import java.util.List;
 
 public record LoginResponse(
         @SerializedName("redactedPhoneNumber") @Expose String redactedPhoneNumber,
-        @SerializedName("mfaRequired") @Expose @Required boolean mfaRequired,
         @SerializedName(value = "latestTermsAndConditionsAccepted") @Expose @Required
                 boolean latestTermsAndConditionsAccepted,
         @SerializedName("mfaMethodType") @Expose @Required MFAMethodType mfaMethodType,
@@ -28,7 +27,6 @@ public record LoginResponse(
             boolean passwordChangeRequired) {
         this(
                 redactedPhoneNumber,
-                mfaDetail.isMfaRequired(),
                 latestTermsAndConditionsAccepted,
                 mfaDetail.mfaMethodType(),
                 mfaDetail.mfaMethodVerified(),
