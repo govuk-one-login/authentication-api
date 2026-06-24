@@ -133,4 +133,5 @@ performance_tuning = {
   }
 }
 
-use_strongly_consistent_reads = true
+use_strongly_consistent_reads  = true
+deploy_oidc_api_gateway_domain = false
