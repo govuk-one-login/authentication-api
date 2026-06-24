@@ -2401,6 +2401,12 @@ Resources:
               - "{{resolve:secretsmanager:/deploy/${env}/ipv_reverification_request_signing_key_v2}}"
               - env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - Sid: AllowAccessToIpvReverificationRequestSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !GetAtt IpvReverificationRequestSigningKey.Arn
 
   MfaResetTokenKmsSigningPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2421,6 +2427,12 @@ Resources:
               - "{{resolve:secretsmanager:/deploy/${env}/mfa_reset_token_signing_key_ecc}}"
               - env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - Sid: AllowAccessToMfaResetTokenSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !GetAtt MfaResetTokenSigningKeyEcc.Arn
 
   PendingEmailCheckQueueAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3041,6 +3053,54 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource: !GetAtt AuthToAccountDataSigningKey.Arn
+
+  MfaResetTokenSigningKeyEcc:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "KMS signing key (ECC) for signing the storage token claim in MFA reset JARs sent to IPV from Auth"
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Statement:
+          - Sid: DefaultAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+
+  MfaResetTokenSigningKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - "alias/${Env}-mfa-reset-token-signing-key-ecc-alias"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref MfaResetTokenSigningKeyEcc
+
+  IpvReverificationRequestSigningKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "KMS signing key (ECC) for JARs sent from Authentication to IPV for MFA reset (v2)"
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Statement:
+          - Sid: DefaultAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+
+  IpvReverificationRequestSigningKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - "alias/${Env}-ipv-reverification-request-signing-key"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref IpvReverificationRequestSigningKey
 
   NotifyCallbackFunctionParameterPolicy:
     Type: AWS::IAM::ManagedPolicy
