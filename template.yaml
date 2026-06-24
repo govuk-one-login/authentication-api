@@ -124,7 +124,10 @@ Conditions:
   DeployMigratedRecords:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   SwapLiveTrafficToCloudfront:
-    !And [!Condition DeployMigratedRecords, !Equals [dev, !Ref Environment]]
+    !And [
+      !Condition DeployMigratedRecords,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
   CreateApiGwCustomDomain:
     !And [
       !Condition SwapLiveTrafficToCloudfront,
