@@ -134,7 +134,10 @@ Conditions:
       !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
     ]
   SwapOriginToApiGateway:
-    !And [!Condition CreateApiGwCustomDomain, !Equals [dev, !Ref Environment]]
+    !And [
+      !Condition CreateApiGwCustomDomain,
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
+    ]
   #endregion
 
 Mappings:
