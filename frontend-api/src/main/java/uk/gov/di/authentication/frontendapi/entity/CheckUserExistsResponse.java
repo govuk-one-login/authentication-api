@@ -15,4 +15,6 @@ public record CheckUserExistsResponse(
         @SerializedName("lockoutInformation") @Expose List<LockoutInformation> lockoutInformation,
         @SerializedName("hasActivePasskey") @Expose Boolean hasActivePasskey,
         @SerializedName("needsForcedMFAResetAfterMFACheck") @Expose
-                boolean needsForcedMFAResetAfterMFACheck) {}
+                boolean needsForcedMFAResetAfterMFACheck,
+        @SerializedName("shouldSuppressPasskeyRegistrationPrompt") @Expose
+                boolean shouldSuppressPasskeyRegistrationPrompt) {}

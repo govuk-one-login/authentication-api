@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.frontendapi.helpers.PasskeyRegistrationPromptHelper;
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -133,12 +134,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
-            var userExists = userProfile.isPresent();
+            var maybeUserProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
+            var userExists = maybeUserProfile.isPresent();
             var internalCommonSubjectId =
                     userExists
                             ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                            userProfile.get(),
+                                            maybeUserProfile.get(),
                                             configurationService.getInternalSectorUri(),
                                             authenticationService)
                                     .getValue()
@@ -180,14 +181,16 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var userMfaDetail = UserMfaDetail.noMfa();
             Optional<Boolean> hasActivePasskey = Optional.empty();
             var needsForcedMFAResetAfterMFACheck = false;
+            var shouldSuppressPasskeyRegistrationPrompt = false;
 
             AuthSessionItem authSession = userContext.getAuthSession();
 
             if (userExists) {
+                var userProfile = maybeUserProfile.get();
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;
                 rpPairwiseId =
                         ClientSubjectHelper.getSubject(
-                                        userProfile.get(),
+                                        userProfile,
                                         userContext.getAuthSession(),
                                         authenticationService)
                                 .getValue();
@@ -197,15 +200,17 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSession.setInternalCommonSubjectId(internalCommonSubjectId);
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
-                userMfaDetail = getUserMFADetail(userCredentials, userProfile.get());
+                userMfaDetail = getUserMFADetail(userCredentials, userProfile);
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
 
                 needsForcedMFAResetAfterMFACheck =
                         configurationService.isForcedMFAResetAfterMFACheckEnabled()
                                 && requiresMfaResetForInternationalNumber(
-                                        authSession, userCredentials, userProfile.get());
-                hasActivePasskey =
-                        hasActivePasskey(userProfile.get().getPublicSubjectID(), authSession);
+                                        authSession, userCredentials, userProfile);
+                hasActivePasskey = hasActivePasskey(userProfile.getPublicSubjectID(), authSession);
+                shouldSuppressPasskeyRegistrationPrompt =
+                        PasskeyRegistrationPromptHelper.shouldSuppressPasskeyRegistrationPrompt(
+                                userProfile);
                 metadataPairs.add(
                         pair(
                                 AUDIT_EVENT_EXTENSIONS_HAS_ACTIVE_PASSKEY,
@@ -241,7 +246,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation,
                             hasActivePasskey.orElse(null),
-                            needsForcedMFAResetAfterMFACheck);
+                            needsForcedMFAResetAfterMFACheck,
+                            shouldSuppressPasskeyRegistrationPrompt);
 
             authSessionService.updateSession(authSession);
 

@@ -50,6 +50,7 @@ import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -116,6 +117,8 @@ class CheckUserExistsHandlerTest {
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
     private static final BearerAccessToken ADAPI_BEARER_ACCESS_TOKEN =
             new BearerAccessToken("adapi_bearer");
+    private static final String YESTERDAY = LocalDateTime.now().minusDays(1).toString();
+    private static final String ONE_HOUR_AGO = LocalDateTime.now().minusHours(1).toString();
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -199,7 +202,8 @@ class CheckUserExistsHandlerTest {
                     "phoneNumberLastThree":"%s",
                     "lockoutInformation":[],
                     "hasActivePasskey":null,
-                    "needsForcedMFAResetAfterMFACheck":false}
+                    "needsForcedMFAResetAfterMFACheck":false,
+                    "shouldSuppressPasskeyRegistrationPrompt":false}
                     """,
                             EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
             assertEquals(
@@ -256,7 +260,8 @@ class CheckUserExistsHandlerTest {
                     "phoneNumberLastThree": %s,
                     "lockoutInformation":[],
                     "hasActivePasskey":null,
-                    "needsForcedMFAResetAfterMFACheck":false}
+                    "needsForcedMFAResetAfterMFACheck":false,
+                    "shouldSuppressPasskeyRegistrationPrompt":false}
                     """,
                             EMAIL_ADDRESS,
                             expectedMfaMethodType,
@@ -376,6 +381,7 @@ class CheckUserExistsHandlerTest {
                                             lockoutExpiry.getEpochSecond(),
                                             JourneyType.PASSWORD_RESET_MFA)),
                             null,
+                            false,
                             false);
             assertThat(result, hasJsonBody(expectedResponse));
         }
@@ -659,6 +665,30 @@ class CheckUserExistsHandlerTest {
             assertEquals(hasActivePasskey, checkUserExistsResponse.hasActivePasskey());
         }
 
+        private static Stream<Arguments> dateTimesToExpectedShouldSuppressPrompts() {
+            return Stream.of(Arguments.of(YESTERDAY, false), Arguments.of(ONE_HOUR_AGO, true));
+        }
+
+        @ParameterizedTest
+        @MethodSource("dateTimesToExpectedShouldSuppressPrompts")
+        void shouldIndicateThatPasskeyPromptShouldBeSuppressedWhenAccountIsLessThanTwoHoursOld(
+                String createdAtTimestamp, boolean expectedShouldSuppressPasskeyPrompt)
+                throws Json.JsonException {
+            var userProfile = generateUserProfile().withCreated(createdAtTimestamp);
+            setupUserProfileAndClient(Optional.of(userProfile));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(
+                    expectedShouldSuppressPasskeyPrompt,
+                    checkUserExistsResponse.shouldSuppressPasskeyRegistrationPrompt());
+        }
+
         @Test
         void shouldReturnNullForHasActivePasskeyIfPasskeysServiceReturnsFailure()
                 throws Json.JsonException {
@@ -791,6 +821,7 @@ class CheckUserExistsHandlerTest {
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(SUBJECT.getValue())
+                .withCreated(YESTERDAY)
                 .withTermsAndConditions(
                         new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
     }
