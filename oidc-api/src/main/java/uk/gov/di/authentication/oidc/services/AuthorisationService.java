@@ -4,7 +4,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
-import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
@@ -28,7 +28,7 @@ public class AuthorisationService {
             throws MissingClientIDException,
                     IncorrectRedirectUriException,
                     ClientNotFoundException,
-                    InvalidAuthenticationRequestException,
+                    InvalidAuthorizeRequestException,
                     MissingRedirectUriException {
         if (error.getClientID() == null) {
             throw new MissingClientIDException(error.getErrorObject());
@@ -44,11 +44,11 @@ public class AuthorisationService {
                         .orElseThrow(
                                 () -> new ClientNotFoundException(error.getClientID().getValue()));
 
-        if (client.getRedirectUrls().contains(error.getRedirectionURI().toString())) {
-            throw new InvalidAuthenticationRequestException(error.getErrorObject());
+        if (!client.getRedirectUrls().contains(error.getRedirectionURI().toString())) {
+            LOG.warn("Redirect URI {} is invalid for client", error.getRedirectionURI());
+            throw new IncorrectRedirectUriException(error.getErrorObject());
         }
 
-        LOG.warn("Redirect URI {} is invalid for client", error.getRedirectionURI());
-        throw new IncorrectRedirectUriException(error.getErrorObject());
+        throw new InvalidAuthorizeRequestException(error.getErrorObject());
     }
 }

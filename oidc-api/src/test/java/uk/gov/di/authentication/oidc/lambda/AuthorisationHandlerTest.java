@@ -56,7 +56,7 @@ import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
-import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
@@ -79,7 +79,6 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
@@ -644,13 +643,13 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldCallClassifyParseExceptionWhenAuthorisationRequestCannotBeParsed()
-                throws InvalidAuthenticationRequestException,
+                throws InvalidAuthorizeRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
                         IncorrectRedirectUriException,
                         MissingRedirectUriException {
             doThrow(
-                            new InvalidAuthenticationRequestException(
+                            new InvalidAuthorizeRequestException(
                                     new com.nimbusds.oauth2.sdk.ParseException(
                                                     "Missing response_type parameter")
                                             .getErrorObject()))
@@ -711,13 +710,13 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldCallClassifyParseExceptionWhenUnrecognisedPromptValue()
-                throws InvalidAuthenticationRequestException,
+                throws InvalidAuthorizeRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
                         IncorrectRedirectUriException,
                         MissingRedirectUriException {
             doThrow(
-                            new InvalidAuthenticationRequestException(
+                            new InvalidAuthorizeRequestException(
                                     new com.nimbusds.oauth2.sdk.ParseException(
                                                     "Invalid prompt parameter: Unknown prompt type: unrecognised")
                                             .getErrorObject()))
@@ -739,8 +738,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenJARValidationIsRequired()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldValidateRequestObjectWhenJARValidationIsRequired() throws Exception {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
 
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
@@ -761,8 +759,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenJARValidationIsNotRequired()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldValidateRequestObjectWhenJARValidationIsNotRequired() throws Exception {
             when(orchestrationAuthorizationService.isJarValidationRequired(any()))
                     .thenReturn(false);
 
@@ -784,8 +781,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToLoginWhenRequestObjectIsValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldRedirectToLoginWhenRequestObjectIsValid() throws Exception {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
 
@@ -838,8 +834,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnValidationFailedWhenSignatureIsInvalid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnValidationFailedWhenSignatureIsInvalid() throws Exception {
             when(requestObjectAuthorizeValidator.validate(any()))
                     .thenThrow(ClientSignatureValidationException.class);
 
@@ -862,8 +857,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToLoginWhenMissingNonce()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldRedirectToLoginWhenMissingNonce() throws Exception {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var jwtClaimsSet =
@@ -925,8 +919,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnServerErrorOnJwksException()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldReturnServerErrorOnJwksException() throws Exception {
             when(requestObjectAuthorizeValidator.validate(any())).thenThrow(JwksException.class);
 
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
@@ -1706,9 +1699,9 @@ class AuthorisationHandlerTest {
     @Nested
     class InvalidRequestNonRedirecting {
         @Test
-        void shouldReturn400WhenAuthorisationRequestContainsInvalidRedirectUri() {
+        void shouldReturn400WhenAuthorisationRequestContainsInvalidRedirectUri() throws Exception {
             when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenThrow(ClientRedirectUriValidationException.class);
+                    .thenThrow(InvalidAuthorizeRequestException.class);
 
             APIGatewayProxyRequestEvent event =
                     withRequestEvent(
@@ -1746,7 +1739,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400ForOpenRedirect()
-                throws InvalidAuthenticationRequestException,
+                throws InvalidAuthorizeRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
                         IncorrectRedirectUriException,
@@ -1777,7 +1770,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenMissingClientId()
-                throws InvalidAuthenticationRequestException,
+                throws InvalidAuthorizeRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
                         IncorrectRedirectUriException,
@@ -1801,7 +1794,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenMissingRedirectUri()
-                throws InvalidAuthenticationRequestException,
+                throws InvalidAuthorizeRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
                         IncorrectRedirectUriException,
@@ -1826,7 +1819,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenIncorrectRedirectUri()
-                throws InvalidAuthenticationRequestException,
+                throws InvalidAuthorizeRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
                         IncorrectRedirectUriException,
@@ -1857,7 +1850,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenClientNotFound()
-                throws InvalidAuthenticationRequestException,
+                throws InvalidAuthorizeRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
                         IncorrectRedirectUriException,
@@ -1945,7 +1938,8 @@ class AuthorisationHandlerTest {
     @Nested
     class InvalidRequestRedirectingErrors {
         @Test
-        void shouldReturn302WithErrorQueryParamsWhenAuthorisationRequestContainsInvalidScope() {
+        void shouldReturn302WithErrorQueryParamsWhenAuthorisationRequestContainsInvalidScope()
+                throws Exception {
             when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
@@ -1980,12 +1974,12 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturnRedirectWithErrorWhenInvalidAuthParameters()
-                throws InvalidAuthenticationRequestException,
+                throws InvalidAuthorizeRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
                         IncorrectRedirectUriException,
                         MissingRedirectUriException {
-            doThrow(new InvalidAuthenticationRequestException(INVALID_REQUEST))
+            doThrow(new InvalidAuthorizeRequestException(INVALID_REQUEST))
                     .when(authorisationService)
                     .classifyParseException(any());
 
@@ -2014,8 +2008,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToRPWhenRequestObjectIsNotValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldRedirectToRPWhenRequestObjectIsNotValid() throws Exception {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
@@ -2163,8 +2156,7 @@ class AuthorisationHandlerTest {
 
         @ParameterizedTest
         @MethodSource("expectedErrorObjects")
-        void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject)
-                throws JwksException, ClientSignatureValidationException {
+        void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) throws Exception {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(

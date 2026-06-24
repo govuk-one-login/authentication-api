@@ -10,12 +10,12 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -32,7 +32,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
-import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper.parseOidcClaims;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -68,17 +67,26 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
     @Override
     public Optional<AuthRequestError> validate(AuthenticationRequest authRequest)
-            throws ClientSignatureValidationException, JwksException {
+            throws ClientSignatureValidationException,
+                    InvalidAuthorizeRequestException,
+                    JwksException {
 
         var clientId = authRequest.getClientID().toString();
         attachLogFieldToLogs(CLIENT_ID, clientId);
         ClientRegistry client = getClientFromDynamo(clientId);
 
-        var signedJWT = (SignedJWT) authRequest.getRequestObject();
-        clientSignatureValidationService.validate(signedJWT, client);
+        if (authRequest.getRequestObject() instanceof SignedJWT signedJWT) {
+            clientSignatureValidationService.validate(signedJWT, client);
+        } else {
+            logErrorInProdElseWarn("Request object JWT was unsigned");
+            throw new InvalidAuthorizeRequestException(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_OBJECT_CODE,
+                            "Request object JWT must be signed"));
+        }
 
         try {
-            var jwtClaimsSet = signedJWT.getJWTClaimsSet();
+            var jwtClaimsSet = authRequest.getRequestObject().getJWTClaimsSet();
 
             var expiration = jwtClaimsSet.getExpirationTime();
             if (Objects.isNull(expiration)) {
@@ -103,13 +111,11 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                         String.format(
                                 "Invalid Redirect URI in request %s",
                                 jwtClaimsSet.getStringClaim("redirect_uri")));
-                throw new ClientRedirectUriValidationException(
-                        format(
-                                "Invalid Redirect in request %s",
-                                jwtClaimsSet.getStringClaim("redirect_uri")));
+                throw new InvalidAuthorizeRequestException(
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid redirect URI"));
             }
 
-            var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
+            var redirectURI = URI.create(jwtClaimsSet.getStringClaim("redirect_uri"));
 
             var responseMode = jwtClaimsSet.getStringClaim("response_mode");
 
@@ -225,7 +231,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("ui_locales"))) {
                 try {
-                    String uiLocales = (String) jwtClaimsSet.getClaim("ui_locales");
+                    var uiLocales = jwtClaimsSet.getStringClaim("ui_locales");
                     LangTagUtils.parseLangTagList(uiLocales.split(" "));
                 } catch (ClassCastException | LangTagException e) {
                     logErrorInProdElseWarn(

@@ -2,7 +2,6 @@ package uk.gov.di.authentication.oidc.services;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -23,6 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.validators.BaseAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.Channel;
@@ -30,8 +30,6 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
-import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
-import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -42,7 +40,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -110,7 +107,8 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute() {
+    void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute()
+            throws Exception {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         AuthenticationRequest authRequest =
                 generateAuthRequest(
@@ -135,7 +133,8 @@ class QueryParamsAuthorizeValidatorTest {
 
     @ParameterizedTest
     @MethodSource("invalidVtrAttributes")
-    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest(String invalidVtrAttribute) {
+    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest(String invalidVtrAttribute)
+            throws Exception {
         AuthenticationRequest authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
@@ -164,7 +163,8 @@ class QueryParamsAuthorizeValidatorTest {
 
     @ParameterizedTest
     @MethodSource("invalidChannelAttributes")
-    void shouldReturnErrorWhenInvalidChannelIsSentInRequest(String invalidChannel) {
+    void shouldReturnErrorWhenInvalidChannelIsSentInRequest(String invalidChannel)
+            throws Exception {
         AuthenticationRequest authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
@@ -193,7 +193,8 @@ class QueryParamsAuthorizeValidatorTest {
 
     @ParameterizedTest
     @MethodSource("validChannelAttributes")
-    void shouldSuccessfullyValidateWhenValidChannelIsSentInRequest(String validChannel) {
+    void shouldSuccessfullyValidateWhenValidChannelIsSentInRequest(String validChannel)
+            throws Exception {
         AuthenticationRequest authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
@@ -208,7 +209,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateWhenNoChannelIsSentInRequest() {
+    void shouldSuccessfullyValidateWhenNoChannelIsSentInRequest() throws Exception {
         AuthenticationRequest authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
@@ -223,7 +224,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateAuthRequest() {
+    void shouldSuccessfullyValidateAuthRequest() throws Exception {
         var errorObject =
                 queryParamsAuthorizeValidator.validate(
                         generateAuthRequest(
@@ -238,7 +239,8 @@ class QueryParamsAuthorizeValidatorTest {
 
     @ParameterizedTest
     @MethodSource("validClaims")
-    void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent(String validClaim) {
+    void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent(String validClaim)
+            throws Exception {
         var clientRegistry =
                 new ClientRegistry()
                         .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
@@ -262,7 +264,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenValidatingAuthRequestWhichContainsInvalidClaims() {
+    void shouldReturnErrorWhenValidatingAuthRequestWhichContainsInvalidClaims() throws Exception {
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         AuthenticationRequest authRequest =
@@ -285,7 +287,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldAcceptEmptyClaimsObject() throws ParseException {
+    void shouldAcceptEmptyClaimsObject() throws Exception {
         var authRequest =
                 AuthenticationRequest.parse(
                         "client_id="
@@ -298,7 +300,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateAccountManagementAuthRequest() {
+    void shouldSuccessfullyValidateAccountManagementAuthRequest() throws Exception {
         Scope accountManagementScope =
                 new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
@@ -319,7 +321,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForAccountManagementAuthRequestWhenScopeNotInClient() {
+    void shouldReturnErrorForAccountManagementAuthRequestWhenScopeNotInClient() throws Exception {
         Scope accountManagementScope =
                 new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
         var errorObject =
@@ -335,7 +337,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenClientIdIsNotValidInAuthRequest() {
+    void shouldReturnErrorWhenClientIdIsNotValidInAuthRequest() throws Exception {
         when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.empty());
         var runtimeException =
                 assertThrows(
@@ -352,7 +354,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenResponseTypeIsNotValidInAuthRequest() {
+    void shouldReturnErrorWhenResponseTypeIsNotValidInAuthRequest() throws Exception {
         ResponseType invalidResponseType =
                 new ResponseType(ResponseType.Value.TOKEN, ResponseType.Value.CODE);
         var errorObject =
@@ -366,7 +368,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenScopeIsNotValidInAuthRequest() {
+    void shouldReturnErrorWhenScopeIsNotValidInAuthRequest() throws Exception {
         Scope invalidScopes = new Scope();
         invalidScopes.add(OIDCScopeValue.OPENID);
         invalidScopes.add(OIDCScopeValue.EMAIL);
@@ -381,7 +383,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenStateIsNotIncludedInAuthRequest() {
+    void shouldReturnErrorWhenStateIsNotIncludedInAuthRequest() throws Exception {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 VALID_RESPONSE_TYPE,
@@ -403,7 +405,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateWhenNonceNotExpectedAndMissing() {
+    void shouldSuccessfullyValidateWhenNonceNotExpectedAndMissing() throws Exception {
         var clientRegitry =
                 generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString())
                         .withPermitMissingNonce(true)
@@ -424,7 +426,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenNonceIsExpectedAndMissing() {
+    void shouldReturnErrorWhenNonceIsExpectedAndMissing() throws Exception {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 VALID_RESPONSE_TYPE,
@@ -468,7 +470,7 @@ class QueryParamsAuthorizeValidatorTest {
     @ParameterizedTest
     @MethodSource("requestVtrsNotPermitted")
     void shouldReturnErrorWhenVtrInAuthRequestIsNotPermittedForGivenClient(
-            List<String> clientLoCs, String vtr) {
+            List<String> clientLoCs, String vtr) throws Exception {
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -496,7 +498,8 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void validatorReturnsErrorWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse() {
+    void validatorReturnsErrorWhenIdentityLoCInRequestAndIdentityVerificationFlagIsFalse()
+            throws Exception {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         List<String> clientLoCs = List.of("P0", "P2");
         var vtr = jsonArrayOf("Cl.Cm.P2");
@@ -531,7 +534,8 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void validatorErrorsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod() {
+    void validatorErrorsWhenIdentityJourneyRequestedWithInsufficientlySecureTokenAuthMethod()
+            throws Exception {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         List<String> clientLoCs = List.of("P0", "P2");
         var vtr = jsonArrayOf("Cl.Cm.P2");
@@ -567,7 +571,8 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldNotReturnErrorWhenPkceIsNotEnforcedAndCodeChallengeAndMethodAreMissing() {
+    void shouldNotReturnErrorWhenPkceIsNotEnforcedAndCodeChallengeAndMethodAreMissing()
+            throws Exception {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 VALID_RESPONSE_TYPE,
@@ -584,7 +589,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing() {
+    void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing() throws Exception {
         var clientRegistry = generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString());
         clientRegistry.setPKCEEnforced(true);
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
@@ -615,8 +620,7 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     @SuppressWarnings("deprecation")
-    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
-            throws ParseException {
+    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing() throws Exception {
 
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
 
@@ -646,8 +650,7 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     @SuppressWarnings("deprecation")
-    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid()
-            throws ParseException {
+    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid() throws Exception {
 
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
         var codeChallengeMethod = CodeChallengeMethod.PLAIN;
@@ -678,7 +681,7 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     @SuppressWarnings("deprecation")
-    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreValid() throws ParseException {
+    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreValid() throws Exception {
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
         var codeChallengeMethod = CodeChallengeMethod.S256;
 
@@ -699,7 +702,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailable() {
+    void shouldReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailable() throws Exception {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
         var authRequest =
                 new AuthenticationRequest.Builder(
@@ -717,7 +720,8 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void
-            shouldNotReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailableAndTheClientIsATestClient() {
+            shouldNotReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailableAndTheClientIsATestClient()
+                    throws Exception {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
@@ -752,19 +756,17 @@ class QueryParamsAuthorizeValidatorTest {
 
         var exception =
                 assertThrows(
-                        ClientRedirectUriValidationException.class,
+                        InvalidAuthorizeRequestException.class,
                         () ->
                                 queryParamsAuthorizeValidator.validate(
                                         generateAuthRequest(
                                                 redirectUri, VALID_RESPONSE_TYPE, VALID_SCOPES)),
                         "Expected to throw exception");
-        assertThat(
-                exception.getMessage(),
-                equalTo(format("Invalid Redirect in request %s", redirectUri)));
+        assertThat(exception.getMessage(), equalTo("Invalid redirect URI"));
     }
 
     @Test
-    void shouldReturnErrorWhenRequestURIIsPresent() {
+    void shouldReturnErrorWhenRequestURIIsPresent() throws Exception {
         var authenticationRequest =
                 new AuthenticationRequest.Builder(
                                 VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
@@ -782,7 +784,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenMaxAgeIsInvalid() {
+    void shouldReturnErrorWhenMaxAgeIsInvalid() throws Exception {
         AuthenticationRequest.Builder authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
@@ -811,7 +813,7 @@ class QueryParamsAuthorizeValidatorTest {
                         .responseMode(new ResponseMode("code"));
 
         assertThrows(
-                InvalidResponseModeException.class,
+                InvalidAuthorizeRequestException.class,
                 () -> queryParamsAuthorizeValidator.validate(authRequestBuilder.build()));
     }
 
@@ -825,13 +827,13 @@ class QueryParamsAuthorizeValidatorTest {
                         .responseMode(new ResponseMode("code"));
 
         assertThrows(
-                InvalidResponseModeException.class,
+                InvalidAuthorizeRequestException.class,
                 () -> queryParamsAuthorizeValidator.validate(authRequestBuilder.build()));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"query", "fragment"})
-    void shouldAllowValidResponseModes(String responseMode) {
+    void shouldAllowValidResponseModes(String responseMode) throws Exception {
         AuthenticationRequest.Builder authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)

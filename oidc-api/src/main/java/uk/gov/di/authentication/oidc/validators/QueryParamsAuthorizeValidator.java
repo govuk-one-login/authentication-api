@@ -6,11 +6,10 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.Identifier;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
-import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
@@ -40,7 +38,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
 
     @Override
     public Optional<AuthRequestError> validate(AuthenticationRequest authRequest)
-            throws InvalidResponseModeException {
+            throws InvalidAuthorizeRequestException {
 
         var clientId = authRequest.getClientID().toString();
         attachLogFieldToLogs(CLIENT_ID, clientId);
@@ -50,15 +48,15 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
             logErrorInProdElseWarn(
                     String.format(
                             "Invalid Redirect URI in request %s", authRequest.getRedirectionURI()));
-            throw new ClientRedirectUriValidationException(
-                    format(
-                            "Invalid Redirect in request %s",
-                            authRequest.getRedirectionURI().toString()));
+            throw new InvalidAuthorizeRequestException(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid redirect URI"));
         }
         var redirectURI = authRequest.getRedirectionURI();
 
-        var responseMode = Optional.ofNullable(authRequest.getResponseMode());
-        responseMode.ifPresent(mode -> validateResponseMode(mode.getValue()));
+        var responseMode = authRequest.getResponseMode();
+        if (responseMode != null) {
+            validateResponseMode(responseMode.getValue());
+        }
 
         if (authRequest.getState() == null) {
             logErrorInProdElseWarn("State is missing from authRequest");
