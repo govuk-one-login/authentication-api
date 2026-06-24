@@ -17,6 +17,7 @@ COPY oidc-api ./oidc-api
 COPY ipv-api ./ipv-api
 COPY doc-checking-app-api ./doc-checking-app-api
 COPY client-registry-api ./client-registry-api
+COPY sis-api ./sis-api
 
 RUN --mount=type=cache,target=/root/.gradle ./gradlew :orchestration-local-running:build --no-daemon
 RUN mkdir untarred && tar -xvf orchestration-local-running/build/distributions/orchestration-local-running.tar -C ./untarred

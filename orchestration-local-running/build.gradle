@@ -18,6 +18,7 @@ dependencies {
             project(":ipv-api"),
             project(":doc-checking-app-api"),
             project(":client-registry-api")
+    project(":sis-api")
 }
 
 java {

@@ -18,6 +18,7 @@ The Orchestration codebase is gradually being separated from the Authentication 
 - `oidc-api`
 - `client-registry-api`
 - `doc-checking-app-api`
+- `sis-api`
 - Any directory starting with `orchestration-*`
 
 Each of these directories corresponds to separate modules with some shared code. A brief description of each provided below:
@@ -26,6 +27,7 @@ Each of these directories corresponds to separate modules with some shared code.
 - OIDC API: Manages the OIDC interactions with Relying Parties and the callback from the Authentication component.
 - Client Registry API: Exposes some API endpoints to allow interactions with the [SSE Admin Tool](https://github.com/govuk-one-login/onboarding-self-service-experience).
 - Doc Checking App API: Manages the interactions between Orchestration and the Document Checking App service.
+- SIS API: Manages interactions with the SIS component
 
 ## Testing:
 

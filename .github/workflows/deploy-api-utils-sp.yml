@@ -27,6 +27,7 @@ on:
       - "interventions-api-stub/**"
       - "ipv-api/**"
       - "oidc-api/**"
+      - "sis-api/**"
 
 env:
   AWS_REGION: eu-west-2

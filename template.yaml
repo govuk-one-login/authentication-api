@@ -3641,6 +3641,34 @@ Resources:
             Unit: Count
   #endregion
 
+  #region SIS Jwks Lambda
+
+  SISJwksFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-SISJwksFunction
+      AutoPublishAlias: latest
+      CodeUri: ./sis-api/build/distributions/sis-api.zip
+      Handler: uk.gov.di.orchestration.sis.lambda.SISJwksHandler::handleRequest
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+  #endregion
+
   #region Auth Jwks Lambda
   AuthJwksFunction:
     Type: AWS::Serverless::Function
