@@ -3658,6 +3658,11 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./sis-api/build/distributions/sis-api.zip
       Handler: uk.gov.di.orchestration.sis.lambda.SISJwksHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref SISJwksFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: SISJwksFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3673,6 +3678,76 @@ Resources:
           ENVIRONMENT: !Sub ${Environment}
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  SISJwksFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-sis-jwks-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  SISJwksSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref SISJwksFunctionLogGroup
+
+  SISJwksFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-sis-jwks-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref SISJwksFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-sis-jwks-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  SISJwksFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-sis-jwks-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} SIS jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SISJwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SISJwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
   #endregion
 
   #region Auth Jwks Lambda
@@ -8994,6 +9069,49 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub ${Environment}-IpvJwksFunction
+            Period: 60
+            Stat: Average
+  #endregion
+
+  #region SISJwks Function Anomaly Alarms
+  SISJwksFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-SISJwksFunction
+
+  SISJwksFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-SISJwksFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} SISJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SISJwksFunction
             Period: 60
             Stat: Average
   #endregion
