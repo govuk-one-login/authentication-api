@@ -6059,6 +6059,7 @@ Resources:
             Action:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
+              - dynamodb:DescribeTable
             Resource: !GetAtt OrchSessionTable.Arn
           - Sid: AllowOrchSessionTableKeyAccess
             Effect: Allow
@@ -6275,6 +6276,7 @@ Resources:
             Action:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
+              - dynamodb:DescribeTable
             Resource: !GetAtt ClientSessionTable.Arn
           - Sid: AllowClientSessionTableKeyAccess
             Effect: Allow
@@ -6401,6 +6403,7 @@ Resources:
             Action:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
+              - dynamodb:DescribeTable
             Resource: !GetAtt OrchIdentityCredentialsTable.Arn
           - Sid: AllowOrchIdentityCredentialsTableDecryptionAndEncryption
             Effect: Allow
@@ -6510,6 +6513,7 @@ Resources:
               - dynamodb:BatchWriteItem
               - dynamodb:UpdateItem
               - dynamodb:PutItem
+              - dynamodb:DescribeTable
             Resource:
               - !Sub
                 - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
@@ -6581,6 +6585,7 @@ Resources:
             Action:
               - dynamodb:UpdateItem
               - dynamodb:PutItem
+              - dynamodb:DescribeTable
             Resource: !GetAtt DocAppCredentialTable.Arn
           - Sid: AllowOrchDocAppCredentialTableKeyAccess
             Effect: Allow
@@ -6642,6 +6647,7 @@ Resources:
             Effect: Allow
             Action:
               - sqs:SendMessage
+              - sqs:GetQueueAttributes
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
 
@@ -7513,6 +7519,7 @@ Resources:
             Action:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
+              - dynamodb:DescribeTable
             Resource: !GetAtt OrchAuthCodeTable.Arn
           - Sid: AllowOrchAuthCodeTableDecryptionAndEncryption
             Effect: Allow
@@ -7672,6 +7679,7 @@ Resources:
             Action:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
+              - dynamodb:DescribeTable
             Resource: !GetAtt StateStorageTable.Arn
           - Sid: AllowStateStorageTableDecryptionAndEncryption
             Effect: Allow
@@ -7793,6 +7801,7 @@ Resources:
             Action:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
+              - dynamodb:DescribeTable
             Resource: !GetAtt CrossBrowserTable.Arn
           - Sid: AllowCrossBrowserTableKeyAccess
             Effect: Allow
@@ -7941,6 +7950,7 @@ Resources:
             Action:
               - dynamodb:UpdateItem
               - dynamodb:PutItem
+              - dynamodb:DescribeTable
             Resource:
               - !GetAtt OrchAccessTokenTable.Arn
           - Sid: AllowAccessTokenTableDecryption
