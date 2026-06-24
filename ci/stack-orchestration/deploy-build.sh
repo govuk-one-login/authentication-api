@@ -106,7 +106,7 @@ while [[ $# -gt 0 ]]; do
       PROVISION_HOSTED_ZONE=true
       DOMAIN_TO_PROVISION=${2}
 
-      PERMITTED_VALUES="live alternative"
+      PERMITTED_VALUES="live alternative live-no-cert"
 
       if ! [[ ${PERMITTED_VALUES} =~ ( |^)${DOMAIN_TO_PROVISION}( |$) ]]; then
         echo "Hosted zone arg provided: ${DOMAIN_TO_PROVISION} is not one of ${PERMITTED_VALUES}"
@@ -201,8 +201,9 @@ function provision_hosted_zone_stack() {
 
   if [ "${DOMAIN_TO_PROVISION}" == "alternative" ]; then
     parameters_file="$(pwd)/configuration/${ENVIRONMENT}/hosted-zone/alternative-domain-parameters.json"
+  elif [ "${DOMAIN_TO_PROVISION}" == "live-no-cert" ]; then
+    parameters_file="$(pwd)/configuration/${ENVIRONMENT}/hosted-zone/live-no-cert-parameters.json"
   fi
-
   PARAMETERS_FILE="${parameters_file}" ${LOCAL_PROVISION_COMMAND} "${ENVIRONMENT}" "hosted-zone" "${TEMPLATE_FILE}"
   echo "Provisioned hosted zone stack"
 }
