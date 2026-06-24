@@ -131,7 +131,7 @@ Conditions:
   CreateApiGwCustomDomain:
     !And [
       !Condition SwapLiveTrafficToCloudfront,
-      !Equals [dev, !Ref Environment],
+      !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]],
     ]
   SwapOriginToApiGateway:
     !And [!Condition CreateApiGwCustomDomain, !Equals [dev, !Ref Environment]]
