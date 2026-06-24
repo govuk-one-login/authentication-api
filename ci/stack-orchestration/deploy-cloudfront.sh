@@ -80,7 +80,7 @@ while [[ $# -gt 0 ]]; do
       PROVISION_CLOUDFRONT=true
       CLOUDFRONT_PARAMS_TO_USE="${2}"
 
-      PERMITTED_VALUES="live alternative"
+      PERMITTED_VALUES="live alternative alt-with-live-cert live-with-rollback"
 
       if ! [[ ${PERMITTED_VALUES} =~ ( |^)${CLOUDFRONT_PARAMS_TO_USE}( |$) ]]; then
         echo "Cloudfront distribution arg provided: ${CLOUDFRONT_PARAMS_TO_USE} is not one of ${PERMITTED_VALUES}"
@@ -160,6 +160,10 @@ function provision_cloudfront_distribution() {
 
   if [ "${CLOUDFRONT_PARAMS_TO_USE}" == "alternative" ]; then
     params_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/alternative-parameters.json"
+  elif [ "${CLOUDFRONT_PARAMS_TO_USE}" == "alt-with-live-cert" ]; then
+    params_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/alternative-with-live-cert-parameters.json"
+  elif [ "${CLOUDFRONT_PARAMS_TO_USE}" == "live-with-rollback" ]; then
+    params_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/live-with-rollback-parameters.json"
   fi
 
   if [ "${SYNC_SECRETS}" == "true" ]; then

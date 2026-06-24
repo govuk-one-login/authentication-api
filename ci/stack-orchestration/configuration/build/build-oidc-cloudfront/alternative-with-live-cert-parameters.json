@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "DistributionAlias",
+    "ParameterValue": "oidc-orch.build.account.gov.uk"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "arn:aws:acm:us-east-1:767397776536:certificate/d7f6e974-d9e5-4c42-ba24-551f64d14494"
+  },
+  {
+    "ParameterKey": "FraudHeaderEnabled",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "StandardLoggingEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogDestination",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeaderManagedSecretRotationMonthWeekDaySchedule",
+    "ParameterValue": "WED#3"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeader",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "PreviousOriginCloakingHeader",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "ApiGatewayOriginDomain",
+    "ParameterValue": "w2kildk4ee.execute-api.eu-west-2.amazonaws.com"
+  },
+  {
+    "ParameterKey": "OriginPath",
+    "ParameterValue": "/build"
+  }
+]
