@@ -22,11 +22,19 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.util.Map;
+
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_SUCCESSFUL;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_VERIFICATION_FAILED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_VERIFICATION_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -36,6 +44,7 @@ public class FinishPasskeyAssertionHandler
     private static final Logger LOG = LogManager.getLogger(FinishPasskeyAssertionHandler.class);
     private final PasskeyAssertionService passkeyAssertionService;
     private final UserActionsManager userActionsManager;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public FinishPasskeyAssertionHandler() {
         this(ConfigurationService.getInstance());
@@ -46,7 +55,8 @@ public class FinishPasskeyAssertionHandler
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
             PasskeyAssertionService passkeyAssertionService,
-            UserActionsManager userActionsManager) {
+            UserActionsManager userActionsManager,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 FinishPasskeyAssertionRequest.class,
                 configurationService,
@@ -54,6 +64,7 @@ public class FinishPasskeyAssertionHandler
                 authSessionService);
         this.passkeyAssertionService = passkeyAssertionService;
         this.userActionsManager = userActionsManager;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public FinishPasskeyAssertionHandler(ConfigurationService configurationService) {
@@ -64,6 +75,7 @@ public class FinishPasskeyAssertionHandler
                         new DefaultPasskeyJsonParser(),
                         new StructuredAuditService(configurationService));
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -81,12 +93,14 @@ public class FinishPasskeyAssertionHandler
 
         LOG.info("FinishPasskeyAssertionHandler called");
 
+        reportPasskeyAuthenticationSuccess();
+
         return verifyPasskeyAssertion(userContext, request, input)
                 .flatMap(this::updatePasskeyRecord)
                 .map(success -> reportCorrectPasskeyReceived(userContext))
                 .fold(
                         failure -> {
-                            reportIncorrectPasskeyReceived(userContext);
+                            reportIncorrectPasskeyReceived(userContext, failure);
                             return switch (failure) {
                                 case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
                                         500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
@@ -97,6 +111,13 @@ public class FinishPasskeyAssertionHandler
                             };
                         },
                         success -> generateApiGatewayProxyResponse(200, ""));
+    }
+
+    private void reportPasskeyAuthenticationSuccess() {
+        var metricsDimensions =
+                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment());
+        cloudwatchMetricsService.incrementCounter(
+                PASSKEY_AUTHENTICATION_SUCCESSFUL, metricsDimensions);
     }
 
     private Result<FinishPasskeyAssertionFailureReason, AssertionResult> verifyPasskeyAssertion(
@@ -130,15 +151,27 @@ public class FinishPasskeyAssertionHandler
                         .build();
         userActionsManager.correctPasskeyReceived(null, permissionContext);
 
+        var metricsDimensions =
+                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment());
+        cloudwatchMetricsService.incrementCounter(
+                PASSKEY_VERIFICATION_SUCCESSFUL, metricsDimensions);
+
         return null;
     }
 
-    private Void reportIncorrectPasskeyReceived(UserContext userContext) {
+    private Void reportIncorrectPasskeyReceived(
+            UserContext userContext, FinishPasskeyAssertionFailureReason failureReason) {
         PermissionContext permissionContext =
                 PermissionContext.builder()
                         .withAuthSessionItem(userContext.getAuthSession())
                         .build();
         userActionsManager.incorrectPasskeyReceived(null, permissionContext);
+
+        var metricsDimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(FAILURE_REASON.getValue(), failureReason.getValue()));
+        cloudwatchMetricsService.incrementCounter(PASSKEY_VERIFICATION_FAILED, metricsDimensions);
 
         return null;
     }

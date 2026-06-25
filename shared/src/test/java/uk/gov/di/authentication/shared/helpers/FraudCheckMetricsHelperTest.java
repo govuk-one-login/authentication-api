@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -62,6 +62,6 @@ class FraudCheckMetricsHelperTest {
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 cloudwatchMetricsService, JourneyType.SIGN_IN, notificationType.name(), "test-env");
 
-        verify(cloudwatchMetricsService, never()).incrementCounter(any(), anyMap());
+        verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
     }
 }

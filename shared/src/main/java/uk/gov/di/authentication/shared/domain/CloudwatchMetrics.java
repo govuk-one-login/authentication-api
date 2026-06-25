@@ -30,7 +30,10 @@ public enum CloudwatchMetrics {
     INTERNATIONAL_SMS_SENT("InternationalSmsSent"),
     DOMESTIC_SMS_SENT("DomesticSmsSent"),
     FORCED_MFA_RESET_INITIATED("ForcedMfaResetInitiated"),
-    FORCED_MFA_RESET_COMPLETED("ForcedMfaResetCompleted");
+    FORCED_MFA_RESET_COMPLETED("ForcedMfaResetCompleted"),
+    PASSKEY_VERIFICATION_SUCCESSFUL("PasskeyVerificationSuccessful"),
+    PASSKEY_VERIFICATION_FAILED("PasskeyVerificationFailed"),
+    PASSKEY_AUTHENTICATION_SUCCESSFUL("PasskeyAuthenticationSuccessful");
 
     private String value;
 

@@ -6,6 +6,7 @@ import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.authentication.entity.Application;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifiableType;
@@ -89,6 +90,10 @@ public class CloudwatchMetricsService {
 
     public void incrementCounter(String name, Map<String, String> dimensions) {
         putEmbeddedValue(name, 1, dimensions);
+    }
+
+    public void incrementCounter(CloudwatchMetrics name, Map<String, String> dimensions) {
+        putEmbeddedValue(name.getValue(), 1, dimensions);
     }
 
     public void incrementMfaMethodCounter(
