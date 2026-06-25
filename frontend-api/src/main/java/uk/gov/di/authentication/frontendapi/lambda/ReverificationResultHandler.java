@@ -156,7 +156,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
             LOG.info("ReverificationResult response received from IPV");
 
-            var reverificationResultJson = reverificationResult.getContentAsJSONObject();
+            var reverificationResultJson = reverificationResult.getBodyAsJSONObject();
 
             var validMetadata =
                     extractValidMetadata(

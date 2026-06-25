@@ -174,7 +174,7 @@ public class DcmawUserInfoTest {
                         + "\""
                         + "]"
                         + "}");
-        var contentAsJSONObject = userInfoHTTPResponse.getContentAsJSONObject();
+        var contentAsJSONObject = userInfoHTTPResponse.getBodyAsJSONObject();
         var serializedSignedJWTs =
                 (List<String>) contentAsJSONObject.get(CREDENTIAL_JWT.getValue());
         List<SignedJWT> signedJWTs = new ArrayList<>();

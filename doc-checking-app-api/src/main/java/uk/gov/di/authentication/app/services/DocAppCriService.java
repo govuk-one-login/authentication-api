@@ -158,7 +158,7 @@ public class DocAppCriService {
                         response.getStatusCode());
             }
 
-            if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
+            if (!response.getBodyAsJSONObject().get("sub").equals(docAppSubjectId)
                     && !configurationService.getEnvironment().equals("dev")
                     && !configurationService.getEnvironment().equals("build")) {
                 throw new UnsuccessfulCredentialResponseException(
@@ -179,7 +179,7 @@ public class DocAppCriService {
     private List<SignedJWT> parseResponse(HTTPResponse response)
             throws UnsuccessfulCredentialResponseException {
         try {
-            var contentAsJSONObject = response.getContentAsJSONObject();
+            var contentAsJSONObject = response.getBodyAsJSONObject();
             if (Objects.isNull(contentAsJSONObject.get(CREDENTIAL_JWT.getValue()))) {
                 throw new UnsuccessfulCredentialResponseException(
                         "No Credential JWT claim present");

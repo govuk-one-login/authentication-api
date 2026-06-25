@@ -91,7 +91,7 @@ class ReverificationTest {
                                 tokens.getBearerAccessToken()));
 
         assertThat(
-                reverificationResponse.getContentAsJSONObject(),
+                reverificationResponse.getBodyAsJSONObject(),
                 equalTo(getResponseFromSuccessfulReverification()));
     }
 
@@ -200,7 +200,7 @@ class ReverificationTest {
                         + SUCCESS_FIELD
                         + "\":true"
                         + "}");
-        return reverificationHTTPResponse.getContentAsJSONObject();
+        return reverificationHTTPResponse.getBodyAsJSONObject();
     }
 
     private String getResponseFromUnsuccessfulReverification() {
