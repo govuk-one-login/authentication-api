@@ -115,12 +115,13 @@ public class AMCService {
                 .mapFailure(this::mapJwtFailureReason)
                 .map(
                         signedJWT ->
-                                new TokenRequest(
-                                        configurationService.getAMCTokenEndpointURI(),
-                                        new PrivateKeyJWT(signedJWT),
-                                        new AuthorizationCodeGrant(
-                                                new AuthorizationCode(authCode),
-                                                URI.create(usedRedirectUrl))));
+                                new TokenRequest.Builder(
+                                                configurationService.getAMCTokenEndpointURI(),
+                                                new PrivateKeyJWT(signedJWT),
+                                                new AuthorizationCodeGrant(
+                                                        new AuthorizationCode(authCode),
+                                                        URI.create(usedRedirectUrl)))
+                                        .build());
     }
 
     public Result<JourneyOutcomeError, HTTPResponse> requestJourneyOutcome(
