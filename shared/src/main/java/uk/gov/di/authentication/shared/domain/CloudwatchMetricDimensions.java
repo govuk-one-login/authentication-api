@@ -24,7 +24,8 @@ public enum CloudwatchMetricDimensions {
     SERVICE_NAME("ServiceName"),
     MFA_RESET_TYPE("MfaResetType"),
     PASSKEY_AUTHENTICATION_GENERATION_FAILURE_REASON(
-            "PasskeyAuthenticationGenerationFailureReason");
+            "PasskeyAuthenticationGenerationFailureReason"),
+    AMC_JOURNEY_TYPE("AMCJourneyType");
 
     private String value;
 

@@ -25,6 +25,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -32,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -39,6 +41,7 @@ import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -80,6 +83,8 @@ class AMCAuthorizeHandlerTest {
     private final AMCService amcService = mock(AMCService.class);
     private final DynamoAmcStateService dynamoAmcStateService = mock(DynamoAmcStateService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private AMCAuthorizeHandler handler;
     private final Context context = mock(Context.class);
     private final AuthSessionItem authSession =
@@ -97,6 +102,7 @@ class AMCAuthorizeHandlerTest {
             new RSAKey.Builder((RSAPublicKey) GENERATE_RSA_KEY_PAIR().getPublic())
                     .keyID("test-encryption-key-id")
                     .build();
+    private static final String ENV = "test";
 
     @BeforeEach
     void setUp() throws KeySourceException {
@@ -108,7 +114,8 @@ class AMCAuthorizeHandlerTest {
                         amcService,
                         jwkSource,
                         dynamoAmcStateService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
         when(jwkSource.get(any(), any())).thenReturn(List.of(TEST_RSA_JWK));
         when(configurationService.getAMCSfadRedirectURI())
                 .thenReturn("https://example.com/callback");
@@ -118,6 +125,7 @@ class AMCAuthorizeHandlerTest {
                 .thenReturn("https://example.com/account-data-callback");
         when(configurationService.getAuthToAccountDataApiAudience())
                 .thenReturn("https://example.com/ADAPIAudience");
+        when(configurationService.getEnvironment()).thenReturn(ENV);
         when(configurationService.getAMCSfadRedirectURI())
                 .thenReturn("https://example.com/redirectUri");
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
@@ -205,7 +213,7 @@ class AMCAuthorizeHandlerTest {
 
         @ParameterizedTest
         @MethodSource("amcJourneyTypeAndExpectedScopeInAudtEvent")
-        void shouldEmitTheRelevantAuditEvent(
+        void shouldEmitTheRelevantAuditEventAndCloudwatchMetric(
                 AMCJourneyType amcJourneyType, String expectedAmcScopeInAuditEvent) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
             var result =
@@ -231,6 +239,14 @@ class AMCAuthorizeHandlerTest {
                             expectedAuditContext,
                             expectedJourneyTypePair,
                             expectedAmcScopePair);
+            var expectedDimensions =
+                    Map.ofEntries(
+                            Map.entry("Environment", ENV),
+                            Map.entry("AMCJourneyType", amcJourneyType.name()));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AMC_AUTHORISATION_REQUESTED,
+                            expectedDimensions);
         }
 
         private static Stream<Arguments> amcJourneyTypeAndExpectedScope() {
@@ -275,8 +291,7 @@ class AMCAuthorizeHandlerTest {
             assertTrue(
                     result.getBody()
                             .contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
+            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
         }
 
         @Test
@@ -298,6 +313,7 @@ class AMCAuthorizeHandlerTest {
             assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
             verify(auditService, never())
                     .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
+            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
         }
 
         @Test
@@ -317,6 +333,7 @@ class AMCAuthorizeHandlerTest {
             assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
             verify(auditService, never())
                     .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
+            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
         }
 
         @ParameterizedTest
@@ -348,6 +365,7 @@ class AMCAuthorizeHandlerTest {
             assertTrue(result.getBody().contains(expectedError.getMessage()));
             verify(auditService, never())
                     .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
+            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
         }
     }
 }

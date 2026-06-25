@@ -36,6 +36,7 @@ import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.services.JwtService;
@@ -45,11 +46,15 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.net.MalformedURLException;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_AMC_SCOPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.AMC_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AMC_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -58,6 +63,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
     private final AMCService amcService;
     private final JWKSource<SecurityContext> jwkSource;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     private static final Logger LOG = LogManager.getLogger(AMCAuthorizeHandler.class);
     private final DynamoAmcStateService dynamoAmcStateService;
@@ -87,6 +93,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         new AccessTokenConstructorService(configurationService));
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public AMCAuthorizeHandler(
@@ -96,7 +103,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             AMCService amcService,
             JWKSource<SecurityContext> jwkSource,
             DynamoAmcStateService amcStateService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 AMCAuthorizeRequest.class,
                 configurationService,
@@ -106,6 +114,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.jwkSource = jwkSource;
         this.dynamoAmcStateService = amcStateService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     @SuppressWarnings("java:S1185")
@@ -162,7 +171,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                                     }
                                 });
 
-        emitAuthorizationRequestedAuditEvent(userContext, input, request);
+        reportAuthorizationRequested(userContext, input, request);
 
         return result.fold(
                 AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,
@@ -175,6 +184,14 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                                 500, ErrorResponse.SERIALIZATION_ERROR);
                     }
                 });
+    }
+
+    private void reportAuthorizationRequested(
+            UserContext userContext,
+            APIGatewayProxyRequestEvent input,
+            AMCAuthorizeRequest request) {
+        emitAuthorizationRequestedAuditEvent(userContext, input, request);
+        emitAmcAuthorisationRequestedMetric(request);
     }
 
     private void emitAuthorizationRequestedAuditEvent(
@@ -202,6 +219,14 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         var amcScopePair = pair(AUDIT_EVENT_EXTENSIONS_AMC_SCOPE, amcScopeForAuditEvent);
         auditService.submitAuditEvent(
                 AUTH_AMC_AUTHORISATION_REQUESTED, auditContext, journeyTypePair, amcScopePair);
+    }
+
+    private void emitAmcAuthorisationRequestedMetric(AMCAuthorizeRequest request) {
+        var dimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(AMC_JOURNEY_TYPE.getValue(), request.amcJourneyType().name()));
+        cloudwatchMetricsService.incrementCounter(AMC_AUTHORISATION_REQUESTED, dimensions);
     }
 
     private Result<AMCFailureReason, RSAKey> getAMCPublicEncryptionKey() {
