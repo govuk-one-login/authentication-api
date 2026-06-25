@@ -12,18 +12,18 @@ Mappings:
   AcceptanceTestTags:
     dev:
       tags: >-
-        @UI and not (@AccountInterventions or @Reauth or @old-mfa-without-ipv or
+        @UI and not (@AccountInterventions or @Reauth or
         @AccountRecovery or @InternationalSmsSendingDisabled or @PasskeyUsageEnabled)
         and not (@InternationalNumbersIndefiniteLockout and @under-development)
     build:
       tags: >-
         @UI and not (@under-development or @AccountInterventions or @Reauth or
-        @old-mfa-without-ipv or @AcceptInternationalNumbers or @InternationalSmsSendingDisabled
+        @AcceptInternationalNumbers or @InternationalSmsSendingDisabled
         or @PasskeysEnabled or @PasskeyUsageEnabled)
     staging:
       tags: >-
         @UI and not (@under-development or @AccountInterventions or @Reauth or
-        @old-mfa-without-ipv or @new-mfa-reset-with-ipv or @AcceptInternationalNumbers
+        @new-mfa-reset-with-ipv or @AcceptInternationalNumbers
         or @InternationalSmsSendingDisabled or @PasskeyUsageEnabled or @EnvironmentWithAMCStubDeployed)
 
 Resources:
