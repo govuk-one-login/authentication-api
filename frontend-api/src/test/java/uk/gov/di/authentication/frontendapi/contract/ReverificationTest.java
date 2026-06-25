@@ -227,6 +227,6 @@ class ReverificationTest {
                         + SUCCESS_FIELD
                         + "\":false"
                         + "}\n");
-        return reverificationHTTPResponse.getContent();
+        return reverificationHTTPResponse.getBody();
     }
 }

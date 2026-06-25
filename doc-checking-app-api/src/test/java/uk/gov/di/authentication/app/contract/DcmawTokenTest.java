@@ -20,7 +20,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.kms.model.*;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -36,7 +40,10 @@ import java.util.Date;
 import static au.com.dius.pact.consumer.dsl.LambdaDsl.newJsonBody;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.when;
 
 @PactConsumerTest
 @MockServerConfig(hostInterface = "localHost", port = "1234")
@@ -151,8 +158,7 @@ public class DcmawTokenTest {
         TokenResponse response = docAppCriService.sendTokenRequest(tokenRequest);
 
         assertThat(response.indicatesSuccess(), equalTo(true));
-        assertThat(
-                response.toHTTPResponse().getContent(), equalTo(getSuccessfulTokenHttpResponse()));
+        assertThat(response.toHTTPResponse().getBody(), equalTo(getSuccessfulTokenHttpResponse()));
     }
 
     @Pact(consumer = "OrchTokenConsumer")

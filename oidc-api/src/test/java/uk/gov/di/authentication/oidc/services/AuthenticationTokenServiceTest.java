@@ -165,7 +165,7 @@ class AuthenticationTokenServiceTest {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
         when(httpRequest.send()).thenReturn(httpResponse);
         when(httpResponse.indicatesSuccess()).thenReturn(true);
-        when(httpResponse.getContent()).thenReturn(userInfoJson);
+        when(httpResponse.getBody()).thenReturn(userInfoJson);
 
         Map<String, List<String>> headers = new HashMap<>();
         headers.put("Content-Type", Collections.singletonList("application/json"));
@@ -185,7 +185,7 @@ class AuthenticationTokenServiceTest {
         int failureStatusCode = 503;
         String failureErrorMessage = "Error content";
         when(httpResponse.getStatusCode()).thenReturn(failureStatusCode);
-        when(httpResponse.getContent()).thenReturn(failureErrorMessage);
+        when(httpResponse.getBody()).thenReturn(failureErrorMessage);
 
         UnsuccessfulCredentialResponseException exception =
                 assertThrows(
@@ -206,7 +206,7 @@ class AuthenticationTokenServiceTest {
     @Test
     void shouldThrowUnsuccessfulCredentialResponseExceptionWhenHttpContentIsNull() {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
-        when(httpResponse.getContent()).thenReturn(null);
+        when(httpResponse.getBody()).thenReturn(null);
 
         UnsuccessfulCredentialResponseException thrown =
                 assertThrows(
@@ -221,7 +221,7 @@ class AuthenticationTokenServiceTest {
     @Test
     void shouldThrowUnsuccessfulCredentialResponseExceptionWhenObjectMapperThrowsException() {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
-        when(httpResponse.getContent()).thenReturn("{}");
+        when(httpResponse.getBody()).thenReturn("{}");
 
         UnsuccessfulCredentialResponseException thrown =
                 assertThrows(

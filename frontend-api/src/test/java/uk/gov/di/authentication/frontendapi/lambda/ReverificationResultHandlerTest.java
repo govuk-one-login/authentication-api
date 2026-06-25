@@ -190,7 +190,7 @@ class ReverificationResultHandlerTest {
                     logging.events(),
                     hasItem(withMessageContaining(format("Received reverification success code"))));
             assertThat(result, hasStatus(200));
-            assertThat(result, hasBody(userInfo.getContent()));
+            assertThat(result, hasBody(userInfo.getBody()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -228,7 +228,7 @@ class ReverificationResultHandlerTest {
                             USER_CONTEXT);
 
             assertThat(result, hasStatus(200));
-            assertThat(result, hasBody(userInfo.getContent()));
+            assertThat(result, hasBody(userInfo.getBody()));
 
             verify(auditService)
                     .submitAuditEvent(

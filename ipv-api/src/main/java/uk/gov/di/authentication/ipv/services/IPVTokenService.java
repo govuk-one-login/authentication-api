@@ -80,7 +80,7 @@ public class IPVTokenService {
                         "Unsuccessful {} response from IPV token endpoint on attempt {}: {} ",
                         response.getStatusCode(),
                         count,
-                        response.getContent());
+                        response.getBody());
             }
         } while (!tokenResponse.indicatesSuccess() && count < maxTries);
 
@@ -143,9 +143,7 @@ public class IPVTokenService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from IPV user identity endpoint on attempt %d: %s ",
-                                    httpResponse.getStatusCode(),
-                                    count,
-                                    httpResponse.getContent()));
+                                    httpResponse.getStatusCode(), count, httpResponse.getBody()));
                 }
             } while (!userIdentityResponse.indicatesSuccess() && count < maxTries);
 

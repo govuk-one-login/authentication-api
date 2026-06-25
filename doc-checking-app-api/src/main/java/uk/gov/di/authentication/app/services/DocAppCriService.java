@@ -81,7 +81,7 @@ public class DocAppCriService {
                         "Unsuccessful {} response from DocApp token endpoint on attempt {}: {} ",
                         response.getStatusCode(),
                         count,
-                        response.getContent());
+                        response.getBody());
             }
         } while (!tokenResponse.indicatesSuccess() && count < maxTries);
 
@@ -146,7 +146,7 @@ public class DocAppCriService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from DocApp userinfo endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
+                                    response.getStatusCode(), count, response.getBody()));
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
 
@@ -154,7 +154,7 @@ public class DocAppCriService {
                 throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call CRI data endpoint: %s",
-                                response.getStatusCode(), response.getContent()),
+                                response.getStatusCode(), response.getBody()),
                         response.getStatusCode());
             }
 
