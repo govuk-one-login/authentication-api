@@ -89,7 +89,7 @@ class AuthenticationTokenServiceTest {
     }
 
     @Test
-    void shouldConstructTokenRequest() throws JOSEException {
+    void shouldConstructTokenRequest() throws Exception {
         signJWTWithKMS(KEY_ID);
         TokenRequest tokenRequest =
                 authenticationTokenService.constructTokenRequest(AUTH_CODE.getValue());
@@ -98,13 +98,13 @@ class AuthenticationTokenServiceTest {
                 tokenRequest.getClientAuthentication().getMethod().getValue(),
                 equalTo("private_key_jwt"));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("redirect_uri").get(0),
                 equalTo(ORCH_CALLBACK_URI.toString()));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("grant_type").get(0),
                 equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("client_id").get(0),
                 equalTo(CLIENT_ID.getValue()));
     }
 
