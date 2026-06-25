@@ -50,6 +50,12 @@ import java.util.Objects;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.AUTH_CODE_ISSUED;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.STATUS_CODE;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.DOC_APP_TOKEN_REQUEST_FAILED;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.DOC_APP_TOKEN_REQUEST_SUCCESSFUL;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.DOC_APP_USER_INFO_REQUEST_FAILED;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.DOC_APP_USER_INFO_REQUEST_SUCCESSFUL;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -220,6 +226,10 @@ public class DocAppCallbackHandler
 
             var tokenResponse = tokenService.getToken(input.getQueryStringParameters().get("code"));
             if (tokenResponse.indicatesSuccess()) {
+                metrics.increment(
+                        DOC_APP_TOKEN_REQUEST_SUCCESSFUL.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+
                 LOG.info("TokenResponse was successful");
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
@@ -227,6 +237,14 @@ public class DocAppCallbackHandler
                         user);
             } else {
                 incrementDocAppCallbackErrorCounter(false, "UnsuccessfulTokenResponse");
+                metrics.increment(
+                        DOC_APP_TOKEN_REQUEST_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                STATUS_CODE.getValue(),
+                                String.valueOf(tokenResponse.toHTTPResponse().getStatusCode())));
+
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
@@ -256,6 +274,9 @@ public class DocAppCallbackHandler
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                         clientId,
                         user);
+                metrics.increment(
+                        DOC_APP_USER_INFO_REQUEST_SUCCESSFUL.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
                 LOG.info("Adding DocAppCredential to dynamo");
                 dynamoDocAppCriService.addDocAppCredential(
                         orchClientSession.getDocAppSubjectId(), credential);
@@ -313,6 +334,15 @@ public class DocAppCallbackHandler
                             user);
                 } else {
                     incrementDocAppCallbackErrorCounter(false, "UnsuccessfulCredentialResponse");
+
+                    metrics.increment(
+                            DOC_APP_USER_INFO_REQUEST_FAILED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    STATUS_CODE.getValue(),
+                                    String.valueOf(e.getHttpCode())));
+
                     auditService.submitAuditEvent(
                             DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                             clientId,
