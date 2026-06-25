@@ -42,18 +42,4 @@ public record PasskeyDetail(
                 userVerified,
                 null);
     }
-
-    public static PasskeyDetail authenticationSuccessful(
-            long passkeyCounter,
-            boolean passkeyCredentialBackedUp,
-            String passkeyCredentialDeviceType) {
-        var userVerified = false;
-        return new PasskeyDetail(
-                null,
-                passkeyCounter,
-                passkeyCredentialBackedUp,
-                passkeyCredentialDeviceType,
-                userVerified,
-                null);
-    }
 }
