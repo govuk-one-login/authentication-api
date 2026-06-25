@@ -13,7 +13,7 @@ Mappings:
     dev:
       tags: >-
         @UI and not (@AccountInterventions or @Reauth or
-        @AccountRecovery or @InternationalSmsSendingDisabled or @PasskeyUsageEnabled)
+        @AccountRecovery or @InternationalSmsSendingDisabled)
         and not (@InternationalNumbersIndefiniteLockout and @under-development)
     build:
       tags: >-
@@ -24,7 +24,7 @@ Mappings:
       tags: >-
         @UI and not (@under-development or @AccountInterventions or @Reauth or
         @new-mfa-reset-with-ipv or @AcceptInternationalNumbers
-        or @InternationalSmsSendingDisabled or @PasskeyUsageEnabled or @EnvironmentWithAMCStubDeployed)
+        or @InternationalSmsSendingDisabled or @EnvironmentWithAMCStubDeployed)
 
 Resources:
   AcceptanceTestAPICucumberFilterTags:
