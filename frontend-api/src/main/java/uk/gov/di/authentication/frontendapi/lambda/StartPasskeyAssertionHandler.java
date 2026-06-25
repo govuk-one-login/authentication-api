@@ -26,16 +26,23 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSKEY_AUTHENTICATION_GENERATED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PASSKEY;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.PASSKEY_AUTHENTICATION_GENERATION_FAILURE_REASON;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_GENERATED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_GENERATION_FAILED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_REQUESTED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -46,6 +53,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
     private static final Logger LOG = LogManager.getLogger(StartPasskeyAssertionHandler.class);
     private final AuditService auditService;
     private final PasskeyAssertionService passkeyAssertionService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public StartPasskeyAssertionHandler() {
         this(ConfigurationService.getInstance());
@@ -56,7 +64,8 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
             AuthenticationService authenticationService,
             AuthSessionService authSessionService,
             PasskeyAssertionService passkeyAssertionService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 StartPasskeyAssertionRequest.class,
                 configurationService,
@@ -64,6 +73,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                 authSessionService);
         this.passkeyAssertionService = passkeyAssertionService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public StartPasskeyAssertionHandler(ConfigurationService configurationService) {
@@ -74,6 +84,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                         new DefaultPasskeyJsonParser(),
                         new StructuredAuditService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -89,12 +100,17 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
             StartPasskeyAssertionRequest request,
             UserContext userContext) {
         LOG.info("StartPasskeyAssertionHandler called");
+
+        incrementAuthenticationRequestedMetric();
+
         var emailAddress = userContext.getAuthSession().getEmailAddress();
         if (emailAddress == null || emailAddress.isEmpty()) {
+            incrementAuthenticationGenerationFailedMetric("emailAddressNotFound");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.EMAIL_ADDRESS_EMPTY);
         }
         var maybeUserProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
         if (maybeUserProfile.isEmpty()) {
+            incrementAuthenticationGenerationFailedMetric("userProfileNotFound");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.USER_NOT_FOUND);
         }
         var userProfile = maybeUserProfile.get();
@@ -109,6 +125,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
             assertionRequestJsonToStore = assertionRequest.toJson();
         } catch (JsonProcessingException e) {
             LOG.error("Error serializing assertion request", e);
+            incrementAuthenticationGenerationFailedMetric("serialisationFailure");
             return generateApiGatewayProxyErrorResponse(
                     500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
         }
@@ -118,6 +135,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                         .getAuthSession()
                         .withPasskeyAssertionRequest(assertionRequestJsonToStore));
 
+        incrementAuthenticationGeneratedMetric();
         emitAuthPasskeyAuthenticationGeneratedAuditEvent(
                 userContext, input, emailAddress, assertionRequest);
         return generateApiGatewayProxyResponse(200, credentialsJson);
@@ -190,5 +208,32 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                         .getTransports()
                         .map(set -> set.stream().map(AuthenticatorTransport::getId).toList())
                         .orElse(List.of()));
+    }
+
+    private void incrementAuthenticationRequestedMetric() {
+        cloudwatchMetricsService.incrementCounter(
+                PASSKEY_AUTHENTICATION_REQUESTED, metricDimensions());
+    }
+
+    private void incrementAuthenticationGenerationFailedMetric(String failureReason) {
+        cloudwatchMetricsService.incrementCounter(
+                PASSKEY_AUTHENTICATION_GENERATION_FAILED, metricDimensions(failureReason));
+    }
+
+    private void incrementAuthenticationGeneratedMetric() {
+        cloudwatchMetricsService.incrementCounter(
+                PASSKEY_AUTHENTICATION_GENERATED, metricDimensions());
+    }
+
+    private Map<String, String> metricDimensions() {
+        return Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment());
+    }
+
+    private Map<String, String> metricDimensions(String failureReason) {
+        return Map.ofEntries(
+                Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                Map.entry(
+                        PASSKEY_AUTHENTICATION_GENERATION_FAILURE_REASON.getValue(),
+                        failureReason));
     }
 }

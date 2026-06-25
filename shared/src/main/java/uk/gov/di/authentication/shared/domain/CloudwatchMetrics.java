@@ -33,7 +33,10 @@ public enum CloudwatchMetrics {
     FORCED_MFA_RESET_COMPLETED("ForcedMfaResetCompleted"),
     PASSKEY_VERIFICATION_SUCCESSFUL("PasskeyVerificationSuccessful"),
     PASSKEY_VERIFICATION_FAILED("PasskeyVerificationFailed"),
-    PASSKEY_AUTHENTICATION_SUCCESSFUL("PasskeyAuthenticationSuccessful");
+    PASSKEY_AUTHENTICATION_SUCCESSFUL("PasskeyAuthenticationSuccessful"),
+    PASSKEY_AUTHENTICATION_GENERATED("PasskeyAuthenticationGenerated"),
+    PASSKEY_AUTHENTICATION_GENERATION_FAILED("PasskeyAuthenticationGenerationFailed"),
+    PASSKEY_AUTHENTICATION_REQUESTED("PasskeyAuthenticationRequested");
 
     private String value;
 

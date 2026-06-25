@@ -22,7 +22,9 @@ public enum CloudwatchMetricDimensions {
     LOG_GROUP("LogGroup"),
     SERVICE_TYPE("ServiceType"),
     SERVICE_NAME("ServiceName"),
-    MFA_RESET_TYPE("MfaResetType");
+    MFA_RESET_TYPE("MfaResetType"),
+    PASSKEY_AUTHENTICATION_GENERATION_FAILURE_REASON(
+            "PasskeyAuthenticationGenerationFailureReason");
 
     private String value;
 
