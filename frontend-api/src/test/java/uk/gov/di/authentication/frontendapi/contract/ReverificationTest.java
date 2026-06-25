@@ -189,7 +189,7 @@ class ReverificationTest {
     private JSONObject getResponseFromSuccessfulReverification() throws ParseException {
         var reverificationHTTPResponse = new HTTPResponse(200);
         reverificationHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        reverificationHTTPResponse.setContent(
+        reverificationHTTPResponse.setBody(
                 "{"
                         + "\""
                         + SUB_FIELD
@@ -206,7 +206,7 @@ class ReverificationTest {
     private String getResponseFromUnsuccessfulReverification() {
         var reverificationHTTPResponse = new HTTPResponse(400);
         reverificationHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        reverificationHTTPResponse.setContent(
+        reverificationHTTPResponse.setBody(
                 "{"
                         + "\""
                         + ERROR_CODE_FIELD

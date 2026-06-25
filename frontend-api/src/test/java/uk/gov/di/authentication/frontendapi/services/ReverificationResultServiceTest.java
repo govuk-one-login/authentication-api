@@ -348,7 +348,7 @@ class ReverificationResultServiceTest {
                 throws IOException, UnsuccessfulReverificationResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
             when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
             when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
@@ -362,7 +362,7 @@ class ReverificationResultServiceTest {
                 throws IOException, UnsuccessfulReverificationResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
             when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
             when(httpRequest.send())
@@ -378,7 +378,7 @@ class ReverificationResultServiceTest {
         void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVUserIdentityFail() throws IOException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
             when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
             when(httpRequest.send()).thenReturn(new HTTPResponse(500));

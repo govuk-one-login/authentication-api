@@ -176,7 +176,7 @@ class IPVTokenServiceTest {
             throws IOException, UnsuccessfulCredentialResponseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
@@ -209,7 +209,7 @@ class IPVTokenServiceTest {
             throws IOException, UnsuccessfulCredentialResponseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         when(httpRequest.send()).thenReturn(new HTTPResponse(500)).thenReturn(userInfoHTTPResponse);
@@ -224,7 +224,7 @@ class IPVTokenServiceTest {
     void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVUserIdentityFail() throws IOException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         when(httpRequest.send()).thenReturn(new HTTPResponse(500));
@@ -288,7 +288,7 @@ class IPVTokenServiceTest {
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return tokenHTTPResponse;
     }

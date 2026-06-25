@@ -224,7 +224,7 @@ class DocAppCriServiceTest {
                             + "}";
             var tokenHTTPResponse = new HTTPResponse(200);
             tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            tokenHTTPResponse.setContent(tokenResponseContent);
+            tokenHTTPResponse.setBody(tokenResponseContent);
 
             return tokenHTTPResponse;
         }
@@ -258,7 +258,7 @@ class DocAppCriServiceTest {
                 throws IOException, UnsuccessfulCredentialResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
             var response = docAppCriService.sendCriDataRequest(httpRequest, DOC_APP_SUBJECT_ID);
@@ -273,7 +273,7 @@ class DocAppCriServiceTest {
                 throws IOException, UnsuccessfulCredentialResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send())
                     .thenReturn(new HTTPResponse(500))
                     .thenReturn(userInfoHTTPResponse);
@@ -291,7 +291,7 @@ class DocAppCriServiceTest {
                 throws IOException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
             UnsuccessfulCredentialResponseException thrown =
