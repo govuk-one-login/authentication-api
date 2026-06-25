@@ -3685,6 +3685,9 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
+          SIS_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchSISTokenSigningKmsKeyAlias
+      Policies:
+        - !Ref SISTokenSigningKmsAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -6894,6 +6897,20 @@ Resources:
             Resource:
               - !GetAtt OrchIPVTokenSigningKmsKey.Arn
 
+  SISTokenSigningKmsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowSISTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt OrchSISTokenSigningKmsKey.Arn
+
   OrchToAuthSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -8187,6 +8204,33 @@ Resources:
     Type: AWS::KMS::Key
     Properties:
       Description: KMS signing key for authentication to the IPV token endpoint
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  #endregion
+
+  #region SIS token signing key pair
+
+  OrchSISTokenSigningKmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-sis-token-auth-kms-key-alias"
+      TargetKeyId: !Ref OrchSISTokenSigningKmsKey
+
+  OrchSISTokenSigningKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS signing key for authentication to the SIS token endpoint
       PendingWindowInDays: 30
       KeyUsage: SIGN_VERIFY
       KeySpec: ECC_NIST_P256
