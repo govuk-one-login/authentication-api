@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.services.JwtService;
@@ -52,6 +53,12 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_OUTCOME;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_AMC_SCOPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.AMC_AUTHORISATION_OVERALL_SUCCESS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.AMC_SCOPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AMC_AUTHORISATION_RECEIVED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AMC_FAILURE_GETTING_AUTHORISATION;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_STATE_MISMATCH;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -62,6 +69,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
     private final AMCService amcService;
     private final DynamoAmcStateService dynamoAmcStateService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     private static final Logger LOG = LogManager.getLogger(AMCCallbackHandler.class);
 
@@ -79,6 +87,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         new AccessTokenConstructorService(configurationService));
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public AMCCallbackHandler(
@@ -87,7 +96,8 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             AuthSessionService authSessionService,
             AMCService amcService,
             DynamoAmcStateService dynamoAmcStateService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 AMCCallbackRequest.class,
                 configurationService,
@@ -96,6 +106,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         this.amcService = amcService;
         this.dynamoAmcStateService = dynamoAmcStateService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     @SuppressWarnings("java:S1185")
@@ -116,6 +127,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
 
         var verifyStateResult = verifyState(request.state(), userContext);
         if (verifyStateResult.isFailure()) {
+            reportFailureGettingAuthorisation("StateVerificationFailure");
             return verifyStateResult.getFailure();
         }
 
@@ -129,6 +141,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         if (requestResult.isFailure()) {
             var failure = requestResult.getFailure();
             LOG.warn("Failure building token request {}", failure.getValue());
+            reportFailureGettingAuthorisation("FailureBuildingTokenRequest");
             return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(failure);
         }
 
@@ -151,6 +164,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         var tokenResponse = sendTokenRequest(requestResult.getSuccess(), additionalAmcHeaders);
 
         if (tokenResponse.isFailure()) {
+            reportFailureGettingAuthorisation("FailureRetrievingTokenResponse");
             return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(tokenResponse.getFailure());
         }
 
@@ -170,6 +184,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                 .fold(
                         error -> {
                             LOG.warn("Error requesting journey outcome: {}", error.getValue());
+                            reportFailureGettingAuthorisation("FailureRetrievingJourneyOutcome");
                             return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(error);
                         },
                         response -> {
@@ -182,15 +197,44 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                                                         JourneyOutcomeResponse.class);
                             } catch (JsonException e) {
                                 LOG.error("Failed to parse journey outcome response", e);
+                                reportFailureGettingAuthorisation("FailedToParseJourneyOutcome");
                                 return generateApiGatewayProxyErrorResponse(
                                         500, ErrorResponse.AMC_JOURNEY_OUTCOME_UNEXPECTED_ERROR);
                             }
 
-                            emitAuthorisationReceivedAuditEvent(journeyOutcome, userContext, input);
+                            reportAuthorisationReceived(journeyOutcome, userContext, input);
 
                             LOG.info("Journey outcome received successfully");
                             return generateApiGatewayProxyResponse(200, response.getContent());
                         });
+    }
+
+    private void reportFailureGettingAuthorisation(String failureReason) {
+        var metricDimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(FAILURE_REASON.getValue(), failureReason));
+        cloudwatchMetricsService.incrementCounter(
+                AMC_FAILURE_GETTING_AUTHORISATION, metricDimensions);
+    }
+
+    private void reportAuthorisationReceived(
+            JourneyOutcomeResponse journeyOutcome,
+            UserContext userContext,
+            APIGatewayProxyRequestEvent input) {
+        emitAuthorisationReceivedAuditEvent(journeyOutcome, userContext, input);
+        emitAuthorisationReceivedMetric(journeyOutcome);
+    }
+
+    private void emitAuthorisationReceivedMetric(JourneyOutcomeResponse journeyOutcomeResponse) {
+        var metricDimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(
+                                AMC_AUTHORISATION_OVERALL_SUCCESS.getValue(),
+                                String.valueOf(journeyOutcomeResponse.success())),
+                        Map.entry(AMC_SCOPE.getValue(), journeyOutcomeResponse.scope()));
+        cloudwatchMetricsService.incrementCounter(AMC_AUTHORISATION_RECEIVED, metricDimensions);
     }
 
     private void emitAuthorisationReceivedAuditEvent(

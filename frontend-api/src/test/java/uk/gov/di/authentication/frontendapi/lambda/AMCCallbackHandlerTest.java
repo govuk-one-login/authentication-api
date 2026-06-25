@@ -19,6 +19,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.frontendapi.services.AMCService;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AMCState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -37,13 +39,16 @@ import java.io.IOException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -82,6 +87,8 @@ class AMCCallbackHandlerTest {
     private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final DynamoAmcStateService dynamoAmcStateService =
             mock(DynamoAmcStateService.class);
+    private static final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private static final AMCService AMC_SERVICE = mock(AMCService.class);
     private static final AuditService auditService = mock(AuditService.class);
     private static TokenRequest tokenRequest;
@@ -117,11 +124,13 @@ class AMCCallbackHandlerTest {
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
                     ENCODED_DEVICE_DETAILS);
+    private static final String ENV = "test";
 
     @BeforeAll
     static void setUp() {
         tokenRequest = mock(TokenRequest.class);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
+        when(configurationService.getEnvironment()).thenReturn(ENV);
         handler =
                 new AMCCallbackHandler(
                         configurationService,
@@ -129,7 +138,8 @@ class AMCCallbackHandlerTest {
                         authSessionService,
                         AMC_SERVICE,
                         dynamoAmcStateService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
     }
 
     @BeforeEach
@@ -143,8 +153,7 @@ class AMCCallbackHandlerTest {
 
     @AfterEach
     void resetMocks() {
-        reset(AMC_SERVICE);
-        reset(dynamoAmcStateService);
+        reset(AMC_SERVICE, dynamoAmcStateService, cloudwatchMetricsService);
     }
 
     private static Stream<Arguments> scopeAndExpectedJourneyType() {
@@ -182,6 +191,18 @@ class AMCCallbackHandlerTest {
                         pair("account_actions_failed", List.of()),
                         pair("amc_scope", amcScope.getValue()),
                         pair("journey-type", journeyType));
+
+        var expectedMetricsDimensions =
+                Map.ofEntries(
+                        Map.entry("Environment", ENV),
+                        Map.entry("AMCAuthorisationOverallSuccess", "true"),
+                        Map.entry("AMCScope", amcScope.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.AMC_AUTHORISATION_RECEIVED, expectedMetricsDimensions);
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        eq(CloudwatchMetrics.AMC_FAILURE_GETTING_AUTHORISATION), anyMap());
 
         verify(dynamoAmcStateService).delete(STATE);
     }
@@ -221,6 +242,7 @@ class AMCCallbackHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.AMC_STATE_MISMATCH));
+        verifyFailureMetricIncremented("StateVerificationFailure");
     }
 
     @Test
@@ -244,10 +266,11 @@ class AMCCallbackHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.AMC_STATE_MISMATCH));
 
         verify(dynamoAmcStateService, never()).delete(STATE);
+        verifyFailureMetricIncremented("StateVerificationFailure");
     }
 
     @Test
-    void shouldReturn400WhenTokenResponseUnsuccessful() {
+    void shouldReturn400WhenTokenResponseFailsToBuild() {
         when(AMC_SERVICE.buildTokenRequest(AUTH_CODE, USED_REDIRECT_URL))
                 .thenReturn(Result.failure(AMCFailureReason.JWT_ENCODING_ERROR));
 
@@ -261,6 +284,7 @@ class AMCCallbackHandlerTest {
                         USER_CONTEXT);
 
         assertEquals(400, result.getStatusCode());
+        verifyFailureMetricIncremented("FailureBuildingTokenRequest");
     }
 
     @Test
@@ -282,6 +306,7 @@ class AMCCallbackHandlerTest {
 
         assertEquals(500, result.getStatusCode());
         assertThat(result, hasJsonBody(AMC_TOKEN_RESPONSE_ERROR));
+        verifyFailureMetricIncremented("FailureRetrievingTokenResponse");
     }
 
     @Test
@@ -304,6 +329,7 @@ class AMCCallbackHandlerTest {
 
         assertEquals(500, result.getStatusCode());
         assertThat(result, hasJsonBody(AMC_TOKEN_UNEXPECTED_ERROR));
+        verifyFailureMetricIncremented("FailureRetrievingTokenResponse");
     }
 
     @Test
@@ -324,7 +350,7 @@ class AMCCallbackHandlerTest {
                         USER_CONTEXT);
 
         assertEquals(500, result.getStatusCode());
-        assertThat(result, hasJsonBody(AMC_TOKEN_UNEXPECTED_ERROR));
+        verifyFailureMetricIncremented("FailureRetrievingTokenResponse");
     }
 
     @Test
@@ -357,6 +383,7 @@ class AMCCallbackHandlerTest {
                         USER_CONTEXT);
 
         assertEquals(400, result.getStatusCode());
+        verifyFailureMetricIncremented("FailureRetrievingJourneyOutcome");
     }
 
     @Test
@@ -388,6 +415,7 @@ class AMCCallbackHandlerTest {
                         USER_CONTEXT);
 
         assertEquals(500, result.getStatusCode());
+        verifyFailureMetricIncremented("FailureRetrievingJourneyOutcome");
     }
 
     @Test
@@ -407,10 +435,12 @@ class AMCCallbackHandlerTest {
         assertEquals(500, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.AMC_JOURNEY_OUTCOME_UNEXPECTED_ERROR));
         verify(auditService, never()).submitAuditEvent(any(), any(), any());
+        verifyFailureMetricIncremented("FailedToParseJourneyOutcome");
     }
 
     @Test
-    void shouldEmitAuditEventWithFailedActionsAndErrors() throws IOException, ParseException {
+    void shouldEmitAuditEventAndMetricsWithFailedActionsAndErrors()
+            throws IOException, ParseException {
         var failedJourneyOutcome =
                 """
                         {
@@ -457,6 +487,15 @@ class AMCCallbackHandlerTest {
                         pair("account_actions_failed", List.of("passkey-create")),
                         pair("amc_scope", "passkey-create"),
                         pair("journey-type", JourneyType.SIGN_IN));
+
+        var expectedMetricsDimensions =
+                Map.ofEntries(
+                        Map.entry("Environment", ENV),
+                        Map.entry("AMCAuthorisationOverallSuccess", "false"),
+                        Map.entry("AMCScope", "passkey-create"));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.AMC_AUTHORISATION_RECEIVED, expectedMetricsDimensions);
     }
 
     private void setupSuccessfulTokenResponse() throws IOException, ParseException {
@@ -510,5 +549,19 @@ class AMCCallbackHandlerTest {
                             }
                     """
                 .formatted(amcScope.getValue(), amcScope.getValue());
+    }
+
+    private void verifyFailureMetricIncremented(String expectedFailureReason) {
+        var expectedMetricsDimensions =
+                Map.ofEntries(
+                        Map.entry("Environment", ENV),
+                        Map.entry("FailureReason", expectedFailureReason));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.AMC_FAILURE_GETTING_AUTHORISATION,
+                        expectedMetricsDimensions);
+
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(eq(CloudwatchMetrics.AMC_AUTHORISATION_RECEIVED), anyMap());
     }
 }

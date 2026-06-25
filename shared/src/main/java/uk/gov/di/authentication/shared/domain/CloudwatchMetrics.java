@@ -37,7 +37,9 @@ public enum CloudwatchMetrics {
     PASSKEY_AUTHENTICATION_GENERATED("PasskeyAuthenticationGenerated"),
     PASSKEY_AUTHENTICATION_GENERATION_FAILED("PasskeyAuthenticationGenerationFailed"),
     PASSKEY_AUTHENTICATION_REQUESTED("PasskeyAuthenticationRequested"),
-    AMC_AUTHORISATION_REQUESTED("AMCAuthorisationRequested");
+    AMC_AUTHORISATION_REQUESTED("AMCAuthorisationRequested"),
+    AMC_AUTHORISATION_RECEIVED("AMCAuthorisationReceived"),
+    AMC_FAILURE_GETTING_AUTHORISATION("AMCFailureGettingAuthorisation");
 
     private String value;
 

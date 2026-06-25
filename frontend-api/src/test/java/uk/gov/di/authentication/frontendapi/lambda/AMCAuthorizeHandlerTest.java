@@ -245,8 +245,7 @@ class AMCAuthorizeHandlerTest {
                             Map.entry("AMCJourneyType", amcJourneyType.name()));
             verify(cloudwatchMetricsService)
                     .incrementCounter(
-                            CloudwatchMetrics.AMC_AUTHORISATION_REQUESTED,
-                            expectedDimensions);
+                            CloudwatchMetrics.AMC_AUTHORISATION_REQUESTED, expectedDimensions);
         }
 
         private static Stream<Arguments> amcJourneyTypeAndExpectedScope() {
