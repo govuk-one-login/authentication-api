@@ -1,21 +1,15 @@
 package uk.gov.di.orchestration.local;
 
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
+import uk.gov.di.orchestration.local.initialisers.ClientConfigReader;
 import uk.gov.di.orchestration.local.initialisers.DynamoDbInitialiser;
 import uk.gov.di.orchestration.local.initialisers.KmsInitialiser;
 import uk.gov.di.orchestration.local.initialisers.ParameterInitialiser;
 import uk.gov.di.orchestration.local.initialisers.SqsInitialiser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.ValidClaims;
-import uk.gov.di.orchestration.shared.helpers.Argon2EncoderHelper;
-
-import java.util.List;
 
 public class App {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         initialiseDownstreamComponents();
         new LocalOrchestrationApi();
     }
@@ -25,7 +19,7 @@ public class App {
     // It might be nice to commonise this with the integration test setup,
     // (see BaseAwsResourceExtension, ParameterStoreExtension etc.)
     // or replace entirely with local stubs/config
-    private static void initialiseDownstreamComponents() {
+    private static void initialiseDownstreamComponents() throws Exception {
         // Set up localstack SSM parameters
         // Remove this once using JWKS for auth
         var parameterInitialiser = new ParameterInitialiser();
@@ -62,70 +56,6 @@ public class App {
         dynamoInitialiser.addRecords(
                 "local-client-registry",
                 ClientRegistry.class,
-                List.of(
-                        // Client for the local RP stub
-                        new ClientRegistry()
-                                .withClientID("local-rp-stub")
-                                .withClientName("Local RP stub")
-                                .withRedirectUrls(
-                                        List.of(
-                                                "http://localhost:4000/oidc/authorization-code/callback"))
-                                .withPostLogoutRedirectUrls(
-                                        List.of("http://localhost:4000/signed-out"))
-                                .withScopes(
-                                        List.of(
-                                                "openid",
-                                                "email",
-                                                "phone",
-                                                "wallet-subject-id",
-                                                "am"))
-                                .withClaims(ValidClaims.getAllValidClaims().stream().toList())
-                                .withTokenAuthMethod("private_key_jwt")
-                                .withClientSecret(
-                                        Argon2EncoderHelper.argon2Hash("local-client-secret"))
-                                .withPublicKeySource("JWKS")
-                                .withJwksUrl(
-                                        "http://host.docker.internal:4000/local-rp-stub/.well-known/jwks.json")
-                                .withServiceType(ServiceType.MANDATORY.name())
-                                .withSubjectType("public")
-                                .withClientType(ClientType.WEB.getValue())
-                                .withIdentityVerificationSupported(true)
-                                .withClientLoCs(
-                                        List.of(
-                                                LevelOfConfidence.NONE.getValue(),
-                                                LevelOfConfidence.LOW_LEVEL.getValue(),
-                                                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                                LevelOfConfidence.HIGH_LEVEL.getValue())),
-                        // Clients for the OIDC conformance test suite
-                        new ClientRegistry()
-                                .withClientID("oidc-conformance-test")
-                                .withClientName("OIDC conformance test suite")
-                                .withRedirectUrls(
-                                        List.of(
-                                                "https://localhost:8443/test/a/local-test/callback"))
-                                .withScopes(List.of("openid", "email", "phone", "offline_access"))
-                                .withTokenAuthMethod("client_secret_post")
-                                .withClientSecret(
-                                        Argon2EncoderHelper.argon2Hash("conformance-test-secret"))
-                                .withServiceType(ServiceType.MANDATORY.name())
-                                .withSubjectType("pairwise")
-                                .withClientType(ClientType.WEB.getValue())
-                                .withIdentityVerificationSupported(true)
-                                .withPermitMissingNonce(true),
-                        new ClientRegistry()
-                                .withClientID("oidc-conformance-test-2")
-                                .withClientName("OIDC conformance test suite")
-                                .withRedirectUrls(
-                                        List.of(
-                                                "https://localhost:8443/test/a/local-test/callback"))
-                                .withScopes(List.of("openid", "email", "phone", "offline_access"))
-                                .withTokenAuthMethod("client_secret_post")
-                                .withClientSecret(
-                                        Argon2EncoderHelper.argon2Hash("conformance-test-secret-2"))
-                                .withServiceType(ServiceType.MANDATORY.name())
-                                .withSubjectType("pairwise")
-                                .withClientType(ClientType.WEB.getValue())
-                                .withIdentityVerificationSupported(true)
-                                .withPermitMissingNonce(true)));
+                ClientConfigReader.getClientConfigs());
     }
 }
