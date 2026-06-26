@@ -106,13 +106,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             new OrchAccessTokenExtension();
 
     private static final IntegrationTestConfigurationService configuration =
-            new IntegrationTestConfigurationService(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+            new IntegrationTestConfigurationService() {
 
                 @Override
                 public String getTxmaAuditQueueUrl() {
@@ -464,13 +458,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static class UserInfoConfigurationService extends IntegrationTestConfigurationService {
 
         public UserInfoConfigurationService() {
-            super(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            super();
         }
 
         @Override

@@ -48,9 +48,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.orchestration.testsupport.helpers.SpotQueueAssertionHelper;
 
 import java.net.URI;
@@ -138,9 +136,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @BeforeEach
     void setup() {
         ipvStub.init();
-        configurationService =
-                new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
-                        ipvStub, externalTokenSigner, ipvPrivateKeyJwtSigner, spotRequestQueue);
+        configurationService = new TestConfigurationService(ipvStub);
         handler = new IPVCallbackHandler(configurationService);
         txmaAuditQueue.clear();
         spotRequestQueue.clear();
@@ -351,13 +347,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     private void enableSyncWaitForSPOT() {
-        configurationService =
-                new TestConfigurationService(
-                        ipvStub,
-                        externalTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotRequestQueue,
-                        true);
+        configurationService = new TestConfigurationService(ipvStub, true);
         handler = new IPVCallbackHandler(configurationService);
     }
 
@@ -706,27 +696,13 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         private final IPVStubExtension ipvStubExtension;
         private final boolean isSyncWaitForSPOTEnabled;
 
-        public TestConfigurationService(
-                IPVStubExtension ipvStub,
-                TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotRequestQueue) {
-            this(ipvStub, tokenSigningKey, ipvPrivateKeyJwtSigner, spotRequestQueue, false);
+        public TestConfigurationService(IPVStubExtension ipvStub) {
+            this(ipvStub, false);
         }
 
         public TestConfigurationService(
-                IPVStubExtension ipvStub,
-                TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotRequestQueue,
-                boolean isSyncWaitForSPOTEnabled) {
-            super(
-                    tokenSigningKey,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+                IPVStubExtension ipvStub, boolean isSyncWaitForSPOTEnabled) {
+            super();
             this.ipvStubExtension = ipvStub;
             this.isSyncWaitForSPOTEnabled = isSyncWaitForSPOTEnabled;
         }

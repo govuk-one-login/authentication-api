@@ -112,13 +112,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
 
     protected static final ConfigurationService configuration =
-            new IntegrationTestConfigurationService(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+            new IntegrationTestConfigurationService() {
 
                 @Override
                 public String getTxmaAuditQueueUrl() {

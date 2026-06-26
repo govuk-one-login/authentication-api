@@ -112,22 +112,10 @@ public class IntegrationTest {
                             Map.entry("local-notify-callback-bearer-token", BEARER_TOKEN)));
 
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            new IntegrationTestConfigurationService();
 
     protected static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+            new IntegrationTestConfigurationService() {
 
                 @Override
                 public String getTxmaAuditQueueUrl() {
@@ -136,13 +124,7 @@ public class IntegrationTest {
             };
 
     protected static final ConfigurationService TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+            new IntegrationTestConfigurationService() {
 
                 @Override
                 public String getTxmaAuditQueueUrl() {
@@ -220,61 +202,32 @@ public class IntegrationTest {
 
     public static class IntegrationTestConfigurationService extends ConfigurationService {
 
-        private final TokenSigningExtension externalTokenSigningKey;
-        private final TokenSigningExtension storageTokenSigningKey;
-        private final TokenSigningExtension ipvPrivateKeyJwtSigner;
-        private final SqsQueueExtension spotRequestQueue;
-        private final TokenSigningExtension docAppPrivateKeyJwtSigner;
-
-        public IntegrationTestConfigurationService(
-                TokenSigningExtension externalTokenSigningKey,
-                TokenSigningExtension storageTokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotRequestQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
-                ParameterStoreExtension parameterStoreExtension) {
-            super(parameterStoreExtension.getClient());
-            this.externalTokenSigningKey = externalTokenSigningKey;
-            this.storageTokenSigningKey = storageTokenSigningKey;
-            this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
-            this.spotRequestQueue = spotRequestQueue;
-            this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
+        public IntegrationTestConfigurationService() {
+            super(configurationParameters.getClient());
         }
 
-        public IntegrationTestConfigurationService(
-                TokenSigningExtension externalTokenSigningKey,
-                TokenSigningExtension storageTokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotRequestQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
-                ParameterStoreExtension parameterStoreExtension,
-                SystemService systemService) {
-            super(parameterStoreExtension.getClient());
-            this.externalTokenSigningKey = externalTokenSigningKey;
-            this.storageTokenSigningKey = storageTokenSigningKey;
-            this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
-            this.spotRequestQueue = spotRequestQueue;
-            this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
+        public IntegrationTestConfigurationService(SystemService systemService) {
+            super(configurationParameters.getClient());
             super.systemService = systemService;
         }
 
         public String getKeyId() {
-            return externalTokenSigningKey.getKeyId();
+            return externalTokenSigner.getKeyId();
         }
 
         @Override
         public String getExternalTokenSigningKeyAlias() {
-            return externalTokenSigningKey.getKeyAlias();
+            return externalTokenSigner.getKeyAlias();
         }
 
         @Override
         public String getNextExternalTokenSigningKeyAliasV2() {
-            return externalTokenSigningKey.getNewKeyAliasV2();
+            return externalTokenSigner.getNewKeyAliasV2();
         }
 
         @Override
         public String getStorageTokenSigningKeyAlias() {
-            return storageTokenSigningKey.getKeyAlias();
+            return storageTokenSigner.getKeyAlias();
         }
 
         @Override

@@ -17,14 +17,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 class IpvJwksHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
-        var configurationService =
-                new IntegrationTestConfigurationService(
-                        externalTokenSigner,
-                        storageTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotRequestQueue,
-                        docAppPrivateKeyJwtSigner,
-                        configurationParameters);
+        var configurationService = new IntegrationTestConfigurationService();
 
         handler = new IpvJwksHandler(configurationService);
 

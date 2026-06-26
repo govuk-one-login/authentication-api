@@ -36,9 +36,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreE
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -110,12 +108,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
             new CrossBrowserStorageExtension();
 
     protected static final ConfigurationService configurationService =
-            new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
-                    criStub,
-                    externalTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner);
+            new TestConfigurationService(criStub);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -357,7 +350,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
     }
 
-    private void setupSession() throws Json.JsonException {
+    private void setupSession() {
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -399,19 +392,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         private final CriStubExtension criStubExtension;
 
-        public TestConfigurationService(
-                CriStubExtension criStubExtension,
-                TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotRequestQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner) {
-            super(
-                    tokenSigningKey,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+        public TestConfigurationService(CriStubExtension criStubExtension) {
+            super();
             this.criStubExtension = criStubExtension;
         }
 
