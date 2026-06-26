@@ -57,7 +57,7 @@
           "provider": "GitHub",
           "config": {
             "file": ".github/workflows/pre-merge-checks.yml",
-            "path": "$.jobs.run-integration-tests"
+            "path": "$.jobs.run-integration-tests-api"
           }
         },
         {
@@ -264,7 +264,7 @@
           "provider": "GitHub",
           "config": {
             "file": ".github/workflows/pre-merge-checks.yml",
-            "path": "$.jobs.run-integration-tests"
+            "path": "$.jobs.run-integration-tests-orchestration"
           }
         },
         {
@@ -432,7 +432,7 @@
           "provider": "GitHub",
           "config": {
             "file": ".github/workflows/deploy-orch.yml",
-            "path": "$.jobs.run-orchestration-alerting-tests"
+            "path": "$.jobs.run-alerting-tests"
           }
         }
       ]
