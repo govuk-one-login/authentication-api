@@ -12,12 +12,12 @@ Mappings:
   AcceptanceTestTags:
     dev:
       tags: >-
-        @UI and not (@AccountInterventions or @Reauth or
+        @UI and not (@Reauth or
         @AccountRecovery or @InternationalSmsSendingDisabled)
         and not (@InternationalNumbersIndefiniteLockout and @under-development)
     build:
       tags: >-
-        @UI and not (@under-development or @AccountInterventions or @Reauth or
+        @UI and not (@under-development or @Reauth or
         @AcceptInternationalNumbers or @InternationalSmsSendingDisabled
         or @PasskeysEnabled or @PasskeyUsageEnabled)
     staging:
