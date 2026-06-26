@@ -111,14 +111,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private final String CODE_CHALLENGE_STRING = createCodeChallengeFromCodeVerifier(CODE_VERIFIER);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
 
-    protected static final ConfigurationService configuration =
-            new IntegrationTestConfigurationService() {
-
-                @Override
-                public String getTxmaAuditQueueUrl() {
-                    return txmaAuditQueue.getQueueUrl();
-                }
-            };
+    protected static final ConfigurationService configuration = TXMA_ENABLED_CONFIGURATION_SERVICE;
 
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
