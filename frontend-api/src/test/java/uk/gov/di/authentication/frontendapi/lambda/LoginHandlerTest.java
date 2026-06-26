@@ -76,6 +76,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -1502,5 +1503,104 @@ class LoginHandlerTest {
         handler.handleRequest(event, context);
 
         verify(authSessionService).updateSession(argThat(s -> !s.getIsPartiallyCreatedAccount()));
+    }
+
+    @Test
+    void shouldRehashPasswordWhenFlagEnabledAndParamsDiffer() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
+        when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(32768);
+        when(configurationService.getArgon2Iterations()).thenReturn(2);
+        when(configurationService.getArgon2Parallelism()).thenReturn(1);
+        var userCredentials =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .withPassword(
+                                "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw");
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_MFA_METHOD)));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        handler.handleRequest(event, context);
+
+        verify(authenticationService).updatePassword(EMAIL, CommonTestVariables.PASSWORD);
+    }
+
+    @Test
+    void shouldNotRehashPasswordWhenFlagDisabled() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(false);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        handler.handleRequest(event, context);
+
+        verify(authenticationService, never()).updatePassword(anyString(), anyString());
+    }
+
+    @Test
+    void shouldNotRehashPasswordWhenFlagEnabledButParamsMatch() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
+        when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(15360);
+        when(configurationService.getArgon2Iterations()).thenReturn(2);
+        when(configurationService.getArgon2Parallelism()).thenReturn(1);
+        var userCredentials =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .withPassword(
+                                "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw");
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_MFA_METHOD)));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        handler.handleRequest(event, context);
+
+        verify(authenticationService, never()).updatePassword(anyString(), anyString());
+    }
+
+    @Test
+    void shouldStillLoginSuccessfullyWhenRehashThrowsException() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
+        when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(32768);
+        when(configurationService.getArgon2Iterations()).thenReturn(2);
+        when(configurationService.getArgon2Parallelism()).thenReturn(1);
+        var userCredentials =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .withPassword(
+                                "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw");
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_MFA_METHOD)));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+        doThrow(new RuntimeException("DynamoDB error"))
+                .when(authenticationService)
+                .updatePassword(anyString(), anyString());
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
     }
 }

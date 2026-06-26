@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -304,6 +305,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             JourneyType journeyType,
             PermissionContext permissionContext) {
 
+        rehashPasswordIfRequired(request.getEmail(), request.getPassword(), userCredentials);
+
         var userMfaDetail = getUserMFADetail(userCredentials, userProfile);
         var isMfaRequired = MfaHelper.mfaRequired(authSessionItem.getRequestedCredentialStrength());
 
@@ -576,5 +579,24 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return formatPhoneNumber(mfaMethod.getDestination());
         }
         return null;
+    }
+
+    private void rehashPasswordIfRequired(
+            String email, String password, UserCredentials userCredentials) {
+        try {
+            if (!configurationService.isPasswordRehashOnLoginEnabled()) {
+                return;
+            }
+            boolean needsRehash =
+                    Argon2MatcherHelper.needsRehash(
+                            userCredentials.getPassword(), configurationService);
+            LOG.info("Password rehash check: needsRehash={}", needsRehash);
+            if (needsRehash) {
+                authenticationService.updatePassword(email, password);
+                LOG.info("Password rehash completed for user");
+            }
+        } catch (Exception e) {
+            LOG.error("Error during password rehash", e);
+        }
     }
 }
