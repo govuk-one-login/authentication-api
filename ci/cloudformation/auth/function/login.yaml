@@ -32,6 +32,13 @@ Resources:
               argon2Parallelism,
               DefaultValue: "1",
             ]
+          PASSWORD_REHASH_ON_LOGIN_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              passwordRehashOnLoginEnabled,
+              DefaultValue: "false",
+            ]
           AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED: "true"
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
