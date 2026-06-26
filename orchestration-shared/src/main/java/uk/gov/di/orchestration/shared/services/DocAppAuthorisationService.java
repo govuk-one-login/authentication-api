@@ -1,19 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
-import com.nimbusds.jose.EncryptionMethod;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWEAlgorithm;
-import com.nimbusds.jose.JWEHeader;
-import com.nimbusds.jose.JWEObject;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.Payload;
-import com.nimbusds.jose.crypto.RSAEncrypter;
-import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -21,63 +9,52 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
-import software.amazon.awssdk.services.kms.model.SignRequest;
-import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.entity.StateItem;
-import uk.gov.di.orchestration.shared.exceptions.DocAppAuthorisationServiceException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.RsaKeyHelper;
 
-import java.nio.charset.StandardCharsets;
-import java.security.interfaces.RSAPublicKey;
-import java.text.ParseException;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
-
 public class DocAppAuthorisationService {
 
     private static final Logger LOG = LogManager.getLogger(DocAppAuthorisationService.class);
     private final ConfigurationService configurationService;
-    private final KmsConnectionService kmsConnectionService;
     private final JwksCacheService jwksCacheService;
     private final StateStorageService stateStorageService;
+    private final OrchJwtService orchJwtService;
     private final NowHelper.NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
     public static final String STATE_PARAM = "state";
-    private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     public DocAppAuthorisationService(
             ConfigurationService configurationService,
-            KmsConnectionService kmsConnectionService,
             JwksCacheService jwksCacheService,
             StateStorageService stateStorageService,
+            OrchJwtService orchJwtService,
             Clock clock) {
         this.configurationService = configurationService;
-        this.kmsConnectionService = kmsConnectionService;
         this.jwksCacheService = jwksCacheService;
         this.stateStorageService = stateStorageService;
+        this.orchJwtService = orchJwtService;
         this.nowClock = new NowHelper.NowClock(clock);
     }
 
     public DocAppAuthorisationService(
             ConfigurationService configurationService,
-            KmsConnectionService kmsConnectionService,
             JwksCacheService jwksCacheService,
-            StateStorageService stateStorageService) {
+            StateStorageService stateStorageService,
+            OrchJwtService orchJwtService) {
         this.configurationService = configurationService;
-        this.kmsConnectionService = kmsConnectionService;
         this.jwksCacheService = jwksCacheService;
         this.stateStorageService = stateStorageService;
+        this.orchJwtService = orchJwtService;
         this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
     }
 
@@ -146,20 +123,6 @@ public class DocAppAuthorisationService {
             ClientRegistry clientRegistry,
             String clientSessionId) {
         LOG.info("Generating request JWT");
-
-        var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
-
-        var signingKeyId =
-                kmsConnectionService
-                        .getPublicKey(
-                                GetPublicKeyRequest.builder()
-                                        .keyId(docAppTokenSigningKeyAlias)
-                                        .build())
-                        .keyId();
-        var jwsHeader =
-                new JWSHeader.Builder(SIGNING_ALGORITHM)
-                        .keyID(hashSha256String(signingKeyId))
-                        .build();
         var jwtID = IdGenerator.generate();
         var expiryDate =
                 clientRegistry.isTestClient()
@@ -188,60 +151,12 @@ public class DocAppAuthorisationService {
         if (clientRegistry.isTestClient()) {
             claimsBuilder.claim("test_client", true);
         }
-        var encodedHeader = jwsHeader.toBase64URL();
-        var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
-        var message = encodedHeader + "." + encodedClaims;
-        var signRequest =
-                SignRequest.builder()
-                        .message(SdkBytes.fromByteArray(message.getBytes(StandardCharsets.UTF_8)))
-                        .keyId(docAppTokenSigningKeyAlias)
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .build();
-        try {
-            LOG.info("Signing request JWT");
-            var signResponse = kmsConnectionService.sign(signRequest);
-            LOG.info("Request JWT has been signed successfully");
-            var signature =
-                    Base64URL.encode(
-                                    ECDSA.transcodeSignatureToConcat(
-                                            signResponse.signature().asByteArray(),
-                                            ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
-                            .toString();
-            var signedJWT = SignedJWT.parse(message + "." + signature);
-            var encryptedJWT = encryptJWT(signedJWT);
-            LOG.info("Encrypted request JWT has been generated");
-            return encryptedJWT;
-        } catch (ParseException | JOSEException e) {
-            LOG.error("Error when generating SignedJWT", e);
-            throw new DocAppAuthorisationServiceException(e);
-        }
-    }
-
-    private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
-        try {
-            LOG.info("Encrypting SignedJWT");
-            JwksCacheItem jwksCacheItem = getPublicEncryptionKey();
-            RSAPublicKey publicEncryptionKey =
-                    RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem(jwksCacheItem);
-
-            var jweObject =
-                    new JWEObject(
-                            new JWEHeader.Builder(
-                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
-                                    .contentType("JWT")
-                                    .keyID(jwksCacheItem.getKeyId())
-                                    .build(),
-                            new Payload(signedJWT));
-            jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
-            LOG.info("SignedJWT has been successfully encrypted");
-            return EncryptedJWT.parse(jweObject.serialize());
-        } catch (JOSEException e) {
-            LOG.error("Error when encrypting SignedJWT", e);
-            throw new DocAppAuthorisationServiceException(e);
-        } catch (ParseException e) {
-            LOG.error("Error when parsing JWE object to EncryptedJWT", e);
-            throw new DocAppAuthorisationServiceException(e);
-        }
+        var publicEncryptionKey =
+                RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem(getPublicEncryptionKey());
+        return orchJwtService.signAndEncryptJWT(
+                claimsBuilder.build(),
+                configurationService.getDocAppTokenSigningKeyAlias(),
+                publicEncryptionKey);
     }
 
     private JwksCacheItem getPublicEncryptionKey() {

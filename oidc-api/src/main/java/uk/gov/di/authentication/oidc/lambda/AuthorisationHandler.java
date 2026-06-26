@@ -69,6 +69,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -175,6 +176,7 @@ public class AuthorisationHandler
         var jwksService = new JwksService(configurationService, kmsConnectionService);
         var jwksCacheService = new JwksCacheService(configurationService);
         var stateStorageService = new StateStorageService(configurationService);
+        var orchJwtService = new OrchJwtService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.crossBrowserOrchestrationService =
                 new CrossBrowserOrchestrationService(configurationService);
@@ -205,9 +207,9 @@ public class AuthorisationHandler
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        kmsConnectionService,
                         jwksCacheService,
-                        stateStorageService);
+                        stateStorageService,
+                        orchJwtService);
         var cloudwatchMetricService = new Metrics(configurationService);
         this.metrics = cloudwatchMetricService;
         this.authorisationService = new AuthorisationService(configurationService);
