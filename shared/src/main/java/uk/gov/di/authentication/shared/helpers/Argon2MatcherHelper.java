@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;
 import org.bouncycastle.util.Arrays;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Base64;
 
@@ -26,6 +27,21 @@ public class Argon2MatcherHelper {
         generator.init(decoded.getParameters());
         generator.generateBytes(rawPassword.toCharArray(), hashBytes);
         return constantTimeArrayEquals(decoded.getHash(), hashBytes);
+    }
+
+    public static boolean needsRehash(
+            String encodedPassword, ConfigurationService configurationService) {
+        try {
+            Argon2Hash decoded = decode(encodedPassword);
+            Argon2Parameters params = decoded.getParameters();
+            return params.getVersion() != Argon2Parameters.ARGON2_VERSION_13
+                    || params.getMemory() != configurationService.getArgon2MemoryInKibibytes()
+                    || params.getIterations() != configurationService.getArgon2Iterations()
+                    || params.getLanes() != configurationService.getArgon2Parallelism();
+        } catch (IllegalArgumentException ex) {
+            LOG.warn("Unable to parse password hash for rehash check");
+            return false;
+        }
     }
 
     private static boolean constantTimeArrayEquals(byte[] expected, byte[] actual) {
