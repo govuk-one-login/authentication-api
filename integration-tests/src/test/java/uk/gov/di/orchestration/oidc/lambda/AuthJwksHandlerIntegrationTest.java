@@ -16,9 +16,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 class AuthJwksHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200WithAuthPublicSigningKey() throws ParseException {
-        var configurationService = new IntegrationTestConfigurationService();
-
-        handler = new AuthJwksHandler(configurationService);
+        handler = new AuthJwksHandler(TEST_CONFIGURATION_SERVICE);
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 

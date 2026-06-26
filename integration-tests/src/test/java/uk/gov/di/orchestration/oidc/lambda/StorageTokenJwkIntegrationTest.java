@@ -18,8 +18,7 @@ class StorageTokenJwkIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
-        var configurationService = new IntegrationTestConfigurationService();
-        handler = new StorageTokenJwkHandler(configurationService);
+        handler = new StorageTokenJwkHandler(TEST_CONFIGURATION_SERVICE);
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
         assertThat(response, hasStatus(200));
