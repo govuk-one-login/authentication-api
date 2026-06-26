@@ -288,6 +288,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
     }
 
+    public String getSISTokenSigningKeyAlias() {
+        return System.getenv("SIS_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
     public String getInternalSectorURI() {
         return System.getenv("INTERNAl_SECTOR_URI");
     }

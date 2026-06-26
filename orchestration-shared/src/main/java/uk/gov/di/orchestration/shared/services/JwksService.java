@@ -95,6 +95,11 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
+    public JWK getPublicSisTokenJwkWithOpaqueId() {
+        LOG.info("Retrieving SIS token public key");
+        return getPublicJWKWithKeyId(configurationService.getSISTokenSigningKeyAlias());
+    }
+
     public JWK getPublicAuthSigningJwkWithOpaqueId() {
         LOG.info("Retrieving Auth public signing key");
         return getPublicJWKWithKeyId(configurationService.getAuthSigningKeyAlias());
