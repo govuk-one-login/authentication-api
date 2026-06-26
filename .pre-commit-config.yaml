@@ -158,22 +158,27 @@ repos:
             echo ""
             echo "=== Validating auth template ==="
             TEMPLATE_SOURCE_DIR=ci/cloudformation/auth TEMPLATE_FILE=auth-template.yaml ./scripts/merge-templates.sh
-            sam validate --lint --ignore-lint-errors W1001 -t auth-template.yaml
+            sam validate --lint -t auth-template.yaml
             echo ""
 
             echo "=== Validating stubs template ==="
             TEMPLATE_SOURCE_DIR=ci/cloudformation/stubs TEMPLATE_FILE=stubs-template.yaml ./scripts/merge-templates.sh
-            sam validate --lint --ignore-lint-errors W1001 -t stubs-template.yaml
+            sam validate --lint -t stubs-template.yaml
             echo ""
 
             echo "=== Validating am template ==="
             TEMPLATE_SOURCE_DIR=ci/cloudformation/account-management TEMPLATE_FILE=am-template.yaml ./scripts/merge-templates.sh
-            sam validate --lint --ignore-lint-errors W1001 -t am-template.yaml
+            sam validate --lint -t am-template.yaml
             echo ""
 
             echo "=== Validating ad template ==="
             TEMPLATE_SOURCE_DIR=ci/cloudformation/account-data TEMPLATE_FILE=ad-template.yaml ./scripts/merge-templates.sh
-            sam validate --lint --ignore-lint-errors W1001 -t ad-template.yaml
+            sam validate --lint -t ad-template.yaml
+            echo ""
+
+            echo "=== Validating utils template ==="
+            TEMPLATE_SOURCE_DIR=ci/cloudformation/utils TEMPLATE_FILE=utils-template.yaml ./scripts/merge-templates.sh
+            sam validate --lint -t utils-template.yaml
             echo ""
         language: system
         pass_filenames: false
