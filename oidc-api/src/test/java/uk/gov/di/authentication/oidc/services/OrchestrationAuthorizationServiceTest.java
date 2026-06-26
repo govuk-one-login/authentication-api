@@ -1,18 +1,8 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.crypto.ECDSAVerifier;
-import com.nimbusds.jose.crypto.RSADecrypter;
-import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.jose.util.Base64URL;
-import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -30,29 +20,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
-import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.kms.model.MessageType;
-import software.amazon.awssdk.services.kms.model.SignRequest;
-import software.amazon.awssdk.services.kms.model.SignResponse;
-import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.JwksService;
-import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.text.ParseException;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +45,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -81,43 +59,41 @@ class OrchestrationAuthorizationServiceTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
-    private static final String KEY_ID = "14342354354353";
-    // 5000 Chars long
-    private static final String LONG_CLAIM =
-            "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    private static final String SIGNING_KEY_ALIAS = "test-signing-key";
     private OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
-    private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
             mock(CrossBrowserOrchestrationService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
-    private final JwksService jwksService = mock(JwksService.class);
-    private PrivateKey privateKey;
+    private final OrchJwtService orchJwtService = mock(OrchJwtService.class);
+    private RSAPublicKey publicEncryptionKey;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(OrchestrationAuthorizationService.class);
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(
                         configurationService,
                         dynamoClientService,
-                        kmsConnectionService,
                         crossBrowserOrchestrationService,
                         stateStorageService,
-                        jwksService);
+                        orchJwtService);
         var keyPair = generateRsaKeyPair();
-        privateKey = keyPair.getPrivate();
-        String publicCertificateAsPem =
+        var publicCertificateAsPem =
                 "-----BEGIN PUBLIC KEY-----\n"
                         + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
                         + "\n-----END PUBLIC KEY-----\n";
         when(configurationService.getOrchestrationToAuthenticationEncryptionPublicKey())
                 .thenReturn(publicCertificateAsPem);
+        publicEncryptionKey =
+                new RSAKey.Builder((RSAKey) JWK.parseFromPEMEncodedObjects(publicCertificateAsPem))
+                        .build()
+                        .toRSAPublicKey();
+        when(configurationService.getAuthSigningKeyAlias()).thenReturn(SIGNING_KEY_ALIAS);
     }
 
     @AfterEach
@@ -212,84 +188,14 @@ class OrchestrationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldConstructASignedAndEncryptedRequestJWT() throws JOSEException, ParseException {
+    void shouldConstructASignedAndEncryptedRequestJWT() {
         var claim1Value = "JWT claim 1";
-        var ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        when(jwksService.getPublicAuthSigningJwkWithOpaqueId())
-                .thenReturn(ecSigningKey.toPublicJWK());
-        var ecdsaSigner = new ECDSASigner(ecSigningKey);
         var jwtClaimsSet = new JWTClaimsSet.Builder().claim("claim1", claim1Value).build();
-        var jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KEY_ID).build();
-        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
-        signedJWT.sign(ecdsaSigner);
-        byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        var expectedMessage =
-                jwsHeader.toBase64URL() + "." + Base64URL.encode(jwtClaimsSet.toString());
-        var signResult =
-                SignResponse.builder()
-                        .signature(SdkBytes.fromByteArray(signatureToDER))
-                        .keyId(KEY_ID)
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .build();
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
 
-        var encryptedJWT = orchestrationAuthorizationService.getSignedAndEncryptedJWT(jwtClaimsSet);
+        orchestrationAuthorizationService.getSignedAndEncryptedJWT(jwtClaimsSet);
 
-        var signedJWTResponse = decryptJWT(encryptedJWT);
-        var signRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim1"), equalTo(claim1Value));
-        verify(kmsConnectionService).sign(signRequestCaptor.capture());
-        assertThat(
-                SdkBytes.fromByteArray(expectedMessage.getBytes(StandardCharsets.UTF_8)),
-                equalTo(signRequestCaptor.getValue().message()));
-        assertThat(MessageType.RAW, equalTo(signRequestCaptor.getValue().messageType()));
-    }
-
-    @Test
-    void shouldUseAHashDigestWhenMessageSizeIsMoreThan4095() throws JOSEException, ParseException {
-        var claim1Value = "JWT claim 1";
-        var ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        when(jwksService.getPublicAuthSigningJwkWithOpaqueId())
-                .thenReturn(ecSigningKey.toPublicJWK());
-        var ecdsaSigner = new ECDSASigner(ecSigningKey);
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .claim("claim1", claim1Value)
-                        .claim("state", LONG_CLAIM)
-                        .build();
-        var jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KEY_ID).build();
-        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
-        var expectedMessage =
-                jwsHeader.toBase64URL() + "." + Base64URL.encode(jwtClaimsSet.toString());
-        signedJWT.sign(ecdsaSigner);
-        byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        var signResult =
-                SignResponse.builder()
-                        .signature(SdkBytes.fromByteArray(signatureToDER))
-                        .keyId(KEY_ID)
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .build();
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
-
-        var encryptedJWT = orchestrationAuthorizationService.getSignedAndEncryptedJWT(jwtClaimsSet);
-
-        var signRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
-        var signedJWTResponse = decryptJWT(encryptedJWT);
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim1"), equalTo(claim1Value));
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("state"), equalTo(LONG_CLAIM));
-        signedJWTResponse.verify(new ECDSAVerifier(ecSigningKey.toECPublicKey()));
-        verify(kmsConnectionService).sign(signRequestCaptor.capture());
-        assertThat(
-                getHashSdkBytes(expectedMessage), equalTo(signRequestCaptor.getValue().message()));
-        assertThat(MessageType.DIGEST, equalTo(signRequestCaptor.getValue().messageType()));
+        verify(orchJwtService)
+                .signAndEncryptJWT(jwtClaimsSet, SIGNING_KEY_ALIAS, publicEncryptionKey);
     }
 
     @Test
@@ -356,22 +262,5 @@ class OrchestrationAuthorizationServiceTest {
         claimsRequest.ifPresent(authRequestBuilder::claims);
 
         return authRequestBuilder.build();
-    }
-
-    private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
-        encryptedJWT.decrypt(new RSADecrypter(privateKey));
-        return encryptedJWT.getPayload().toSignedJWT();
-    }
-
-    private SdkBytes getHashSdkBytes(String jwtMessage) {
-        byte[] signingInputHash;
-        try {
-            signingInputHash =
-                    MessageDigest.getInstance("SHA-256")
-                            .digest(jwtMessage.getBytes(StandardCharsets.UTF_8));
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e.getMessage());
-        }
-        return SdkBytes.fromByteArray(signingInputHash);
     }
 }
