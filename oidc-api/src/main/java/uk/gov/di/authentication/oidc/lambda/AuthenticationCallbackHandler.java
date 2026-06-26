@@ -153,7 +153,7 @@ public class AuthenticationCallbackHandler
                 new InitiateIPVAuthorisationService(
                         configurationService,
                         auditService,
-                        new IPVAuthorisationService(configurationService, kmsConnectionService),
+                        new IPVAuthorisationService(configurationService),
                         metrics,
                         new CrossBrowserOrchestrationService(configurationService),
                         new TokenService(

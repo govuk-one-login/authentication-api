@@ -1,19 +1,7 @@
 package uk.gov.di.authentication.ipv.services;
 
-import com.nimbusds.jose.EncryptionMethod;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWEAlgorithm;
-import com.nimbusds.jose.JWEHeader;
-import com.nimbusds.jose.JWEObject;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.Payload;
-import com.nimbusds.jose.crypto.RSAEncrypter;
-import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -23,9 +11,6 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.kms.model.SignRequest;
-import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
 import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.entity.StateItem;
@@ -34,13 +19,10 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.orchestration.shared.helpers.RsaKeyHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
-import uk.gov.di.orchestration.shared.services.JwksService;
-import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
-import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
-import java.text.ParseException;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -51,38 +33,32 @@ public class IPVAuthorisationService {
 
     private static final Logger LOG = LogManager.getLogger(IPVAuthorisationService.class);
     private final ConfigurationService configurationService;
-    private final KmsConnectionService kmsConnectionService;
-    private final JwksService jwksService;
     private final JwksCacheService jwksCacheService;
     private final StateStorageService stateStorageService;
+    private final OrchJwtService orchJwtService;
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
-    private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     public static final String SESSION_INVALIDATED_ERROR_CODE = "session_invalidated";
 
-    public IPVAuthorisationService(
-            ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
+    public IPVAuthorisationService(ConfigurationService configurationService) {
         this(
                 configurationService,
-                kmsConnectionService,
-                new JwksService(configurationService, kmsConnectionService),
                 new JwksCacheService(configurationService),
                 new StateStorageService(configurationService),
+                new OrchJwtService(configurationService),
                 new NowClock(Clock.systemUTC()));
     }
 
     public IPVAuthorisationService(
             ConfigurationService configurationService,
-            KmsConnectionService kmsConnectionService,
-            JwksService jwksService,
             JwksCacheService jwksCacheService,
             StateStorageService stateStorageService,
+            OrchJwtService orchJwtService,
             NowClock nowClock) {
         this.configurationService = configurationService;
-        this.kmsConnectionService = kmsConnectionService;
-        this.jwksService = jwksService;
         this.jwksCacheService = jwksCacheService;
         this.stateStorageService = stateStorageService;
+        this.orchJwtService = orchJwtService;
         this.nowClock = nowClock;
     }
 
@@ -162,9 +138,6 @@ public class IPVAuthorisationService {
             List<String> vtr,
             Boolean reproveIdentity) {
         LOG.info("Generating request JWT");
-        var signingKeyJwt = jwksService.getPublicIpvTokenJwkWithOpaqueId();
-        var jwsHeader =
-                new JWSHeader.Builder(SIGNING_ALGORITHM).keyID(signingKeyJwt.getKeyID()).build();
         var jwtID = IdGenerator.generate();
         var expiryDate = nowClock.nowPlus(3, ChronoUnit.MINUTES);
         var claimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claims);
@@ -192,62 +165,13 @@ public class IPVAuthorisationService {
             claimsBuilder.claim("reprove_identity", reproveIdentity);
         }
         claimsBuilder.claim("claims", claimsRequest.toJSONObject());
-
-        var encodedHeader = jwsHeader.toBase64URL();
-        var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
-        var message = encodedHeader + "." + encodedClaims;
-        var signRequest =
-                SignRequest.builder()
-                        .message(SdkBytes.fromByteArray(message.getBytes(StandardCharsets.UTF_8)))
-                        .keyId(configurationService.getIPVTokenSigningKeyAlias())
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .build();
-        try {
-            LOG.info("Signing request JWT");
-            var signResult = kmsConnectionService.sign(signRequest);
-            LOG.info("Request JWT has been signed successfully");
-            var signature =
-                    Base64URL.encode(
-                                    ECDSA.transcodeSignatureToConcat(
-                                            signResult.signature().asByteArray(),
-                                            ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
-                            .toString();
-            var signedJWT = SignedJWT.parse(message + "." + signature);
-            var encryptedJWT = encryptJWT(signedJWT);
-            LOG.info("Encrypted request JWT has been generated");
-            return encryptedJWT;
-        } catch (ParseException | JOSEException e) {
-            LOG.error("Error when generating SignedJWT", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
-        try {
-            LOG.info("Encrypting SignedJWT");
-            JwksCacheItem jwksCacheItem = getJwksCacheItemFromJwksEndpoint();
-            String keyId = jwksCacheItem.getKeyId();
-            RSAPublicKey publicEncryptionKey =
-                    RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem(jwksCacheItem);
-
-            var jweObject =
-                    new JWEObject(
-                            new JWEHeader.Builder(
-                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
-                                    .contentType("JWT")
-                                    .keyID(keyId)
-                                    .build(),
-                            new Payload(signedJWT));
-            jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
-            LOG.info("SignedJWT has been successfully encrypted");
-            return EncryptedJWT.parse(jweObject.serialize());
-        } catch (JOSEException e) {
-            LOG.error("Error when encrypting SignedJWT", e);
-            throw new RuntimeException(e);
-        } catch (ParseException e) {
-            LOG.error("Error when parsing JWE object to EncryptedJWT", e);
-            throw new RuntimeException(e);
-        }
+        LOG.info("Encrypted request JWT has been generated");
+        RSAPublicKey publicEncryptionKey =
+                RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem(getJwksCacheItemFromJwksEndpoint());
+        return orchJwtService.signAndEncryptJWT(
+                claimsBuilder.build(),
+                configurationService.getIPVTokenSigningKeyAlias(),
+                publicEncryptionKey);
     }
 
     private JwksCacheItem getJwksCacheItemFromJwksEndpoint() {
