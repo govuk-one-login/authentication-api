@@ -1,0 +1,6 @@
+[
+  {
+    "Key": "FMSGlobalCustomPolicy",
+    "Value": "cloudfrontoidc"
+  }
+]

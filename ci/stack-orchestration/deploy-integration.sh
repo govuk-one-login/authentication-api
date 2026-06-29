@@ -14,6 +14,8 @@ PROVISION_BASE_STACKS=false
 PROVISION_VPC_STACK=false
 PROVISION_PIPELINE_STACK=false
 PROVISION_TXMA_STACK=false
+PROVISION_HOSTED_ZONE=false
+DOMAIN_TO_PROVISION="live"
 
 ENVIRONMENT=integration
 
@@ -53,6 +55,7 @@ function usage() {
     -p, --pipelines                        Provision secure pipelines
     -v, --vpc                              Provision VPC stack
     -t, --txma                             Provision the manual TxMA stack for auditing.
+    -h, --hosted-zone                      Provisions the hosted zone stack for the OIDC domain.
 USAGE
 }
 
@@ -92,6 +95,19 @@ while [[ $# -gt 0 ]]; do
       ;;
     -t | --txma)
       PROVISION_TXMA_STACK=true
+      ;;
+    -h | --hosted-zone)
+      PROVISION_HOSTED_ZONE=true
+      DOMAIN_TO_PROVISION=${2}
+
+      PERMITTED_VALUES="live alternative live-no-cert"
+
+      if ! [[ ${PERMITTED_VALUES} =~ ( |^)${DOMAIN_TO_PROVISION}( |$) ]]; then
+        echo "Hosted zone arg provided: ${DOMAIN_TO_PROVISION} is not one of ${PERMITTED_VALUES}"
+        exit 1
+      fi
+
+      shift
       ;;
     *)
       usage
@@ -155,6 +171,28 @@ function provision_pipeline_stack() {
   echo "Provisioned secure pipeline stack"
 }
 
+function provision_hosted_zone_stack() {
+  export AWS_REGION="eu-west-2"
+
+  # shellcheck disable=SC2155
+  local parameters_file="$(pwd)/configuration/${ENVIRONMENT}/hosted-zone/parameters.json"
+
+  echo "Provisioning hosted zone stack"
+  TEMPLATE_FILE="$(pwd)/manual-stacks/domains/template.yaml"
+  if [ ! -f "${TEMPLATE_FILE}" ]; then
+    echo "Could not find the hosted zone stack template at path: ${TEMPLATE_FILE}"
+    exit 1
+  fi
+
+  if [ "${DOMAIN_TO_PROVISION}" == "alternative" ]; then
+    parameters_file="$(pwd)/configuration/${ENVIRONMENT}/hosted-zone/alternative-domain-parameters.json"
+  elif [ "${DOMAIN_TO_PROVISION}" == "live-no-cert" ]; then
+    parameters_file="$(pwd)/configuration/${ENVIRONMENT}/hosted-zone/live-no-cert-parameters.json"
+  fi
+  PARAMETERS_FILE="${parameters_file}" ${LOCAL_PROVISION_COMMAND} "${ENVIRONMENT}" "hosted-zone" "${TEMPLATE_FILE}"
+  echo "Provisioned hosted zone stack"
+}
+
 # --------------------
 # Run provision commands
 # --------------------
@@ -163,6 +201,7 @@ function provision_pipeline_stack() {
 
 [ "${PROVISION_BASE_STACKS}" == "true" ] && provision_base_stacks
 [ "${PROVISION_VPC_STACK}" == "true" ] && provision_vpc_stack
+[ "${PROVISION_HOSTED_ZONE}" == "true" ] && provision_hosted_zone_stack
 
 # Now we can deploy the pipeline stack
 
