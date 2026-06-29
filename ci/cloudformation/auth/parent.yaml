@@ -277,6 +277,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev1.dev.account.gov.uk
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
@@ -334,6 +335,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev2.dev.account.gov.uk
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
@@ -395,6 +397,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev3.dev.account.gov.uk
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
@@ -461,6 +464,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      passwordRehashOnLoginEnabled: "true"
       relyingPartyId: dev.account.gov.uk
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
@@ -532,6 +536,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      passwordRehashOnLoginEnabled: "false"
       relyingPartyId: build.account.gov.uk
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
@@ -605,6 +610,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      passwordRehashOnLoginEnabled: "true"
       relyingPartyId: staging.account.gov.uk
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
@@ -678,6 +684,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      passwordRehashOnLoginEnabled: "false"
       relyingPartyId: integration.account.gov.uk
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
@@ -751,6 +758,7 @@ Mappings:
       argon2MemoryInKibibytes: "15360"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      passwordRehashOnLoginEnabled: "false"
       relyingPartyId: account.gov.uk
   LambdaConfiguration:
     account-recovery:
