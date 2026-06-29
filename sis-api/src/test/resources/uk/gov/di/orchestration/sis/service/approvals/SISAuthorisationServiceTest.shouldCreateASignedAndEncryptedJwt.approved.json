@@ -1,0 +1,26 @@
+{
+  "sub": "pairwise-identifier",
+  "iss": "sis-client-id",
+  "response_type": "code",
+  "client_id": "sis-client-id",
+  "govuk_signin_journey_id": "test-csid",
+  "aud": "http://sis/",
+  "nbf": 1782745200,
+  "email_address": "test@email.com",
+  "vtr": [
+    "P2"
+  ],
+  "scope": "openid",
+  "claims": {
+    "userinfo": {
+      "https://vocab.account.gov.uk/v1/coreIdentityJWT": {
+        "essential": true
+      }
+    }
+  },
+  "state": "test-state",
+  "redirect_uri": "http://localhost/oidc/sis/callback",
+  "exp": 1782745380,
+  "iat": 1782745200,
+  "jti": "test-jwt-id"
+}

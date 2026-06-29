@@ -283,13 +283,29 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURLOrThrow("IPV_JWKS_URL");
     }
 
-    public int getJwkCacheExpirationInSeconds() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
+    public String getSISAudience() {
+        return System.getenv().getOrDefault("SIS_AUDIENCE", "");
+    }
+
+    public URI getSISAuthorisationCallbackURI() {
+        return getURIOrEmpty("SIS_AUTHORISATION_CALLBACK_URI");
+    }
+
+    public String getSISAuthorisationClientId() {
+        return System.getenv().getOrDefault("SIS_AUTHORISATION_CLIENT_ID", "");
     }
 
     public String getSISTokenSigningKeyAlias() {
         return System.getenv("SIS_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
+    public URL getSISJwksUrl() {
+        return getURLOrThrow("SIS_JWKS_URL");
+    }
+
+    public int getJwkCacheExpirationInSeconds() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
     }
 
     public String getInternalSectorURI() {
