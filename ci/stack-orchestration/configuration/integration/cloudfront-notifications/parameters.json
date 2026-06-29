@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "integration"
+  },
+  {
+    "ParameterKey": "DeploySlackNotificationTopic",
+    "ParameterValue": "Yes"
+  }
+]
