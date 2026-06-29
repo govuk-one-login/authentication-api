@@ -570,7 +570,7 @@ Mappings:
       testSigningKeyEnabled: false
       accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
       accountDataApiId: hoidt6wujb
-      argon2MemoryInKibibytes: "15360"
+      argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
     production:

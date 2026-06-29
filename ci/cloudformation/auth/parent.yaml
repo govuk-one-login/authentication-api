@@ -675,7 +675,7 @@ Mappings:
       amcCreatePasskeyRedirectUri: https://signin.integration.account.gov.uk/create-passkey-callback
       bulkEmailSendingEnabled: "false"
       amcJwksUrl: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/.well-known/jwks.json
-      argon2MemoryInKibibytes: "15360"
+      argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
       relyingPartyId: integration.account.gov.uk
