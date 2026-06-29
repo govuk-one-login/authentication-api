@@ -6,6 +6,8 @@ import com.yubico.webauthn.AssertionResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -13,17 +15,25 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_SUCCESSFUL;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_VERIFICATION_FAILED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_VERIFICATION_SUCCESSFUL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
@@ -39,11 +49,16 @@ class FinishPasskeyAssertionHandlerTest {
     private final PasskeyAssertionService passkeyAssertionService =
             mock(PasskeyAssertionService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private FinishPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
+    private static final String ENV = "test";
+
     @BeforeEach
     void setup() {
+        when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
@@ -54,7 +69,8 @@ class FinishPasskeyAssertionHandlerTest {
                         authenticationService,
                         authSessionService,
                         passkeyAssertionService,
-                        userActionsManager);
+                        userActionsManager,
+                        cloudwatchMetricsService);
     }
 
     @Nested
@@ -86,6 +102,29 @@ class FinishPasskeyAssertionHandlerTest {
             // Then
             verify(userActionsManager, times(1)).correctPasskeyReceived(any(), any());
             verify(userActionsManager, times(0)).incorrectPasskeyReceived(any(), any());
+        }
+
+        @Test
+        void shouldEmitCloudwatchMetricsWhenAssertionSuccessful() {
+            // Given
+            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+                    .thenReturn(Result.success(mockAssertionResult));
+
+            // When
+            handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            var expectedMetricsDimensions = Map.of("Environment", ENV);
+
+            verify(cloudwatchMetricsService, times(1))
+                    .incrementCounter(PASSKEY_AUTHENTICATION_SUCCESSFUL, expectedMetricsDimensions);
+
+            verify(cloudwatchMetricsService, times(1))
+                    .incrementCounter(PASSKEY_VERIFICATION_SUCCESSFUL, expectedMetricsDimensions);
+
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(PASSKEY_VERIFICATION_FAILED), anyMap());
         }
     }
 
@@ -169,6 +208,35 @@ class FinishPasskeyAssertionHandlerTest {
             // Then
             assertThat(response, hasStatus(401));
             assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ASSERTION_FAILED));
+        }
+
+        @ParameterizedTest
+        @EnumSource(FinishPasskeyAssertionFailureReason.class)
+        void shouldEmitVerificationFailureMetricWhenAssertionFailsForAnyReason(
+                FinishPasskeyAssertionFailureReason failureReason) {
+            // Given
+            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+                    .thenReturn(Result.failure(failureReason));
+
+            // When
+            handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            var dimensionsForAuthenticationSuccessEvent = Map.of("Environment", ENV);
+            var dimensionsForFailedEvent =
+                    Map.ofEntries(
+                            Map.entry("Environment", "test"),
+                            Map.entry("FailureReason", failureReason.getValue()));
+
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            PASSKEY_AUTHENTICATION_SUCCESSFUL,
+                            dimensionsForAuthenticationSuccessEvent);
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(PASSKEY_VERIFICATION_FAILED, dimensionsForFailedEvent);
+
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(PASSKEY_VERIFICATION_SUCCESSFUL), anyMap());
         }
     }
 

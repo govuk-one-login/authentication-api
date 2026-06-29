@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -39,14 +41,20 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSKEY_DELETED_NONE_REMAINING;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSKEY_DELETED_SOME_REMAINING;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_DELETION_FAILED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_DELETION_SUCCESSFUL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -60,12 +68,15 @@ class PasskeysDeleteProxyHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final StructuredAuditService structuredAuditService =
             mock(StructuredAuditService.class);
 
     private static final String ADAPI_TOKEN_HEADER = "X-ADAPI-AccessToken";
     private static final String TOKEN = "token";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String ENV = "test";
 
     private PasskeysDeleteProxyHandler handler;
 
@@ -78,6 +89,7 @@ class PasskeysDeleteProxyHandlerTest {
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class)))
                 .thenReturn("test-salt".getBytes(StandardCharsets.UTF_8));
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(configurationService.getEnvironment()).thenReturn(ENV);
 
         handler =
                 new PasskeysDeleteProxyHandler(
@@ -86,7 +98,13 @@ class PasskeysDeleteProxyHandlerTest {
                         sqsClient,
                         dynamoService,
                         auditService,
-                        structuredAuditService);
+                        structuredAuditService,
+                        cloudwatchMetricsService);
+    }
+
+    @AfterEach
+    void resetMocks() {
+        reset(cloudwatchMetricsService, dynamoService, auditService, structuredAuditService);
     }
 
     private static final String PASSKEY_IDENTIFIER = "test-passkey-id";
@@ -161,7 +179,7 @@ class PasskeysDeleteProxyHandlerTest {
         }
 
         @Test
-        void shouldEmitSuccessAuditEventOnSuccessfulDeletion()
+        void shouldEmitSuccessAuditEventAndMetricsOnSuccessfulDeletion()
                 throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
             // Arrange
             var mockHttpResponse = mock(HttpResponse.class);
@@ -191,13 +209,16 @@ class PasskeysDeleteProxyHandlerTest {
             assertEquals(
                     PASSKEY_IDENTIFIER,
                     submittedAuditEvent.restricted().passkey().passkeyCredentialId());
+            var expectedDimensions = Map.of("Environment", ENV);
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(PASSKEY_DELETION_SUCCESSFUL, expectedDimensions);
         }
     }
 
     @Nested
     class FailedRequest {
         @Test
-        void shouldEmitFailedAuditEventWhenDeleteThrowsException()
+        void shouldEmitFailedAuditEventAndMetricWhenDeleteThrowsException()
                 throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
             // Arrange
             when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
@@ -218,21 +239,20 @@ class PasskeysDeleteProxyHandlerTest {
                             any(),
                             eq("HOME"),
                             eq(AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR),
-                            argThat(
-                                    metadataPair ->
-                                            metadataPair.key().equals("passkey")
-                                                    && metadataPair.isRestricted()));
+                            argThat(metadataPair -> metadataPair.key().equals("passkey")));
+            verifyFailureMetricIncremented("DataApiDeleteError");
         }
 
         @Test
         void shouldEmitFailedAuditEventWhenDeleteReturnsNon204()
                 throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
             // Arrange
-            var mockHttpResponse = mock(HttpResponse.class);
             when(accountDataApiService.retrievePasskeys(PUBLIC_SUBJECT_ID, TOKEN))
                     .thenReturn(
                             new PasskeysRetrieveResponse(
                                     List.of(aPasskeyResponse(PASSKEY_IDENTIFIER))));
+
+            var mockHttpResponse = mock(HttpResponse.class);
             when(mockHttpResponse.statusCode()).thenReturn(404);
             when(mockHttpResponse.body()).thenReturn("{\"error\": \"not found\"}");
             when(accountDataApiService.deletePasskey(PUBLIC_SUBJECT_ID, PASSKEY_IDENTIFIER, TOKEN))
@@ -252,6 +272,7 @@ class PasskeysDeleteProxyHandlerTest {
                                     metadataPair ->
                                             metadataPair.key().equals("passkey")
                                                     && metadataPair.isRestricted()));
+            verifyFailureMetricIncremented("DataApiUnsuccessfulResponse");
         }
 
         @Test
@@ -276,6 +297,18 @@ class PasskeysDeleteProxyHandlerTest {
                                     metadataPair ->
                                             metadataPair.key().equals("passkey")
                                                     && metadataPair.isRestricted()));
+            verifyFailureMetricIncremented("DataApiRetrievePasskeysError");
+        }
+
+        private void verifyFailureMetricIncremented(String failureReason) {
+            var expectedFailureMetricDimensions =
+                    Map.ofEntries(
+                            Map.entry("Environment", ENV),
+                            Map.entry("FailureReason", failureReason));
+            verify(cloudwatchMetricsService, times(1))
+                    .incrementCounter(PASSKEY_DELETION_FAILED, expectedFailureMetricDimensions);
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(PASSKEY_DELETION_SUCCESSFUL), anyMap());
         }
     }
 

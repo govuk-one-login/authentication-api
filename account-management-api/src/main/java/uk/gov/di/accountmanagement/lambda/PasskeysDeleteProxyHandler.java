@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -36,6 +37,10 @@ import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_RESTRICTED_PASSKEY_CREDENTIAL_ID;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_DELETION_FAILED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_DELETION_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -54,6 +59,7 @@ public class PasskeysDeleteProxyHandler
     private final DynamoService dynamoService;
     private final AuditService auditService;
     private final StructuredAuditService structuredAuditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public PasskeysDeleteProxyHandler() {
         this(ConfigurationService.getInstance());
@@ -70,6 +76,7 @@ public class PasskeysDeleteProxyHandler
         this.dynamoService = new DynamoService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public PasskeysDeleteProxyHandler(
@@ -78,13 +85,15 @@ public class PasskeysDeleteProxyHandler
             AwsSqsClient sqsClient,
             DynamoService dynamoService,
             AuditService auditService,
-            StructuredAuditService structuredAuditService) {
+            StructuredAuditService structuredAuditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
         this.accountDataApiService = accountDataApiService;
         this.sqsClient = sqsClient;
         this.dynamoService = dynamoService;
         this.auditService = auditService;
         this.structuredAuditService = structuredAuditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     @Override
@@ -123,14 +132,14 @@ public class PasskeysDeleteProxyHandler
 
         var currentPasskeyCountResult = getPasskeyCount(request);
         if (currentPasskeyCountResult.isFailure()) {
-            emitFailedAuditEvent(auditContext, request);
+            reportDeletionFailed(auditContext, request, "DataApiRetrievePasskeysError");
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
         var currentPasskeyCount = currentPasskeyCountResult.getSuccess();
 
         var deletePasskeyResponseResult = deletePasskey(request);
         if (deletePasskeyResponseResult.isFailure()) {
-            emitFailedAuditEvent(auditContext, request);
+            reportDeletionFailed(auditContext, request, "DataApiDeleteError");
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
         HttpResponse<String> deletePasskeyResponse = deletePasskeyResponseResult.getSuccess();
@@ -144,9 +153,9 @@ public class PasskeysDeleteProxyHandler
                     "Passkey Deleted Email notification not sent because delete passkey response was {} for Public Subject ID {}",
                     deletePasskeyResponse.statusCode(),
                     request.publicSubjectId);
-            emitFailedAuditEvent(auditContext, request);
+            reportDeletionFailed(auditContext, request, "DataApiUnsuccessfulResponse");
         } else {
-            emitSuccessAuditEvent(auditContext, request, currentPasskeyCount);
+            reportDeleteSuccess(auditContext, request, currentPasskeyCount);
             sendEmailNotification(request, userEmail, currentPasskeyCount);
         }
 
@@ -237,6 +246,17 @@ public class PasskeysDeleteProxyHandler
                 request.publicSubjectId);
     }
 
+    private void reportDeleteSuccess(
+            AuditContext auditContext, PasskeysDeleteRequest request, int currentPasskeyCount) {
+        emitSuccessAuditEvent(auditContext, request, currentPasskeyCount);
+        emitDeletionSuccessMetric();
+    }
+
+    private void emitDeletionSuccessMetric() {
+        var dimensions = Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment());
+        cloudwatchMetricsService.incrementCounter(PASSKEY_DELETION_SUCCESSFUL, dimensions);
+    }
+
     private void emitSuccessAuditEvent(
             AuditContext auditContext, PasskeysDeleteRequest request, int currentPasskeyCount) {
         var newPasskeyCount = currentPasskeyCount - 1;
@@ -247,6 +267,20 @@ public class PasskeysDeleteProxyHandler
                         auditContext, newPasskeyCount, passkeyId, Clock.systemUTC());
 
         structuredAuditService.submitAuditEvent(event);
+    }
+
+    private void reportDeletionFailed(
+            AuditContext auditContext, PasskeysDeleteRequest request, String failureReason) {
+        emitFailedAuditEvent(auditContext, request);
+        emitDeletionFailureMetric(failureReason);
+    }
+
+    private void emitDeletionFailureMetric(String failureReason) {
+        var dimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(FAILURE_REASON.getValue(), failureReason));
+        cloudwatchMetricsService.incrementCounter(PASSKEY_DELETION_FAILED, dimensions);
     }
 
     private void emitFailedAuditEvent(AuditContext auditContext, PasskeysDeleteRequest request) {

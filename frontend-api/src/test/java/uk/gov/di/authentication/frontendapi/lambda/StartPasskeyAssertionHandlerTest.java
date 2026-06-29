@@ -25,11 +25,13 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -38,15 +40,20 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSKEY_AUTHENTICATION_GENERATED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_GENERATED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_GENERATION_FAILED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_REQUESTED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
@@ -77,6 +84,8 @@ class StartPasskeyAssertionHandlerTest {
     private final PasskeyAssertionService passkeyAssertionService =
             mock(PasskeyAssertionService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private StartPasskeyAssertionHandler handler;
     private final AuthSessionItem authSession =
             new AuthSessionItem()
@@ -95,6 +104,8 @@ class StartPasskeyAssertionHandlerTest {
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
                     ENCODED_DEVICE_DETAILS);
+    private static final String ENV = "test";
+    private static final Map<String, String> METRICS_DIMENSIONS = Map.of("Environment", ENV);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -102,6 +113,12 @@ class StartPasskeyAssertionHandlerTest {
 
     @AfterEach
     void tearDown() {
+        reset(
+                cloudwatchMetricsService,
+                auditService,
+                passkeyAssertionService,
+                authSessionService,
+                authenticationService);
         assertThat(logging.events(), not(hasItem(withMessageContaining(SESSION_ID))));
     }
 
@@ -110,13 +127,15 @@ class StartPasskeyAssertionHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
+        when(configurationService.getEnvironment()).thenReturn(ENV);
         handler =
                 new StartPasskeyAssertionHandler(
                         configurationService,
                         authenticationService,
                         authSessionService,
                         passkeyAssertionService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
     }
 
     @Nested
@@ -195,6 +214,25 @@ class StartPasskeyAssertionHandlerTest {
                             expectedUnrestrictedPasskeyPair,
                             expectedRestrictedPasskeyPair);
         }
+
+        @Test
+        void shouldIncrementSuccessMetric() {
+            authSession.setEmailAddress(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(USER_PROFILE));
+            var assertionRequest =
+                    createAssertionRequest(List.of(), UserVerificationRequirement.REQUIRED);
+            when(passkeyAssertionService.startAssertion(any())).thenReturn(assertionRequest);
+
+            handler.handleRequest(startPasskeyAssertionRequest(), context);
+
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(PASSKEY_AUTHENTICATION_REQUESTED, METRICS_DIMENSIONS);
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(PASSKEY_AUTHENTICATION_GENERATED, METRICS_DIMENSIONS);
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(PASSKEY_AUTHENTICATION_GENERATION_FAILED), anyMap());
+        }
     }
 
     @Nested
@@ -205,11 +243,9 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
+
+            verifyAuthenticationGeneratedAuditEventIsNotEmitted();
+            verifyMetricsForFailureAreEmitted("emailAddressNotFound");
         }
 
         @Test
@@ -220,11 +256,9 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_EMPTY));
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
+
+            verifyAuthenticationGeneratedAuditEventIsNotEmitted();
+            verifyMetricsForFailureAreEmitted("emailAddressNotFound");
         }
 
         @Test
@@ -237,11 +271,9 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
+
+            verifyAuthenticationGeneratedAuditEventIsNotEmitted();
+            verifyMetricsForFailureAreEmitted("userProfileNotFound");
         }
     }
 
@@ -264,11 +296,9 @@ class StartPasskeyAssertionHandlerTest {
 
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
+
+            verifyAuthenticationGeneratedAuditEventIsNotEmitted();
+            verifyMetricsForFailureAreEmitted("serialisationFailure");
         }
 
         @Test
@@ -287,11 +317,9 @@ class StartPasskeyAssertionHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
             verify(authSessionService, never()).updateSession(any());
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
+
+            verifyAuthenticationGeneratedAuditEventIsNotEmitted();
+            verifyMetricsForFailureAreEmitted("serialisationFailure");
         }
     }
 
@@ -315,5 +343,27 @@ class StartPasskeyAssertionHandlerTest {
         return AssertionRequest.builder()
                 .publicKeyCredentialRequestOptions(publicKeyCredentialRequestOptions)
                 .build();
+    }
+
+    private void verifyMetricsForFailureAreEmitted(String failureReason) {
+        verify(cloudwatchMetricsService)
+                .incrementCounter(PASSKEY_AUTHENTICATION_REQUESTED, METRICS_DIMENSIONS);
+        var failureDimensions =
+                Map.ofEntries(
+                        Map.entry("Environment", ENV),
+                        Map.entry("PasskeyAuthenticationGenerationFailureReason", failureReason));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(PASSKEY_AUTHENTICATION_GENERATION_FAILED, failureDimensions);
+
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(eq(PASSKEY_AUTHENTICATION_GENERATED), anyMap());
+    }
+
+    private void verifyAuthenticationGeneratedAuditEventIsNotEmitted() {
+        verify(auditService, never())
+                .submitAuditEvent(
+                        eq(AUTH_PASSKEY_AUTHENTICATION_GENERATED),
+                        any(AuditContext.class),
+                        any(AuditService.MetadataPair[].class));
     }
 }
