@@ -208,6 +208,7 @@ Conditions:
       !Equals [!Ref Environment, "dev"],
       !Equals [!Ref Environment, "build"],
       !Equals [!Ref Environment, "staging"],
+      !Equals [!Ref Environment, "integration"],
     ]
 
   IsLowerEnv:
