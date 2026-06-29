@@ -33,7 +33,9 @@ Resources:
     Type: AWS::SSM::Parameter
     Condition: HasAcceptanceTests
     Properties:
-      Name: !Sub /acceptance-tests/${Environment}/API_CUCUMBER_FILTER_TAGS
+      Name: !Sub
+        - /acceptance-tests/${Env}/API_CUCUMBER_FILTER_TAGS
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Type: String
       Value: !FindInMap
         - AcceptanceTestTags
