@@ -131,7 +131,11 @@ Conditions:
       !Equals [integration, !Ref Environment],
     ]
   DeployAlternateDomainRecord:
-    !Or [!Equals [build, !Ref Environment], !Equals [staging, !Ref Environment]]
+    !Or [
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+    ]
   DeployMigratedRecords:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   SwapLiveTrafficToCloudfront:
