@@ -3,7 +3,9 @@ AWSTemplateFormatVersion: "2010-09-09"
 Conditions:
   HasAcceptanceTests:
     Fn::Or:
-      - Fn::Equals: [!Ref Environment, dev]
+      - Fn::And:
+          - Fn::Equals: [!Ref Environment, dev]
+          - Fn::Equals: [!Ref SubEnvironment, none]
       - Fn::Equals: [!Ref Environment, build]
       - Fn::Equals: [!Ref Environment, staging]
 
