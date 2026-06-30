@@ -26,14 +26,7 @@ Resources:
                 ]
           EXPERIAN_PHONE_CHECKER_QUEUE_URL: !Sub
             - https://sqs.eu-west-2.amazonaws.com/${AccountId}/${Env}-experian-phone-check-queue
-            - AccountId: !If
-                - SwitchPhoneChecklambda
-                - !Ref AWS::AccountId
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    dataStoreAccountId,
-                  ]
+            - AccountId: !Ref AWS::AccountId
               Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           INTERNAl_SECTOR_URI: !If
