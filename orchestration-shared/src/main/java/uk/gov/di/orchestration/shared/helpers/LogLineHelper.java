@@ -21,7 +21,8 @@ public class LogLineHelper {
         AWS_REQUEST_ID("awsRequestId", false),
         CLIENT_ID("clientId", true),
         CLIENT_NAME("clientName", false),
-        TRACE_ID("dt.trace_id", false);
+        TRACE_ID("dt.trace_id", false),
+        JWT_ID("jti", false);
 
         private final String logFieldName;
         private boolean isBase64;

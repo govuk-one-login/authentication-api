@@ -5,13 +5,11 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -28,6 +26,7 @@ import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
@@ -41,6 +40,7 @@ import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.helper.TestClockHelper;
 
@@ -61,8 +61,9 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
@@ -91,15 +92,16 @@ class IPVAuthorisationServiceTest {
     private final JwksService jwksService = mock(JwksService.class);
     private final JwksCacheService jwksCacheService = mock(JwksCacheService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
+    private final OrchJwtService orchJwtService = mock(OrchJwtService.class);
     private final IPVAuthorisationService authorisationService =
             new IPVAuthorisationService(
                     configurationService,
-                    kmsConnectionService,
-                    jwksService,
                     jwksCacheService,
                     stateStorageService,
+                    orchJwtService,
                     TestClockHelper.getInstance());
     private PrivateKey privateKey;
+    private RSAKey publicEncKey;
 
     @BeforeEach
     void setUp() throws MalformedURLException {
@@ -115,7 +117,7 @@ class IPVAuthorisationServiceTest {
         when(configurationService.getIPVAudience()).thenReturn(IPV_URI.toString());
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
-        var rsaKey =
+        publicEncKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
                         .keyID(KEY_ID)
@@ -123,7 +125,7 @@ class IPVAuthorisationServiceTest {
         var jwksUrl = new URL("http://localhost/.well-known/jwks.json");
         when(configurationService.getIPVJwksUrl()).thenReturn(jwksUrl);
         when(jwksCacheService.getOrGenerateIpvJwksCacheItem())
-                .thenReturn(new JwksCacheItem(jwksUrl.toString(), rsaKey, 300));
+                .thenReturn(new JwksCacheItem(jwksUrl.toString(), publicEncKey, 300));
         when(configurationService.getIPVTokenSigningKeyAlias()).thenReturn(IPV_SIGNING_KEY_ID);
         when(jwksService.getPublicIpvTokenJwkWithOpaqueId())
                 .thenReturn(
@@ -285,7 +287,7 @@ class IPVAuthorisationServiceTest {
         }
 
         @Test
-        void shouldConstructASignedRequestJWT() throws JOSEException, ParseException {
+        void shouldConstructASignedRequestJWT() throws JOSEException {
             var state = new State("test-state");
             var scope = new Scope(OIDCScopeValue.OPENID);
             var pairwise = new Subject("pairwise-identifier");
@@ -307,151 +309,117 @@ class IPVAuthorisationServiceTest {
                                                     "https://vocab.account.gov.uk/v1/storageAccessToken")
                                             .withValues(List.of(SERIALIZED_JWT)));
 
-            EncryptedJWT encryptedJWT;
             try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
                 mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
-                encryptedJWT =
-                        authorisationService.constructRequestJWT(
-                                state,
-                                scope,
-                                pairwise,
-                                claims,
-                                "journey-id",
-                                "test@test.com",
-                                List.of("P2", "P1"),
-                                true);
+                authorisationService.constructRequestJWT(
+                        state,
+                        scope,
+                        pairwise,
+                        claims,
+                        "journey-id",
+                        "test@test.com",
+                        List.of("P2", "P1"),
+                        true);
             }
-            assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(KEY_ID));
+            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchJwtService)
+                    .signAndEncryptJWT(
+                            captor.capture(),
+                            eq(IPV_SIGNING_KEY_ID),
+                            eq(publicEncKey.toRSAPublicKey()));
+            var actualClaims = captor.getValue();
 
-            var signedJWTResponse = decryptJWT(encryptedJWT);
+            JsonApprovals.verifyAsJson(actualClaims.toJSONObject(), GsonBuilder::serializeNulls);
 
-            JsonApprovals.verifyAsJson(
-                    signedJWTResponse.getJWTClaimsSet().toJSONObject(),
-                    GsonBuilder::serializeNulls);
-
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("client_id"),
-                    equalTo(IPV_CLIENT_ID));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("state"),
-                    equalTo(state.getValue()));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getSubject(), equalTo(pairwise.getValue()));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("scope"),
-                    equalTo(scope.toString()));
-            assertThat(signedJWTResponse.getJWTClaimsSet().getIssuer(), equalTo(IPV_CLIENT_ID));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getAudience(),
-                    equalTo(singletonList(IPV_URI.toString())));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
+            assertThat(actualClaims.getClaim("client_id"), equalTo(IPV_CLIENT_ID));
+            assertThat(actualClaims.getClaim("state"), equalTo(state.getValue()));
+            assertThat(actualClaims.getSubject(), equalTo(pairwise.getValue()));
+            assertThat(actualClaims.getClaim("scope"), equalTo(scope.toString()));
+            assertThat(actualClaims.getIssuer(), equalTo(IPV_CLIENT_ID));
+            assertThat(actualClaims.getAudience(), equalTo(singletonList(IPV_URI.toString())));
+            assertThat(actualClaims.getClaim("response_type"), equalTo("code"));
             var expectedClaimsRequest =
                     new OIDCClaimsRequest().withUserInfoClaimsRequest(claims).toJSONObject();
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("claims"),
-                    equalTo(expectedClaimsRequest));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("email_address"),
-                    equalTo("test@test.com"));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
-                    equalTo("journey-id"));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("vtr"),
-                    equalTo(List.of("P2", "P1")));
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("reprove_identity"),
-                    equalTo(true));
-            assertThat(
-                    signedJWTResponse.getHeader().getKeyID(),
-                    equalTo(hashSha256String(IPV_SIGNING_KEY_ID)));
+            assertThat(actualClaims.getClaim("claims"), equalTo(expectedClaimsRequest));
+            assertThat(actualClaims.getClaim("email_address"), equalTo("test@test.com"));
+            assertThat(actualClaims.getClaim("govuk_signin_journey_id"), equalTo("journey-id"));
+            assertThat(actualClaims.getClaim("vtr"), equalTo(List.of("P2", "P1")));
+            assertThat(actualClaims.getClaim("reprove_identity"), equalTo(true));
         }
 
         @Test
-        void shouldConstructJWTWithCorrectReproveIdentityClaimFromFlag()
-                throws JOSEException, ParseException {
-            EncryptedJWT encryptedJWT;
+        void shouldConstructJWTWithCorrectReproveIdentityClaimFromFlag() throws JOSEException {
             try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
                 mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
-                encryptedJWT =
-                        authorisationService.constructRequestJWT(
-                                new State("state"),
-                                new Scope(OIDCScopeValue.OPENID),
-                                new Subject("subject"),
-                                new ClaimsSetRequest(),
-                                "",
-                                "",
-                                emptyList(),
-                                false);
+                authorisationService.constructRequestJWT(
+                        new State("state"),
+                        new Scope(OIDCScopeValue.OPENID),
+                        new Subject("subject"),
+                        new ClaimsSetRequest(),
+                        "",
+                        "",
+                        emptyList(),
+                        false);
             }
-
-            var signedJWTResponse = decryptJWT(encryptedJWT);
-
-            assertThat(
-                    signedJWTResponse.getJWTClaimsSet().getClaim("reprove_identity"),
-                    equalTo(false));
+            verify(orchJwtService)
+                    .signAndEncryptJWT(
+                            argThat(
+                                    claims -> {
+                                        try {
+                                            return !claims.getBooleanClaim("reprove_identity");
+                                        } catch (ParseException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    }),
+                            eq(IPV_SIGNING_KEY_ID),
+                            eq(publicEncKey.toRSAPublicKey()));
         }
 
         @Test
         void shouldNotConstructJWTWithReproveIdentityClaimIfAccountInterventionsActionFlagDisabled()
-                throws JOSEException, ParseException {
+                throws JOSEException {
             when(configurationService.isAccountInterventionServiceActionEnabled())
                     .thenReturn(false);
-            EncryptedJWT encryptedJWT;
 
             try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
                 mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
-                encryptedJWT =
-                        authorisationService.constructRequestJWT(
-                                new State("state"),
-                                new Scope(OIDCScopeValue.OPENID),
-                                new Subject("subject"),
-                                new ClaimsSetRequest(),
-                                "",
-                                "",
-                                emptyList(),
-                                false);
+                authorisationService.constructRequestJWT(
+                        new State("state"),
+                        new Scope(OIDCScopeValue.OPENID),
+                        new Subject("subject"),
+                        new ClaimsSetRequest(),
+                        "",
+                        "",
+                        emptyList(),
+                        false);
             }
-            var signedJWTResponse = decryptJWT(encryptedJWT);
-
-            assertFalse(
-                    signedJWTResponse
-                            .getJWTClaimsSet()
-                            .getClaims()
-                            .containsKey("reprove_identity"));
+            verify(orchJwtService)
+                    .signAndEncryptJWT(
+                            argThat(claims -> !claims.getClaims().containsKey("reprove_identity")),
+                            eq(IPV_SIGNING_KEY_ID),
+                            eq(publicEncKey.toRSAPublicKey()));
         }
 
         @Test
         void shouldNotConstructJWTWithReproveIdentityClaimIfReproveIdentityIsNull()
-                throws JOSEException, ParseException {
-            EncryptedJWT encryptedJWT;
-
+                throws Exception {
             try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
                 mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
-                encryptedJWT =
-                        authorisationService.constructRequestJWT(
-                                new State("state"),
-                                new Scope(OIDCScopeValue.OPENID),
-                                new Subject("subject"),
-                                new ClaimsSetRequest(),
-                                "",
-                                "",
-                                emptyList(),
-                                null);
+                authorisationService.constructRequestJWT(
+                        new State("state"),
+                        new Scope(OIDCScopeValue.OPENID),
+                        new Subject("subject"),
+                        new ClaimsSetRequest(),
+                        "",
+                        "",
+                        emptyList(),
+                        null);
             }
-            var signedJWTResponse = decryptJWT(encryptedJWT);
-
-            assertFalse(
-                    signedJWTResponse
-                            .getJWTClaimsSet()
-                            .getClaims()
-                            .containsKey("reprove_identity"));
+            verify(orchJwtService)
+                    .signAndEncryptJWT(
+                            argThat(claims -> !claims.getClaims().containsKey("reprove_identity")),
+                            eq(IPV_SIGNING_KEY_ID),
+                            eq(publicEncKey.toRSAPublicKey()));
         }
-    }
-
-    private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
-        encryptedJWT.decrypt(new RSADecrypter(privateKey));
-        return encryptedJWT.getPayload().toSignedJWT();
     }
 }

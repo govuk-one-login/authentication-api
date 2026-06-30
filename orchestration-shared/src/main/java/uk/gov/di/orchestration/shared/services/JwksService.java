@@ -104,7 +104,7 @@ public class JwksService {
         return JwksUtils.retrieveJwkFromURLWithKeyId(url, keyId);
     }
 
-    private JWK getPublicJWKWithKeyId(String keyId) {
+    JWK getPublicJWKWithKeyId(String keyId) {
         var jwk =
                 segmentedFunctionCall(
                         "createJwk", () -> KEY_CACHE.computeIfAbsent(keyId, this::createJwk));

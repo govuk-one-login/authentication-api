@@ -4,13 +4,11 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -25,6 +23,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
@@ -59,10 +58,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.shared.services.DocAppAuthorisationService.STATE_STORAGE_PREFIX;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
@@ -91,12 +90,13 @@ class DocAppAuthorisationServiceTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksCacheService jwksCacheService = mock(JwksCacheService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
+    private final OrchJwtService orchJwtService = mock(OrchJwtService.class);
     private final DocAppAuthorisationService authorisationService =
             new DocAppAuthorisationService(
                     configurationService,
-                    kmsConnectionService,
                     jwksCacheService,
                     stateStorageService,
+                    orchJwtService,
                     FIXED_CLOCK);
     private PrivateKey privateEncryptionKey;
     private RSAKey publicEncryptionRsaKey;
@@ -243,43 +243,40 @@ class DocAppAuthorisationServiceTest {
         when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
                 .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicEncryptionRsaKey, 300));
 
-        var encryptedJWT =
-                authorisationService.constructRequestJWT(
-                        state, pairwise.getValue(), clientRegistry, "client-session-id");
+        authorisationService.constructRequestJWT(
+                state, pairwise.getValue(), clientRegistry, "client-session-id");
 
-        var signedJWTResponse = decryptJWT(encryptedJWT);
+        var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+        verify(orchJwtService)
+                .signAndEncryptJWT(
+                        captor.capture(),
+                        eq(KEY_ALIAS),
+                        eq(publicEncryptionRsaKey.toRSAPublicKey()));
+        var actualClaims = captor.getValue();
 
+        assertThat(actualClaims.getClaim("client_id"), equalTo(DOC_APP_CLIENT_ID));
+        assertThat(actualClaims.getClaim("state"), equalTo(state.getValue()));
+        assertThat(actualClaims.getSubject(), equalTo(pairwise.getValue()));
+        assertThat(actualClaims.getIssuer(), equalTo(DOC_APP_CLIENT_ID));
         assertThat(
-                signedJWTResponse.getJWTClaimsSet().getClaim("client_id"),
-                equalTo(DOC_APP_CLIENT_ID));
-        assertThat(
-                signedJWTResponse.getJWTClaimsSet().getClaim("state"), equalTo(state.getValue()));
-        assertThat(signedJWTResponse.getJWTClaimsSet().getSubject(), equalTo(pairwise.getValue()));
-        assertThat(signedJWTResponse.getJWTClaimsSet().getIssuer(), equalTo(DOC_APP_CLIENT_ID));
-        assertThat(
-                signedJWTResponse.getJWTClaimsSet().getAudience(),
+                actualClaims.getAudience(),
                 equalTo(singletonList(DOC_APP_AUTHORISATION_URI.toString())));
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
+        assertThat(actualClaims.getClaim("response_type"), equalTo("code"));
 
         assertThat(
-                signedJWTResponse.getJWTClaimsSet().getStringClaim("govuk_signin_journey_id"),
+                actualClaims.getStringClaim("govuk_signin_journey_id"),
                 equalTo("client-session-id"));
-        assertThat(
-                signedJWTResponse.getHeader().getKeyID(),
-                equalTo(hashSha256String("789789789789789")));
         if (isTestClient) {
-            assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("test_client"), equalTo(true));
+            assertThat(actualClaims.getClaim("test_client"), equalTo(true));
             assertThat(
-                    signedJWTResponse
-                            .getJWTClaimsSet()
+                    actualClaims
                             .getExpirationTime()
                             .after(FIXED_NOW_HELPER.nowPlus(3, ChronoUnit.MINUTES)),
                     equalTo(true));
         } else {
-            assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("test_client"), equalTo(null));
+            assertThat(actualClaims.getClaim("test_client"), equalTo(null));
             assertThat(
-                    signedJWTResponse
-                            .getJWTClaimsSet()
+                    actualClaims
                             .getExpirationTime()
                             .before(NowHelper.nowPlus(3, ChronoUnit.MINUTES)),
                     equalTo(true));
@@ -290,8 +287,7 @@ class DocAppAuthorisationServiceTest {
     class Approvals {
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
-        void shouldCreateRequestJWTWithExpectedClaims(boolean isTestClient)
-                throws JOSEException, ParseException {
+        void shouldCreateRequestJWTWithExpectedClaims(boolean isTestClient) throws JOSEException {
             setupSigning();
             var state = new State("state");
             var pairwise = new Subject("pairwise-identifier");
@@ -300,27 +296,29 @@ class DocAppAuthorisationServiceTest {
                     .thenReturn(
                             new JwksCacheItem(JWKS_URL.toString(), publicEncryptionRsaKey, 300));
 
-            EncryptedJWT requestJWT;
-
             try (MockedStatic<IdGenerator> mockIdGenerator =
                     Mockito.mockStatic(IdGenerator.class)) {
                 mockIdGenerator.when(IdGenerator::generate).thenReturn("jti");
-                requestJWT =
-                        authorisationService.constructRequestJWT(
-                                state, pairwise.getValue(), clientRegistry, "client-session-id");
+                authorisationService.constructRequestJWT(
+                        state, pairwise.getValue(), clientRegistry, "client-session-id");
             }
-
-            var signedJWTResponse = decryptJWT(requestJWT);
+            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchJwtService)
+                    .signAndEncryptJWT(
+                            captor.capture(),
+                            eq(KEY_ALIAS),
+                            eq(publicEncryptionRsaKey.toRSAPublicKey()));
+            var actualClaims = captor.getValue();
 
             JsonApprovals.verifyAsJson(
-                    signedJWTResponse.getJWTClaimsSet().toJSONObject(),
+                    actualClaims.toJSONObject(),
                     org.approvaltests.Approvals.NAMES.withParameters(
                             isTestClient ? "forTestClient" : "forNonTestClient"));
         }
     }
 
     @Test
-    void usesNewDocAppAudClaim() throws JOSEException, ParseException {
+    void usesNewDocAppAudClaim() throws JOSEException {
         when(configurationService.isDocAppNewAudClaimEnabled()).thenReturn(true);
         String newAudience = "https://www.review-b.test.account.gov.uk";
         when(configurationService.getDocAppAudClaim()).thenReturn(new Audience(newAudience));
@@ -331,13 +329,17 @@ class DocAppAuthorisationServiceTest {
 
         when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
                 .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicEncryptionRsaKey, 300));
-        var encryptedJWT =
-                authorisationService.constructRequestJWT(
-                        state, pairwise.getValue(), clientRegistry, "client-session-id");
 
-        assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(ENCRYPTION_KID));
-        var signedJwt = decryptJWT(encryptedJWT);
-        assertThat(signedJwt.getJWTClaimsSet().getAudience(), contains(newAudience));
+        authorisationService.constructRequestJWT(
+                state, pairwise.getValue(), clientRegistry, "client-session-id");
+        var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+        verify(orchJwtService)
+                .signAndEncryptJWT(
+                        captor.capture(),
+                        eq(KEY_ALIAS),
+                        eq(publicEncryptionRsaKey.toRSAPublicKey()));
+        var actualClaims = captor.getValue();
+        assertThat(actualClaims.getAudience(), contains(newAudience));
     }
 
     private void setupSigning() throws JOSEException {
@@ -369,10 +371,5 @@ class DocAppAuthorisationServiceTest {
                         .keyId(KEY_ID)
                         .build();
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
-    }
-
-    private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
-        encryptedJWT.decrypt(new RSADecrypter(privateEncryptionKey));
-        return encryptedJWT.getPayload().toSignedJWT();
     }
 }

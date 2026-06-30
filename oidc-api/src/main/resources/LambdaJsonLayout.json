@@ -87,5 +87,9 @@
   "trace-id": {
     "$resolver": "mdc",
     "key": "dt.trace_id"
+  },
+  "jwt-id": {
+    "$resolver": "mdc",
+    "key": "jti"
   }
 }

@@ -137,8 +137,7 @@ public class IPVCallbackHandler
     public IPVCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
-        this.ipvAuthorisationService =
-                new IPVAuthorisationService(configurationService, kmsConnectionService);
+        this.ipvAuthorisationService = new IPVAuthorisationService(configurationService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
