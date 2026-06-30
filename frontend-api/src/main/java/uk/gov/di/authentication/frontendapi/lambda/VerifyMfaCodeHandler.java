@@ -616,7 +616,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthSessionItem authSession,
             Optional<String> maybeRpPairwiseId) {
         if (journeyType == REAUTHENTICATION
-                && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
                     maybeRpPairwiseId.isPresent()
@@ -662,8 +661,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         ? configurationService.getReducedLockoutDuration()
                         : configurationService.getLockoutDuration();
 
-        if (!configurationService.supportReauthSignoutEnabled()
-                || journeyType != REAUTHENTICATION) {
+        if (journeyType != REAUTHENTICATION) {
             codeStorageService.saveBlockedForEmail(
                     emailAddress, codeBlockedKeyPrefix, blockDuration);
         }
