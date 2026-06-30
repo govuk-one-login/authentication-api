@@ -14,8 +14,7 @@ Mappings:
   AcceptanceTestTags:
     dev:
       tags: >-
-        @UI and not (@ReauthMultiTabLogout or
-        @AccountRecovery or @InternationalSmsSendingDisabled)
+        @UI and not (ReauthMultiTabLogout or @InternationalSmsSendingDisabled)
         and not (@InternationalNumbersIndefiniteLockout and @under-development)
     build:
       tags: >-
