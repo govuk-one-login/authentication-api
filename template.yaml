@@ -12,6 +12,7 @@ Metadata:
       ignore_checks:
         - E1011 # FindInMap within FindInMap DefaultValue is currently not working w/ cfn-lint
         - W1028 # Our API Migration flags currently have "unreachable" If conditions because they all apply to one env
+        - W2531 # We are not migrating away from Java17 yet
 
 Parameters:
   Environment:
@@ -120,6 +121,7 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
     ]
   ProvisionNewApiClientRegistryApiKey:
     !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
@@ -4689,7 +4691,7 @@ Resources:
 
   UpdateClientConfigFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
+    Condition: ProvisionNewApiClientRegistryApiKey
     Properties:
       FunctionName: !Ref UpdateClientConfigFunction.Alias
       Action: lambda:InvokeFunction
@@ -4871,7 +4873,7 @@ Resources:
 
   ClientRegistrationFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
+    Condition: ProvisionNewApiClientRegistryApiKey
     Properties:
       FunctionName: !Ref ClientRegistrationFunction.Alias
       Action: lambda:InvokeFunction
