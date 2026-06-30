@@ -4690,7 +4690,7 @@ Resources:
 
   UpdateClientConfigFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
+    Condition: ProvisionNewApiClientRegistryApiKey
     Properties:
       FunctionName: !Ref UpdateClientConfigFunction.Alias
       Action: lambda:InvokeFunction
@@ -4872,7 +4872,7 @@ Resources:
 
   ClientRegistrationFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
+    Condition: ProvisionNewApiClientRegistryApiKey
     Properties:
       FunctionName: !Ref ClientRegistrationFunction.Alias
       Action: lambda:InvokeFunction
