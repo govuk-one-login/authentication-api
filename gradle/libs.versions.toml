@@ -62,7 +62,7 @@ openTelemetryJavaHttpClient = { module = "io.opentelemetry.instrumentation:opent
 pactConsumer = { module = "au.com.dius.pact.consumer:junit5", version.ref = "pact" }
 pactProvider = { module = "au.com.dius.pact.provider:junit5", version.ref = "pact" }
 reflections = "org.reflections:reflections:0.10.2"
-sl4jNop = "org.slf4j:slf4j-nop:2.0.17"
+sl4jNop = "org.slf4j:slf4j-nop:2.0.18"
 webcompere = "uk.org.webcompere:system-stubs-jupiter:2.1.8"
 webauthnServer = "com.yubico:webauthn-server-core:2.8.1"
 wiremock = "org.wiremock:wiremock-jetty12:3.13.2"
