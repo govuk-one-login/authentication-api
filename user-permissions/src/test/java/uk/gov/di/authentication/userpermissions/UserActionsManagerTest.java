@@ -506,38 +506,7 @@ class UserActionsManagerTest {
             }
 
             @Test
-            void shouldBlockAndResetCountWhenReauthSignoutDisabled() {
-                when(configurationService.supportReauthSignoutEnabled()).thenReturn(false);
-                var codeRequestType =
-                        CodeRequestType.getCodeRequestType(
-                                SupportedCodeType.MFA, JourneyType.REAUTHENTICATION);
-                var sessionWithMaxCount = authSession;
-                for (int i = 0; i < 5; i++) {
-                    sessionWithMaxCount =
-                            sessionWithMaxCount.incrementCodeRequestCount(codeRequestType);
-                }
-                var contextWithMaxCount =
-                        PermissionContext.builder()
-                                .withEmailAddress(EMAIL)
-                                .withAuthSessionItem(sessionWithMaxCount)
-                                .build();
-
-                var result =
-                        userActionsManager.sentSmsOtpNotification(
-                                JourneyType.REAUTHENTICATION, contextWithMaxCount);
-
-                var expectedBlockedKey = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-                verify(codeStorageService).saveBlockedForEmail(EMAIL, expectedBlockedKey, 900L);
-                ArgumentCaptor<AuthSessionItem> captor =
-                        ArgumentCaptor.forClass(AuthSessionItem.class);
-                verify(authSessionService, times(2)).updateSession(captor.capture());
-                assertEquals(0, captor.getAllValues().get(1).getCodeRequestCount(codeRequestType));
-                assertTrue(result.isSuccess());
-            }
-
-            @Test
-            void shouldSetInMemoryLockoutStateHolderAndResetCountWhenReauthSignoutEnabled() {
-                when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+            void shouldSetInMemoryLockoutStateHolderAndResetCountWhenJourneyIsReauth() {
                 var codeRequestType =
                         CodeRequestType.getCodeRequestType(
                                 SupportedCodeType.MFA, JourneyType.REAUTHENTICATION);
