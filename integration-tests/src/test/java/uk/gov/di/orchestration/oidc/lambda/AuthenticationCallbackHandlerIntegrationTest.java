@@ -57,7 +57,6 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -166,14 +165,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @BeforeAll
     static void beforeAll() {
         configurationService =
-                new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
-                        authExternalApiStub,
-                        externalTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotRequestQueue,
-                        docAppPrivateKeyJwtSigner,
-                        accountInterventionApiStub,
-                        false);
+                new TestConfigurationService(
+                        authExternalApiStub, accountInterventionApiStub, false);
         var rsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
@@ -1054,14 +1047,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     private void setupTest(boolean abortOnAisErrorResponse) {
         configurationService =
-                new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
-                        authExternalApiStub,
-                        externalTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotRequestQueue,
-                        docAppPrivateKeyJwtSigner,
-                        accountInterventionApiStub,
-                        abortOnAisErrorResponse);
+                new TestConfigurationService(
+                        authExternalApiStub, accountInterventionApiStub, abortOnAisErrorResponse);
         handler = new AuthenticationCallbackHandler(configurationService);
         authExternalApiStub.init(SUBJECT_ID);
         txmaAuditQueue.clear();
@@ -1093,19 +1080,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         public TestConfigurationService(
                 AuthExternalApiStubExtension authExternalApiStub,
-                TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotRequestQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
                 AccountInterventionsStubExtension accountInterventionsStubExtension,
                 boolean abortOnAisErrorResponse) {
-            super(
-                    tokenSigningKey,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            super();
             this.authExternalApiStub = authExternalApiStub;
             this.accountInterventionApiStub = accountInterventionsStubExtension;
             this.abortOnAisErrorResponse = abortOnAisErrorResponse;

@@ -27,6 +27,7 @@ import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
@@ -105,20 +106,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     protected static final OrchAccessTokenExtension orchAccessTokenExtension =
             new OrchAccessTokenExtension();
 
-    private static final IntegrationTestConfigurationService configuration =
-            new IntegrationTestConfigurationService(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
-
-                @Override
-                public String getTxmaAuditQueueUrl() {
-                    return txmaAuditQueue.getQueueUrl();
-                }
-            };
+    private static final ConfigurationService configuration = TXMA_ENABLED_CONFIGURATION_SERVICE;
 
     @BeforeEach
     void setup() throws JOSEException, NoSuchAlgorithmException {
@@ -340,7 +328,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet)
             throws JOSEException, NoSuchAlgorithmException {
         var jwsHeader =
-                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(configuration.getKeyId()).build();
+                new JWSHeader.Builder(JWSAlgorithm.ES256)
+                        .keyID(externalTokenSigner.getKeyId())
+                        .build();
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
 
         var keyPairGenerator = KeyPairGenerator.getInstance("EC");
@@ -464,13 +454,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static class UserInfoConfigurationService extends IntegrationTestConfigurationService {
 
         public UserInfoConfigurationService() {
-            super(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            super();
         }
 
         @Override

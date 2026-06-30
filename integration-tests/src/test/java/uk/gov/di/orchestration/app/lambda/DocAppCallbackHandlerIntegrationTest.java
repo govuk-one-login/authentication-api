@@ -27,7 +27,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.CriStubExtension;
@@ -36,9 +35,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreE
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -110,12 +107,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
             new CrossBrowserStorageExtension();
 
     protected static final ConfigurationService configurationService =
-            new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
-                    criStub,
-                    externalTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner);
+            new TestConfigurationService(criStub);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -137,7 +129,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldRedirectToRpWhenSuccessfullyProcessedDocAppResponse() throws Json.JsonException {
+    void shouldRedirectToRpWhenSuccessfullyProcessedDocAppResponse() {
         setupSession();
 
         var response =
@@ -172,8 +164,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldRedirectToRpWhenSuccessfullyProcessedDocAppResponseUsingUserinfoV2Endpoint()
-            throws Json.JsonException {
+    void shouldRedirectToRpWhenSuccessfullyProcessedDocAppResponseUsingUserinfoV2Endpoint() {
         handler = new DocAppCallbackHandler(configurationService);
         setupSession();
 
@@ -209,8 +200,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldThrowIfClientSessionAndUserInfoEndpointDocAppIdDoesNotMatch()
-            throws Json.JsonException {
+    void shouldThrowIfClientSessionAndUserInfoEndpointDocAppIdDoesNotMatch() {
         setupSession();
 
         criStub.register(
@@ -241,7 +231,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldThrowIfInvalidResponseReceivedFromCriProtectedEndpoint() throws Json.JsonException {
+    void shouldThrowIfInvalidResponseReceivedFromCriProtectedEndpoint() {
         setupSession();
 
         criStub.register("/userinfo/v2", 200, "application/jwt", "invalid-response");
@@ -268,8 +258,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldSendAuthenticationErrorResponseToRPWhenCRIRequestReturns404()
-            throws Json.JsonException {
+    void shouldSendAuthenticationErrorResponseToRPWhenCRIRequestReturns404() {
         setupSession();
         handler = new DocAppCallbackHandler(configurationService);
 
@@ -300,7 +289,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldThrowIfErrorReceivedFromCriProtectedEndpoint() throws Json.JsonException {
+    void shouldThrowIfErrorReceivedFromCriProtectedEndpoint() {
         setupSession();
 
         criStub.register("/userinfo/v2", 400, "application/jwt", "error");
@@ -327,8 +316,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldRedirectToRPWhenNoSessionCookieAndAccessDeniedErrorIsPresent()
-            throws Json.JsonException {
+    void shouldRedirectToRPWhenNoSessionCookieAndAccessDeniedErrorIsPresent() {
         setupSession();
         crossBrowserStorageExtension.store(DOC_APP_STATE, CLIENT_SESSION_ID);
 
@@ -357,7 +345,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
     }
 
-    private void setupSession() throws Json.JsonException {
+    private void setupSession() {
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -399,19 +387,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         private final CriStubExtension criStubExtension;
 
-        public TestConfigurationService(
-                CriStubExtension criStubExtension,
-                TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotRequestQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner) {
-            super(
-                    tokenSigningKey,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+        public TestConfigurationService(CriStubExtension criStubExtension) {
+            super();
             this.criStubExtension = criStubExtension;
         }
 

@@ -70,8 +70,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                     + Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded())
                     + "\n-----END PUBLIC KEY-----\n";
 
-    private static final ConfigurationService configurationService =
-            new OrchestrationToAuthenticationAuthorizeIntegrationTest.TestConfigurationService();
+    private static final ConfigurationService configurationService = new TestConfigurationService();
 
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
@@ -403,13 +402,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         public TestConfigurationService() {
-            super(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotRequestQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+            super();
         }
 
         @Override

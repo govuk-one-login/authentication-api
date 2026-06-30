@@ -18,15 +18,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
-        var configurationService =
-                new IntegrationTestConfigurationService(
-                        externalTokenSigner,
-                        storageTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotRequestQueue,
-                        docAppPrivateKeyJwtSigner,
-                        configurationParameters);
-        handler = new JwksHandler(configurationService);
+        handler = new JwksHandler(TEST_CONFIGURATION_SERVICE);
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
         assertThat(response, hasStatus(200));
