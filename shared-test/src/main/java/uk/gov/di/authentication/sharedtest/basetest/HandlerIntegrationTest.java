@@ -180,11 +180,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                         }
 
                         @Override
-                        public boolean supportReauthSignoutEnabled() {
-                            return true;
-                        }
-
-                        @Override
                         public boolean isAuthenticationAttemptsServiceEnabled() {
                             return true;
                         }
