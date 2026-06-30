@@ -257,7 +257,6 @@ class AuthenticationAuthCodeHandlerTest {
             var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
             userProfile.setSubjectID(TEST_SUBJECT_ID);
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
             mockedClientSubjectHelperClass
@@ -313,7 +312,6 @@ class AuthenticationAuthCodeHandlerTest {
             var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
             userProfile.setSubjectID(TEST_SUBJECT_ID);
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
             mockedClientSubjectHelperClass
@@ -353,7 +351,6 @@ class AuthenticationAuthCodeHandlerTest {
     @Test
     void shouldNotSubmitReauthSuccessEventForNonReauthJourney() {
         when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
         var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
         userProfile.setSubjectID(TEST_SUBJECT_ID);
         when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
