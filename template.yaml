@@ -12,6 +12,7 @@ Metadata:
       ignore_checks:
         - E1011 # FindInMap within FindInMap DefaultValue is currently not working w/ cfn-lint
         - W1028 # Our API Migration flags currently have "unreachable" If conditions because they all apply to one env
+        - W2531 # We are not migrating away from Java17 yet
 
 Parameters:
   Environment:
