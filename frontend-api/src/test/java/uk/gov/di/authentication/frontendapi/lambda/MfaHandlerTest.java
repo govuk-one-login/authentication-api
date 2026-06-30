@@ -633,10 +633,8 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
-    void shouldReturn400WhenUserHitsCodeRequestLimitAfterAction(
-            JourneyType journeyType, boolean reauthEnabled) {
+    void shouldReturn400WhenUserHitsCodeRequestLimitAfterAction(JourneyType journeyType) {
         usingValidSession();
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
 
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)))
@@ -665,10 +663,8 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
-    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes(
-            JourneyType journeyType, boolean reauthEnabled) {
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes(JourneyType journeyType) {
         usingValidSession();
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any(), any()))
                 .thenReturn(
                         Result.success(
@@ -727,10 +723,8 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
-    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(
-            JourneyType journeyType, boolean reauthEnabled) {
+    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(JourneyType journeyType) {
         usingValidSession();
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
         when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(
                         Result.success(
@@ -975,14 +969,9 @@ class MfaHandlerTest {
                 .thenReturn(Optional.of(authSession));
     }
 
-    private static Stream<Arguments> smsJourneyTypes() {
+    private static Stream<JourneyType> smsJourneyTypes() {
         return Stream.of(
-                Arguments.of(JourneyType.PASSWORD_RESET_MFA, false),
-                Arguments.of(JourneyType.SIGN_IN, false),
-                Arguments.of(JourneyType.REAUTHENTICATION, false),
-                Arguments.of(JourneyType.PASSWORD_RESET_MFA, true),
-                Arguments.of(JourneyType.SIGN_IN, true),
-                Arguments.of(JourneyType.REAUTHENTICATION, true));
+                JourneyType.PASSWORD_RESET_MFA, JourneyType.SIGN_IN, JourneyType.REAUTHENTICATION);
     }
 
     private static Stream<Arguments> mfaJourneyTypes() {

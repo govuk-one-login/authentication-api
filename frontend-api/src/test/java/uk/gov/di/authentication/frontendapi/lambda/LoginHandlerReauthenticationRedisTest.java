@@ -9,8 +9,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
@@ -191,8 +191,6 @@ class LoginHandlerReauthenticationRedisTest {
                                         Instant.now().plusSeconds(900),
                                         false)));
 
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -217,14 +215,12 @@ class LoginHandlerReauthenticationRedisTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"true, true", "false, true", "true, false", "false, false"})
-    void shouldIncrementRelevantCountWhenCredentialsAreInvalid(
-            boolean isReauthJourney, boolean isReauthEnabled) {
+    @ValueSource(booleans = {true, false})
+    void shouldIncrementRelevantCountWhenCredentialsAreInvalid(boolean isReauthJourney) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(SMS, false);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(isReauthEnabled);
 
         usingValidAuthSession();
 
