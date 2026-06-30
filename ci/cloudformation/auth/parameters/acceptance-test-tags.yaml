@@ -14,8 +14,7 @@ Mappings:
   AcceptanceTestTags:
     dev:
       tags: >-
-        @UI and not (@Reauth or
-        @AccountRecovery or @InternationalSmsSendingDisabled)
+        @UI and not (@AccountRecovery or @InternationalSmsSendingDisabled)
         and not (@InternationalNumbersIndefiniteLockout and @under-development)
     build:
       tags: >-
