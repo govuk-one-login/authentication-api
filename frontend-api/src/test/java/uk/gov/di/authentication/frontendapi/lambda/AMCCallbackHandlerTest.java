@@ -508,7 +508,7 @@ class AMCCallbackHandlerTest {
 
     private void setupJourneyOutcomeResponse(String journeyOutcomeContent) {
         var journeyOutcomeHttpResponse = new HTTPResponse(200);
-        journeyOutcomeHttpResponse.setContent(journeyOutcomeContent);
+        journeyOutcomeHttpResponse.setBody(journeyOutcomeContent);
 
         when(AMC_SERVICE.requestJourneyOutcome(
                         argThat(
@@ -526,7 +526,7 @@ class AMCCallbackHandlerTest {
             throws ParseException, IOException {
         var httpResponse = new HTTPResponse(tokenResponseCode);
         httpResponse.setContentType("application/json");
-        httpResponse.setContent(tokenResponseBody);
+        httpResponse.setBody(tokenResponseBody);
         when(httpRequest.send()).thenReturn(httpResponse);
     }
 

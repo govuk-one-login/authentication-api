@@ -190,7 +190,7 @@ class ReverificationResultHandlerTest {
                     logging.events(),
                     hasItem(withMessageContaining(format("Received reverification success code"))));
             assertThat(result, hasStatus(200));
-            assertThat(result, hasBody(userInfo.getContent()));
+            assertThat(result, hasBody(userInfo.getBody()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -228,7 +228,7 @@ class ReverificationResultHandlerTest {
                             USER_CONTEXT);
 
             assertThat(result, hasStatus(200));
-            assertThat(result, hasBody(userInfo.getContent()));
+            assertThat(result, hasBody(userInfo.getBody()));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -527,7 +527,7 @@ class ReverificationResultHandlerTest {
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
             userInfo.setContentType("application/json");
-            userInfo.setContent(responseContent);
+            userInfo.setBody(responseContent);
 
             when(idReverificationStateService.get(anyString()))
                     .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
@@ -554,7 +554,7 @@ class ReverificationResultHandlerTest {
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return TokenResponse.parse(tokenHTTPResponse);
     }
@@ -562,7 +562,7 @@ class ReverificationResultHandlerTest {
     private HTTPResponse successfulResponseWithBody(String body) throws ParseException {
         HTTPResponse userInfo = new HTTPResponse(200);
         userInfo.setContentType("application/json");
-        userInfo.setContent(body);
+        userInfo.setBody(body);
         return userInfo;
     }
 
@@ -575,7 +575,7 @@ class ReverificationResultHandlerTest {
 
         var tokenHTTPResponse = new HTTPResponse(400);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return TokenErrorResponse.parse(tokenHTTPResponse);
     }
@@ -597,7 +597,7 @@ class ReverificationResultHandlerTest {
 
         HTTPResponse userInfo = new HTTPResponse(200);
         userInfo.setContentType("application/json");
-        userInfo.setContent(responseContent);
+        userInfo.setBody(responseContent);
 
         when(idReverificationStateService.get(anyString()))
                 .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));

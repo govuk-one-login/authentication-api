@@ -90,7 +90,7 @@ class DocAppCriServiceTest {
     @Nested
     class TokenTests {
         @Test
-        void shouldConstructTokenRequest() throws JOSEException {
+        void shouldConstructTokenRequest() throws Exception {
             signJWTWithKMS();
             TokenRequest tokenRequest =
                     docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
@@ -99,13 +99,17 @@ class DocAppCriServiceTest {
                     tokenRequest.getClientAuthentication().getMethod().getValue(),
                     equalTo("private_key_jwt"));
             assertThat(
-                    tokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
+                    tokenRequest
+                            .toHTTPRequest()
+                            .getBodyAsFormParameters()
+                            .get("redirect_uri")
+                            .get(0),
                     equalTo(REDIRECT_URI.toString()));
             assertThat(
-                    tokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
+                    tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("grant_type").get(0),
                     equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
             assertThat(
-                    tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
+                    tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("client_id").get(0),
                     equalTo(CLIENT_ID.getValue()));
         }
 
@@ -224,7 +228,7 @@ class DocAppCriServiceTest {
                             + "}";
             var tokenHTTPResponse = new HTTPResponse(200);
             tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            tokenHTTPResponse.setContent(tokenResponseContent);
+            tokenHTTPResponse.setBody(tokenResponseContent);
 
             return tokenHTTPResponse;
         }
@@ -258,7 +262,7 @@ class DocAppCriServiceTest {
                 throws IOException, UnsuccessfulCredentialResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
             var response = docAppCriService.sendCriDataRequest(httpRequest, DOC_APP_SUBJECT_ID);
@@ -273,7 +277,7 @@ class DocAppCriServiceTest {
                 throws IOException, UnsuccessfulCredentialResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send())
                     .thenReturn(new HTTPResponse(500))
                     .thenReturn(userInfoHTTPResponse);
@@ -291,7 +295,7 @@ class DocAppCriServiceTest {
                 throws IOException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
             UnsuccessfulCredentialResponseException thrown =

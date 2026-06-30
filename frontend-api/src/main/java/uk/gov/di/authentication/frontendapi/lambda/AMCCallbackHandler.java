@@ -193,7 +193,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                                 journeyOutcome =
                                         SerializationService.getInstance()
                                                 .readValue(
-                                                        response.getContent(),
+                                                        response.getBody(),
                                                         JourneyOutcomeResponse.class);
                             } catch (JsonException e) {
                                 LOG.error("Failed to parse journey outcome response", e);
@@ -205,7 +205,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                             reportAuthorisationReceived(journeyOutcome, userContext, input);
 
                             LOG.info("Journey outcome received successfully");
-                            return generateApiGatewayProxyResponse(200, response.getContent());
+                            return generateApiGatewayProxyResponse(200, response.getBody());
                         });
     }
 
@@ -312,7 +312,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                 LOG.warn(
                         "Error {} when attempting to call AMC token endpoint: {}",
                         response.getStatusCode(),
-                        response.getContent());
+                        response.getBody());
                 return Result.failure(TokenResponseError.ERROR_RESPONSE_FROM_TOKEN_REQUEST);
             }
             return Result.success(TokenResponse.parse(response));

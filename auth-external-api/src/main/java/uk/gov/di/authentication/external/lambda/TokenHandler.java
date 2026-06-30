@@ -173,7 +173,7 @@ public class TokenHandler
                 var tokenErrorResponse =
                         tokenUtilityService.generateTokenErrorResponse(OAuth2Error.INVALID_REQUEST);
                 return generateApiGatewayProxyResponse(
-                        tokenErrorResponse.getStatusCode(), tokenErrorResponse.getContent());
+                        tokenErrorResponse.getStatusCode(), tokenErrorResponse.getBody());
             }
 
             LOG.info(
@@ -223,12 +223,12 @@ public class TokenHandler
             var tokenErrorResponse =
                     tokenUtilityService.generateTokenErrorResponse(e.getErrorObject());
             return generateApiGatewayProxyResponse(
-                    tokenErrorResponse.getStatusCode(), tokenErrorResponse.getContent());
+                    tokenErrorResponse.getStatusCode(), tokenErrorResponse.getBody());
         } catch (AuthCodeStoreRetreivalException e) {
             var tokenErrorResponse =
                     tokenUtilityService.generateTokenErrorResponse(e.getOAuth2Error());
             return generateApiGatewayProxyResponse(
-                    tokenErrorResponse.getStatusCode(), tokenErrorResponse.getContent());
+                    tokenErrorResponse.getStatusCode(), tokenErrorResponse.getBody());
         }
     }
 

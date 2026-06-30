@@ -70,7 +70,7 @@ public class TokenGeneratorHelper {
                         subject,
                         List.of(new Audience(clientId)),
                         expiryDate,
-                        new Date());
+                        Date.from(expiryDate.toInstant().minus(1, ChronoUnit.DAYS)));
         if (Objects.nonNull(clientSessionId)) idTokenClaims.setClaim("sid", clientSessionId);
         if (Objects.nonNull(vot)) idTokenClaims.setClaim("vot", vot);
 
@@ -140,7 +140,7 @@ public class TokenGeneratorHelper {
                         .claim("scope", scopes)
                         .issuer(issuerUrl)
                         .expirationTime(expiryDate)
-                        .issueTime(NowHelper.now())
+                        .issueTime(Date.from(expiryDate.toInstant().minus(1, ChronoUnit.DAYS)))
                         .claim("client_id", clientId)
                         .subject(subject.getValue())
                         .jwtID(UUID.randomUUID().toString());

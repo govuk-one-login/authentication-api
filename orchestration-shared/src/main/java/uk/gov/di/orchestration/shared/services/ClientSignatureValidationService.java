@@ -10,6 +10,7 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
+import com.nimbusds.oauth2.sdk.auth.verifier.JWTAudienceCheck;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -110,7 +111,8 @@ public class ClientSignatureValidationService {
                             new PrivateKeyJwtAuthPublicKeySelector(publicKey),
                             Set.of(
                                     new Audience(oidcAPI.tokenURI().toString()),
-                                    new Audience(oidcAPI.getIssuerURI().toString())));
+                                    new Audience(oidcAPI.getIssuerURI().toString())),
+                            JWTAudienceCheck.LEGACY);
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException
                 | NoSuchAlgorithmException

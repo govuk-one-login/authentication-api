@@ -6,7 +6,10 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.*;
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
+import com.nimbusds.oauth2.sdk.TokenRequest;
+import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
@@ -29,7 +32,6 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 
 import static java.util.Collections.singletonList;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
@@ -74,15 +76,9 @@ public class ReverificationResultService {
                         NowHelper.now(),
                         NowHelper.now(),
                         new JWTID());
-        return new TokenRequest(
-                ipvTokenURI,
-                generatePrivateKeyJwt(claimsSet),
-                codeGrant,
-                null,
-                null,
-                Map.of(
-                        "client_id",
-                        singletonList(configurationService.getIPVAuthorisationClientId())));
+        return new TokenRequest.Builder(ipvTokenURI, generatePrivateKeyJwt(claimsSet), codeGrant)
+                .customParameter("client_id", configurationService.getIPVAuthorisationClientId())
+                .build();
     }
 
     private TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
@@ -123,7 +119,7 @@ public class ReverificationResultService {
                             "Unsuccessful {} response from IPV token endpoint on attempt: {}; error: {}",
                             response.toHTTPResponse().getStatusCode(),
                             count,
-                            httpResponse.getContent());
+                            httpResponse.getBody());
                 }
             } catch (IOException e) {
                 LOG.error("Error whilst sending TokenRequest", e);
@@ -154,14 +150,14 @@ public class ReverificationResultService {
                             "Unsuccessful {} response from IPV reverification endpoint on attempt{}: {} ",
                             response.getStatusCode(),
                             count,
-                            response.getContent());
+                            response.getBody());
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
                 throw new UnsuccessfulReverificationResponseException(
                         String.format(
                                 "Error %s when attempting to call IPV reverification endpoint: %s",
-                                response.getStatusCode(), response.getContent()));
+                                response.getStatusCode(), response.getBody()));
             }
             LOG.info("Received successful reverification response");
             return response;

@@ -50,9 +50,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.util.Collections.singletonList;
@@ -345,14 +348,13 @@ class ReverificationResultServiceTest {
                 throws IOException, UnsuccessfulReverificationResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
             when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
             when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
             var reverificationResult =
                     reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
-            assertThat(
-                    reverificationResult.getContent(), equalTo(userInfoHTTPResponse.getContent()));
+            assertThat(reverificationResult.getBody(), equalTo(userInfoHTTPResponse.getBody()));
         }
 
         @Test
@@ -360,7 +362,7 @@ class ReverificationResultServiceTest {
                 throws IOException, UnsuccessfulReverificationResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
             when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
             when(httpRequest.send())
@@ -369,15 +371,14 @@ class ReverificationResultServiceTest {
 
             var reverificationResult =
                     reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
-            assertThat(
-                    reverificationResult.getContent(), equalTo(userInfoHTTPResponse.getContent()));
+            assertThat(reverificationResult.getBody(), equalTo(userInfoHTTPResponse.getBody()));
         }
 
         @Test
         void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVUserIdentityFail() throws IOException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
             when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
             when(httpRequest.send()).thenReturn(new HTTPResponse(500));

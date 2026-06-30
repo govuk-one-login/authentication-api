@@ -89,7 +89,7 @@ class AuthenticationTokenServiceTest {
     }
 
     @Test
-    void shouldConstructTokenRequest() throws JOSEException {
+    void shouldConstructTokenRequest() throws Exception {
         signJWTWithKMS(KEY_ID);
         TokenRequest tokenRequest =
                 authenticationTokenService.constructTokenRequest(AUTH_CODE.getValue());
@@ -98,13 +98,13 @@ class AuthenticationTokenServiceTest {
                 tokenRequest.getClientAuthentication().getMethod().getValue(),
                 equalTo("private_key_jwt"));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("redirect_uri").get(0),
                 equalTo(ORCH_CALLBACK_URI.toString()));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("grant_type").get(0),
                 equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("client_id").get(0),
                 equalTo(CLIENT_ID.getValue()));
     }
 
@@ -165,7 +165,7 @@ class AuthenticationTokenServiceTest {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
         when(httpRequest.send()).thenReturn(httpResponse);
         when(httpResponse.indicatesSuccess()).thenReturn(true);
-        when(httpResponse.getContent()).thenReturn(userInfoJson);
+        when(httpResponse.getBody()).thenReturn(userInfoJson);
 
         Map<String, List<String>> headers = new HashMap<>();
         headers.put("Content-Type", Collections.singletonList("application/json"));
@@ -185,7 +185,7 @@ class AuthenticationTokenServiceTest {
         int failureStatusCode = 503;
         String failureErrorMessage = "Error content";
         when(httpResponse.getStatusCode()).thenReturn(failureStatusCode);
-        when(httpResponse.getContent()).thenReturn(failureErrorMessage);
+        when(httpResponse.getBody()).thenReturn(failureErrorMessage);
 
         UnsuccessfulCredentialResponseException exception =
                 assertThrows(
@@ -206,7 +206,7 @@ class AuthenticationTokenServiceTest {
     @Test
     void shouldThrowUnsuccessfulCredentialResponseExceptionWhenHttpContentIsNull() {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
-        when(httpResponse.getContent()).thenReturn(null);
+        when(httpResponse.getBody()).thenReturn(null);
 
         UnsuccessfulCredentialResponseException thrown =
                 assertThrows(
@@ -221,7 +221,7 @@ class AuthenticationTokenServiceTest {
     @Test
     void shouldThrowUnsuccessfulCredentialResponseExceptionWhenObjectMapperThrowsException() {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
-        when(httpResponse.getContent()).thenReturn("{}");
+        when(httpResponse.getBody()).thenReturn("{}");
 
         UnsuccessfulCredentialResponseException thrown =
                 assertThrows(
@@ -286,7 +286,7 @@ class AuthenticationTokenServiceTest {
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return tokenHTTPResponse;
     }
