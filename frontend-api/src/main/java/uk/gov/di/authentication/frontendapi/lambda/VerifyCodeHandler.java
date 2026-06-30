@@ -588,7 +588,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthSessionItem authSession,
             Optional<String> maybeRpPairwiseId) {
         if (journeyType == REAUTHENTICATION
-                && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
                     maybeRpPairwiseId.isPresent()
@@ -647,8 +646,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             case TOO_MANY_INVALID_MFA_OTPS_ENTERED,
                     TOO_MANY_INVALID_PW_RESET_CODES_ENTERED,
                     TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED:
-                if (!configurationService.supportReauthSignoutEnabled()
-                        || journeyType != REAUTHENTICATION) {
+                if (journeyType != REAUTHENTICATION) {
                     blockCodeForSession(authSession, codeBlockedKeyPrefix);
                 }
                 resetIncorrectMfaCodeAttemptsCount(authSession);
