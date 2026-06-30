@@ -77,12 +77,6 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
-          SUPPORT_REAUTH_SIGNOUT_ENABLED:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              supportReauthSignoutEnabled,
-            ]
           TERMS_CONDITIONS_VERSION:
             !FindInMap [
               EnvironmentConfiguration,

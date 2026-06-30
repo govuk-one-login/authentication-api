@@ -254,7 +254,6 @@ Mappings:
       lambdaMinConcurrency: 0
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
-      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       authSessionUseStronglyConsistentReads: true
@@ -312,7 +311,6 @@ Mappings:
       lambdaMinConcurrency: 0
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
-      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       authSessionUseStronglyConsistentReads: true
@@ -370,7 +368,6 @@ Mappings:
       lambdaMinConcurrency: 0
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
-      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       authSessionUseStronglyConsistentReads: true
@@ -442,7 +439,6 @@ Mappings:
       otpCodeTtlDuration: 60
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
-      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       authSessionUseStronglyConsistentReads: true
@@ -510,7 +506,6 @@ Mappings:
       otpCodeTtlDuration: 60
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
-      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       authSessionUseStronglyConsistentReads: true
@@ -584,7 +579,6 @@ Mappings:
       otpCodeTtlDuration: 900
       reauthEnterEmailCountTtl: 300
       reducedLockoutDuration: 900
-      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       authSessionUseStronglyConsistentReads: true
@@ -654,7 +648,6 @@ Mappings:
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 900
-      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: false
       UseAlarmActions: "Yes"
@@ -728,7 +721,6 @@ Mappings:
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 900
-      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: false
       UseAlarmActions: "Yes"

@@ -305,7 +305,6 @@ Mappings:
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
-      supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
@@ -342,7 +341,6 @@ Mappings:
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
-      supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
@@ -379,7 +377,6 @@ Mappings:
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
-      supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
@@ -423,7 +420,6 @@ Mappings:
       otpCodeTtlDuration: 120
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
-      supportReauthSignoutEnabled: false
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
@@ -469,7 +465,6 @@ Mappings:
       otpCodeTtlDuration: 900
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
-      supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
@@ -514,7 +509,6 @@ Mappings:
       otpCodeTtlDuration: 900
       reauthEnterEmailCountTtl: 300
       reducedLockoutDuration: 900
-      supportReauthSignoutEnabled: true
       testClientsEnabled: true
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
@@ -558,7 +552,6 @@ Mappings:
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 900
-      supportReauthSignoutEnabled: true
       testClientsEnabled: false
       UseAlarmActions: "Yes"
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
@@ -606,7 +599,6 @@ Mappings:
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 900
-      supportReauthSignoutEnabled: true
       testClientsEnabled: false
       UseAlarmActions: "Yes"
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
