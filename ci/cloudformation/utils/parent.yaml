@@ -10,6 +10,7 @@ Metadata:
         - W1028
         - W8003
         - E1011
+        - W2531
 
 Description: >
   SAM template for deploying utility Lambda functions and supporting infrastructure

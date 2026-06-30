@@ -11,9 +11,10 @@ Metadata:
         - W8003
         - E1011
         - W8001
+        - W2531
 
 Description: >
-  SAM template for deploying account-data-api -sp
+  SAM template for deploying account-data-api
 
 Parameters:
   VpcStackName:
