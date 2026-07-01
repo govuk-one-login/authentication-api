@@ -38,6 +38,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
@@ -85,6 +86,8 @@ class AMCAuthorizeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private AMCAuthorizeHandler handler;
     private final Context context = mock(Context.class);
     private final AuthSessionItem authSession =
@@ -115,7 +118,8 @@ class AMCAuthorizeHandlerTest {
                         jwkSource,
                         dynamoAmcStateService,
                         auditService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        permissionDecisionManager);
         when(jwkSource.get(any(), any())).thenReturn(List.of(TEST_RSA_JWK));
         when(configurationService.getAMCSfadRedirectURI())
                 .thenReturn("https://example.com/callback");
@@ -170,6 +174,9 @@ class AMCAuthorizeHandlerTest {
         void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
                 AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
+            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
+                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
+            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -185,6 +192,9 @@ class AMCAuthorizeHandlerTest {
         void shouldConstructTheAuthorizationResultWithTheCorrectTransportJwtAndTokenConfigs(
                 AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
+            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
+                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
+            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -216,6 +226,9 @@ class AMCAuthorizeHandlerTest {
         void shouldEmitTheRelevantAuditEventAndCloudwatchMetric(
                 AMCJourneyType amcJourneyType, String expectedAmcScopeInAuditEvent) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
+            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
+                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
+            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -272,6 +285,7 @@ class AMCAuthorizeHandlerTest {
         void setupUserProfile() {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
+            when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
         }
 
         @Test
@@ -290,6 +304,25 @@ class AMCAuthorizeHandlerTest {
             assertTrue(
                     result.getBody()
                             .contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
+            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
+        }
+
+        @Test
+        void shouldReturn400WhenNotPermittedToSetupPasskey() {
+            when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(false);
+
+            APIGatewayProxyResponseEvent result =
+                    handler.handleRequestWithUserContext(
+                            VALID_EVENT,
+                            context,
+                            new AMCAuthorizeRequest(AMCJourneyType.PASSKEY_CREATE),
+                            userContext);
+
+            assertEquals(400, result.getStatusCode());
+            assertTrue(
+                    result.getBody()
+                            .contains(
+                                    ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED.getMessage()));
             verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
         }
 
