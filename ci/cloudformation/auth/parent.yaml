@@ -78,6 +78,17 @@ Conditions:
             ]
           - ""
 
+  AddIpvApiVpcEndpointId:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              IpvApiVpcEndpointId,
+              DefaultValue: "",
+            ]
+          - ""
+
   AddAmcApiVpcEndpointId:
     Fn::Not:
       - Fn::Equals:
@@ -270,6 +281,7 @@ Mappings:
       amcClientId: auth
       accountDataApiId: rjlo8fsb55
       EvcsApiVpcEndpointId: ""
+      IpvApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
       amcCreatePasskeyRedirectUri: https://signin.authdev1.dev.account.gov.uk/create-passkey-callback
       supportPasskeys: true
@@ -327,6 +339,7 @@ Mappings:
       amcClientId: auth
       accountDataApiId: ez2ro7vca7
       EvcsApiVpcEndpointId: ""
+      IpvApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
       amcCreatePasskeyRedirectUri: https://signin.authdev2.dev.account.gov.uk/create-passkey-callback
       supportPasskeys: true
@@ -388,6 +401,7 @@ Mappings:
       amcClientId: auth
       accountDataApiId: 5ctgxqnq37
       EvcsApiVpcEndpointId: ""
+      IpvApiVpcEndpointId: ""
       enhancedAuthCodeProtectionEnabled: true
       supportPasskeys: true
       amcCreatePasskeyRedirectUri: https://signin.authdev3.dev.account.gov.uk/create-passkey-callback
@@ -429,6 +443,7 @@ Mappings:
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       EvcsApiVpcEndpointId: ""
+      IpvApiVpcEndpointId: ""
       orchApiVpcEndpointId: vpce-0028f62dad635589a
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
@@ -496,6 +511,7 @@ Mappings:
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
       EvcsApiVpcEndpointId: vpce-078a9d6aa4e30ef6d
+      IpvApiVpcEndpointId: ""
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
@@ -568,6 +584,7 @@ Mappings:
       lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
       EvcsApiVpcEndpointId: vpce-0db9a336254d281b6
+      IpvApiVpcEndpointId: vpce-0cc0de10742b83b8a
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       amcApiVpcEndpointId: vpce-04ae8d53b32b38278
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
@@ -641,6 +658,7 @@ Mappings:
       lockoutCountTtl: 900
       lockoutDuration: 7200
       EvcsApiVpcEndpointId: vpce-0cf3501e9b45089f0
+      IpvApiVpcEndpointId: vpce-0f47068fdf9ad0c3d
       orchApiVpcEndpointId: vpce-0704b783d794cea52
       amcApiVpcEndpointId: vpce-0553cfc8fc1aeb970
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0KGEYIJxophMmqbI/eaJnAJYewaxN+vg+fXthdHMTKrQWPTFu8tUwCbo7f8CS90UsIeSHSDdaSPvXvIoa+j8eA==
@@ -714,6 +732,7 @@ Mappings:
       lockoutCountTtl: 900
       lockoutDuration: 7200
       EvcsApiVpcEndpointId: vpce-02321f5ecdd491213
+      IpvApiVpcEndpointId: vpce-0e40247a557c2169e
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
       amcApiVpcEndpointId: vpce-0d6fa47d5c9ae876d
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIh7xuVSWAZ8aW3ak20Ile5B9DfbP/87qEnLLTBZ/8lYCoKVdjMkS/IroHkPcS0laDQa/w0TAPDIqGtsHLI1Rw==

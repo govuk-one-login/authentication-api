@@ -51,6 +51,15 @@ Resources:
                         ]
                       - !Ref AWS::NoValue
                     - !If
+                      - AddIpvApiVpcEndpointId
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          IpvApiVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+                      - !Ref AWS::NoValue
+                    - !If
                       - AddAmcApiVpcEndpointId
                       - !FindInMap [
                           EnvironmentConfiguration,
@@ -93,6 +102,15 @@ Resources:
                 EnvironmentConfiguration,
                 !Ref Environment,
                 EvcsApiVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
+          - !If
+            - AddIpvApiVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                IpvApiVpcEndpointId,
                 DefaultValue: "",
               ]
             - !Ref AWS::NoValue
