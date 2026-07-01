@@ -3,7 +3,11 @@ package uk.gov.di.orchestration.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Expression;
+import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -11,6 +15,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,8 +63,7 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
             LOG.info("Orch refresh token item with Jwt ID: {} has isUsed = true", jwtId);
             return Optional.empty();
         }
-        var refreshToken = markTokenAsUsed(unusedOrchRefreshToken.get());
-        return Optional.of(refreshToken);
+        return markAuthCodeAsUsedIfAuthCodeUnused(unusedOrchRefreshToken.get());
     }
 
     public List<OrchRefreshTokenItem> getRefreshTokensForAuthCode(String authCode) {
@@ -100,17 +104,36 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
         }
     }
 
-    private OrchRefreshTokenItem markTokenAsUsed(OrchRefreshTokenItem orchRefreshTokenItem) {
+    private Optional<OrchRefreshTokenItem> markAuthCodeAsUsedIfAuthCodeUnused(
+            OrchRefreshTokenItem orchRefreshTokenItem) {
         var item = orchRefreshTokenItem.withIsUsed(true);
+        Expression conditionExpression =
+                Expression.builder()
+                        .expression("IsUsed = :false")
+                        .expressionValues(
+                                Collections.singletonMap(
+                                        ":false", AttributeValue.builder().bool(false).build()))
+                        .build();
+
+        UpdateItemEnhancedRequest<OrchRefreshTokenItem> enhancedRequest =
+                UpdateItemEnhancedRequest.builder(OrchRefreshTokenItem.class)
+                        .item(item)
+                        .conditionExpression(conditionExpression)
+                        .build();
+
         try {
-            update(item);
+            update(enhancedRequest);
+        } catch (ConditionalCheckFailedException e) {
+            LOG.info("Orch refresh token item with Jwt ID: {} has isUsed = true", item.getJwtId());
+            return Optional.empty();
         } catch (Exception e) {
             logAndThrowOrchRefreshTokenException(
-                    "Failed to mark refresh token as used. Token jwt: "
-                            + orchRefreshTokenItem.getJwtId(),
+                    String.format(
+                            "Failed to mark refresh token as used. Token jwt: %s",
+                            orchRefreshTokenItem.getJwtId()),
                     e);
         }
-        return item;
+        return Optional.of(item);
     }
 
     private void logAndThrowOrchRefreshTokenException(String message, Exception e) {
