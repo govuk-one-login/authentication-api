@@ -3701,6 +3701,23 @@ Resources:
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
+  SISJwksFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SISJwksFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/sis-jwks.json"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
   SISJwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
