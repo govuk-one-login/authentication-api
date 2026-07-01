@@ -4,7 +4,9 @@ import org.mockito.ArgumentMatchers;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
@@ -45,6 +47,21 @@ public abstract class BaseDynamoServiceTest<T> {
         doThrow(DynamoDbException.builder().message("Failed to update item in table").build())
                 .when(table)
                 .updateItem(ArgumentMatchers.<T>any());
+    }
+
+    protected void withFailedUpdateItemRequest() {
+        doThrow(DynamoDbException.builder().message("Failed to update item in table").build())
+                .when(table)
+                .updateItem(ArgumentMatchers.<UpdateItemEnhancedRequest<T>>any());
+    }
+
+    protected void withConditionalCheckFailedUpdateItemRequest() {
+        doThrow(
+                        ConditionalCheckFailedException.builder()
+                                .message("Conditional check has failed")
+                                .build())
+                .when(table)
+                .updateItem(ArgumentMatchers.<UpdateItemEnhancedRequest<T>>any());
     }
 
     protected void withFailedDelete() {
