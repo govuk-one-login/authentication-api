@@ -62,12 +62,6 @@ Resources:
             - "{{resolve:ssm:/deploy/${env}/support_account_creation_count_ttl}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          SUPPORT_REAUTH_SIGNOUT_ENABLED:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              supportReauthSignoutEnabled,
-            ]
           TERMS_CONDITIONS_VERSION:
             !FindInMap [
               EnvironmentConfiguration,

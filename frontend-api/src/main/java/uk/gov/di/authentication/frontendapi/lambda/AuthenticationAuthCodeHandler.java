@@ -132,8 +132,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                     new AuthorizationSuccessResponse(
                             redirectUri, authorisationCode, null, state, null);
 
-            if (configurationService.supportReauthSignoutEnabled()
-                    && Boolean.TRUE.equals(authCodeRequest.isReauthJourney())) {
+            if (Boolean.TRUE.equals(authCodeRequest.isReauthJourney())) {
                 var auditContext =
                         AuditContext.auditContextFromUserContext(
                                 userContext,

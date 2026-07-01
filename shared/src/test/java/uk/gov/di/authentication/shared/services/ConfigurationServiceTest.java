@@ -559,11 +559,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void supportReauthSignoutEnabledShouldEqualDefaultWhenEnvVarUnset() {
-        assertFalse(configurationService.supportReauthSignoutEnabled());
-    }
-
-    @Test
     void isAuthenticationAttemptsServiceEnabledShouldEqualDefaultWhenEnvVarUnset() {
         assertFalse(configurationService.isAuthenticationAttemptsServiceEnabled());
     }

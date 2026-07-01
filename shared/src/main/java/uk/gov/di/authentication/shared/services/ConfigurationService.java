@@ -773,12 +773,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals(FEATURE_SWITCH_ON);
     }
 
-    public boolean supportReauthSignoutEnabled() {
-        return System.getenv()
-                .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public boolean supportPasskeys() {
         return System.getenv()
                 .getOrDefault("SUPPORT_PASSKEYS", FEATURE_SWITCH_OFF)

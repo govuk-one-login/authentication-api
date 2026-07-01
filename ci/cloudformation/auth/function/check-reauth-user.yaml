@@ -46,12 +46,6 @@ Resources:
               reauthEnterEmailCountTtl,
             ]
           REDIS_KEY: "session"
-          SUPPORT_REAUTH_SIGNOUT_ENABLED:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              supportReauthSignoutEnabled,
-            ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS:
             !FindInMap [

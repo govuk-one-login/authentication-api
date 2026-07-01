@@ -4,10 +4,10 @@ package uk.gov.di.authentication.userpermissions.entity;
  * In-memory state holder for communicating lockout status between UserActionsManager and
  * PermissionDecisionManager within a single Lambda invocation.
  *
- * <p>This exists as a workaround for reauth journeys when supportReauthSignoutEnabled is true. In
- * that scenario, sentSmsOtpNotification increments the count and resets it when the limit is
- * exceeded, but does NOT create a Redis block. The subsequent call to canSendSmsOtpNotification
- * checks Redis for blocks, but finds none because reauth users aren't blocked there.
+ * <p>This exists as a workaround for reauth journeys. In that scenario, sentSmsOtpNotification
+ * increments the count and resets it when the limit is exceeded, but does NOT create a Redis block.
+ * The subsequent call to canSendSmsOtpNotification checks Redis for blocks, but finds none because
+ * reauth users aren't blocked there.
  *
  * <p>We explicitly chose not to enable recording of the Redis block on reauth journeys because of
  * knock-on consequences to other places in the API that check these blocks. For example, if we

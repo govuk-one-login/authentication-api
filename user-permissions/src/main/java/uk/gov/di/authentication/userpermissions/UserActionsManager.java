@@ -245,9 +245,7 @@ public class UserActionsManager implements UserActions {
         if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
             var blockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
 
-            boolean shouldRecordBlock =
-                    journeyType != JourneyType.REAUTHENTICATION
-                            || !configurationService.supportReauthSignoutEnabled();
+            boolean shouldRecordBlock = journeyType != JourneyType.REAUTHENTICATION;
 
             if (shouldRecordBlock) {
                 LOG.info("Setting block for email as user has requested too many SMS OTPs");

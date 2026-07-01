@@ -27,12 +27,6 @@ Resources:
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           REDIS_KEY: "session"
-          SUPPORT_REAUTH_SIGNOUT_ENABLED:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              supportReauthSignoutEnabled,
-            ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           ENHANCED_AUTH_CODE_PROTECTION_ENABLED:
             !FindInMap [

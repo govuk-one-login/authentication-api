@@ -145,7 +145,6 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
         when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));

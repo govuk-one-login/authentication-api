@@ -221,8 +221,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                             Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1),
                                             java.util.List.of(ENTER_PASSWORD))));
 
-            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -344,8 +342,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
             setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
 
-            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -426,8 +422,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                             detailedCounts,
                                             java.util.List.of(countType))));
 
-            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -486,8 +480,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                             detailedCounts,
                                             java.util.List.of(ENTER_PASSWORD))));
 
-            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, false);
 
@@ -537,8 +529,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
 
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
@@ -583,8 +573,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
 
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
@@ -622,8 +610,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
         when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
 
         when(authenticationAttemptsService.getCount(any(), any(), any())).thenReturn(1);
@@ -645,7 +631,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
         when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
 
         when(authenticationAttemptsService.getCount(any(), any(), any()))

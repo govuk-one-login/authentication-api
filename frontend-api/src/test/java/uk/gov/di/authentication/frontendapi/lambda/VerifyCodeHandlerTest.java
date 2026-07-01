@@ -1213,7 +1213,6 @@ class VerifyCodeHandlerTest {
 
     private void withReauthTurnedOn() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
     }
 
     @Nested
