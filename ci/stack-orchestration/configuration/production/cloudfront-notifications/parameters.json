@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "production"
+  },
+  {
+    "ParameterKey": "DeployPagerDutySnsTopic",
+    "ParameterValue": "Yes"
+  }
+]
