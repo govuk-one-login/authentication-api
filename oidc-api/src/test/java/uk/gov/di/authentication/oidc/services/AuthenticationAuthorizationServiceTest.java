@@ -97,6 +97,8 @@ import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.SALT;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.UPLIFT_REQUIRED;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.orchestration.sharedtest.matchers.JWTClaimsSetMatcher.assertClaims;
+import static uk.gov.di.orchestration.sharedtest.matchers.JWTClaimsSetMatcher.isJWTClaimSetWith;
 
 class AuthenticationAuthorizationServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -655,19 +657,21 @@ class AuthenticationAuthorizationServiceTest {
         }
 
         private void assertRequiredClaimsAreSet(JWTClaimsSet claimsSet) throws Exception {
-            assertThat(claimsSet.getIssuer(), equalTo(TEST_ORCHESTRATOR_CLIENT_ID));
-            assertThat(claimsSet.getAudience().get(0), equalTo(FRONT_END_BASE_URI.toString()));
-            assertThat(claimsSet.getClaim("rp_client_id"), equalTo(CLIENT_ID.getValue()));
-            assertThat(claimsSet.getClaim("rp_sector_host"), equalTo(RP_SECTOR_HOST));
-            assertThat(claimsSet.getClaim("rp_redirect_uri"), equalTo(new URI(REDIRECT_URI)));
-            assertThat(claimsSet.getClaim("rp_state"), equalTo(STATE.toString()));
-            assertThat(claimsSet.getClaim("client_name"), equalTo(CLIENT_NAME));
-            assertThat(
-                    claimsSet.getClaim("cookie_consent_shared"), equalTo(IS_COOKIE_CONSENT_SHARED));
-            assertThat(claimsSet.getClaim("is_one_login_service"), equalTo(IS_ONE_LOGIN));
-            assertThat(claimsSet.getClaim("service_type"), equalTo(RP_SERVICE_TYPE));
-            assertThat(claimsSet.getClaim("govuk_signin_journey_id"), equalTo(CLIENT_SESSION_ID));
-            assertThat(claimsSet.getClaim("redirect_uri"), equalTo(ORCH_REDIRECT_URI));
+            assertClaims(
+                    claimsSet,
+                    isJWTClaimSetWith()
+                            .issuer(TEST_ORCHESTRATOR_CLIENT_ID)
+                            .audience(FRONT_END_BASE_URI.toString())
+                            .claim("rp_client_id", CLIENT_ID.getValue())
+                            .claim("rp_sector_host", RP_SECTOR_HOST)
+                            .claim("rp_redirect_uri", new URI(REDIRECT_URI))
+                            .claim("rp_state", STATE.toString())
+                            .claim("client_name", CLIENT_NAME)
+                            .claim("cookie_consent_shared", IS_COOKIE_CONSENT_SHARED)
+                            .claim("is_one_login_service", IS_ONE_LOGIN)
+                            .claim("service_type", RP_SERVICE_TYPE)
+                            .claim("govuk_signin_journey_id", CLIENT_SESSION_ID)
+                            .claim("redirect_uri", ORCH_REDIRECT_URI));
         }
 
         private AuthenticationRequest.Builder authRequestBuilder(VectorOfTrust vtr)
