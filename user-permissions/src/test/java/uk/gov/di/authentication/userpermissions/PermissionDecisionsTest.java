@@ -101,5 +101,10 @@ class PermissionDecisionsTest {
         public boolean canIssueAuthCode(AuthSessionItem authSession) {
             return true;
         }
+
+        @Override
+        public boolean canSetupPasskey(AuthSessionItem authSession) {
+            return true;
+        }
     }
 }

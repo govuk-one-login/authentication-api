@@ -1342,6 +1342,39 @@ class PermissionDecisionManagerTest {
         }
     }
 
+    @Nested
+    class CanSetupPasskey {
+        @Test
+        void shouldReturnTrueIfSessionIndicatesPasswordAndMfaInput() {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(true)
+                            .withHasVerifiedWithMfa(true);
+
+            assertTrue(permissionDecisionManager.canSetupPasskey(session));
+        }
+
+        private static Stream<AuthSessionItem> sessionItemsWithoutMfaAndPassword() {
+            return Stream.of(
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(true)
+                            .withHasVerifiedWithMfa(false),
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(false)
+                            .withHasVerifiedWithMfa(true),
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(false)
+                            .withHasVerifiedWithMfa(false));
+        }
+
+        @ParameterizedTest
+        @MethodSource("sessionItemsWithoutMfaAndPassword")
+        void shouldReturnFalseIfSessionIndicatesOneOrBothOfPasswordOrMfaNotVerified(
+                AuthSessionItem session) {
+            assertFalse(permissionDecisionManager.canSetupPasskey(session));
+        }
+    }
+
     private PermissionContext createUserContext(int passwordResetCount) {
         return createUserContext(passwordResetCount, EMAIL, Optional.of(PHONE_NUMBER));
     }
