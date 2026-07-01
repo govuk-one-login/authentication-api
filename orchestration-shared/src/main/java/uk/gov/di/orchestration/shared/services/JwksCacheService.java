@@ -62,6 +62,11 @@ public class JwksCacheService extends BaseDynamoService<JwksCacheItem> {
         return getOrGenerateJwksCacheItem(docAppsUrl);
     }
 
+    public JwksCacheItem getOrGenerateSISJwksCacheItem() {
+        URL docAppsUrl = configurationService.getSISJwksUrl();
+        return getOrGenerateJwksCacheItem(docAppsUrl);
+    }
+
     private JwksCacheItem getOrGenerateJwksCacheItem(URL url) {
         Optional<JwksCacheItem> jwkCacheItem = getEncryptionKey(url.toString());
         if (jwkCacheItem.isEmpty()) {
