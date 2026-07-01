@@ -102,6 +102,15 @@ paths:
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
         type: "aws_proxy"
+  /.well-known/sis-jwks.json:
+    get:
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SISJwksFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
   /authorize:
     get:
       x-amazon-apigateway-integration:
