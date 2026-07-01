@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.OrchAuthCodeItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
@@ -123,11 +124,12 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
 
         orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
 
-        var orchAuthCodeItemCaptor = ArgumentCaptor.forClass(OrchAuthCodeItem.class);
-        verify(table).updateItem(orchAuthCodeItemCaptor.capture());
-        var capturedRequest = orchAuthCodeItemCaptor.getValue();
+        ArgumentCaptor<UpdateItemEnhancedRequest<OrchAuthCodeItem>> updateItemEnhancedRequest =
+                ArgumentCaptor.forClass(UpdateItemEnhancedRequest.class);
+        verify(table).updateItem(updateItemEnhancedRequest.capture());
+        var capturedRequest = updateItemEnhancedRequest.getValue();
 
-        assertTrue(capturedRequest.getIsUsed());
+        assertTrue(capturedRequest.item().getIsUsed());
     }
 
     @Test
@@ -165,11 +167,25 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
         var exchangeData = anAuthCodeExchangeDataEntity();
         withValidOrchAuthCode(exchangeData);
 
-        withFailedUpdate();
+        withFailedUpdateItemRequest();
 
         assertThrows(
                 OrchAuthCodeException.class,
                 () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
+    }
+
+    @Test
+    void
+            shouldNotGetAuthCodeExchangeDataByAuthCodeWhenOrchAuthCodeItemExistsButIsMarkedAsUsedWhenMarkingAsUsed()
+                    throws Json.JsonException {
+        var exchangeData = anAuthCodeExchangeDataEntity();
+        withValidOrchAuthCode(exchangeData);
+
+        withConditionalCheckFailedUpdateItemRequest();
+
+        var actualExchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
+
+        assertTrue(actualExchangeData.isEmpty());
     }
 
     private AuthCodeExchangeData anAuthCodeExchangeDataEntity() {

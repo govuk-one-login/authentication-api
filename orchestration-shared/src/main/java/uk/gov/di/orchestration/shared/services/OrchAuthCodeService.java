@@ -4,7 +4,11 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Expression;
+import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.OrchAuthCodeItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
@@ -14,6 +18,7 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.Optional;
 
 public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
@@ -142,16 +147,33 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
                     e);
         }
 
-        markAuthCodeAsUsed(authCodeItem.get());
-
-        return authCodeExchangeData;
+        return markAuthCodeAsUsedIfAuthCodeUnused(authCodeItem.get())
+                ? authCodeExchangeData
+                : Optional.empty();
     }
 
-    private void markAuthCodeAsUsed(OrchAuthCodeItem authCodeItem) {
-        var item = authCodeItem.withIsUsed(true);
+    private boolean markAuthCodeAsUsedIfAuthCodeUnused(OrchAuthCodeItem authCodeItem) {
+        Expression conditionExpression =
+                Expression.builder()
+                        .expression("IsUsed = :false")
+                        .expressionValues(
+                                Collections.singletonMap(
+                                        ":false", AttributeValue.builder().bool(false).build()))
+                        .build();
+
+        UpdateItemEnhancedRequest<OrchAuthCodeItem> enhancedRequest =
+                UpdateItemEnhancedRequest.builder(OrchAuthCodeItem.class)
+                        .item(authCodeItem.withIsUsed(true))
+                        .conditionExpression(conditionExpression)
+                        .build();
 
         try {
-            update(item);
+            update(enhancedRequest);
+        } catch (ConditionalCheckFailedException e) {
+            LOG.warn(
+                    "Orch auth code item found with isUsed set to true. Code: {}",
+                    authCodeItem.getAuthCode());
+            return false;
         } catch (Exception e) {
             logAndThrowOrchAuthCodeException(
                     String.format(
@@ -159,6 +181,7 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
                             authCodeItem.getAuthCode()),
                     e);
         }
+        return true;
     }
 
     private void logAndThrowOrchAuthCodeException(String message, Exception e) {
