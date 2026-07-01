@@ -198,6 +198,7 @@ Mappings:
         }]'
       oidcDomainName: "oidc.dev.account.gov.uk"
       oidcAlternateDomainName: "oidc-orch.dev.account.gov.uk"
+      serviceNameForKeyRotationStack: "orch"
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -235,6 +236,7 @@ Mappings:
         }]'
       oidcDomainName: "oidc.build.account.gov.uk"
       oidcAlternateDomainName: "oidc-orch.build.account.gov.uk"
+      serviceNameForKeyRotationStack: "orch"
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -274,6 +276,7 @@ Mappings:
         }]'
       oidcDomainName: "oidc.staging.account.gov.uk"
       oidcAlternateDomainName: "oidc-orch.staging.account.gov.uk"
+      serviceNameForKeyRotationStack: "orch"
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -311,6 +314,7 @@ Mappings:
         }]'
       oidcDomainName: "oidc.integration.account.gov.uk"
       oidcAlternateDomainName: "oidc-orch.integration.account.gov.uk"
+      serviceNameForKeyRotationStack: "orch"
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_331_39_20260206-150338_with_collector_java_arm:1
@@ -348,6 +352,7 @@ Mappings:
         }]'
       oidcDomainName: "oidc.account.gov.uk"
       oidcAlternateDomainName: "oidc-orch.account.gov.uk"
+      serviceNameForKeyRotationStack: "orch"
 
 Globals:
   Function:
@@ -9601,6 +9606,34 @@ Resources:
       Statistic: Average
       Threshold: 10
       EvaluationPeriods: 1
+  #endregion
+
+  #region S3 bucket for JWKS files
+  WellKnownJwksBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - govuk-one-login-${ServiceName}-published-keys-${Environment}
+        - ServiceName:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              serviceNameForKeyRotationStack,
+            ]
+      LoggingConfiguration:
+        DestinationBucketName: !Sub di-s3-access-logs-${AWS::AccountId}-${AWS::Region}
+        LogFilePrefix: WellKnownJwksBucket/
+      VersioningConfiguration:
+        Status: "Enabled"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
   #endregion
 
 Outputs:
