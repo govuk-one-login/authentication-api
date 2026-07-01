@@ -16,22 +16,26 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class ConfigurationServiceTest {
 
     private final SystemService systemService = mock(SystemService.class);
 
+    // QualityGateRegressionTest
     @Test
     void sessionCookieMaxAgeShouldEqualDefaultWhenEnvVarUnset() {
         ConfigurationService configurationService = new ConfigurationService();
         assertEquals(3600, configurationService.getSessionCookieMaxAge());
     }
 
+    // QualityGateRegressionTest
     @Test
     void getSessionCookieAttributesShouldEqualDefaultWhenEnvVarUnset() {
         ConfigurationService configurationService = new ConfigurationService();
         assertEquals("Secure; HttpOnly;", configurationService.getSessionCookieAttributes());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReadTermsAndConditionsVersionCSVList() {
         when(systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", ""))
@@ -44,6 +48,7 @@ class ConfigurationServiceTest {
                 configurationService.getBulkUserEmailIncludedTermsAndConditions());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReadEmptyTermsAndConditionsVersionCSVList() {
         when(systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", ""))
@@ -56,6 +61,7 @@ class ConfigurationServiceTest {
                 configurationService.getBulkUserEmailIncludedTermsAndConditions());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldCacheTheNotifyBearerTokenAfterTheFirstCall() {
         var mock = mock(SsmClient.class);
@@ -74,6 +80,7 @@ class ConfigurationServiceTest {
         verify(mock, times(1)).getParameter(request);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldHandleMissingAISUrl() {
         when(systemService.getOrDefault("ACCOUNT_INTERVENTION_SERVICE_URI", "")).thenReturn("");
@@ -83,6 +90,7 @@ class ConfigurationServiceTest {
         assertEquals(configurationService.getAccountInterventionServiceURI(), URI.create(""));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowUncheckedExceptionIfUrlNotValid() {
         when(systemService.getOrDefault("IPV_JWKS_URL", ""))

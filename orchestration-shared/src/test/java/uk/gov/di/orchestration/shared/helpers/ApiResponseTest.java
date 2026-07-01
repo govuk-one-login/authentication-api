@@ -11,8 +11,10 @@ import org.junit.jupiter.api.Test;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+// QualityGateUnitTest
 class ApiResponseTest {
 
+    // QualityGateRegressionTest
     @Test
     void okReturnsAsExpected() {
         var response = ApiResponse.ok("test");
@@ -21,6 +23,7 @@ class ApiResponseTest {
         assertThat(response.getBody(), is("\"test\""));
     }
 
+    // QualityGateRegressionTest
     @Test
     void okWithUnserializableObjectReturnsError() {
         var unserializableResponse =
@@ -34,6 +37,7 @@ class ApiResponseTest {
                 is("{\"error_description\":\"Invalid request\",\"error\":\"invalid_request\"}"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void badRequestReturnsAsExpected() {
         var response = ApiResponse.badRequest("error");
@@ -42,6 +46,7 @@ class ApiResponseTest {
         assertThat(response.getBody(), is("\"error\""));
     }
 
+    // QualityGateRegressionTest
     @Test
     void badRequestWithErrorObjectReturnsAsExpected() {
         var response = ApiResponse.badRequest(OAuth2Error.INVALID_REQUEST);
@@ -52,6 +57,7 @@ class ApiResponseTest {
                 is("{\"error_description\":\"Invalid request\",\"error\":\"invalid_request\"}"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void badRequestWithUnserializableObjectReturnsError() {
         var unserializableErrorObject =

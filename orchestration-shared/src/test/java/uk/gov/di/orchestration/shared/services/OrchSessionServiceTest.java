@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
     private static final String SESSION_ID = "test-session-id";
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
@@ -36,6 +37,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         orchSessionService = new OrchSessionService(dynamoDbClient, table, configurationService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void newSessionHasDefaultValues() {
         var session = new OrchSessionItem(SESSION_ID);
@@ -44,6 +46,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertThat(session.getClientSessions(), equalTo(new ArrayList<>()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void getSessionReturnsSessionWithValidTtl() {
         withValidSession();
@@ -51,6 +54,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertThat(session.isPresent(), equalTo(true));
     }
 
+    // QualityGateRegressionTest
     @Test
     void getSessionReturnsEmptyOptionalWhenExpired() {
         withExpiredSession();
@@ -58,6 +62,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertThat(session.isPresent(), equalTo(false));
     }
 
+    // QualityGateRegressionTest
     @Test
     void updateSessionThrowsOrchSessionExceptionWhenUpdateFails() {
         withFailedUpdate();
@@ -67,6 +72,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
                 () -> orchSessionService.updateSession(sessionToBeUpdated));
     }
 
+    // QualityGateRegressionTest
     @Test
     void deleteSessionThrowsOrchSessionExceptionWhenDeleteFails() {
         withValidSession();
@@ -79,6 +85,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertEquals("Error deleting orch session item", exception.getMessage());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnSessionFromSessionCookie() {
         withValidSession();
@@ -94,6 +101,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertEquals(SESSION_ID, sessionFromSessionCookie.get().getSessionId());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnEmptyFromSessionCookieWhenHeaderIsIncorrect() {
         withValidSession();
@@ -106,6 +114,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertFalse(session.isPresent());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnEmptyFromSessionCookieWhenSessionDoesNotExist() {
         Optional<OrchSessionItem> session =
@@ -118,6 +127,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertFalse(session.isPresent());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldRetrieveSessionUsingRequestHeaders() {
         withValidSession();
@@ -129,6 +139,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertEquals(SESSION_ID, session.get().getSessionId());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotRetrieveSessionForLowerCaseHeaderName() {
         withValidSession();
@@ -138,24 +149,28 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
         assertTrue(session.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotRetrieveSessionWithNoHeaders() {
         var session = orchSessionService.getSessionFromRequestHeaders(Collections.emptyMap());
         assertTrue(session.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotRetrieveSessionWithNullHeaders() {
         var session = orchSessionService.getSessionFromRequestHeaders(null);
         assertTrue(session.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotRetrieveSessionWithMissingHeader() {
         var session = orchSessionService.getSessionFromRequestHeaders(Map.of("Something", "Else"));
         assertTrue(session.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldDeleteSessionFromDatabase() {
         var existingSession = withValidSession();
