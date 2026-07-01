@@ -92,6 +92,10 @@ public class IntegrationTest {
             new TokenSigningExtension("ipv-token-auth-key");
 
     @RegisterExtension
+    protected static final TokenSigningExtension sisPrivateKeyJwtSigner =
+            new TokenSigningExtension("sis-token-auth-key");
+
+    @RegisterExtension
     protected static final TokenSigningExtension docAppPrivateKeyJwtSigner =
             new TokenSigningExtension("doc-app-token-auth-key");
 
@@ -233,6 +237,11 @@ public class IntegrationTest {
         @Override
         public String getIPVTokenSigningKeyAlias() {
             return ipvPrivateKeyJwtSigner.getKeyAlias();
+        }
+
+        @Override
+        public String getSISTokenSigningKeyAlias() {
+            return sisPrivateKeyJwtSigner.getKeyAlias();
         }
 
         @Override
