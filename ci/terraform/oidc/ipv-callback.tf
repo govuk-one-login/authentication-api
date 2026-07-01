@@ -11,12 +11,10 @@ module "ipv_callback_role_2" {
     aws_iam_policy.dynamo_user_write_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.spot_queue_encryption_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     local.user_profile_encryption_policy_arn,
-    aws_iam_policy.spot_queue_write_access_policy.arn
   ]
   extra_tags = {
     Service = "ipv-callback"
@@ -47,7 +45,6 @@ module "ipv-callback" {
     IPV_BACKEND_URI                             = var.ipv_backend_uri
     OIDC_API_BASE_URL                           = local.api_base_url
     REDIS_KEY                                   = local.redis_key
-    SPOT_QUEUE_URL                              = aws_sqs_queue.spot_request_queue.id
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
   }
