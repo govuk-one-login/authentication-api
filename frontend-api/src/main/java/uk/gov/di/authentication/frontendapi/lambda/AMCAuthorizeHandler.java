@@ -19,6 +19,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCoo
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
 import uk.gov.di.authentication.frontendapi.entity.amc.TransportJWTConfig;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
@@ -42,6 +43,7 @@ import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.services.JwtService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.MalformedURLException;
 import java.time.Clock;
@@ -64,6 +66,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
     private final JWKSource<SecurityContext> jwkSource;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     private static final Logger LOG = LogManager.getLogger(AMCAuthorizeHandler.class);
     private final DynamoAmcStateService dynamoAmcStateService;
@@ -94,6 +97,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     public AMCAuthorizeHandler(
@@ -104,7 +108,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             JWKSource<SecurityContext> jwkSource,
             DynamoAmcStateService amcStateService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 AMCAuthorizeRequest.class,
                 configurationService,
@@ -115,6 +120,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.dynamoAmcStateService = amcStateService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     @SuppressWarnings("java:S1185")
@@ -140,6 +146,14 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         if (userProfile == null) {
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+        }
+
+        if (!actionIsPermitted(request.amcJourneyType(), authSessionItem)) {
+            LOG.warn(
+                    "AMC authorize with journey type {} is not permitted",
+                    request.amcJourneyType());
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED);
         }
 
         List<AccessTokenConfig> accessTokenConfigsForJourneyType =
@@ -249,5 +263,12 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             LOG.error("Could not retrieve JWKS", e);
             return Result.failure(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
         }
+    }
+
+    private boolean actionIsPermitted(AMCJourneyType journeyType, AuthSessionItem sessionItem) {
+        if (journeyType.equals(AMCJourneyType.PASSKEY_CREATE)) {
+            return permissionDecisionManager.canSetupPasskey(sessionItem);
+        }
+        return true;
     }
 }

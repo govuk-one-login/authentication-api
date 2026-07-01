@@ -443,6 +443,19 @@ public class PermissionDecisionManager implements PermissionDecisions {
         return true;
     }
 
+    @Override
+    public boolean canSetupPasskey(AuthSessionItem authSession) {
+        if (authSession.getHasVerifiedWithMfa() && authSession.getHasVerifiedWithPassword()) {
+            return true;
+        } else {
+            LOG.warn(
+                    "Cannot setup passkey, user has not verified with mfa and password in current session, has verified with mfa is {} and hasVerifiedWithPassword is {}",
+                    authSession.getHasVerifiedWithMfa(),
+                    authSession.getHasVerifiedWithPassword());
+            return false;
+        }
+    }
+
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {
         if (authenticationAttemptsService == null) {
             authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
